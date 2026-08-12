@@ -22,28 +22,31 @@ import {
     ConfigurationError
 } from "./errors/ConfigurationError.js";
 
-function getDefaults(): ApplicationConfiguration {
-    switch (getEnvironment()) {
-        case "production":
-            return productionApplicationDefaults;
-
-        case "test":
-            return testApplicationDefaults;
-
-        default:
-            return developmentApplicationDefaults;
-    }
-}
-
 export function getApplicationConfiguration():
     ApplicationConfiguration {
 
-    const defaults = getDefaults();
+    const environment = getEnvironment();
 
-    const port = Number(
-        process.env.APP_PORT ??
-        defaults.port
-    );
+    const defaults =
+        environment === "production"
+            ? productionApplicationDefaults
+            : environment === "test"
+                ? testApplicationDefaults
+                : developmentApplicationDefaults;
+
+    const rawPort =
+        process.env.APP_PORT;
+
+    const port = rawPort === undefined
+        ? defaults.port
+        : Number(rawPort);
+
+    if (!Number.isFinite(port)) {
+        throw new ConfigurationError(
+            "Application port must be a valid number.",
+            { name: "APP_PORT", value: rawPort }
+        );
+    }
 
     if (
         !Number.isInteger(port) ||
@@ -66,8 +69,7 @@ export function getApplicationConfiguration():
             defaults.version,
 
         environment:
-            process.env.NODE_ENV ??
-            defaults.environment,
+            environment,
 
         host:
             process.env.APP_HOST ??
