@@ -2,23 +2,66 @@ import type {
     FeaturesConfiguration
 } from "./types/configuration.js";
 
+import {
+    ConfigurationError
+} from "./errors/ConfigurationError.js";
+
+function parseFeatureFlag(
+    value: string | undefined,
+    defaultValue: boolean,
+    name: string
+): boolean {
+    if (value === undefined) {
+        return defaultValue;
+    }
+
+    switch (value.trim().toLowerCase()) {
+        case "true":
+            return true;
+
+        case "false":
+            return false;
+
+        default:
+            throw new ConfigurationError(
+                `${name} must be either true or false.`,
+                { name, value }
+            );
+    }
+}
+
 export function getFeaturesConfiguration():
     FeaturesConfiguration {
 
     return {
-        aiHub:
-            process.env.FEATURE_AI_HUB !== "false",
+        aiHub: parseFeatureFlag(
+            process.env.FEATURE_AI_HUB,
+            true,
+            "FEATURE_AI_HUB"
+        ),
 
-        workflow:
-            process.env.FEATURE_WORKFLOW !== "false",
+        workflow: parseFeatureFlag(
+            process.env.FEATURE_WORKFLOW,
+            true,
+            "FEATURE_WORKFLOW"
+        ),
 
-        compliance:
-            process.env.FEATURE_COMPLIANCE !== "false",
+        compliance: parseFeatureFlag(
+            process.env.FEATURE_COMPLIANCE,
+            true,
+            "FEATURE_COMPLIANCE"
+        ),
 
-        analytics:
-            process.env.FEATURE_ANALYTICS !== "false",
+        analytics: parseFeatureFlag(
+            process.env.FEATURE_ANALYTICS,
+            true,
+            "FEATURE_ANALYTICS"
+        ),
 
-        security:
-            process.env.FEATURE_SECURITY !== "false"
+        security: parseFeatureFlag(
+            process.env.FEATURE_SECURITY,
+            true,
+            "FEATURE_SECURITY"
+        )
     };
 }
