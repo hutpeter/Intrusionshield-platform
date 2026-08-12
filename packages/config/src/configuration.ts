@@ -25,13 +25,30 @@ import {
 let configuration:
     Configuration | undefined;
 
+function deepFreeze<T>(value: T): T {
+    if (
+        value !== null &&
+        typeof value === "object"
+    ) {
+        for (const child of Object.values(
+            value as Record<string, unknown>
+        )) {
+            deepFreeze(child);
+        }
+
+        Object.freeze(value);
+    }
+
+    return value;
+}
+
 /**
  * Builds the complete IntrusionShield configuration.
  */
 function buildConfiguration(): Configuration {
     loadEnvironment();
 
-    return {
+    return deepFreeze({
         application:
             getApplicationConfiguration(),
 
@@ -43,14 +60,14 @@ function buildConfiguration(): Configuration {
 
         features:
             getFeaturesConfiguration()
-    };
+    });
 }
 
 /**
  * Returns the complete IntrusionShield configuration.
  *
- * Configuration is initialized lazily and cached for the
- * lifetime of the process.
+ * Configuration is initialized lazily, deeply frozen, and cached
+ * for the lifetime of the process.
  */
 export function getConfiguration():
     Configuration {
@@ -66,8 +83,7 @@ export function getConfiguration():
 /**
  * Clears the cached configuration.
  *
- * Primarily useful for tests and controlled runtime
- * reconfiguration.
+ * Primarily useful for tests and controlled runtime reconfiguration.
  */
 export function resetConfiguration(): void {
     configuration = undefined;
