@@ -26,13 +26,17 @@ export default {
 
     collectCoverageFrom: [
         "src/**/*.ts",
-        "!src/**/*.test.ts"
+        "!src/**/*.test.ts",
+        "!src/types/**",
+        "!src/index.ts"
     ],
 
-    coveragePathIgnorePatterns: [
-        "/node_modules/",
-        "/dist/",
-        "/src/**/__tests__/"
+    coverageDirectory: "coverage",
+
+    coverageReporters: [
+        "text",
+        "text-summary",
+        "lcov"
     ],
 
     moduleFileExtensions: [
@@ -42,5 +46,9 @@ export default {
         "mjs"
     ],
 
-    clearMocks: true
+    clearMocks: true,
+
+    restoreMocks: true,
+
+    verbose: true
 };
