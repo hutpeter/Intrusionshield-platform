@@ -24,18 +24,32 @@ import {
 
 function parseBoolean(
     value: string | undefined,
-    defaultValue: boolean
+    defaultValue: boolean,
+    name: string
 ): boolean {
     if (value === undefined) {
         return defaultValue;
     }
 
-    return value.toLowerCase() === "true";
+    switch (value.trim().toLowerCase()) {
+        case "true":
+            return true;
+
+        case "false":
+            return false;
+
+        default:
+            throw new ConfigurationError(
+                `${name} must be either true or false.`,
+                { name, value }
+            );
+    }
 }
 
 function parseNumber(
     value: string | undefined,
-    defaultValue: number
+    defaultValue: number,
+    name: string
 ): number {
     if (value === undefined) {
         return defaultValue;
@@ -44,7 +58,10 @@ function parseNumber(
     const parsed = Number(value);
 
     if (!Number.isFinite(parsed)) {
-        return defaultValue;
+        throw new ConfigurationError(
+            `${name} must be a valid number.`,
+            { name, value }
+        );
     }
 
     return parsed;
@@ -91,7 +108,8 @@ export function getDatabaseConfiguration():
 
     const port = parseNumber(
         process.env.DB_PORT,
-        defaults.port
+        defaults.port,
+        "DB_PORT"
     );
 
     if (
@@ -107,12 +125,14 @@ export function getDatabaseConfiguration():
 
     const poolMax = parseNumber(
         process.env.DB_POOL_MAX,
-        defaults.pool.max
+        defaults.pool.max,
+        "DB_POOL_MAX"
     );
 
     const poolMin = parseNumber(
         process.env.DB_POOL_MIN,
-        defaults.pool.min
+        defaults.pool.min,
+        "DB_POOL_MIN"
     );
 
     if (
@@ -151,14 +171,16 @@ export function getDatabaseConfiguration():
 
         encrypt: parseBoolean(
             process.env.DB_ENCRYPT,
-            defaults.encrypt
+            defaults.encrypt,
+            "DB_ENCRYPT"
         ),
 
         trustServerCertificate:
             parseBoolean(
                 process.env.DB_TRUST_SERVER_CERTIFICATE ??
                 process.env.DB_TRUST_CERT,
-                defaults.trustServerCertificate
+                defaults.trustServerCertificate,
+                "DB_TRUST_SERVER_CERTIFICATE"
             ),
 
         pool: {
