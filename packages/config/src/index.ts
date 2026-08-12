@@ -38,5 +38,13 @@ export {
 } from "./configuration.js";
 
 export {
+    sanitizeConfiguration
+} from "./sanitization.js";
+
+export type {
+    SanitizedConfiguration
+} from "./sanitization.js";
+
+export {
     ConfigurationError
 } from "./errors/ConfigurationError.js";
