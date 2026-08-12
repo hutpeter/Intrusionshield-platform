@@ -7,6 +7,10 @@ import type { IDatabaseProvider } from "./IDatabaseProvider.js";
 
 /**
  * SQL Server implementation of the database provider contract.
+ *
+ * The provider owns its connection pool rather than using mssql's
+ * process-global pool. This allows multiple DatabaseManager/provider
+ * instances to safely target different databases or tenants.
  */
 export class SqlServerProvider implements IDatabaseProvider {
     private pool: sql.ConnectionPool | null = null;
@@ -25,7 +29,7 @@ export class SqlServerProvider implements IDatabaseProvider {
             return;
         }
 
-        this.pool = await sql.connect({
+        const pool = new sql.ConnectionPool({
             server: this.options.server,
             port: this.options.port,
             database: this.options.database,
@@ -37,6 +41,14 @@ export class SqlServerProvider implements IDatabaseProvider {
                     this.options.trustServerCertificate
             }
         });
+
+        try {
+            await pool.connect();
+            this.pool = pool;
+        } catch (error) {
+            await pool.close().catch(() => undefined);
+            throw error;
+        }
     }
 
     /**
@@ -53,9 +65,11 @@ export class SqlServerProvider implements IDatabaseProvider {
             this.transaction = null;
         }
 
-        if (this.pool) {
-            await this.pool.close();
-            this.pool = null;
+        const pool = this.pool;
+        this.pool = null;
+
+        if (pool) {
+            await pool.close();
         }
     }
 
@@ -128,7 +142,12 @@ export class SqlServerProvider implements IDatabaseProvider {
 
         this.transaction = new sql.Transaction(this.pool);
 
-        await this.transaction.begin();
+        try {
+            await this.transaction.begin();
+        } catch (error) {
+            this.transaction = null;
+            throw error;
+        }
     }
 
     /**
@@ -143,9 +162,11 @@ export class SqlServerProvider implements IDatabaseProvider {
 
         const transaction = this.transaction;
 
-        this.transaction = null;
-
-        await transaction.commit();
+        try {
+            await transaction.commit();
+        } finally {
+            this.transaction = null;
+        }
     }
 
     /**
@@ -158,9 +179,11 @@ export class SqlServerProvider implements IDatabaseProvider {
 
         const transaction = this.transaction;
 
-        this.transaction = null;
-
-        await transaction.rollback();
+        try {
+            await transaction.rollback();
+        } finally {
+            this.transaction = null;
+        }
     }
 
     /**
