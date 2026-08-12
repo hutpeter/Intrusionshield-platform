@@ -1,0 +1,31 @@
+{
+  "name": "@intrusionshield/common",
+  "version": "1.0.0",
+  "description": "IntrusionShield Enterprise Platform - Common Library",
+  "author": "IntrusionShield",
+  "license": "Proprietary",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rimraf dist",
+    "lint": "eslint src --ext .ts",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "coverage": "jest --coverage"
+  },
+  "dependencies": {
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.0.0",
+    "jest": "^30.0.0",
+    "ts-jest": "^29.4.0",
+    "typescript": "^5.9.0",
+    "rimraf": "^6.0.0"
+  }
+}

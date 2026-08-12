@@ -1,0 +1,21 @@
+{
+  "name": "@intrusionshield/events",
+  "version": "1.0.0",
+  "description": "Event contracts and event infrastructure for the IntrusionShield Platform.",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rimraf dist",
+    "test": "jest"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.0.0",
+    "jest": "^30.0.0",
+    "rimraf": "^6.0.0",
+    "typescript": "^5.9.0"
+  }
+}

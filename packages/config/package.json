@@ -1,0 +1,58 @@
+{
+"name": "@intrusionshield/config",
+"version": "1.0.0",
+"description": "Centralized configuration management for the IntrusionShield Platform.",
+"license": "MIT",
+"author": "IntrusionShield",
+"homepage": "https://github.com/intrusionshield/platform",
+"repository": {
+"type": "git",
+"url": "https://github.com/intrusionshield/platform.git",
+"directory": "packages/config"
+},
+"keywords": [
+"configuration",
+"config",
+"environment",
+"dotenv",
+"security",
+"enterprise",
+"intrusionshield"
+],
+"type": "module",
+"main": "./dist/index.js",
+"types": "./dist/index.d.ts",
+"exports": {
+"import": "./dist/index.js",
+"types": "./dist/index.d.ts"
+},
+"files": [
+"dist",
+"README.md",
+"CHANGELOG.md",
+"LICENSE"
+],
+"engines": {
+"node": ">=24.0.0"
+},
+"scripts": {
+  "build": "tsc -p tsconfig.json",
+  "clean": "node clean.js",
+  "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --coverage",
+  "test:watch": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --watch",
+  "lint": "eslint .",
+  "lint:fix": "eslint . --fix"
+},
+"devDependencies": {
+"@jest/globals": "^30.0.0",
+"@types/jest": "^30.0.0",
+"@types/node": "^24.13.3",
+"eslint": "^9.34.0",
+"jest": "^30.0.5",
+"ts-jest": "^29.4.12",
+"typescript": "^5.9.3"
+},
+"publishConfig": {
+"access": "restricted"
+}
+}

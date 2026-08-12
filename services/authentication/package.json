@@ -1,0 +1,20 @@
+{
+  "name": "@intrusionshield/authentication-service",
+  "version": "1.0.0",
+  "description": "Authentication service for the IntrusionShield Platform.",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rimraf dist",
+    "start": "node dist/index.js",
+    "dev": "node --watch dist/index.js"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "rimraf": "^6.0.0",
+    "typescript": "^5.9.0"
+  }
+}

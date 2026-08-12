@@ -1,0 +1,7 @@
+packages:
+  - "packages/*"
+  - "services/*"
+  - "!packages/archive/**"
+allowBuilds:
+  esbuild: false
+  unrs-resolver: true
