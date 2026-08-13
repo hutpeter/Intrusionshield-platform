@@ -1,24 +1,28 @@
-import { ErrorCode } from "./ErrorCode";
-import { ErrorSeverity } from "./ErrorSeverity";
+import { ErrorCode } from "./ErrorCode.js";
+import { ErrorSeverity } from "./ErrorSeverity.js";
 
 export class ApplicationError extends Error {
+    public readonly code: ErrorCode;
 
-    constructor(
+    public readonly severity: ErrorSeverity;
 
-        public readonly code: ErrorCode,
+    public readonly metadata?: Readonly<Record<string, unknown>>;
 
+    public constructor(
+        code: ErrorCode,
         message: string,
-
-        public readonly severity: ErrorSeverity = ErrorSeverity.Error,
-
-        public readonly metadata?: Record<string, unknown>
-
+        severity: ErrorSeverity = ErrorSeverity.Error,
+        metadata?: Record<string, unknown>
     ) {
-
         super(message);
 
-        this.name = this.constructor.name;
+        this.name = new.target.name;
+        this.code = code;
+        this.severity = severity;
+        this.metadata = metadata
+            ? Object.freeze({ ...metadata })
+            : undefined;
 
+        Object.setPrototypeOf(this, new.target.prototype);
     }
-
 }
