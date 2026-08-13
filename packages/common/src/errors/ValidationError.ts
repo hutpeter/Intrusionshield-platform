@@ -4,8 +4,8 @@ import { ErrorSeverity } from "./ErrorSeverity.js";
 
 export class ValidationError extends ApplicationError {
     public constructor(
-        code: ErrorCode = ErrorCode.VALIDATION_ERROR,
         message: string,
+        code: ErrorCode = ErrorCode.VALIDATION_ERROR,
         metadata?: Record<string, unknown>
     ) {
         super(
