@@ -1,6 +1,4 @@
- /**
-  * Application configuration.
-  */
+/** Application configuration. */
 export interface ApplicationConfiguration {
     name: string;
     version: string;
@@ -9,17 +7,13 @@ export interface ApplicationConfiguration {
     port: number;
 }
 
-/**
- * Database connection pool configuration.
- */
+/** Database connection pool configuration. */
 export interface DatabasePoolConfiguration {
     max: number;
     min: number;
 }
 
-/**
- * Database configuration.
- */
+/** Database configuration. */
 export interface DatabaseConfiguration {
     server: string;
     port: number;
@@ -32,28 +26,16 @@ export interface DatabaseConfiguration {
     pool: DatabasePoolConfiguration;
 }
 
-/**
- * Logging configuration.
- */
+/** Logging configuration. */
 export interface LoggingConfiguration {
     level: string;
     format: string;
     console: boolean;
-
-    file: {
-        enabled: boolean;
-        path: string;
-    };
-
-    audit: {
-        enabled: boolean;
-        retentionDays: number;
-    };
+    file: { enabled: boolean; path: string };
+    audit: { enabled: boolean; retentionDays: number };
 }
 
-/**
- * Platform feature configuration.
- */
+/** Platform feature configuration. */
 export interface FeaturesConfiguration {
     aiHub: boolean;
     workflow: boolean;
@@ -62,12 +44,47 @@ export interface FeaturesConfiguration {
     security: boolean;
 }
 
-/**
- * Complete IntrusionShield configuration.
- */
+/** AI Hub configuration. */
+export interface AiConfiguration {
+    enabled: boolean;
+    defaultProvider: string;
+    routerMode: "automatic" | "user" | "hybrid";
+    timeoutMs: number;
+    maxRetries: number;
+}
+
+/** Workflow engine configuration. */
+export interface WorkflowConfiguration {
+    enabled: boolean;
+    executionMode: "synchronous" | "asynchronous" | "hybrid";
+    defaultTimeoutMs: number;
+    maxConcurrentExecutions: number;
+}
+
+/** Compliance framework engine configuration. */
+export interface ComplianceConfiguration {
+    enabled: boolean;
+    defaultFramework: string;
+    assessmentMode: "manual" | "automated" | "hybrid";
+    evidenceRetentionDays: number;
+}
+
+/** Security analytics configuration. */
+export interface AnalyticsConfiguration {
+    enabled: boolean;
+    ingestionBatchSize: number;
+    retentionDays: number;
+    anomalyDetection: boolean;
+}
+
+/** Complete IntrusionShield configuration. */
 export interface Configuration {
     application: ApplicationConfiguration;
     database: DatabaseConfiguration;
     logging: LoggingConfiguration;
     features: FeaturesConfiguration;
+    ai: AiConfiguration;
+    workflow: WorkflowConfiguration;
+    compliance: ComplianceConfiguration;
+    analytics: AnalyticsConfiguration;
 }
