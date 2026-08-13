@@ -1,31 +1,18 @@
-import { ApplicationError } from "./ApplicationError";
-import { ErrorCode } from "./ErrorCode";
-import { ErrorSeverity } from "./ErrorSeverity";
+import { ApplicationError } from "./ApplicationError.js";
+import { ErrorCode } from "./ErrorCode.js";
+import { ErrorSeverity } from "./ErrorSeverity.js";
 
 export class ValidationError extends ApplicationError {
-
-    constructor(
-
-        code: ErrorCode,
-
+    public constructor(
+        code: ErrorCode = ErrorCode.VALIDATION_ERROR,
         message: string,
-
         metadata?: Record<string, unknown>
-
     ) {
-
         super(
-
             code,
-
             message,
-
             ErrorSeverity.Warning,
-
             metadata
-
         );
-
     }
-
 }
