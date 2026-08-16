@@ -1,15 +1,15 @@
-import type {
-  AuthorizationDecision,
-  AuthorizationRequest,
-  Permission
-} from "../types/authorization.js";
+import type { AuthorizationDecision, AuthorizationRequest, Permission } from "../types/authorization.js";
+import type { PolicyService } from "./policy-service.js";
 
 export interface AuthorizationRepository {
   getPermissions(identityId: string, tenantId: string): Promise<readonly Permission[]>;
 }
 
 export class AuthorizationService {
-  public constructor(private readonly repository: AuthorizationRepository) {}
+  public constructor(
+    private readonly repository: AuthorizationRepository,
+    private readonly policyService?: PolicyService
+  ) {}
 
   public async authorize(request: AuthorizationRequest): Promise<AuthorizationDecision> {
     const permissions = await this.repository.getPermissions(
@@ -17,15 +17,18 @@ export class AuthorizationService {
       request.context.tenantId
     );
 
-    const allowed = permissions.some(
-      (permission) =>
-        permission.resource === request.resource &&
-        permission.action === request.action
+    const permittedByRbac = permissions.some(
+      (permission) => permission.resource === request.resource && permission.action === request.action
     );
 
-    return {
-      allowed,
-      reason: allowed ? "Permission granted" : "Permission denied"
-    };
+    if (!permittedByRbac) {
+      return { allowed: false, reason: "RBAC permission denied" };
+    }
+
+    if (this.policyService) {
+      return this.policyService.evaluate(request);
+    }
+
+    return { allowed: true, reason: "RBAC permission granted" };
   }
 }
