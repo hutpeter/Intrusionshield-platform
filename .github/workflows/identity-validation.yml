@@ -1,0 +1,45 @@
+name: Identity Validation
+
+on:
+  push:
+    paths:
+      - "packages/identity/**"
+      - "packages/core/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/identity-validation.yml"
+  pull_request:
+    paths:
+      - "packages/identity/**"
+      - "packages/core/**"
+      - "pnpm-lock.yaml"
+      - ".github/workflows/identity-validation.yml"
+
+jobs:
+  identity:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build Core
+        run: pnpm --filter @intrusionshield/core build
+
+      - name: Build Identity
+        run: pnpm --filter @intrusionshield/identity build
+
+      - name: Test Identity
+        run: pnpm --filter @intrusionshield/identity test -- --runInBand
