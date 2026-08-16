@@ -12,6 +12,7 @@ export * from "./types/events.js";
 export * from "./types/abac.js";
 export * from "./repositories/SqlIdentityRepository.js";
 export * from "./repositories/SqlAuthorizationRepository.js";
+export * from "./repositories/SqlRbacRepository.js";
 export * from "./services/identity-service.js";
 export * from "./services/authorization-service.js";
 export * from "./services/rbac-service.js";
