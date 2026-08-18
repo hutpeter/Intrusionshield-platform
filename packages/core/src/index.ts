@@ -5,3 +5,5 @@
 export * from "./constants/index.js";
 export * from "./database/index.js";
 export * from "./events/index.js";
+export * from "./capabilities/index.js";
+export * from "./entitlements/index.js";
