@@ -20,6 +20,7 @@ export interface AuthorizationContext {
 }
 
 export interface AuthorizationRequest {
+  readonly capabilityId?: string;
   readonly resource: string;
   readonly action: string;
   readonly context: AuthorizationContext;
