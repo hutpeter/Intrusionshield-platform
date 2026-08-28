@@ -4,6 +4,7 @@ import type { CapabilityDefinition } from "./types.js";
 export const CORE_CAPABILITIES: readonly CapabilityDefinition[] = [
   { id: "core.authentication", name: "Authentication", description: "Platform authentication capabilities.", version: "1.0.0", category: "security", dependencies: [], status: "ACTIVE" },
   { id: "core.authorization", name: "Authorization", description: "RBAC, ABAC, and authorization policy capabilities.", version: "1.0.0", category: "security", dependencies: ["core.authentication"], status: "ACTIVE" },
+  { id: "core.i18n", name: "Internationalization", description: "Localization, translation, locale, timezone, and international formatting capabilities.", version: "1.0.0", category: "platform", dependencies: ["core.authorization"], status: "ACTIVE" },
   { id: "core.ai", name: "AI Hub", description: "AI routing and AI service orchestration capabilities.", version: "1.0.0", category: "intelligence", dependencies: ["core.authorization"], status: "ACTIVE" },
   { id: "core.compliance", name: "Compliance", description: "Compliance framework and contextual compliance capabilities.", version: "1.0.0", category: "governance", dependencies: ["core.authorization"], status: "ACTIVE" },
   { id: "core.data-classification", name: "Data Classification", description: "Data discovery, classification, labeling, and classification policy capabilities.", version: "1.0.0", category: "governance", dependencies: ["core.authorization"], status: "ACTIVE" },
