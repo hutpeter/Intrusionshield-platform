@@ -23,7 +23,9 @@
     "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config=jest.config.mjs --coverage",
     "test:watch": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config=jest.config.mjs --watch"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@intrusionshield/core": "workspace:*"
+  },
   "devDependencies": {
     "@jest/globals": "^30.4.0",
     "@types/node": "^24.13.3",
