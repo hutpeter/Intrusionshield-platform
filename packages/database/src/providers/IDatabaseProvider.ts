@@ -8,57 +8,33 @@ import type { SqlResult } from "../SqlResult.js";
  * database abstraction into a specific database technology.
  */
 export interface IDatabaseProvider {
-    /**
-     * Establishes a database connection.
-     */
+    /** Establishes a database connection. */
     connect(): Promise<void>;
 
-    /**
-     * Closes the database connection.
-     */
+    /** Closes the database connection. */
     disconnect(): Promise<void>;
 
-    /**
-     * Executes a SQL query and returns the resulting rows.
-     *
-     * @param sql SQL statement to execute.
-     * @param parameters Optional query parameters.
-     */
+    /** Executes a SQL query and returns the resulting rows. */
     query<T>(
         sql: string,
         parameters?: SqlParameter[]
     ): Promise<SqlResult<T>>;
 
-    /**
-     * Executes a SQL command that does not return a result set.
-     *
-     * @param sql SQL statement to execute.
-     * @param parameters Optional query parameters.
-     */
+    /** Executes a SQL command that does not return a result set. */
     execute(
         sql: string,
         parameters?: SqlParameter[]
     ): Promise<number>;
 
-    /**
-     * Begins a database transaction.
-     */
+    /** Begins a database transaction. */
     beginTransaction(): Promise<void>;
 
-    /**
-     * Commits the current database transaction.
-     */
+    /** Commits the current database transaction. */
     commitTransaction(): Promise<void>;
 
-    /**
-     * Rolls back the current database transaction.
-     */
+    /** Rolls back the current database transaction. */
     rollbackTransaction(): Promise<void>;
 
-    /**
-     * Indicates whether the provider currently has an
-     * active database connection.
-     */
+    /** Indicates whether the provider currently has an active connection. */
     isConnected(): boolean;
 }
-```
