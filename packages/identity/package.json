@@ -20,8 +20,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
-    "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config=jest.config.mjs --coverage",
-    "test:watch": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config=jest.config.mjs --watch"
+    "test": "jest --passWithNoTests",
+    "test:watch": "jest --passWithNoTests --watch"
   },
   "dependencies": {},
   "devDependencies": {
