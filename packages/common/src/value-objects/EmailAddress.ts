@@ -1,45 +1,19 @@
-import { Guard } from "../guards";
+import { ValueObject } from "./ValueObject.js";
 
-import { ValidationError } from "../errors";
-
-import { ErrorCode } from "../errors";
-
-import { ValueObject } from "./ValueObject";
-
-export class EmailAddress
-    extends ValueObject<string> {
-
-    private constructor(
-        email: string
-    ) {
-
+export class EmailAddress extends ValueObject<string> {
+    private constructor(email: string) {
         super(email);
-
     }
 
-    public static create(
-        value: string
-    ): EmailAddress {
-
-        const validation =
-            Guard
-                .against(value, "email")
-                .notNull()
-                .notEmpty()
-                .maxLength(254)
-                .email()
-                .validate();
-
-        if (!validation.succeeded) {
-
-            throw validation.error!;
-
+    public static create(value: string): EmailAddress {
+        const email = value?.trim().toLowerCase();
+        if (!email || email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            throw new Error("Invalid email address.");
         }
-
-        return new EmailAddress(
-            value.toLowerCase()
-        );
-
+        return new EmailAddress(email);
     }
 
+    public toString(): string {
+        return this.value;
+    }
 }
