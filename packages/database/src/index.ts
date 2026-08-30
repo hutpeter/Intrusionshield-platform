@@ -1,3 +1,4 @@
+export * from "./DatabaseManager.js";
 export * from "./DatabaseOptions.js";
 export * from "./SqlParameter.js";
 export * from "./SqlResult.js";
