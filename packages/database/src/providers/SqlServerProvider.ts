@@ -1,4 +1,3 @@
-
 import sql from "mssql";
 
 import type { DatabaseOptions } from "../DatabaseOptions.js";
@@ -18,9 +17,7 @@ export class SqlServerProvider implements IDatabaseProvider {
         private readonly options: DatabaseOptions
     ) {}
 
-    /**
-     * Establishes the SQL Server connection.
-     */
+    /** Establishes the SQL Server connection. */
     public async connect(): Promise<void> {
         if (this.pool?.connected) {
             return;
@@ -34,15 +31,12 @@ export class SqlServerProvider implements IDatabaseProvider {
             password: this.options.password,
             options: {
                 encrypt: this.options.encrypt,
-                trustServerCertificate:
-                    this.options.trustServerCertificate
+                trustServerCertificate: this.options.trustServerCertificate
             }
         });
     }
 
-    /**
-     * Closes the SQL Server connection.
-     */
+    /** Closes the SQL Server connection. */
     public async disconnect(): Promise<void> {
         if (this.transaction) {
             try {
@@ -60,9 +54,7 @@ export class SqlServerProvider implements IDatabaseProvider {
         }
     }
 
-    /**
-     * Executes a parameterized SQL query.
-     */
+    /** Executes a parameterized SQL query. */
     public async query<T>(
         sqlText: string,
         parameters: SqlParameter[] = []
@@ -75,17 +67,14 @@ export class SqlServerProvider implements IDatabaseProvider {
 
         return {
             rows: result.recordset ?? [],
-            rowCount:
-                result.rowsAffected?.reduce(
-                    (total, count) => total + count,
-                    0
-                ) ?? 0
+            rowCount: result.rowsAffected?.reduce(
+                (total, count) => total + count,
+                0
+            ) ?? 0
         };
     }
 
-    /**
-     * Executes a parameterized SQL command.
-     */
+    /** Executes a parameterized SQL command. */
     public async execute(
         sqlText: string,
         parameters: SqlParameter[] = []
@@ -96,17 +85,13 @@ export class SqlServerProvider implements IDatabaseProvider {
 
         const result = await request.query(sqlText);
 
-        return (
-            result.rowsAffected?.reduce(
-                (total, count) => total + count,
-                0
-            ) ?? 0
-        );
+        return result.rowsAffected?.reduce(
+            (total, count) => total + count,
+            0
+        ) ?? 0;
     }
 
-    /**
-     * Begins a transaction.
-     */
+    /** Begins a transaction. */
     public async beginTransaction(): Promise<void> {
         if (!this.pool) {
             throw new Error(
@@ -115,19 +100,14 @@ export class SqlServerProvider implements IDatabaseProvider {
         }
 
         if (this.transaction) {
-            throw new Error(
-                "A database transaction is already active."
-            );
+            throw new Error("A database transaction is already active.");
         }
 
         this.transaction = new sql.Transaction(this.pool);
-
         await this.transaction.begin();
     }
 
-    /**
-     * Commits the current transaction.
-     */
+    /** Commits the current transaction. */
     public async commitTransaction(): Promise<void> {
         if (!this.transaction) {
             throw new Error(
@@ -136,73 +116,54 @@ export class SqlServerProvider implements IDatabaseProvider {
         }
 
         const transaction = this.transaction;
-
         this.transaction = null;
-
         await transaction.commit();
     }
 
-    /**
-     * Rolls back the current transaction.
-     */
+    /** Rolls back the current transaction. */
     public async rollbackTransaction(): Promise<void> {
         if (!this.transaction) {
             return;
         }
 
         const transaction = this.transaction;
-
         this.transaction = null;
-
         await transaction.rollback();
     }
 
-    /**
-     * Indicates whether the provider is connected.
-     */
+    /** Indicates whether the provider is connected. */
     public isConnected(): boolean {
         return this.pool?.connected === true;
     }
 
-    /**
-     * Creates a SQL request using either the active transaction
-     * or the connection pool.
-     */
+    /** Creates a request using the active transaction or connection pool. */
     private async createRequest(): Promise<sql.Request> {
         if (this.transaction) {
             return new sql.Request(this.transaction);
         }
 
         if (!this.pool) {
-            throw new Error(
-                "Database connection has not been established."
-            );
+            throw new Error("Database connection has not been established.");
         }
 
         return this.pool.request();
     }
 
-    /**
-     * Binds platform SQL parameters to a SQL Server request.
-     */
+    /** Binds platform SQL parameters to a SQL Server request. */
     private bindParameters(
         request: sql.Request,
         parameters: SqlParameter[]
     ): void {
         for (const parameter of parameters) {
-            if (parameter.type) {
+            if (parameter.type !== undefined) {
                 request.input(
                     parameter.name,
-                    parameter.type,
+                    parameter.type as Parameters<sql.Request["input"]>[1],
                     parameter.value
                 );
             } else {
-                request.input(
-                    parameter.name,
-                    parameter.value
-                );
+                request.input(parameter.name, parameter.value);
             }
         }
     }
 }
-```
