@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it } from "@jest/globals";
 import { DefaultI18nService } from "./service.js";
 
 describe("DefaultI18nService", () => {
