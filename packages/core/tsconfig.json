@@ -1,7 +1,7 @@
 {
-"extends": "../../tsconfig.json",
+  "extends": "../../tsconfig.json",
 
-"compilerOptions": {
+  "compilerOptions": {
     "rootDir": "./src",
     "outDir": "./dist",
 
@@ -15,17 +15,18 @@
     "isolatedModules": true,
 
     "types": [
-        "node"
+      "node"
     ]
-},
+  },
 
-"include": [
+  "include": [
     "src/**/*.ts"
-],
+  ],
 
-"exclude": [
+  "exclude": [
     "node_modules",
-    "dist"
-]
-
+    "dist",
+    "src/**/*.test.ts",
+    "src/**/__tests__/**"
+  ]
 }
