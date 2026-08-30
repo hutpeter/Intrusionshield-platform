@@ -13,9 +13,9 @@
     "build": "tsc -p tsconfig.json",
     "clean": "rimraf dist",
     "lint": "eslint src --ext .ts",
-    "test": "jest",
-    "test:watch": "jest --watch",
-    "coverage": "jest --coverage"
+    "test": "jest --passWithNoTests",
+    "test:watch": "jest --passWithNoTests --watch",
+    "coverage": "jest --passWithNoTests --coverage"
   },
   "dependencies": {
     "uuid": "^11.1.0"
