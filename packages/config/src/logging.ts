@@ -83,7 +83,18 @@ function parseNonNegativeInteger(
         return defaultValue;
     }
 
-    const parsed = Number(value);
+    const normalized =
+        value.trim();
+
+    if (normalized === "") {
+        throw new ConfigurationError(
+            `${name} must be a non-negative integer.`,
+            { name, value }
+        );
+    }
+
+    const parsed =
+        Number(normalized);
 
     if (!Number.isInteger(parsed) || parsed < 0) {
         throw new ConfigurationError(
@@ -99,7 +110,9 @@ function parseLogLevel(
     value: string | undefined,
     defaultValue: string
 ): string {
-    const level = value?.trim().toLowerCase() ?? defaultValue;
+    const level =
+        value?.trim().toLowerCase() ??
+        defaultValue;
 
     if (!VALID_LOG_LEVELS.has(level)) {
         throw new ConfigurationError(
@@ -119,7 +132,9 @@ function parseLogFormat(
     value: string | undefined,
     defaultValue: string
 ): string {
-    const format = value?.trim().toLowerCase() ?? defaultValue;
+    const format =
+        value?.trim().toLowerCase() ??
+        defaultValue;
 
     if (!VALID_LOG_FORMATS.has(format)) {
         throw new ConfigurationError(
@@ -138,7 +153,8 @@ function parseLogFormat(
 export function getLoggingConfiguration():
     LoggingConfiguration {
 
-    const defaults = getDefaults();
+    const defaults =
+        getDefaults();
 
     return {
         level: parseLogLevel(

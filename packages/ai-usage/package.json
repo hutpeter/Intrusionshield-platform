@@ -1,0 +1,33 @@
+{
+  "name": "@intrusionshield/ai-usage",
+  "version": "1.0.0",
+  "description": "AI Usage, Governance, Metering, Performance and Audit services for the IntrusionShield Platform.",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rimraf dist",
+    "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config=jest.config.mjs --passWithNoTests"
+  },
+  "dependencies": {
+    "@intrusionshield/contracts": "workspace:*",
+    "@intrusionshield/repositories": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.0.0",
+    "jest": "^30.4.0",
+    "rimraf": "^6.0.0",
+    "ts-jest": "^29.4.12",
+    "typescript": "^5.9.3"
+  }
+}
+

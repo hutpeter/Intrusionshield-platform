@@ -8,7 +8,10 @@ const config: Config = {
     collectCoverageFrom: [
         "src/**/*.ts",
         "!src/index.ts"
-    ]
+    ],
+    moduleNameMapper: {
+        "^(\\.{1,2}/.*)\\.js$": "$1"
+    }
 };
 
 export default config;

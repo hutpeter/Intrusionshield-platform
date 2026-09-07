@@ -2,29 +2,14 @@
  * @intrusionshield/dependency-injection
  */
 
-
 export {
-
     Container
-
-}
-from "./container";
-
-
+} from "./container.js";
 
 export {
-
     TOKENS
-
-}
-from "./tokens";
-
-
+} from "./tokens.js";
 
 export {
-
     registerServices
-
-}
-
-from "./serviceRegistry";
+} from "./serviceRegistry.js";

@@ -67,10 +67,11 @@ export class SqlServerProvider implements IDatabaseProvider {
 
         return {
             rows: result.recordset ?? [],
-            rowCount: result.rowsAffected?.reduce(
-                (total, count) => total + count,
-                0
-            ) ?? 0
+            rowCount:
+                result.rowsAffected?.reduce(
+                    (total, count) => total + count,
+                    0
+                ) ?? 0
         };
     }
 
@@ -85,10 +86,12 @@ export class SqlServerProvider implements IDatabaseProvider {
 
         const result = await request.query(sqlText);
 
-        return result.rowsAffected?.reduce(
-            (total, count) => total + count,
-            0
-        ) ?? 0;
+        return (
+            result.rowsAffected?.reduce(
+                (total, count) => total + count,
+                0
+            ) ?? 0
+        );
     }
 
     /** Begins a transaction. */
@@ -103,8 +106,11 @@ export class SqlServerProvider implements IDatabaseProvider {
             throw new Error("A database transaction is already active.");
         }
 
-        this.transaction = new sql.Transaction(this.pool);
-        await this.transaction.begin();
+        const transaction = new sql.Transaction(this.pool);
+
+        await transaction.begin();
+
+        this.transaction = transaction;
     }
 
     /** Commits the current transaction. */
@@ -116,8 +122,10 @@ export class SqlServerProvider implements IDatabaseProvider {
         }
 
         const transaction = this.transaction;
-        this.transaction = null;
+
         await transaction.commit();
+
+        this.transaction = null;
     }
 
     /** Rolls back the current transaction. */
@@ -127,16 +135,16 @@ export class SqlServerProvider implements IDatabaseProvider {
         }
 
         const transaction = this.transaction;
-        this.transaction = null;
+
         await transaction.rollback();
+
+        this.transaction = null;
     }
 
-    /** Indicates whether the provider is connected. */
     public isConnected(): boolean {
         return this.pool?.connected === true;
     }
 
-    /** Creates a request using the active transaction or connection pool. */
     private async createRequest(): Promise<sql.Request> {
         if (this.transaction) {
             return new sql.Request(this.transaction);
@@ -149,7 +157,6 @@ export class SqlServerProvider implements IDatabaseProvider {
         return this.pool.request();
     }
 
-    /** Binds platform SQL parameters to a SQL Server request. */
     private bindParameters(
         request: sql.Request,
         parameters: SqlParameter[]

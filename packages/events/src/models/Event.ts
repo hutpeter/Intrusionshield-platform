@@ -1,3 +1,4 @@
+
 import { randomUUID } from "node:crypto";
 
 import type { IEvent } from "../abstractions/IEvent.js";
@@ -19,7 +20,7 @@ export class Event<TPayload = unknown> implements IEvent<TPayload> {
         metadata: EventMetadata = {}
     ) {
         this.id = randomUUID();
-        this.version = "1.0";
+        this.version = metadata.version ?? "1.0";
         this.timestamp = new Date();
         this.tenantId = metadata.tenantId;
         this.userId = metadata.userId;
@@ -28,3 +29,4 @@ export class Event<TPayload = unknown> implements IEvent<TPayload> {
         this.source = metadata.source;
     }
 }
+

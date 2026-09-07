@@ -1,11 +1,6 @@
 export enum ErrorSeverity {
-
-    Information,
-
-    Warning,
-
-    Error,
-
-    Critical
-
+    Information = "information",
+    Warning = "warning",
+    Error = "error",
+    Critical = "critical"
 }

@@ -1,35 +1,27 @@
 {
+  "extends": "../../tsconfig.json",
   "compilerOptions": {
-
-    "target": "ES2024",
-
+    "target": "ES2022",
     "module": "NodeNext",
-
     "moduleResolution": "NodeNext",
-
     "declaration": true,
-
+    "declarationMap": true,
+    "sourceMap": true,
     "outDir": "./dist",
-
     "rootDir": "./src",
-
     "strict": true,
-
     "noImplicitAny": true,
-
-    "noUnusedLocals": true,
-
-    "noUnusedParameters": true,
-
     "esModuleInterop": true,
-
     "forceConsistentCasingInFileNames": true,
-
-    "skipLibCheck": true
-
+    "skipLibCheck": true,
+    "isolatedModules": true
   },
-
-  "include": [
-    "src/**/*"
+  "include": ["src/**/*.ts"],
+  "exclude": [
+    "dist",
+    "node_modules",
+    "src/**/*.test.ts",
+    "src/**/*.spec.ts",
+    "src/**/__tests__/**"
   ]
 }

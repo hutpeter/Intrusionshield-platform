@@ -1,3 +1,4 @@
+
 /**
  * Public API for @intrusionshield/identity.
  *
@@ -8,6 +9,6 @@
 
 export * from "./types/identity.js";
 export * from "./types/authorization.js";
-export * from "./types/events.js";
 export * from "./services/identity-service.js";
 export * from "./services/authorization-service.js";
+

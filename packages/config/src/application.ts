@@ -37,15 +37,32 @@ export function getApplicationConfiguration():
     const rawPort =
         process.env.APP_PORT;
 
-    const port = rawPort === undefined
-        ? defaults.port
-        : Number(rawPort);
+    let port: number;
 
-    if (!Number.isFinite(port)) {
-        throw new ConfigurationError(
-            "Application port must be a valid number.",
-            { name: "APP_PORT", value: rawPort }
-        );
+    if (rawPort === undefined) {
+        port = defaults.port;
+    } else {
+        if (rawPort.trim() === "") {
+            throw new ConfigurationError(
+                "Application port must be a valid number.",
+                {
+                    name: "APP_PORT",
+                    value: rawPort
+                }
+            );
+        }
+
+        port = Number(rawPort);
+
+        if (!Number.isFinite(port)) {
+            throw new ConfigurationError(
+                "Application port must be a valid number.",
+                {
+                    name: "APP_PORT",
+                    value: rawPort
+                }
+            );
+        }
     }
 
     if (

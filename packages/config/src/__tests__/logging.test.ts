@@ -95,5 +95,12 @@ describe(
             expect(() => getLoggingConfiguration())
                 .toThrow(ConfigurationError);
         });
+
+        test("rejects empty audit retention", () => {
+            process.env.AUDIT_RETENTION_DAYS = "";
+
+            expect(() => getLoggingConfiguration())
+                .toThrow(ConfigurationError);
+        });
     }
 );

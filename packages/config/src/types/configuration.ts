@@ -1,10 +1,14 @@
- /**
-  * Application configuration.
-  */
+import type {
+    ConfigurationEnvironment
+} from "../environment.js";
+
+/**
+ * Application configuration.
+ */
 export interface ApplicationConfiguration {
     name: string;
     version: string;
-    environment: string;
+    environment: ConfigurationEnvironment;
     host: string;
     port: number;
 }

@@ -172,6 +172,40 @@ describe(
         );
 
         test(
+            "uses development defaults",
+            () => {
+                process.env.NODE_ENV =
+                    "development";
+
+                resetConfiguration();
+
+                const configuration =
+                    getConfiguration();
+
+                expect(
+                    configuration.application.environment
+                ).toBe("development");
+
+                expect(
+                    configuration.database
+                ).toEqual({
+                    server: "localhost",
+                    port: 1433,
+                    database: "intrusionshield",
+                    schema: "dbo",
+                    username: undefined,
+                    password: undefined,
+                    encrypt: false,
+                    trustServerCertificate: true,
+                    pool: {
+                        max: 10,
+                        min: 0
+                    }
+                });
+            }
+        );
+
+        test(
             "allows application environment overrides",
             () => {
                 process.env.APP_NAME =
@@ -318,6 +352,20 @@ describe(
         );
 
         test(
+            "rejects an invalid feature flag",
+            () => {
+                process.env.FEATURE_AI_HUB =
+                    "yes";
+
+                resetConfiguration();
+
+                expect(
+                    () => getConfiguration()
+                ).toThrow(ConfigurationError);
+            }
+        );
+
+        test(
             "allows logging configuration overrides",
             () => {
                 process.env.LOG_LEVEL =
@@ -421,10 +469,136 @@ describe(
         );
 
         test(
+            "rejects an empty application port",
+            () => {
+                process.env.APP_PORT =
+                    "";
+
+                resetConfiguration();
+
+                expect(
+                    () => getConfiguration()
+                ).toThrow(ConfigurationError);
+            }
+        );
+
+        test(
+            "rejects a non-numeric application port",
+            () => {
+                process.env.APP_PORT =
+                    "not-a-number";
+
+                resetConfiguration();
+
+                expect(
+                    () => getConfiguration()
+                ).toThrow(ConfigurationError);
+            }
+        );
+        
+        test(
+            "rejects a whitespace-only application port",
+            () => {
+                process.env.APP_PORT =
+                    "   ";
+
+                resetConfiguration();
+
+                expect(
+                    () => getConfiguration()
+                ).toThrow(ConfigurationError);
+            }
+        );
+
+        test(
+            "rejects an invalid database boolean",
+            () => {
+                process.env.DB_ENCRYPT =
+                    "yes";
+
+                resetConfiguration();
+
+                expect(
+                    () => getConfiguration()
+                ).toThrow(ConfigurationError);
+            }
+        );
+
+        test(
+            "rejects a non-numeric database port",
+            () => {
+                process.env.DB_PORT =
+                    "not-a-number";
+
+                resetConfiguration();
+
+                expect(
+                    () => getConfiguration()
+                ).toThrow(ConfigurationError);
+            }
+        );
+
+        test(
+            "rejects an empty database port",
+            () => {
+                process.env.DB_PORT =
+                    "";
+
+                resetConfiguration();
+
+                expect(
+                    () => getConfiguration()
+                ).toThrow(ConfigurationError);
+            }
+        );
+
+        test(
+            "rejects a whitespace-only database port",
+            () => {
+                process.env.DB_PORT =
+                    "   ";
+
+                resetConfiguration();
+
+                expect(
+                    () => getConfiguration()
+                ).toThrow(ConfigurationError);
+            }
+        );
+
+        test(
             "rejects an invalid database port",
             () => {
                 process.env.DB_PORT =
                     "70000";
+
+                resetConfiguration();
+
+                expect(
+                    () => getConfiguration()
+                ).toThrow(ConfigurationError);
+            }
+        );
+
+        test(
+            "rejects a non-numeric database pool maximum",
+            () => {
+                process.env.DB_POOL_MAX =
+                    "not-a-number";
+
+                resetConfiguration();
+
+                expect(
+                    () => getConfiguration()
+                ).toThrow(ConfigurationError);
+            }
+        );
+
+        test(
+            "rejects an empty database pool minimum",
+            () => {
+                process.env.DB_POOL_MIN =
+                    "";
 
                 resetConfiguration();
 

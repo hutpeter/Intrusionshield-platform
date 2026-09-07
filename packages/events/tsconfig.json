@@ -1,3 +1,4 @@
+
 {
   "extends": "../../tsconfig.json",
   "compilerOptions": {
@@ -19,6 +20,10 @@
   "exclude": [
     "node_modules",
     "dist",
+    "tests",
+    "src/**/*.test.ts",
+    "src/**/*.spec.ts",
     "src/**/__tests__/**"
   ]
 }
+

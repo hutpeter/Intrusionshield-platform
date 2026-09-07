@@ -7,205 +7,68 @@
  * - singleton lifecycle management
  */
 
-
 export interface Registration {
-
-    factory:
-        (container: Container) => unknown;
-
-
-    singleton:
-        boolean;
-
-
-    instance?:
-        unknown;
-
+    factory: (container: Container) => unknown;
+    singleton: boolean;
+    instance?: unknown;
+    initialized: boolean;
 }
 
-
-
-
 export class Container {
+    private readonly registry: Map<symbol, Registration>;
 
-
-    private registry:
-        Map<symbol, Registration>;
-
-
-
-    constructor() {
-
-        this.registry =
-            new Map();
-
+    public constructor() {
+        this.registry = new Map();
     }
 
-
-
-
-
-    register(
-
+    public register(
         token: symbol,
-
-        factory:
-            (container: Container) => unknown,
-
-        options:
-        {
+        factory: (container: Container) => unknown,
+        options: {
             singleton?: boolean;
-
         } = {}
-
     ): void {
-
-
-        if(this.registry.has(token)) {
-
-
+        if (this.registry.has(token)) {
             throw new Error(
-
-                `Dependency already registered: ${
-                    String(token.description)
-                }`
-
+                `Dependency already registered: ${String(token.description)}`
             );
-
         }
 
-
-
-
-        this.registry.set(
-
-            token,
-
-            {
-
-                factory,
-
-                singleton:
-                    options.singleton ?? true
-
-            }
-
-        );
-
-
+        this.registry.set(token, {
+            factory,
+            singleton: options.singleton ?? true,
+            initialized: false
+        });
     }
 
+    public resolve<T>(token: symbol): T {
+        const registration = this.registry.get(token);
 
-
-
-
-
-
-    resolve<T>(
-
-        token: symbol
-
-    ): T {
-
-
-        const registration =
-            this.registry.get(token);
-
-
-
-
-        if(!registration) {
-
-
+        if (registration === undefined) {
             throw new Error(
-
-                `Dependency not registered: ${
-                    String(token.description)
-                }`
-
+                `Dependency not registered: ${String(token.description)}`
             );
-
         }
 
-
-
-
-
-
-        if(
-            registration.singleton
-            &&
-            registration.instance
-        ) {
-
-
+        if (registration.singleton && registration.initialized) {
             return registration.instance as T;
-
         }
 
+        const instance = registration.factory(this);
 
-
-
-
-
-
-        const instance =
-            registration.factory(this);
-
-
-
-
-
-
-        if(registration.singleton) {
-
-
-            registration.instance =
-                instance;
-
-
+        if (registration.singleton) {
+            registration.instance = instance;
+            registration.initialized = true;
         }
-
-
-
-
-
 
         return instance as T;
-
     }
 
-
-
-
-
-
-
-    has(
-
-        token: symbol
-
-    ): boolean {
-
-
+    public has(token: symbol): boolean {
         return this.registry.has(token);
-
-
     }
 
-
-
-
-
-
-
-    clear(): void {
-
-
+    public clear(): void {
         this.registry.clear();
-
-
     }
-
-
 }

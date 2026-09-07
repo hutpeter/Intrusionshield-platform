@@ -1,3 +1,4 @@
+
 {
   "name": "@intrusionshield/identity",
   "version": "1.0.0",
@@ -20,8 +21,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "clean": "node -e \"require('node:fs').rmSync('dist', { recursive: true, force: true })\"",
-    "test": "jest --passWithNoTests",
-    "test:watch": "jest --passWithNoTests --watch"
+    "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config=jest.config.mjs --passWithNoTests",
+    "test:watch": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config=jest.config.mjs --passWithNoTests --watch"
   },
   "dependencies": {},
   "devDependencies": {
@@ -32,3 +33,4 @@
     "typescript": "^5.9.3"
   }
 }
+

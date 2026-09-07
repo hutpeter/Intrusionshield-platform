@@ -4,14 +4,22 @@
   "description": "API gateway service for the IntrusionShield Platform.",
   "private": true,
   "type": "module",
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "./dist/server.js",
+  "types": "./dist/server.d.ts",
   "scripts": {
     "clean": "rimraf dist",
-    "start": "node dist/index.js",
-    "dev": "node --watch dist/index.js"
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/server.js",
+    "dev": "node --watch dist/server.js"
+  },
+  "dependencies": {
+    "@intrusionshield/config": "workspace:*",
+    "@intrusionshield/database": "workspace:*",
+    "@intrusionshield/di": "workspace:*",
+    "express": "^5.1.0"
   },
   "devDependencies": {
+    "@types/express": "^5.0.3",
     "@types/node": "^24.0.0",
     "rimraf": "^6.0.0",
     "typescript": "^5.9.0"
