@@ -3,6 +3,7 @@ import type { Request, Response } from "express";
 import type { Person } from "@intrusionshield/his";
 import { PersonService } from "../application/PersonService.js";
 import { getTenantId } from "../middleware/tenantContext.js";
+import { bodyAsRecord, dateFromBody } from "./requestHelpers.js";
 
 export class PersonController {
   public constructor(private readonly service: PersonService) {}
@@ -15,27 +16,33 @@ export class PersonController {
 
   public create = async (req: Request, res: Response): Promise<void> => {
     const now = new Date();
-    const body = req.body as Partial<Person>;
+    const body = bodyAsRecord(req.body);
     const person: Person = {
-      ...(body as Person), id: randomUUID(), tenantId: getTenantId(res),
-      createdAt: now, updatedAt: now, version: 1,
-      identifiers: body.identifiers ?? [], addresses: body.addresses ?? [],
-      sex: body.sex ?? "UNKNOWN", status: body.status ?? "ACTIVE"
+      id: randomUUID(), tenantId: getTenantId(res), createdAt: now, updatedAt: now, version: 1,
+      firstName: String(body.firstName ?? ""), middleName: body.middleName as string | undefined,
+      lastName: String(body.lastName ?? ""), preferredName: body.preferredName as string | undefined,
+      dateOfBirth: body.dateOfBirth ? dateFromBody(body.dateOfBirth, now) : undefined,
+      sex: (body.sex ?? "UNKNOWN") as Person["sex"], gender: body.gender as string | undefined,
+      identifiers: Array.isArray(body.identifiers) ? body.identifiers as Person["identifiers"] : [],
+      contactInformation: body.contactInformation as Person["contactInformation"],
+      addresses: Array.isArray(body.addresses) ? body.addresses as Person["addresses"] : [],
+      status: (body.status ?? "ACTIVE") as Person["status"]
     };
-    const created = await this.service.create(person);
-    res.status(201).json(created);
+    res.status(201).json(await this.service.create(person));
   };
 
   public update = async (req: Request, res: Response): Promise<void> => {
-    const existing = await this.service.get(req.params.id, getTenantId(res));
+    const tenantId = getTenantId(res);
+    const existing = await this.service.get(req.params.id, tenantId);
     if (!existing) { res.status(404).json({ error: "Person not found" }); return; }
-    const body = req.body as Partial<Person>;
+    const body = bodyAsRecord(req.body);
     const person: Person = {
-      ...existing, ...body, id: existing.id, tenantId: existing.tenantId,
-      updatedAt: new Date(), version: body.version ?? existing.version,
-      identifiers: body.identifiers ?? existing.identifiers,
-      addresses: body.addresses ?? existing.addresses
-    };
+      ...existing, ...body, id: existing.id, tenantId, updatedAt: new Date(),
+      version: typeof body.version === "number" ? body.version : existing.version,
+      dateOfBirth: body.dateOfBirth !== undefined ? dateFromBody(body.dateOfBirth, existing.dateOfBirth ?? new Date()) : existing.dateOfBirth,
+      identifiers: Array.isArray(body.identifiers) ? body.identifiers as Person["identifiers"] : existing.identifiers,
+      addresses: Array.isArray(body.addresses) ? body.addresses as Person["addresses"] : existing.addresses
+    } as Person;
     res.status(200).json(await this.service.update(person));
   };
 }
