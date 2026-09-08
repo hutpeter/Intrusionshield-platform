@@ -3,6 +3,7 @@ import type { Request, Response } from "express";
 import type { Facility } from "@intrusionshield/his";
 import { FacilityService } from "../application/FacilityService.js";
 import { getTenantId } from "../middleware/tenantContext.js";
+import { bodyAsRecord } from "./requestHelpers.js";
 
 export class FacilityController {
   public constructor(private readonly service: FacilityService) {}
@@ -15,11 +16,12 @@ export class FacilityController {
 
   public create = async (req: Request, res: Response): Promise<void> => {
     const now = new Date();
-    const body = req.body as Partial<Facility>;
+    const body = bodyAsRecord(req.body);
     const facility: Facility = {
-      ...(body as Facility), id: randomUUID(), tenantId: getTenantId(res),
+      ...(body as Partial<Facility>), id: randomUUID(), tenantId: getTenantId(res),
       createdAt: now, updatedAt: now, version: 1,
-      status: body.status ?? "ACTIVE"
+      facilityType: (body.facilityType ?? "OTHER") as Facility["facilityType"],
+      code: String(body.code ?? ""), name: String(body.name ?? ""), status: (body.status ?? "ACTIVE") as Facility["status"]
     };
     res.status(201).json(await this.service.create(facility));
   };
@@ -28,11 +30,11 @@ export class FacilityController {
     const tenantId = getTenantId(res);
     const existing = await this.service.get(req.params.id, tenantId);
     if (!existing) { res.status(404).json({ error: "Facility not found" }); return; }
-    const body = req.body as Partial<Facility>;
+    const body = bodyAsRecord(req.body);
     const facility: Facility = {
-      ...existing, ...body, id: existing.id, tenantId,
-      updatedAt: new Date(), version: body.version ?? existing.version
-    };
+      ...existing, ...body, id: existing.id, tenantId, updatedAt: new Date(),
+      version: typeof body.version === "number" ? body.version : existing.version
+    } as Facility;
     res.status(200).json(await this.service.update(facility));
   };
 }
