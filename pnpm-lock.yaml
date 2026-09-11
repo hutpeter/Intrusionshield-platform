@@ -202,6 +202,15 @@ importers:
         specifier: ^5.9.0
         version: 5.9.3
 
+  packages/his:
+    devDependencies:
+      '@types/node':
+        specifier: ^24.13.3
+        version: 24.13.3
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
   packages/identity:
     devDependencies:
       '@jest/globals':
@@ -392,6 +401,46 @@ importers:
       rimraf:
         specifier: ^6.0.0
         version: 6.1.3
+      typescript:
+        specifier: ^5.9.0
+        version: 5.9.3
+
+  services/his:
+    dependencies:
+      '@intrusionshield/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+      '@intrusionshield/his':
+        specifier: workspace:*
+        version: link:../../packages/his
+      express:
+        specifier: ^5.1.0
+        version: 5.2.1(supports-color@8.1.1)
+    devDependencies:
+      '@intrusionshield/config':
+        specifier: workspace:*
+        version: link:../../packages/config
+      '@jest/globals':
+        specifier: ^30.4.1
+        version: 30.4.1(supports-color@8.1.1)
+      '@types/express':
+        specifier: ^5.0.3
+        version: 5.0.6
+      '@types/jest':
+        specifier: ^30.0.0
+        version: 30.0.0
+      '@types/node':
+        specifier: ^24.0.0
+        version: 24.13.3
+      jest:
+        specifier: ^30.4.1
+        version: 30.4.2(@types/node@24.13.3)(supports-color@8.1.1)
+      rimraf:
+        specifier: ^6.0.0
+        version: 6.1.3
+      ts-jest:
+        specifier: ^29.4.12
+        version: 29.4.12(@babel/core@7.29.7(supports-color@8.1.1))(@jest/transform@30.4.1(supports-color@8.1.1))(@jest/types@30.4.1)(babel-jest@30.4.1(@babel/core@7.29.7(supports-color@8.1.1))(supports-color@8.1.1))(esbuild@0.28.1)(jest-util@30.4.1)(jest@30.4.2(@types/node@24.13.3)(supports-color@8.1.1))(typescript@5.9.3)
       typescript:
         specifier: ^5.9.0
         version: 5.9.3

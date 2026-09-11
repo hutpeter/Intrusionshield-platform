@@ -11,6 +11,18 @@
     "isolatedModules": true,
     "types": ["node"]
   },
-  "include": ["src/**/*.ts"],
-  "exclude": ["node_modules", "dist"]
+  "include": [
+    "src/app.ts",
+    "src/index.ts",
+    "src/application/**/*.ts",
+    "src/controllers/**/*.ts",
+    "src/infrastructure/**/*.ts",
+    "src/middleware/**/*.ts",
+    "src/routes/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/__tests__"
+  ]
 }

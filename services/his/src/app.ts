@@ -1,7 +1,8 @@
 import express from "express";
+import type { Express } from "express";
 import { createHisRouter, type HisServices } from "./routes/index.js";
 
-export function createApp(services?: HisServices) {
+export function createApp(services?: HisServices): Express {
   const app = express();
   app.disable("x-powered-by");
   app.use(express.json({ limit: "1mb" }));

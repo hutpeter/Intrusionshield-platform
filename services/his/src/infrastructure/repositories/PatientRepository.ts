@@ -1,5 +1,6 @@
 import type { IDatabaseProvider } from "@intrusionshield/database";
 import type { Patient } from "@intrusionshield/his";
+import { normalizeUuid } from "../normalizeUuid.js";
 
 export interface PatientRepository {
   findById(id: string, tenantId: string): Promise<Patient | null>;
@@ -10,56 +11,183 @@ export interface PatientRepository {
 export class SqlPatientRepository implements PatientRepository {
   public constructor(private readonly database: IDatabaseProvider) {}
 
-  public async findById(id: string, tenantId: string): Promise<Patient | null> {
+  public async findById(
+    id: string,
+    tenantId: string
+  ): Promise<Patient | null> {
     const result = await this.database.query<PatientRow>(
-      `SELECT id, tenant_id AS tenantId, person_id AS personId,
-              medical_record_number AS medicalRecordNumber, patient_number AS patientNumber,
-              status, registration_date AS registrationDate, deceased_date AS deceasedDate,
-              preferred_language AS preferredLanguage, created_at AS createdAt,
-              updated_at AS updatedAt, version
+      `SELECT
+          id,
+          tenant_id AS tenantId,
+          person_id AS personId,
+          medical_record_number AS medicalRecordNumber,
+          patient_number AS patientNumber,
+          status,
+          registration_date AS registrationDate,
+          deceased_date AS deceasedDate,
+          preferred_language AS preferredLanguage,
+          preferred_contact_method AS preferredContactMethod,
+          created_at AS createdAt,
+          updated_at AS updatedAt,
+          version
        FROM HIS.Patients
-       WHERE id = @id AND tenant_id = @tenantId`,
-      [{ name: "id", value: id }, { name: "tenantId", value: tenantId }]
+       WHERE id = @id
+         AND tenant_id = @tenantId`,
+      [
+        { name: "id", value: id },
+        { name: "tenantId", value: tenantId }
+      ]
     );
+
     const row = result.rows[0];
-    if (!row) return null;
 
-    const contacts = await this.database.query<{ personId: string }>(
-      `SELECT person_id AS personId FROM HIS.PatientEmergencyContacts
-       WHERE patient_id = @id AND tenant_id = @tenantId ORDER BY person_id`,
-      [{ name: "id", value: id }, { name: "tenantId", value: tenantId }]
-    );
+    if (!row) {
+      return null;
+    }
 
-    return { ...row, emergencyContactPersonIds: contacts.rows.map((item) => item.personId) };
+    const contacts =
+      await this.database.query<PatientEmergencyContactRow>(
+        `SELECT
+            person_id AS personId
+         FROM HIS.PatientEmergencyContacts
+         WHERE patient_id = @id
+           AND tenant_id = @tenantId
+         ORDER BY person_id`,
+        [
+          { name: "id", value: id },
+          { name: "tenantId", value: tenantId }
+        ]
+      );
+
+    const communicationPreferences =
+      row.preferredLanguage !== null ||
+      row.preferredContactMethod !== null
+        ? {
+            preferredLanguage: row.preferredLanguage ?? undefined,
+            preferredContactMethod:
+              row.preferredContactMethod ?? undefined
+          }
+        : undefined;
+
+    return {
+      id: normalizeUuid(row.id),
+      tenantId: normalizeUuid(row.tenantId),
+      personId: normalizeUuid(row.personId),
+      medicalRecordNumber: row.medicalRecordNumber,
+      patientNumber: row.patientNumber,
+      status: row.status,
+      registrationDate: row.registrationDate,
+      deceasedDate: row.deceasedDate ?? undefined,
+      communicationPreferences,
+      emergencyContactPersonIds: contacts.rows.map((contact) =>
+        normalizeUuid(contact.personId)
+      ),
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+      version: row.version
+    };
   }
 
   public async create(patient: Patient): Promise<Patient> {
     await this.database.beginTransaction();
+
     try {
       await this.database.execute(
         `INSERT INTO HIS.Patients
-         (id, tenant_id, person_id, medical_record_number, patient_number, status,
-          registration_date, deceased_date, preferred_language, created_at, updated_at, version)
-         VALUES (@id, @tenantId, @personId, @medicalRecordNumber, @patientNumber, @status,
-                 @registrationDate, @deceasedDate, @preferredLanguage, @createdAt, @updatedAt, @version)`,
+         (
+           id,
+           tenant_id,
+           person_id,
+           medical_record_number,
+           patient_number,
+           status,
+           registration_date,
+           deceased_date,
+           preferred_language,
+           preferred_contact_method,
+           created_at,
+           updated_at,
+           version
+         )
+         VALUES
+         (
+           @id,
+           @tenantId,
+           @personId,
+           @medicalRecordNumber,
+           @patientNumber,
+           @status,
+           @registrationDate,
+           @deceasedDate,
+           @preferredLanguage,
+           @preferredContactMethod,
+           @createdAt,
+           @updatedAt,
+           @version
+         )`,
         [
-          { name: "id", value: patient.id }, { name: "tenantId", value: patient.tenantId },
-          { name: "personId", value: patient.personId }, { name: "medicalRecordNumber", value: patient.medicalRecordNumber },
-          { name: "patientNumber", value: patient.patientNumber }, { name: "status", value: patient.status },
-          { name: "registrationDate", value: patient.registrationDate }, { name: "deceasedDate", value: patient.deceasedDate ?? null },
-          { name: "preferredLanguage", value: patient.preferredLanguage ?? null },
-          { name: "createdAt", value: patient.createdAt }, { name: "updatedAt", value: patient.updatedAt },
+          { name: "id", value: patient.id },
+          { name: "tenantId", value: patient.tenantId },
+          { name: "personId", value: patient.personId },
+          {
+            name: "medicalRecordNumber",
+            value: patient.medicalRecordNumber
+          },
+          {
+            name: "patientNumber",
+            value: patient.patientNumber
+          },
+          { name: "status", value: patient.status },
+          {
+            name: "registrationDate",
+            value: patient.registrationDate
+          },
+          {
+            name: "deceasedDate",
+            value: patient.deceasedDate ?? null
+          },
+          {
+            name: "preferredLanguage",
+            value:
+              patient.communicationPreferences?.preferredLanguage ??
+              null
+          },
+          {
+            name: "preferredContactMethod",
+            value:
+              patient.communicationPreferences
+                ?.preferredContactMethod ?? null
+          },
+          { name: "createdAt", value: patient.createdAt },
+          { name: "updatedAt", value: patient.updatedAt },
           { name: "version", value: patient.version }
         ]
       );
+
       for (const personId of patient.emergencyContactPersonIds) {
         await this.database.execute(
-          `INSERT INTO HIS.PatientEmergencyContacts (tenant_id, patient_id, person_id)
-           VALUES (@tenantId, @patientId, @personId)`,
-          [{ name: "tenantId", value: patient.tenantId }, { name: "patientId", value: patient.id }, { name: "personId", value: personId }]
+          `INSERT INTO HIS.PatientEmergencyContacts
+           (
+             tenant_id,
+             patient_id,
+             person_id
+           )
+           VALUES
+           (
+             @tenantId,
+             @patientId,
+             @personId
+           )`,
+          [
+            { name: "tenantId", value: patient.tenantId },
+            { name: "patientId", value: patient.id },
+            { name: "personId", value: personId }
+          ]
         );
       }
+
       await this.database.commitTransaction();
+
       return patient;
     } catch (error) {
       await this.database.rollbackTransaction();
@@ -69,29 +197,135 @@ export class SqlPatientRepository implements PatientRepository {
 
   public async update(patient: Patient): Promise<Patient> {
     const nextVersion = patient.version + 1;
-    const rows = await this.database.execute(
-      `UPDATE HIS.Patients
-       SET person_id = @personId, medical_record_number = @medicalRecordNumber,
-           patient_number = @patientNumber, status = @status, registration_date = @registrationDate,
-           deceased_date = @deceasedDate, preferred_language = @preferredLanguage,
-           updated_at = @updatedAt, version = @nextVersion
-       WHERE id = @id AND tenant_id = @tenantId AND version = @version`,
-      [
-        { name: "personId", value: patient.personId }, { name: "medicalRecordNumber", value: patient.medicalRecordNumber },
-        { name: "patientNumber", value: patient.patientNumber }, { name: "status", value: patient.status },
-        { name: "registrationDate", value: patient.registrationDate }, { name: "deceasedDate", value: patient.deceasedDate ?? null },
-        { name: "preferredLanguage", value: patient.preferredLanguage ?? null }, { name: "updatedAt", value: patient.updatedAt },
-        { name: "nextVersion", value: nextVersion }, { name: "id", value: patient.id },
-        { name: "tenantId", value: patient.tenantId }, { name: "version", value: patient.version }
-      ]
-    );
-    if (rows !== 1) throw new Error("Patient was modified or does not exist");
-    return { ...patient, version: nextVersion };
+
+    await this.database.beginTransaction();
+
+    try {
+      const rows = await this.database.execute(
+        `UPDATE HIS.Patients
+         SET
+           person_id = @personId,
+           medical_record_number = @medicalRecordNumber,
+           patient_number = @patientNumber,
+           status = @status,
+           registration_date = @registrationDate,
+           deceased_date = @deceasedDate,
+           preferred_language = @preferredLanguage,
+           preferred_contact_method = @preferredContactMethod,
+           updated_at = @updatedAt,
+           version = @nextVersion
+         WHERE id = @id
+           AND tenant_id = @tenantId
+           AND version = @version`,
+        [
+          { name: "personId", value: patient.personId },
+          {
+            name: "medicalRecordNumber",
+            value: patient.medicalRecordNumber
+          },
+          {
+            name: "patientNumber",
+            value: patient.patientNumber
+          },
+          { name: "status", value: patient.status },
+          {
+            name: "registrationDate",
+            value: patient.registrationDate
+          },
+          {
+            name: "deceasedDate",
+            value: patient.deceasedDate ?? null
+          },
+          {
+            name: "preferredLanguage",
+            value:
+              patient.communicationPreferences?.preferredLanguage ??
+              null
+          },
+          {
+            name: "preferredContactMethod",
+            value:
+              patient.communicationPreferences
+                ?.preferredContactMethod ?? null
+          },
+          { name: "updatedAt", value: patient.updatedAt },
+          { name: "nextVersion", value: nextVersion },
+          { name: "id", value: patient.id },
+          { name: "tenantId", value: patient.tenantId },
+          { name: "version", value: patient.version }
+        ]
+      );
+
+      if (rows !== 1) {
+        throw new Error("Patient was modified or does not exist");
+      }
+
+      await this.database.execute(
+        `DELETE FROM HIS.PatientEmergencyContacts
+         WHERE patient_id = @patientId
+           AND tenant_id = @tenantId`,
+        [
+          { name: "patientId", value: patient.id },
+          { name: "tenantId", value: patient.tenantId }
+        ]
+      );
+
+      for (const personId of patient.emergencyContactPersonIds) {
+        await this.database.execute(
+          `INSERT INTO HIS.PatientEmergencyContacts
+           (
+             tenant_id,
+             patient_id,
+             person_id
+           )
+           VALUES
+           (
+             @tenantId,
+             @patientId,
+             @personId
+           )`,
+          [
+            { name: "tenantId", value: patient.tenantId },
+            { name: "patientId", value: patient.id },
+            { name: "personId", value: personId }
+          ]
+        );
+      }
+
+      await this.database.commitTransaction();
+
+      return {
+        ...patient,
+        version: nextVersion
+      };
+    } catch (error) {
+      await this.database.rollbackTransaction();
+      throw error;
+    }
   }
 }
 
 interface PatientRow {
-  id: string; tenantId: string; personId: string; medicalRecordNumber: string;
-  patientNumber: string; status: Patient["status"]; registrationDate: Date;
-  deceasedDate?: Date; preferredLanguage?: string; createdAt: Date; updatedAt: Date; version: number;
+  id: string;
+  tenantId: string;
+  personId: string;
+  medicalRecordNumber: string;
+  patientNumber: string;
+  status: Patient["status"];
+  registrationDate: Date;
+  deceasedDate: Date | null;
+  preferredLanguage: string | null;
+  preferredContactMethod:
+    | "EMAIL"
+    | "PHONE"
+    | "SMS"
+    | "MAIL"
+    | null;
+  createdAt: Date;
+  updatedAt: Date;
+  version: number;
+}
+
+interface PatientEmergencyContactRow {
+  personId: string;
 }
