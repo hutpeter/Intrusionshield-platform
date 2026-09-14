@@ -1,6 +1,6 @@
+
 import type { IDatabaseProvider } from "@intrusionshield/database";
 import type { Patient } from "@intrusionshield/his";
-import { normalizeUuid } from "../normalizeUuid.js";
 
 export interface PatientRepository {
   findById(id: string, tenantId: string): Promise<Patient | null>;
@@ -70,17 +70,17 @@ export class SqlPatientRepository implements PatientRepository {
         : undefined;
 
     return {
-      id: normalizeUuid(row.id),
-      tenantId: normalizeUuid(row.tenantId),
-      personId: normalizeUuid(row.personId),
+      id: row.id,
+      tenantId: row.tenantId,
+      personId: row.personId,
       medicalRecordNumber: row.medicalRecordNumber,
       patientNumber: row.patientNumber,
       status: row.status,
       registrationDate: row.registrationDate,
       deceasedDate: row.deceasedDate ?? undefined,
       communicationPreferences,
-      emergencyContactPersonIds: contacts.rows.map((contact) =>
-        normalizeUuid(contact.personId)
+      emergencyContactPersonIds: contacts.rows.map(
+        (contact) => contact.personId
       ),
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
@@ -329,3 +329,4 @@ interface PatientRow {
 interface PatientEmergencyContactRow {
   personId: string;
 }
+

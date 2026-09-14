@@ -1,7 +1,24 @@
-import { Router } from "express";
-import { FacilityController, PatientController, PersonController, PractitionerController } from "../controllers/index.js";
-import { tenantContext } from "../middleware/tenantContext.js";
-import type { FacilityService, PatientService, PersonService, PractitionerService } from "../application/index.js";
+import {
+  Router
+} from "express";
+
+import {
+  FacilityController,
+  PatientController,
+  PersonController,
+  PractitionerController
+} from "../controllers/index.js";
+
+import {
+  tenantContext
+} from "../middleware/tenantContext.js";
+
+import type {
+  FacilityService,
+  PatientService,
+  PersonService,
+  PractitionerService
+} from "../application/index.js";
 
 export interface HisServices {
   personService: PersonService;
@@ -10,30 +27,120 @@ export interface HisServices {
   facilityService: FacilityService;
 }
 
-export function createHisRouter(services: HisServices): Router {
-  const router = Router();
-  const person = new PersonController(services.personService);
-  const patient = new PatientController(services.patientService);
-  const practitioner = new PractitionerController(services.practitionerService);
-  const facility = new FacilityController(services.facilityService);
+export function createHisRouter(
+  services: HisServices
+): Router {
+  const router =
+    Router();
 
-  router.use(tenantContext);
+  const person =
+    new PersonController(
+      services.personService
+    );
 
-  router.get("/persons/:id", person.get);
-  router.post("/persons", person.create);
-  router.put("/persons/:id", person.update);
+  const patient =
+    new PatientController(
+      services.patientService
+    );
 
-  router.get("/patients/:id", patient.get);
-  router.post("/patients", patient.create);
-  router.put("/patients/:id", patient.update);
+  const practitioner =
+    new PractitionerController(
+      services.practitionerService
+    );
 
-  router.get("/practitioners/:id", practitioner.get);
-  router.post("/practitioners", practitioner.create);
-  router.put("/practitioners/:id", practitioner.update);
+  const facility =
+    new FacilityController(
+      services.facilityService
+    );
 
-  router.get("/facilities/:id", facility.get);
-  router.post("/facilities", facility.create);
-  router.put("/facilities/:id", facility.update);
+  router.use(
+    tenantContext
+  );
+
+  router.get(
+    "/persons/summary",
+    person.summary
+  );
+
+  router.get(
+    "/persons",
+    person.list
+  );
+
+  router.get(
+    "/facilities/options",
+    person.facilityOptions
+  );
+
+  router.get(
+    "/persons/:id/facility-affiliations",
+    person.listFacilityAffiliations
+  );
+
+  router.put(
+    "/persons/:id/facility-affiliations",
+    person.replaceFacilityAffiliations
+  );
+
+  router.get(
+    "/persons/:id",
+    person.get
+  );
+
+  router.post(
+    "/persons",
+    person.create
+  );
+
+  router.put(
+    "/persons/:id",
+    person.update
+  );
+
+  router.get(
+    "/patients/:id",
+    patient.get
+  );
+
+  router.post(
+    "/patients",
+    patient.create
+  );
+
+  router.put(
+    "/patients/:id",
+    patient.update
+  );
+
+  router.get(
+    "/practitioners/:id",
+    practitioner.get
+  );
+
+  router.post(
+    "/practitioners",
+    practitioner.create
+  );
+
+  router.put(
+    "/practitioners/:id",
+    practitioner.update
+  );
+
+  router.get(
+    "/facilities/:id",
+    facility.get
+  );
+
+  router.post(
+    "/facilities",
+    facility.create
+  );
+
+  router.put(
+    "/facilities/:id",
+    facility.update
+  );
 
   return router;
 }

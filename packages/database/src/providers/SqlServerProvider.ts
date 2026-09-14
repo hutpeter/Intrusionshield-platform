@@ -3,10 +3,16 @@ import sql from "mssql";
 import type { DatabaseOptions } from "../DatabaseOptions.js";
 import type { SqlParameter } from "../SqlParameter.js";
 import type { SqlResult } from "../SqlResult.js";
+import { normalizeDatabaseValue } from "../Uuid.js";
 import type { IDatabaseProvider } from "./IDatabaseProvider.js";
 
 /**
  * SQL Server implementation of the database provider contract.
+ *
+ * SQL Server uniqueidentifier values may be returned using uppercase
+ * hexadecimal characters. The database provider is the platform database
+ * boundary, so all query results are normalized here before they enter
+ * repositories or application code.
  */
 export class SqlServerProvider implements IDatabaseProvider {
     private pool: sql.ConnectionPool | null = null;
@@ -31,7 +37,8 @@ export class SqlServerProvider implements IDatabaseProvider {
             password: this.options.password,
             options: {
                 encrypt: this.options.encrypt,
-                trustServerCertificate: this.options.trustServerCertificate
+                trustServerCertificate:
+                    this.options.trustServerCertificate
             }
         });
     }
@@ -54,7 +61,13 @@ export class SqlServerProvider implements IDatabaseProvider {
         }
     }
 
-    /** Executes a parameterized SQL query. */
+    /**
+     * Executes a parameterized SQL query.
+     *
+     * Query results are normalized at the database boundary so UUID values
+     * returned by SQL Server use the platform's canonical lowercase
+     * representation before being exposed to repositories and services.
+     */
     public async query<T>(
         sqlText: string,
         parameters: SqlParameter[] = []
@@ -65,8 +78,12 @@ export class SqlServerProvider implements IDatabaseProvider {
 
         const result = await request.query<T>(sqlText);
 
+        const rows = normalizeDatabaseValue(
+            result.recordset ?? []
+        );
+
         return {
-            rows: result.recordset ?? [],
+            rows,
             rowCount:
                 result.rowsAffected?.reduce(
                     (total, count) => total + count,
@@ -103,7 +120,9 @@ export class SqlServerProvider implements IDatabaseProvider {
         }
 
         if (this.transaction) {
-            throw new Error("A database transaction is already active.");
+            throw new Error(
+                "A database transaction is already active."
+            );
         }
 
         const transaction = new sql.Transaction(this.pool);
@@ -151,7 +170,9 @@ export class SqlServerProvider implements IDatabaseProvider {
         }
 
         if (!this.pool) {
-            throw new Error("Database connection has not been established.");
+            throw new Error(
+                "Database connection has not been established."
+            );
         }
 
         return this.pool.request();
@@ -165,11 +186,16 @@ export class SqlServerProvider implements IDatabaseProvider {
             if (parameter.type !== undefined) {
                 request.input(
                     parameter.name,
-                    parameter.type as Parameters<sql.Request["input"]>[1],
+                    parameter.type as Parameters<
+                        sql.Request["input"]
+                    >[1],
                     parameter.value
                 );
             } else {
-                request.input(parameter.name, parameter.value);
+                request.input(
+                    parameter.name,
+                    parameter.value
+                );
             }
         }
     }
