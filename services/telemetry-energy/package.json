@@ -1,0 +1,29 @@
+{
+  "name": "@intrusionshield/telemetry-energy-service",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config=jest.config.mjs --runInBand",
+    "test:integration": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config=jest.config.mjs --runInBand telemetry-energy.integration.test.ts"
+  },
+  "dependencies": {
+    "@intrusionshield/config": "workspace:*",
+    "@intrusionshield/database": "workspace:*",
+    "@intrusionshield/telemetry": "workspace:*",
+    "express": "^5.1.0"
+  },
+  "devDependencies": {
+    "@jest/globals": "^30.2.0",
+    "@types/express": "^5.0.3",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^24.13.3",
+    "jest": "^30.2.0",
+    "ts-jest": "^29.4.5",
+    "typescript": "^5.9.3"
+  }
+}
