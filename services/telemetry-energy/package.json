@@ -9,11 +9,12 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "test": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config=jest.config.mjs --runInBand",
-    "test:integration": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config=jest.config.mjs --runInBand telemetry-energy.integration.test.ts"
+    "test:integration": "node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config=jest.config.mjs --runInBand telemetry-energy.integration.test.ts energy-flow.integration.test.ts performance.integration.test.ts"
   },
   "dependencies": {
     "@intrusionshield/config": "workspace:*",
     "@intrusionshield/database": "workspace:*",
+    "@intrusionshield/energy": "workspace:*",
     "@intrusionshield/telemetry": "workspace:*",
     "express": "^5.1.0"
   },

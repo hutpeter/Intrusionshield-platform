@@ -1,4 +1,4 @@
-﻿import express, {
+import express, {
     type Express,
     type Response
 } from "express";
@@ -13,6 +13,40 @@ import type {
     MeasurementDataType,
     TelemetryQuality
 } from "@intrusionshield/telemetry";
+
+import type {
+    EnergyFlowDirection
+} from "@intrusionshield/energy";
+
+import type {
+    AlarmOperator,
+    AlarmSeverity
+} from "@intrusionshield/energy";
+
+import {
+    SqlAlarmRuleRepository
+} from "./infrastructure/repositories/AlarmRuleRepository.js";
+
+import {
+    SqlAlarmEventRepository
+} from "./infrastructure/repositories/AlarmEventRepository.js";
+
+import {
+    SqlPerformanceMetricRepository
+} from "./infrastructure/repositories/PerformanceMetricRepository.js";
+
+import {
+    AlarmEvaluator
+} from "./application/AlarmEvaluator.js";
+
+import {
+    PerformanceEngine
+} from "./application/PerformanceEngine.js";
+
+import {
+    SiteEventStream
+} from "./application/SiteEventStream.js";
+
 
 import {
     SqlAssetRepository
@@ -33,6 +67,10 @@ import {
 import {
     SqlTelemetryRepository
 } from "./infrastructure/repositories/TelemetryRepository.js";
+
+import {
+    SqlEnergyFlowRepository
+} from "./infrastructure/repositories/EnergyFlowRepository.js";
 
 import {
     requireTenantId,
@@ -62,6 +100,33 @@ export function createApp(
     const readings =
         new SqlTelemetryRepository(database);
 
+    const energyFlows =
+        new SqlEnergyFlowRepository(database);
+
+    const alarmRules =
+        new SqlAlarmRuleRepository(database);
+
+    const alarmEvents =
+        new SqlAlarmEventRepository(database);
+
+    const performanceMetrics =
+        new SqlPerformanceMetricRepository(database);
+
+    const performanceEngine =
+        new PerformanceEngine(
+            database,
+            performanceMetrics
+        );
+
+    const alarmEvaluator =
+        new AlarmEvaluator(
+            alarmRules,
+            alarmEvents
+        );
+
+    const liveStream =
+        new SiteEventStream();
+
     app.use(
         express.json({
             limit: "1mb"
@@ -82,6 +147,40 @@ export function createApp(
     app.use(
         "/api/v1/telemetry",
         tenantContext
+    );
+
+    app.use(
+        "/api/v1/energy",
+        tenantContext
+    );
+
+    app.get(
+        "/api/v1/telemetry/sites/:siteId/stream",
+        (
+            request: TenantRequest,
+            response: Response
+        ) => {
+            const tenantId =
+                requireTenantId(request);
+            const siteId = String(
+                request.params.siteId ?? ""
+            );
+
+            if (!siteId) {
+                sendBadRequest(
+                    response,
+                    new Error("siteId is required.")
+                );
+                return;
+            }
+
+            liveStream.connect({
+                tenantId,
+                siteId,
+                request,
+                response
+            });
+        }
     );
 
     app.post(
@@ -792,6 +891,50 @@ export function createApp(
                             )
                     });
 
+                let measurementCode:
+                    string | undefined;
+
+                if (
+                    reading.numericValue !== undefined
+                ) {
+                    const definition =
+                        await measurementDefinitions.findById(
+                            reading.measurementDefinitionId,
+                            reading.tenantId
+                        );
+
+                    measurementCode = definition?.code;
+
+                    const device =
+                        await devices.findById(
+                            reading.deviceId,
+                            reading.tenantId
+                        );
+
+                    if (definition && device) {
+                        await alarmEvaluator.evaluate({
+                            tenantId: reading.tenantId,
+                            siteId: reading.siteId,
+                            assetId: device.assetId,
+                            deviceId: reading.deviceId,
+                            measurementCode: definition.code,
+                            value: reading.numericValue,
+                            observedAt: reading.observedAt,
+                            source: reading.source
+                        });
+                    }
+                }
+
+                liveStream.publish({
+                    tenantId: reading.tenantId,
+                    siteId: reading.siteId,
+                    type: "telemetry-reading",
+                    data: {
+                        reading,
+                        measurementCode
+                    }
+                });
+
                 response
                     .status(201)
                     .json(reading);
@@ -822,7 +965,313 @@ export function createApp(
         }
     );
 
+    app.post(
+        "/api/v1/energy/flows",
+        async (
+            request: TenantRequest,
+            response: Response
+        ) => {
+            try {
+                const body = getBody(request);
+                const tenantId = requireTenantId(request);
+                const siteId = getRequiredString(body, "siteId");
+                const sourceAssetId =
+                    getOptionalString(body, "sourceAssetId");
+                const destinationAssetId =
+                    getOptionalString(body, "destinationAssetId");
+
+                await validateEnergyFlowAsset(
+                    assets,
+                    sourceAssetId,
+                    siteId,
+                    tenantId,
+                    "sourceAssetId"
+                );
+
+                await validateEnergyFlowAsset(
+                    assets,
+                    destinationAssetId,
+                    siteId,
+                    tenantId,
+                    "destinationAssetId"
+                );
+
+                const flow =
+                    await energyFlows.create({
+                        tenantId,
+                        siteId,
+                        sourceAssetId,
+                        destinationAssetId,
+                        direction:
+                            parseEnergyFlowDirection(
+                                body.direction
+                            ),
+                        powerKw:
+                            getRequiredNumber(
+                                body,
+                                "powerKw"
+                            ),
+                        energyKwh:
+                            getOptionalNumber(
+                                body,
+                                "energyKwh"
+                            ),
+                        observedAt:
+                            getRequiredDate(
+                                body,
+                                "observedAt"
+                            ),
+                        source:
+                            getRequiredString(
+                                body,
+                                "source"
+                            )
+                    });
+
+                liveStream.publish({
+                    tenantId: flow.tenantId,
+                    siteId: flow.siteId,
+                    type: "energy-flow",
+                    data: flow
+                });
+
+                response
+                    .status(201)
+                    .json(flow);
+            } catch (error) {
+                sendBadRequest(
+                    response,
+                    error
+                );
+            }
+        }
+    );
+
+    app.get(
+        "/api/v1/energy/flows/:id",
+        async (
+            request: TenantRequest,
+            response: Response
+        ) => {
+            const flow =
+                await energyFlows.findById(
+                    String(
+                        request.params.id ?? ""
+                    ),
+                    requireTenantId(request)
+                );
+
+            if (!flow) {
+                sendNotFound(
+                    response,
+                    "Energy flow"
+                );
+                return;
+            }
+
+            response.json(flow);
+        }
+    );
+
+    app.get(
+        "/api/v1/energy/sites/:siteId/flows",
+        async (
+            request: TenantRequest,
+            response: Response
+        ) => {
+            try {
+                const limit =
+                    getOptionalPositiveIntegerQuery(
+                        request.query.limit,
+                        "limit",
+                        100,
+                        1000
+                    );
+
+                response.json(
+                    await energyFlows.findBySite(
+                        String(
+                            request.params.siteId ?? ""
+                        ),
+                        requireTenantId(request),
+                        limit
+                    )
+                );
+            } catch (error) {
+                sendBadRequest(
+                    response,
+                    error
+                );
+            }
+        }
+    );
+
+
+    app.post(
+        "/api/v1/energy/alarm-rules",
+        async (request: TenantRequest, response: Response) => {
+            try {
+                const body = getBody(request);
+                const rule = await alarmRules.create({
+                    tenantId: requireTenantId(request),
+                    siteId: getOptionalString(body, "siteId"),
+                    measurementCode: getRequiredString(body, "measurementCode"),
+                    name: getRequiredString(body, "name"),
+                    description: getOptionalString(body, "description"),
+                    operator: parseAlarmOperator(body.operator),
+                    threshold: getRequiredNumber(body, "threshold"),
+                    severity: parseAlarmSeverity(body.severity),
+                    enabled: getOptionalBoolean(body, "enabled") ?? true,
+                    durationSeconds: getOptionalNonNegativeInteger(body, "durationSeconds") ?? 0
+                });
+                response.status(201).json(rule);
+            } catch (error) {
+                sendBadRequest(response, error);
+            }
+        }
+    );
+
+    app.get(
+        "/api/v1/energy/sites/:siteId/alarm-rules",
+        async (request: TenantRequest, response: Response) => {
+            response.json(await alarmRules.findBySite(
+                requireTenantId(request),
+                String(request.params.siteId ?? "")
+            ));
+        }
+    );
+
+    app.get(
+        "/api/v1/energy/sites/:siteId/alarm-events",
+        async (request: TenantRequest, response: Response) => {
+            response.json(await alarmEvents.findBySite(
+                requireTenantId(request),
+                String(request.params.siteId ?? "")
+            ));
+        }
+    );
+
+    app.post(
+        "/api/v1/energy/alarm-events/:id/acknowledge",
+        async (request: TenantRequest, response: Response) => {
+            try {
+                const event = await alarmEvents.acknowledge(
+                    String(request.params.id ?? ""),
+                    requireTenantId(request),
+                    getRequiredString(getBody(request), "acknowledgedBy")
+                );
+                if (!event) {
+                    sendNotFound(response, "Alarm event");
+                    return;
+                }
+                response.json(event);
+            } catch (error) {
+                sendBadRequest(response, error);
+            }
+        }
+    );
+
+    app.post(
+        "/api/v1/energy/alarm-events/:id/resolve",
+        async (request: TenantRequest, response: Response) => {
+            try {
+                const event = await alarmEvents.resolve(
+                    String(request.params.id ?? ""),
+                    requireTenantId(request),
+                    getRequiredString(getBody(request), "resolvedBy")
+                );
+                if (!event) {
+                    sendNotFound(response, "Alarm event");
+                    return;
+                }
+                response.json(event);
+            } catch (error) {
+                sendBadRequest(response, error);
+            }
+        }
+    );
+
+    app.post(
+        "/api/v1/energy/sites/:siteId/performance/calculate",
+        async (request: TenantRequest, response: Response) => {
+            try {
+                const body = getBody(request);
+                const metrics = await performanceEngine.calculate({
+                    tenantId: requireTenantId(request),
+                    siteId: String(request.params.siteId ?? ""),
+                    periodStart: getRequiredDate(body, "periodStart"),
+                    periodEnd: getRequiredDate(body, "periodEnd")
+                });
+                response.status(201).json(metrics);
+            } catch (error) {
+                sendBadRequest(response, error);
+            }
+        }
+    );
+
+    app.post(
+        "/api/v1/energy/performance-metrics",
+        async (request: TenantRequest, response: Response) => {
+            try {
+                const body = getBody(request);
+                const metric = await performanceMetrics.create({
+                    tenantId: requireTenantId(request),
+                    siteId: getRequiredString(body, "siteId"),
+                    assetId: getOptionalString(body, "assetId"),
+                    metricCode: getRequiredString(body, "metricCode"),
+                    value: getRequiredNumber(body, "value"),
+                    unit: getOptionalString(body, "unit"),
+                    periodStart: getRequiredDate(body, "periodStart"),
+                    periodEnd: getRequiredDate(body, "periodEnd"),
+                    source: getRequiredString(body, "source")
+                });
+                response.status(201).json(metric);
+            } catch (error) {
+                sendBadRequest(response, error);
+            }
+        }
+    );
+
+    app.get(
+        "/api/v1/energy/sites/:siteId/performance-metrics",
+        async (request: TenantRequest, response: Response) => {
+            response.json(await performanceMetrics.findBySite(
+                requireTenantId(request),
+                String(request.params.siteId ?? ""),
+                getOptionalPositiveIntegerQuery(request.query.limit, "limit", 100, 1000)
+            ));
+        }
+    );
+
     return app;
+}
+
+
+function getOptionalNonNegativeInteger(
+    body: Record<string, unknown>,
+    property: string
+): number | undefined {
+    const value = body[property];
+    if (value === undefined || value === null) return undefined;
+    if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
+        throw new Error(`${property} must be a non-negative integer.`);
+    }
+    return value;
+}
+
+function parseAlarmOperator(value: unknown): AlarmOperator {
+    if (
+        value === "GT" || value === "GTE" || value === "LT" ||
+        value === "LTE" || value === "EQ" || value === "NEQ"
+    ) return value;
+    throw new Error("operator must be GT, GTE, LT, LTE, EQ, or NEQ.");
+}
+
+function parseAlarmSeverity(value: unknown): AlarmSeverity {
+    if (value === "INFO" || value === "WARNING" || value === "CRITICAL") {
+        return value;
+    }
+    throw new Error("severity must be INFO, WARNING, or CRITICAL.");
 }
 
 function getBody(
@@ -917,6 +1366,79 @@ function getOptionalNumber(
     }
 
     return value;
+}
+
+function getRequiredNumber(
+    body: Record<string, unknown>,
+    property: string
+): number {
+    const value = body[property];
+
+    if (
+        typeof value !== "number" ||
+        !Number.isFinite(value)
+    ) {
+        throw new Error(
+            `${property} must be a finite number.`
+        );
+    }
+
+    return value;
+}
+
+function getRequiredDate(
+    body: Record<string, unknown>,
+    property: string
+): Date {
+    const value =
+        getRequiredString(
+            body,
+            property
+        );
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        throw new Error(
+            `${property} must be a valid date/time string.`
+        );
+    }
+
+    return date;
+}
+
+function getOptionalPositiveIntegerQuery(
+    value: unknown,
+    property: string,
+    defaultValue: number,
+    maximum: number
+): number {
+    if (value === undefined) {
+        return defaultValue;
+    }
+
+    if (
+        typeof value !== "string" ||
+        !/^\d+$/.test(value)
+    ) {
+        throw new Error(
+            `${property} must be a positive integer.`
+        );
+    }
+
+    const parsed = Number(value);
+
+    if (
+        !Number.isInteger(parsed) ||
+        parsed < 1 ||
+        parsed > maximum
+    ) {
+        throw new Error(
+            `${property} must be between 1 and ${maximum}.`
+        );
+    }
+
+    return parsed;
 }
 
 function getRequiredInteger(
@@ -1085,6 +1607,61 @@ function parseTelemetryQuality(
     throw new Error(
         "quality must be GOOD, UNCERTAIN, BAD, or MISSING."
     );
+}
+
+function parseEnergyFlowDirection(
+    value: unknown
+): EnergyFlowDirection {
+    const allowed:
+        readonly EnergyFlowDirection[] = [
+            "PRODUCTION",
+            "CONSUMPTION",
+            "IMPORT",
+            "EXPORT",
+            "CHARGE",
+            "DISCHARGE",
+            "TRANSFER"
+        ];
+
+    if (
+        typeof value === "string" &&
+        allowed.includes(
+            value as EnergyFlowDirection
+        )
+    ) {
+        return value as EnergyFlowDirection;
+    }
+
+    throw new Error(
+        "direction must be PRODUCTION, CONSUMPTION, IMPORT, EXPORT, CHARGE, DISCHARGE, or TRANSFER."
+    );
+}
+
+async function validateEnergyFlowAsset(
+    assets: SqlAssetRepository,
+    assetId: string | undefined,
+    siteId: string,
+    tenantId: string,
+    property: string
+): Promise<void> {
+    if (!assetId) {
+        return;
+    }
+
+    const asset =
+        await assets.findById(
+            assetId,
+            tenantId
+        );
+
+    if (
+        !asset ||
+        asset.siteId !== siteId
+    ) {
+        throw new Error(
+            `${property} must identify an asset in the same tenant and site as the energy flow.`
+        );
+    }
 }
 
 function sendNotFound(

@@ -454,6 +454,15 @@ importers:
         specifier: ^5.9.0
         version: 5.9.3
 
+  services/energy-simulator:
+    devDependencies:
+      '@types/node':
+        specifier: ^24.13.3
+        version: 24.13.3
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
   services/gateway:
     dependencies:
       '@intrusionshield/config':
@@ -554,6 +563,9 @@ importers:
       '@intrusionshield/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@intrusionshield/energy':
+        specifier: workspace:*
+        version: link:../../packages/energy
       '@intrusionshield/telemetry':
         specifier: workspace:*
         version: link:../../packages/telemetry
