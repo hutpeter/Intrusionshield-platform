@@ -1,0 +1,50 @@
+{
+  "schemaVersion": 1,
+  "executionPolicy": "manual-review-only",
+  "roles": {
+    "ATHENA": {
+      "migrationRoot": "services/his/sql",
+      "orderedMigrations": [
+        "001_his_foundation.sql",
+        "001_person_facility_affiliations.sql",
+        "002_patient_registrations.sql",
+        "003_encounters.sql",
+        "004_clinical_locations_and_beds.sql",
+        "005_admissions_and_adt.sql",
+        "006_adt_referential_integrity.sql",
+        "007_scheduling_foundation.sql",
+        "008_scheduling_availability.sql"
+      ],
+      "excluded": [
+        "998_his_negative_validation.sql",
+        "999_his_database_validation.sql",
+        "seed_person_facility_affiliations.dev.sql"
+      ]
+    },
+    "BAS_EMS": {
+      "migrationRoot": "services/telemetry-energy/sql",
+      "orderedMigrations": [
+        "001_telemetry_energy_foundation.sql",
+        "002_energy_contract_management.sql",
+        "002_telemetry_reading_source.sql",
+        "003_telemetry_asset_hierarchy.sql",
+        "004_energy_flow_source.sql",
+        "005_energy_alerts_performance.sql",
+        "006_performance_metric_source.sql",
+        "007_trade_resources.sql",
+        "008_regional_configuration.sql",
+        "009_region_service_area_configuration.sql",
+        "010_bas_equipment_commands.sql",
+        "011_bas_equipment_command_verification.sql",
+        "012_telemetry_storage_policies.sql"
+      ],
+      "note": "Combined BAS/EMS + telemetry database only. Do not apply to independently separated telemetry DB."
+    }
+  },
+  "warnings": [
+    "No migrations are executed by this manifest.",
+    "Never run existing schema migrations against a populated target without backup and review.",
+    "Telemetry.Readings and Telemetry.StoragePolicies depend on Telemetry.Devices/Sites/MeasurementDefinitions; BAS equipment commands and Energy contracts depend on Telemetry tables.",
+    "Regional configuration needs explicit product/platform ownership before relocation."
+  ]
+}
