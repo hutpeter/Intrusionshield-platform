@@ -19,3 +19,5 @@ export type { QueryOperator } from "./query/QueryOperator.js";
 export type { QueryParameter } from "./query/QueryParameter.js";
 export { SelectQueryBuilder } from "./query/SelectQueryBuilder.js";
 export type { SqlCommand } from "./query/SqlCommand.js";
+export { resolveDatabaseRoleConfiguration } from "./DatabaseRoleConfiguration.js";
+export type { RubyDatabaseRole, DatabaseRoleResolution } from "./DatabaseRoleConfiguration.js";

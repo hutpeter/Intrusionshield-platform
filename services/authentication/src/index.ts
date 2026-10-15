@@ -3,7 +3,8 @@ import {
 } from "@intrusionshield/config";
 
 import {
-    SqlServerProvider
+    SqlServerProvider,
+    resolveDatabaseRoleConfiguration
 } from "@intrusionshield/database";
 
 import {
@@ -100,24 +101,16 @@ async function start(): Promise<void> {
         );
     }
 
-    const database =
-        new SqlServerProvider({
-            server:
-                configuration.server,
-            port:
-                configuration.port,
-            database:
-                configuration.database,
-            user:
-                configuration.username,
-            password:
-                configuration.password,
-            encrypt:
-                configuration.encrypt,
-            trustServerCertificate:
-                configuration
-                    .trustServerCertificate
-        });
+    const resolved = resolveDatabaseRoleConfiguration("PLATFORM", {
+        server: configuration.server,
+        port: configuration.port,
+        database: configuration.database,
+        user: configuration.username,
+        password: configuration.password,
+        encrypt: configuration.encrypt,
+        trustServerCertificate: configuration.trustServerCertificate
+    });
+    const database = new SqlServerProvider(resolved.options);
 
     await database.connect();
 
