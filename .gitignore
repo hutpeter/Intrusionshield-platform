@@ -39,3 +39,5 @@ temp/
 
 # Generated files
 *.tsbuildinfo
+# Local Ruby configuration
+.env.local

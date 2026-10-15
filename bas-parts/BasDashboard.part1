@@ -1,0 +1,102 @@
+import { useEffect, useMemo, useState } from "react";
+import "./BasDashboard.css";
+
+type Reading = {
+    id: string; deviceId: string; measurementDefinitionId: string;
+    observedAt: string; numericValue?: number; stringValue?: string;
+};
+type Definition = { id: string; code: string };
+type Device = { id: string; code: string; name: string };
+type Sample = { at: string; temperature?: number; humidity?: number; state?: string };
+type Tab = "overview" | "live";
+const CODES = {
+    temperature: "bas.zone.temperature",
+    humidity: "bas.zone.humidity",
+    state: "hvac.operating_state"
+} as const;
+
+export interface BasDashboardProps {
+    baseUrl?: string;
+    tenantId: string;
+    siteId: string;
+    language?: "en" | "es";
+}
+
+export function BasDashboard({ baseUrl = "", tenantId, siteId, language = "en" }: BasDashboardProps) {
+    const labels = language === "es" ? {
+        title: "Automatización de edificios", zone: "Zona de muestra",
+        overview: "Resumen", live: "En vivo", temperature: "Temperatura",
+        humidity: "Humedad relativa", state: "Estado de climatización",
+        connected: "● Datos en vivo conectados", connecting: "○ Conectando datos en vivo",
+        last: "Última muestra", waiting: "Esperando lecturas BAS",
+        recent: "Lecturas recientes", history: "Historial de temperatura y humedad",
+        observed: "Registrado", hvac: "Climatización"
+    } : {
+        title: "Building automation", zone: "Sample zone",
+        overview: "Overview", live: "Live", temperature: "Temperature",
+        humidity: "Relative humidity", state: "HVAC state",
+        connected: "● Live feed connected", connecting: "○ Connecting to live feed",
+        last: "Last sample", waiting: "Waiting for BAS readings",
+        recent: "Recent readings", history: "Temperature and humidity history",
+        observed: "Observed", hvac: "HVAC"
+    };
+    const [tab, setTab] = useState<Tab>("overview");
+    const [readings, setReadings] = useState<Reading[]>([]);
+    const [definitions, setDefinitions] = useState<Definition[]>([]);
+    const [devices, setDevices] = useState<Device[]>([]);
+    const [connected, setConnected] = useState(false);
+    const [error, setError] = useState("");
+    const prefix = `${baseUrl}/api/v1/telemetry`;
+    useEffect(() => {
+        const controller = new AbortController();
+        const headers = { "x-tenant-id": tenantId };
+        async function get<T>(path: string): Promise<T> {
+            const response = await fetch(`${prefix}${path}`, { headers, signal: controller.signal });
+            if (!response.ok) throw new Error(`${path}: HTTP ${response.status}`);
+            return response.json() as Promise<T>;
+        }
+        async function initial() {
+            try {
+                const [defs, devs] = await Promise.all([
+                    get<Definition[]>("/measurement-definitions"),
+                    get<Device[]>(`/sites/${siteId}/devices`)
+                ]);
+                const bas = devs.find(device => device.code === "HVAC-COMM-44092");
+                const latest = bas ? await get<Reading[]>(`/sites/${siteId}/devices/${bas.id}/readings`) : [];
+                if (!controller.signal.aborted) {
+                    setDefinitions(defs); setDevices(devs);
+                    setReadings(previous => [...previous.filter(reading => !latest.some(item => item.id === reading.id)), ...latest].slice(0, 500));
+                    setError("");
+                }
+            } catch (cause) {
+                if (!controller.signal.aborted) setError(String(cause));
+            }
+        }
+        void initial();
+        const refresh = setInterval(() => { void initial(); }, 60_000);
+        return () => { controller.abort(); clearInterval(refresh); };
+    }, [prefix, tenantId, siteId]);
+
+    useEffect(() => {
+        if (tab !== "live") return;
+        const controller = new AbortController();
+        async function stream() {
+            try {
+                const response = await fetch(`${prefix}/sites/${siteId}/stream`, {
+                    headers: { "x-tenant-id": tenantId }, signal: controller.signal
+                });
+                if (!response.ok || !response.body) throw new Error(`Live stream: HTTP ${response.status}`);
+                setConnected(true); setError("");
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = "";
+                while (!controller.signal.aborted) {
+                    const result = await reader.read();
+                    if (result.done) break;
+                    buffer += decoder.decode(result.value, { stream: true }).replaceAll("\r\n", "\n");
+                    let boundary: number;
+                    while ((boundary = buffer.indexOf("\n\n")) >= 0) {
+                        const frame = buffer.slice(0, boundary);
+                        buffer = buffer.slice(boundary + 2);
+                        if (!frame.includes("event: telemetry-reading")) continue;
+            

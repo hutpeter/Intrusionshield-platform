@@ -1,0 +1,358 @@
+ const body = getBody(request);
+
+                const observedAt =
+                    new Date(
+                        getRequiredString(
+                            body,
+                            "observedAt"
+                        )
+                    );
+
+                if (
+                    Number.isNaN(
+                        observedAt.getTime()
+                    )
+                ) {
+                    throw new Error(
+                        "observedAt must be a valid date/time."
+                    );
+                }
+
+                const reading =
+                    await readings.create({
+                        tenantId:
+                            requireTenantId(
+                                request
+                            ),
+                        siteId:
+                            getRequiredString(
+                                body,
+                                "siteId"
+                            ),
+                        deviceId:
+                            getRequiredString(
+                                body,
+                                "deviceId"
+                            ),
+                        measurementDefinitionId:
+                            getRequiredString(
+                                body,
+                                "measurementDefinitionId"
+                            ),
+                        observedAt,
+                        numericValue:
+                            getOptionalNumber(
+                                body,
+                                "numericValue"
+                            ),
+                        booleanValue:
+                            getOptionalBoolean(
+                                body,
+                                "booleanValue"
+                            ),
+                        stringValue:
+                            getOptionalString(
+                                body,
+                                "stringValue"
+                            ),
+                        quality:
+                            parseTelemetryQuality(
+                                body.quality
+                            ),
+                        source:
+                            getRequiredString(
+                                body,
+                                "source"
+                            )
+                    });
+
+                let measurementCode:
+                    string | undefined;
+
+                if (
+                    reading.numericValue !== undefined
+                ) {
+                    const definition =
+                        await measurementDefinitions.findById(
+                            reading.measurementDefinitionId,
+                            reading.tenantId
+                        );
+
+                    measurementCode = definition?.code;
+
+                    const device =
+                        await devices.findById(
+                            reading.deviceId,
+                            reading.tenantId
+                        );
+
+                    if (definition && device) {
+                        await alarmEvaluator.evaluate({
+                            tenantId: reading.tenantId,
+                            siteId: reading.siteId,
+                            assetId: device.assetId,
+                            deviceId: reading.deviceId,
+                            measurementCode: definition.code,
+                            value: reading.numericValue,
+                            observedAt: reading.observedAt,
+                            source: reading.source
+                        });
+                    }
+                }
+
+                liveStream.publish({
+                    tenantId: reading.tenantId,
+                    siteId: reading.siteId,
+                    type: "telemetry-reading",
+                    data: {
+                        reading,
+                        measurementCode
+                    }
+                });
+
+                response
+                    .status(201)
+                    .json(reading);
+            } catch (error) {
+                sendBadRequest(
+                    response,
+                    error
+                );
+            }
+        }
+    );
+
+    app.get(
+        "/api/v1/telemetry/sites/:siteId/readings",
+        async (
+            request: TenantRequest,
+            response: Response
+        ) => {
+            response.json(
+                await readings.bySite(
+                    String(
+                        request.params.siteId ??
+                        ""
+                    ),
+                    requireTenantId(request)
+                )
+            );
+        }
+    );
+
+    app.get(
+        "/api/v1/telemetry/sites/:siteId/devices/:deviceId/readings",
+        async (request: TenantRequest, response: Response) => {
+            const tenantId = requireTenantId(request);
+            const siteId = String(request.params.siteId ?? "");
+            const deviceId = String(request.params.deviceId ?? "");
+            const device = await devices.findById(deviceId, tenantId);
+            if (!device || device.siteId.toLowerCase() !== siteId.toLowerCase()) {
+                sendNotFound(response, "Device");
+                return;
+            }
+            response.json(await readings.byDevice(siteId, deviceId, tenantId));
+        }
+    );
+
+    app.post(
+        "/api/v1/energy/flows",
+        async (
+            request: TenantRequest,
+            response: Response
+        ) => {
+            try {
+                const body = getBody(request);
+                const tenantId = requireTenantId(request);
+                const siteId = getRequiredString(body, "siteId");
+                const sourceAssetId =
+                    getOptionalString(body, "sourceAssetId");
+                const destinationAssetId =
+                    getOptionalString(body, "destinationAssetId");
+
+                await validateEnergyFlowAsset(
+                    assets,
+                    sourceAssetId,
+                    siteId,
+                    tenantId,
+                    "sourceAssetId"
+                );
+
+                await validateEnergyFlowAsset(
+                    assets,
+                    destinationAssetId,
+                    siteId,
+                    tenantId,
+                    "destinationAssetId"
+                );
+
+                const flow =
+                    await energyFlows.create({
+                        tenantId,
+                        siteId,
+                        sourceAssetId,
+                        destinationAssetId,
+                        direction:
+                            parseEnergyFlowDirection(
+                                body.direction
+                            ),
+                        powerKw:
+                            getRequiredNumber(
+                                body,
+                                "powerKw"
+                            ),
+                        energyKwh:
+                            getOptionalNumber(
+                                body,
+                                "energyKwh"
+                            ),
+                        observedAt:
+                            getRequiredDate(
+                                body,
+                                "observedAt"
+                            ),
+                        source:
+                            getRequiredString(
+                                body,
+                                "source"
+                            )
+                    });
+
+                liveStream.publish({
+                    tenantId: flow.tenantId,
+                    siteId: flow.siteId,
+                    type: "energy-flow",
+                    data: flow
+                });
+
+                response
+                    .status(201)
+                    .json(flow);
+            } catch (error) {
+                sendBadRequest(
+                    response,
+                    error
+                );
+            }
+        }
+    );
+
+    app.get(
+        "/api/v1/energy/flows/:id",
+        async (
+            request: TenantRequest,
+            response: Response
+        ) => {
+            const flow =
+                await energyFlows.findById(
+                    String(
+                        request.params.id ?? ""
+                    ),
+                    requireTenantId(request)
+                );
+
+            if (!flow) {
+                sendNotFound(
+                    response,
+                    "Energy flow"
+                );
+                return;
+            }
+
+            response.json(flow);
+        }
+    );
+
+    app.get(
+        "/api/v1/energy/sites/:siteId/flows",
+        async (
+            request: TenantRequest,
+            response: Response
+        ) => {
+            try {
+                const limit =
+                    getOptionalPositiveIntegerQuery(
+                        request.query.limit,
+                        "limit",
+                        100,
+                        1000
+                    );
+
+                response.json(
+                    await energyFlows.findBySite(
+                        String(
+                            request.params.siteId ?? ""
+                        ),
+                        requireTenantId(request),
+                        limit
+                    )
+                );
+            } catch (error) {
+                sendBadRequest(
+                    response,
+                    error
+                );
+            }
+        }
+    );
+
+
+    app.post(
+        "/api/v1/energy/alarm-rules",
+        async (request: TenantRequest, response: Response) => {
+            try {
+                const body = getBody(request);
+                const rule = await alarmRules.create({
+                    tenantId: requireTenantId(request),
+                    siteId: getOptionalString(body, "siteId"),
+                    measurementCode: getRequiredString(body, "measurementCode"),
+                    name: getRequiredString(body, "name"),
+                    description: getOptionalString(body, "description"),
+                    operator: parseAlarmOperator(body.operator),
+                    threshold: getRequiredNumber(body, "threshold"),
+                    severity: parseAlarmSeverity(body.severity),
+                    enabled: getOptionalBoolean(body, "enabled") ?? true,
+                    durationSeconds: getOptionalNonNegativeInteger(body, "durationSeconds") ?? 0
+                });
+                response.status(201).json(rule);
+            } catch (error) {
+                sendBadRequest(response, error);
+            }
+        }
+    );
+
+    app.get(
+        "/api/v1/energy/sites/:siteId/alarm-rules",
+        async (request: TenantRequest, response: Response) => {
+            response.json(await alarmRules.findBySite(
+                requireTenantId(request),
+                String(request.params.siteId ?? "")
+            ));
+        }
+    );
+
+    app.get(
+        "/api/v1/energy/sites/:siteId/alarm-events",
+        async (request: TenantRequest, response: Response) => {
+            response.json(await alarmEvents.findBySite(
+                requireTenantId(request),
+                String(request.params.siteId ?? "")
+            ));
+        }
+    );
+
+    app.post(
+        "/api/v1/energy/alarm-events/:id/acknowledge",
+        async (request: TenantRequest, response: Response) => {
+            try {
+                const event = await alarmEvents.acknowledge(
+                    String(request.params.id ?? ""),
+                    requireTenantId(request),
+                    getRequiredString(getBody(request), "acknowledgedBy")
+                );
+                if (!event) {
+                    sendNotFound(response, "Alarm event");
+                    return;
+                }
+                response.json(event);
+            

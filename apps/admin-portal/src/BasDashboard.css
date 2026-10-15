@@ -1,0 +1,93 @@
+.bas-dashboard { color: #edf3ff; background: #111a2b; border: 1px solid #48617f; border-radius: 18px; padding: 24px; font-family: system-ui, sans-serif; }
+.bas-header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 20px; }
+.bas-header h1 { margin: 0; font-size: 2rem; }
+.bas-header p { margin: 6px 0; color: #c5d3e9; }
+.bas-header .bas-eyebrow { color: #77d9cf; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+.bas-header nav { display: flex; gap: 8px; }
+.bas-header button { color: #edf3ff; background: #23344d; border: 2px solid #6882a4; border-radius: 9px; padding: 10px 18px; cursor: pointer; font: inherit; font-weight: 700; }
+.bas-header button[aria-current="page"] { background: #ffffff; border-color: #ffffff; color: #111a2b; box-shadow: 0 0 0 2px #111a2b, 0 0 0 4px #ffffff; }
+.bas-header button:focus-visible { outline: 3px solid #ffdc82; outline-offset: 2px; }
+.bas-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-top: 24px; }
+.bas-cards article { background: #202e43; border: 2px solid #6682a6; border-radius: 12px; padding: 18px; }
+.bas-cards span { display: block; color: #c8d7ea; font-size: .95rem; }
+.bas-cards strong { display: block; margin-top: 12px; font-size: 1.9rem; }
+.bas-timestamp, .bas-connection { color: #c8d7ea; }
+.bas-connection { font-weight: 700; }
+.bas-error { color: #ffe0e0; background: #662c38; border: 2px solid #f6a0ac; padding: 12px; border-radius: 8px; }
+.bas-history { background: #202e43; border: 2px solid #526e92; border-radius: 12px; padding: 18px; }
+.bas-history h2 { margin: 0 0 16px; }
+.bas-trends { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-bottom: 22px; }
+.bas-trend { border: 1px solid #587397; border-radius: 8px; padding: 12px; }
+.bas-trend h3 { margin: 0 0 10px; font-size: 1rem; }
+.bas-trend svg { display: block; width: 100%; height: 120px; }
+.bas-table-scroll { overflow-x: auto; }
+.bas-history table { border-collapse: collapse; width: 100%; min-width: 520px; text-align: left; }
+.bas-history th, .bas-history td { border-bottom: 1px solid #526986; padding: 10px; }
+.bas-history th { color: #ffffff; font-weight: 800; }
+
+.bas-history tbody td { color: #edf3ff; background: #202e43; font-weight: 500; }
+.bas-history tbody tr:hover td { background: #2b405c; }
+
+.bas-dashboard .bas-history thead th {
+    color: #ffffff;
+    background: #304763;
+    font-weight: 700;
+    border-bottom: 2px solid #87eee1;
+}
+
+.bas-comfort { margin: 18px 0; padding: 18px; border: 2px solid #6488a5; border-radius: 12px; background: #202e43; }
+.bas-comfort h2 { margin: 0 0 12px; font-size: 1.2rem; }
+.bas-comfort-values { display: flex; flex-wrap: wrap; gap: 12px; }
+.bas-comfort-values p { min-width: 210px; margin: 0 0 14px; padding: 12px; border: 1px solid #6488a5; border-radius: 8px; }
+.bas-comfort-values span, .bas-comfort-values strong { display: block; }
+.bas-comfort-values strong { margin-top: 6px; font-size: 1.5rem; }
+.bas-comfort label { display: block; font-weight: 700; }
+.bas-comfort input[type="range"] { display: block; width: min(100%, 520px); margin: 16px 0; accent-color: #87eee1; }
+.bas-comfort button { color: #fff; background: #305d73; border: 2px solid #87eee1; border-radius: 8px; padding: 8px 12px; font: inherit; font-weight: 700; cursor: pointer; }
+.bas-comfort button:focus-visible, .bas-comfort input:focus-visible { outline: 3px solid #ffdc82; outline-offset: 3px; }
+.bas-comfort-note { max-width: 75ch; color: #d5e5f2; font-size: .95rem; }
+
+/* Ruby BAS Temperature Automation v1 */
+.bas-automation { margin: 18px 0; padding: 18px; border: 3px solid #58c7ba; border-radius: 12px; background: #17283b; }
+.bas-automation-heading { display: flex; justify-content: space-between; gap: 18px; align-items: flex-start; flex-wrap: wrap; }
+.bas-automation-heading h2 { margin: 0 0 6px; font-size: 1.25rem; }
+.bas-automation-heading p { margin: 0; max-width: 80ch; color: #d5e5f2; }
+.bas-automation-toggle { display: flex; gap: 8px; align-items: center; font-weight: 800; }
+.bas-automation-status { display: grid; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); gap: 10px; margin: 16px 0; }
+.bas-automation-status p { margin: 0; padding: 12px; border: 2px solid #527a96; border-radius: 9px; background: #20364d; }
+.bas-automation-status span,.bas-automation-status strong { display:block; }
+.bas-automation-status strong { margin-top:5px; font-size:1.18rem; }
+.bas-hvac-heating { color:#ffe09a; }.bas-hvac-cooling { color:#d9f7ff; }.bas-hvac-idle { color:#ffffff; }
+.bas-automation-controls { display:flex; flex-wrap:wrap; gap:12px; align-items:end; margin:14px 0; }
+.bas-automation-controls label { min-width:220px; font-weight:700; }
+.bas-automation-controls input[type=range] { display:block; width:220px; margin-top:7px; accent-color:#87eee1; }
+.bas-automation button { color:#fff; background:#305d73; border:2px solid #87eee1; border-radius:8px; padding:8px 12px; font:inherit; font-weight:700; cursor:pointer; }
+.bas-schedule-table-wrap { overflow-x:auto; }
+.bas-schedule-table { width:100%; border-collapse:collapse; min-width:760px; }
+.bas-schedule-table th,.bas-schedule-table td { padding:8px; border-bottom:1px solid #527a96; text-align:left; }
+.bas-schedule-table th { color:#ffffff; font-weight:800; background:#304763; }
+.bas-schedule-table input:not([type=checkbox]) { width:100%; min-width:90px; box-sizing:border-box; color:#fff; background:#213a52; border:1px solid #6488a5; border-radius:6px; padding:7px; }
+.bas-automation input:focus-visible,.bas-automation button:focus-visible { outline:3px solid #ffdc82; outline-offset:2px; }
+
+
+/* Ruby BAS Equipment Control v1 */
+.bas-equipment-control { margin: 18px 0; padding: 18px; border: 3px solid #7aa7d9; border-radius: 12px; background: #17283b; }
+.bas-equipment-heading { display: flex; justify-content: space-between; gap: 18px; align-items: flex-start; flex-wrap: wrap; }
+.bas-equipment-heading h2 { margin: 0 0 6px; font-size: 1.25rem; }
+.bas-equipment-heading p { margin: 0; max-width: 80ch; color: #d5e5f2; }
+.bas-equipment-enable { display: flex; gap: 8px; align-items: center; font-weight: 800; }
+.bas-equipment-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-top: 16px; }
+.bas-equipment-grid label, .bas-equipment-effective { display: flex; flex-direction: column; gap: 7px; padding: 12px; border: 2px solid #527a96; border-radius: 9px; background: #20364d; font-weight: 700; }
+.bas-equipment-grid select, .bas-equipment-grid input[type=number] { width: 100%; box-sizing: border-box; color: #fff; background: #213a52; border: 1px solid #7aa7d9; border-radius: 6px; padding: 9px; font: inherit; }
+.bas-equipment-grid select:disabled, .bas-equipment-grid input:disabled { opacity: .55; cursor: not-allowed; }
+.bas-equipment-effective span { color: #c8d7ea; font-size: .9rem; }
+.bas-equipment-effective strong { font-size: 1.2rem; color: #ffffff; }
+.bas-equipment-effective small { color: #d5e5f2; }
+.bas-equipment-control input:focus-visible, .bas-equipment-control select:focus-visible { outline: 3px solid #ffdc82; outline-offset: 2px; }
+
+/* High-contrast BAS readability pass */
+.bas-connection { color:#ffffff; font-weight:700; }
+.bas-automation-status span, .bas-equipment-effective span { color:#e7eef8; }
+.bas-schedule-table th, .bas-history th { text-shadow:none; }
+.bas-header nav { gap:10px; }
+.bas-header button[aria-current="page"]::before { content:"✓ "; font-weight:900; }

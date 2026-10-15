@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+﻿import { randomUUID } from "node:crypto";
 
 import type { Request, Response } from "express";
 import type { Practitioner } from "@intrusionshield/his";
@@ -15,6 +15,20 @@ export class PractitionerController {
     private readonly service: PractitionerService
   ) {}
 
+  public list = async (
+    _req: Request,
+    res: Response
+  ): Promise<Response> => {
+    const items =
+      await this.service.list(
+        getTenantId(res)
+      );
+
+    return res.status(200).json({
+      items,
+      total: items.length
+    });
+  };
   public get = async (
     req: Request,
     res: Response

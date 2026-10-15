@@ -1,0 +1,2947 @@
+import {
+
+    useCallback,
+
+    useEffect,
+
+    useMemo,
+
+    useState
+
+} from "react";
+
+
+
+import "./TradeResources.css";
+
+
+
+type TradeResourceType =
+
+    | "EMPLOYEE"
+
+    | "VENDOR"
+
+    | "CONTRACTOR";
+
+
+
+type TradeResourceStatus =
+
+    | "ACTIVE"
+
+    | "INACTIVE";
+
+
+
+type SkillProficiency =
+
+    | "APPRENTICE"
+
+    | "QUALIFIED"
+
+    | "EXPERT";
+
+
+
+interface Skill {
+
+    readonly id: string;
+
+    readonly tenantId: string;
+
+    readonly code: string;
+
+    readonly name: string;
+
+    readonly status: string;
+
+}
+
+
+
+interface ResourceSkill {
+
+    readonly id: string;
+
+    readonly tenantId: string;
+
+    readonly resourceId: string;
+
+    readonly skillId: string;
+
+    readonly skillCode: string;
+
+    readonly skillName: string;
+
+    readonly proficiency?: SkillProficiency;
+
+    readonly certificationName?: string;
+
+    readonly certificationNumber?: string;
+
+    readonly certificationExpiresAt?: string;
+
+    readonly createdAt: string;
+
+}
+
+
+
+interface TradeResource {
+
+    readonly id: string;
+
+    readonly tenantId: string;
+
+    readonly resourceNumber: string;
+
+    readonly firstName: string;
+
+    readonly lastName: string;
+
+    readonly trade: string;
+
+    readonly resourceType: TradeResourceType;
+
+    readonly employerName?: string;
+
+    readonly email?: string;
+
+    readonly phone?: string;
+
+    readonly serviceRegion?: string;
+
+    readonly hourlyRate?: number;
+
+    readonly currency?: string;
+
+    readonly status: TradeResourceStatus;
+
+    readonly notes?: string;
+
+    readonly createdAt: string;
+
+    readonly updatedAt: string;
+
+    readonly version: number;
+
+    readonly skills: readonly ResourceSkill[];
+
+}
+
+
+
+interface CalendarEntry {
+
+    readonly id: string;
+
+    readonly tenantId: string;
+
+    readonly resourceId: string;
+
+    readonly maintenanceActivityId?: string;
+
+    readonly entryType: string;
+
+    readonly title: string;
+
+    readonly startAt: string;
+
+    readonly endAt: string;
+
+    readonly status: string;
+
+    readonly notes?: string;
+
+}
+
+
+
+interface TradeResourcesProps {
+
+    readonly tenantId: string;
+
+}
+
+
+
+interface ResourceForm {
+
+    resourceNumber: string;
+
+    firstName: string;
+
+    lastName: string;
+
+    trade: string;
+
+    resourceType: TradeResourceType;
+
+    employerName: string;
+
+    email: string;
+
+    phone: string;
+
+    serviceRegion: string;
+
+    hourlyRate: string;
+
+    currency: string;
+
+    status: TradeResourceStatus;
+
+    notes: string;
+
+    skillIds: string[];
+
+}
+
+
+
+const EMPTY_FORM: ResourceForm = {
+
+    resourceNumber: "",
+
+    firstName: "",
+
+    lastName: "",
+
+    trade: "",
+
+    resourceType: "EMPLOYEE",
+
+    employerName: "",
+
+    email: "",
+
+    phone: "",
+
+    serviceRegion: "",
+
+    hourlyRate: "",
+
+    currency: "CAD",
+
+    status: "ACTIVE",
+
+    notes: "",
+
+    skillIds: []
+
+};
+
+
+
+async function apiRequest<T>(
+
+    url: string,
+
+    tenantId: string,
+
+    options?: RequestInit
+
+): Promise<T> {
+
+    const response = await fetch(
+
+        url,
+
+        {
+
+            ...options,
+
+            headers: {
+
+                "Content-Type": "application/json",
+
+                "x-tenant-id": tenantId,
+
+                ...(options?.headers ?? {})
+
+            }
+
+        }
+
+    );
+
+
+
+    if (!response.ok) {
+
+        let message =
+
+            `${response.status} ${response.statusText}`;
+
+
+
+        try {
+
+            const payload =
+
+                await response.json() as {
+
+                    error?: string;
+
+                };
+
+
+
+            if (payload.error) {
+
+                message = payload.error;
+
+            }
+
+        } catch {
+
+            // Keep HTTP status message.
+
+        }
+
+
+
+        throw new Error(message);
+
+    }
+
+
+
+    return await response.json() as T;
+
+}
+
+
+
+function formatDateTime(
+
+    value: string
+
+): string {
+
+    const date = new Date(value);
+
+
+
+    if (Number.isNaN(date.getTime())) {
+
+        return value;
+
+    }
+
+
+
+    return date.toLocaleString();
+
+}
+
+
+
+function fullName(
+
+    resource: TradeResource
+
+): string {
+
+    return `${resource.firstName} ${resource.lastName}`;
+
+}
+
+
+
+export function TradeResources({
+
+    tenantId
+
+}: TradeResourcesProps) {
+
+    const [
+
+        activeTab,
+
+        setActiveTab
+
+    ] = useState<"resources" | "skills">(
+
+        "resources"
+
+    );
+
+
+
+    const [
+
+        resources,
+
+        setResources
+
+    ] = useState<TradeResource[]>([]);
+
+
+
+    const [
+
+        skills,
+
+        setSkills
+
+    ] = useState<Skill[]>([]);
+
+
+
+    const [
+
+        selectedResourceId,
+
+        setSelectedResourceId
+
+    ] = useState<string>();
+
+
+
+    const [
+
+        calendar,
+
+        setCalendar
+
+    ] = useState<CalendarEntry[]>([]);
+
+
+
+    const [
+
+        showAddResource,
+
+        setShowAddResource
+
+    ] = useState(false);
+
+
+
+    const [
+
+        form,
+
+        setForm
+
+    ] = useState<ResourceForm>(
+
+        EMPTY_FORM
+
+    );
+
+
+
+    const [
+
+        loading,
+
+        setLoading
+
+    ] = useState(true);
+
+
+
+    const [
+
+        saving,
+
+        setSaving
+
+    ] = useState(false);
+
+
+
+    const [
+
+        error,
+
+        setError
+
+    ] = useState<string>();
+
+
+
+    const [
+
+        search,
+
+        setSearch
+
+    ] = useState("");
+
+
+
+    const loadData =
+
+        useCallback(
+
+            async () => {
+
+                try {
+
+                    setLoading(true);
+
+                    setError(undefined);
+
+
+
+                    const [
+
+                        resourceResult,
+
+                        skillResult
+
+                    ] = await Promise.all([
+
+                        apiRequest<TradeResource[]>(
+
+                            "/api/v1/energy/trade-resources",
+
+                            tenantId
+
+                        ),
+
+                        apiRequest<Skill[]>(
+
+                            "/api/v1/energy/skills",
+
+                            tenantId
+
+                        )
+
+                    ]);
+
+
+
+                    setResources(
+
+                        Array.isArray(resourceResult)
+
+                            ? resourceResult
+
+                            : []
+
+                    );
+
+
+
+                    setSkills(
+
+                        Array.isArray(skillResult)
+
+                            ? skillResult
+
+                            : []
+
+                    );
+
+                } catch (loadError) {
+
+                    setError(
+
+                        loadError instanceof Error
+
+                            ? loadError.message
+
+                            : "Unable to load trade resources."
+
+                    );
+
+                } finally {
+
+                    setLoading(false);
+
+                }
+
+            },
+
+            [tenantId]
+
+        );
+
+
+
+    useEffect(
+
+        () => {
+
+            void loadData();
+
+        },
+
+        [loadData]
+
+    );
+
+
+
+    const selectedResource =
+
+        useMemo(
+
+            () =>
+
+                resources.find(
+
+                    resource =>
+
+                        resource.id ===
+
+                        selectedResourceId
+
+                ),
+
+            [
+
+                resources,
+
+                selectedResourceId
+
+            ]
+
+        );
+
+
+
+    const filteredResources =
+
+        useMemo(
+
+            () => {
+
+                const value =
+
+                    search.trim().toLowerCase();
+
+
+
+                if (!value) {
+
+                    return resources;
+
+                }
+
+
+
+                return resources.filter(
+
+                    resource => {
+
+                        const skillText =
+
+                            resource.skills
+
+                                .map(
+
+                                    skill =>
+
+                                        `${skill.skillCode} ${skill.skillName}`
+
+                                )
+
+                                .join(" ");
+
+
+
+                        return [
+
+                            resource.resourceNumber,
+
+                            resource.firstName,
+
+                            resource.lastName,
+
+                            resource.trade,
+
+                            resource.resourceType,
+
+                            resource.employerName ?? "",
+
+                            resource.serviceRegion ?? "",
+
+                            skillText
+
+                        ]
+
+                            .join(" ")
+
+                            .toLowerCase()
+
+                            .includes(value);
+
+                    }
+
+                );
+
+            },
+
+            [
+
+                resources,
+
+                search
+
+            ]
+
+        );
+
+
+
+    async function selectResource(
+
+        resource: TradeResource
+
+    ): Promise<void> {
+
+        setSelectedResourceId(
+
+            resource.id
+
+        );
+
+
+
+        try {
+
+            const entries =
+
+                await apiRequest<CalendarEntry[]>(
+
+                    `/api/v1/energy/trade-resources/${resource.id}/calendar`,
+
+                    tenantId
+
+                );
+
+
+
+            setCalendar(
+
+                Array.isArray(entries)
+
+                    ? entries
+
+                    : []
+
+            );
+
+        } catch (calendarError) {
+
+            setCalendar([]);
+
+
+
+            setError(
+
+                calendarError instanceof Error
+
+                    ? calendarError.message
+
+                    : "Unable to load calendar."
+
+            );
+
+        }
+
+    }
+
+
+
+    function updateForm(
+
+        property: keyof ResourceForm,
+
+        value: ResourceForm[keyof ResourceForm]
+
+    ): void {
+
+        setForm(
+
+            current => ({
+
+                ...current,
+
+                [property]: value
+
+            })
+
+        );
+
+    }
+
+
+
+    function toggleSkill(
+
+        skillId: string
+
+    ): void {
+
+        setForm(
+
+            current => ({
+
+                ...current,
+
+                skillIds:
+
+                    current.skillIds.includes(
+
+                        skillId
+
+                    )
+
+                        ? current.skillIds.filter(
+
+                            id => id !== skillId
+
+                        )
+
+                        : [
+
+                            ...current.skillIds,
+
+                            skillId
+
+                        ]
+
+            })
+
+        );
+
+    }
+
+
+
+    async function createResource(): Promise<void> {
+
+        try {
+
+            setSaving(true);
+
+            setError(undefined);
+
+
+
+            if (
+
+                !form.resourceNumber.trim() ||
+
+                !form.firstName.trim() ||
+
+                !form.lastName.trim() ||
+
+                !form.trade.trim()
+
+            ) {
+
+                throw new Error(
+
+                    "Resource number, first name, last name, and primary trade are required."
+
+                );
+
+            }
+
+
+
+            const hourlyRate =
+
+                form.hourlyRate.trim()
+
+                    ? Number(form.hourlyRate)
+
+                    : undefined;
+
+
+
+            if (
+
+                hourlyRate !== undefined &&
+
+                (
+
+                    !Number.isFinite(hourlyRate) ||
+
+                    hourlyRate < 0
+
+                )
+
+            ) {
+
+                throw new Error(
+
+                    "Hourly rate must be a non-negative number."
+
+                );
+
+            }
+
+
+
+            const resource =
+
+                await apiRequest<TradeResource>(
+
+                    "/api/v1/energy/trade-resources",
+
+                    tenantId,
+
+                    {
+
+                        method: "POST",
+
+                        body: JSON.stringify({
+
+                            resourceNumber:
+
+                                form.resourceNumber.trim(),
+
+
+
+                            firstName:
+
+                                form.firstName.trim(),
+
+
+
+                            lastName:
+
+                                form.lastName.trim(),
+
+
+
+                            trade:
+
+                                form.trade.trim(),
+
+
+
+                            resourceType:
+
+                                form.resourceType,
+
+
+
+                            employerName:
+
+                                form.employerName.trim() ||
+
+                                undefined,
+
+
+
+                            email:
+
+                                form.email.trim() ||
+
+                                undefined,
+
+
+
+                            phone:
+
+                                form.phone.trim() ||
+
+                                undefined,
+
+
+
+                            serviceRegion:
+
+                                form.serviceRegion.trim() ||
+
+                                undefined,
+
+
+
+                            hourlyRate,
+
+
+
+                            currency:
+
+                                form.currency.trim() ||
+
+                                undefined,
+
+
+
+                            status:
+
+                                form.status,
+
+
+
+                            notes:
+
+                                form.notes.trim() ||
+
+                                undefined
+
+                        })
+
+                    }
+
+                );
+
+
+
+            for (
+
+                const skillId
+
+                of form.skillIds
+
+            ) {
+
+                await apiRequest(
+
+                    `/api/v1/energy/trade-resources/${resource.id}/skills`,
+
+                    tenantId,
+
+                    {
+
+                        method: "POST",
+
+                        body: JSON.stringify({
+
+                            skillId,
+
+                            proficiency:
+
+                                "QUALIFIED"
+
+                        })
+
+                    }
+
+                );
+
+            }
+
+
+
+            setForm(
+
+                EMPTY_FORM
+
+            );
+
+
+
+            setShowAddResource(false);
+
+
+
+            await loadData();
+
+
+
+            setSelectedResourceId(
+
+                resource.id
+
+            );
+
+        } catch (saveError) {
+
+            setError(
+
+                saveError instanceof Error
+
+                    ? saveError.message
+
+                    : "Unable to create tradesperson."
+
+            );
+
+        } finally {
+
+            setSaving(false);
+
+        }
+
+    }
+
+
+
+    return (
+
+        <section className="trade-resources">
+
+            <header className="trade-resources__header">
+
+                <div>
+
+                    <p className="trade-resources__eyebrow">
+
+                        Ruby EMS / BAS
+
+                    </p>
+
+
+
+                    <h2>
+
+                        Tradespeople &amp; Resources
+
+                    </h2>
+
+
+
+                    <p>
+
+                        Manage skilled personnel,
+
+                        qualifications and scheduling
+
+                        for maintenance and asset
+
+                        operations.
+
+                    </p>
+
+                </div>
+
+
+
+                <button
+
+                    className="trade-resources__primary"
+
+                    type="button"
+
+                    onClick={() => {
+
+                        setForm(
+
+                            EMPTY_FORM
+
+                        );
+
+                        setShowAddResource(true);
+
+                    }}
+
+                >
+
+                    + Add Tradesperson
+
+                </button>
+
+            </header>
+
+
+
+            {error && (
+
+                <div
+
+                    className="trade-resources__error"
+
+                    role="alert"
+
+                >
+
+                    {error}
+
+                </div>
+
+            )}
+
+
+
+            <nav
+
+                className="trade-resources__tabs"
+
+                aria-label="Trade resource views"
+
+            >
+
+                <button
+
+                    type="button"
+
+                    className={
+
+                        activeTab === "resources"
+
+                            ? "is-active"
+
+                            : ""
+
+                    }
+
+                    onClick={() =>
+
+                        setActiveTab(
+
+                            "resources"
+
+                        )
+
+                    }
+
+                >
+
+                    Tradespeople
+
+                    <span>
+
+                        {resources.length}
+
+                    </span>
+
+                </button>
+
+
+
+                <button
+
+                    type="button"
+
+                    className={
+
+                        activeTab === "skills"
+
+                            ? "is-active"
+
+                            : ""
+
+                    }
+
+                    onClick={() =>
+
+                        setActiveTab(
+
+                            "skills"
+
+                        )
+
+                    }
+
+                >
+
+                    Skills
+
+                    <span>
+
+                        {skills.length}
+
+                    </span>
+
+                </button>
+
+            </nav>
+
+
+
+            {activeTab === "resources" && (
+
+                <>
+
+                    <div className="trade-resources__toolbar">
+
+                        <input
+
+                            type="search"
+
+                            value={search}
+
+                            placeholder="Search by name, trade, skill, region..."
+
+                            onChange={event =>
+
+                                setSearch(
+
+                                    event.target.value
+
+                                )
+
+                            }
+
+                        />
+
+
+
+                        <button
+
+                            type="button"
+
+                            onClick={() =>
+
+                                void loadData()
+
+                            }
+
+                        >
+
+                            Refresh
+
+                        </button>
+
+                    </div>
+
+
+
+                    {loading ? (
+
+                        <div className="trade-resources__empty">
+
+                            Loading tradespeople...
+
+                        </div>
+
+                    ) : (
+
+                        <div className="trade-resources__layout">
+
+                            <div className="trade-resources__table-wrap">
+
+                                <table className="trade-resources__table">
+
+                                    <thead>
+
+                                        <tr>
+
+                                            <th>
+
+                                                Resource #
+
+                                            </th>
+
+                                            <th>
+
+                                                Name
+
+                                            </th>
+
+                                            <th>
+
+                                                Primary Trade
+
+                                            </th>
+
+                                            <th>
+
+                                                Type
+
+                                            </th>
+
+                                            <th>
+
+                                                Region
+
+                                            </th>
+
+                                            <th>
+
+                                                Skills
+
+                                            </th>
+
+                                            <th>
+
+                                                Status
+
+                                            </th>
+
+                                        </tr>
+
+                                    </thead>
+
+
+
+                                    <tbody>
+
+                                        {filteredResources.map(
+
+                                            resource => (
+
+                                                <tr
+
+                                                    key={
+
+                                                        resource.id
+
+                                                    }
+
+                                                    className={
+
+                                                        selectedResourceId ===
+
+                                                        resource.id
+
+                                                            ? "is-selected"
+
+                                                            : ""
+
+                                                    }
+
+                                                    onClick={() =>
+
+                                                        void selectResource(
+
+                                                            resource
+
+                                                        )
+
+                                                    }
+
+                                                >
+
+                                                    <td>
+
+                                                        {
+
+                                                            resource.resourceNumber
+
+                                                        }
+
+                                                    </td>
+
+
+
+                                                    <td>
+
+                                                        <strong>
+
+                                                            {
+
+                                                                fullName(
+
+                                                                    resource
+
+                                                                )
+
+                                                            }
+
+                                                        </strong>
+
+
+
+                                                        {resource.employerName && (
+
+                                                            <small>
+
+                                                                {
+
+                                                                    resource.employerName
+
+                                                                }
+
+                                                            </small>
+
+                                                        )}
+
+                                                    </td>
+
+
+
+                                                    <td>
+
+                                                        {
+
+                                                            resource.trade
+
+                                                        }
+
+                                                    </td>
+
+
+
+                                                    <td>
+
+                                                        {
+
+                                                            resource.resourceType
+
+                                                        }
+
+                                                    </td>
+
+
+
+                                                    <td>
+
+                                                        {
+
+                                                            resource.serviceRegion ??
+
+                                                            "—"
+
+                                                        }
+
+                                                    </td>
+
+
+
+                                                    <td>
+
+                                                        <div className="trade-resources__skill-chips">
+
+                                                            {resource.skills
+
+                                                                .slice(
+
+                                                                    0,
+
+                                                                    3
+
+                                                                )
+
+                                                                .map(
+
+                                                                    skill => (
+
+                                                                        <span
+
+                                                                            key={
+
+                                                                                skill.id
+
+                                                                            }
+
+                                                                        >
+
+                                                                            {
+
+                                                                                skill.skillName
+
+                                                                            }
+
+                                                                        </span>
+
+                                                                    )
+
+                                                                )}
+
+
+
+                                                            {resource.skills.length >
+
+                                                                3 && (
+
+                                                                <span>
+
+                                                                    +
+
+                                                                    {
+
+                                                                        resource.skills.length -
+
+                                                                        3
+
+                                                                    }
+
+                                                                </span>
+
+                                                            )}
+
+                                                        </div>
+
+                                                    </td>
+
+
+
+                                                    <td>
+
+                                                        <span
+
+                                                            className={`trade-resources__status trade-resources__status--${resource.status.toLowerCase()}`}
+
+                                                        >
+
+                                                            {
+
+                                                                resource.status
+
+                                                            }
+
+                                                        </span>
+
+                                                    </td>
+
+                                                </tr>
+
+                                            )
+
+                                        )}
+
+
+
+                                        {filteredResources.length ===
+
+                                            0 && (
+
+                                            <tr>
+
+                                                <td
+
+                                                    colSpan={
+
+                                                        7
+
+                                                    }
+
+                                                    className="trade-resources__empty"
+
+                                                >
+
+                                                    No tradespeople
+
+                                                    match the
+
+                                                    current search.
+
+                                                </td>
+
+                                            </tr>
+
+                                        )}
+
+                                    </tbody>
+
+                                </table>
+
+                            </div>
+
+
+
+                            {selectedResource && (
+
+                                <aside className="trade-resource-detail">
+
+                                    <div className="trade-resource-detail__heading">
+
+                                        <div>
+
+                                            <span>
+
+                                                {
+
+                                                    selectedResource.resourceNumber
+
+                                                }
+
+                                            </span>
+
+
+
+                                            <h3>
+
+                                                {
+
+                                                    fullName(
+
+                                                        selectedResource
+
+                                                    )
+
+                                                }
+
+                                            </h3>
+
+
+
+                                            <p>
+
+                                                {
+
+                                                    selectedResource.trade
+
+                                                }
+
+                                            </p>
+
+                                        </div>
+
+
+
+                                        <button
+
+                                            type="button"
+
+                                            onClick={() => {
+
+                                                setSelectedResourceId(
+
+                                                    undefined
+
+                                                );
+
+                                                setCalendar(
+
+                                                    []
+
+                                                );
+
+                                            }}
+
+                                        >
+
+                                            ×
+
+                                        </button>
+
+                                    </div>
+
+
+
+                                    <dl className="trade-resource-detail__facts">
+
+                                        <div>
+
+                                            <dt>
+
+                                                Type
+
+                                            </dt>
+
+                                            <dd>
+
+                                                {
+
+                                                    selectedResource.resourceType
+
+                                                }
+
+                                            </dd>
+
+                                        </div>
+
+
+
+                                        <div>
+
+                                            <dt>
+
+                                                Region
+
+                                            </dt>
+
+                                            <dd>
+
+                                                {
+
+                                                    selectedResource.serviceRegion ??
+
+                                                    "—"
+
+                                                }
+
+                                            </dd>
+
+                                        </div>
+
+
+
+                                        <div>
+
+                                            <dt>
+
+                                                Employer
+
+                                            </dt>
+
+                                            <dd>
+
+                                                {
+
+                                                    selectedResource.employerName ??
+
+                                                    "—"
+
+                                                }
+
+                                            </dd>
+
+                                        </div>
+
+
+
+                                        <div>
+
+                                            <dt>
+
+                                                Rate
+
+                                            </dt>
+
+                                            <dd>
+
+                                                {selectedResource.hourlyRate !==
+
+                                                undefined
+
+                                                    ? `${selectedResource.currency ?? ""} ${selectedResource.hourlyRate}`
+
+                                                    : "—"}
+
+                                            </dd>
+
+                                        </div>
+
+
+
+                                        <div>
+
+                                            <dt>
+
+                                                Email
+
+                                            </dt>
+
+                                            <dd>
+
+                                                {
+
+                                                    selectedResource.email ??
+
+                                                    "—"
+
+                                                }
+
+                                            </dd>
+
+                                        </div>
+
+
+
+                                        <div>
+
+                                            <dt>
+
+                                                Phone
+
+                                            </dt>
+
+                                            <dd>
+
+                                                {
+
+                                                    selectedResource.phone ??
+
+                                                    "—"
+
+                                                }
+
+                                            </dd>
+
+                                        </div>
+
+                                    </dl>
+
+
+
+                                    <div className="trade-resource-detail__section">
+
+                                        <h4>
+
+                                            Skills &amp;
+
+                                            Qualifications
+
+                                        </h4>
+
+
+
+                                        <div className="trade-resource-detail__skills">
+
+                                            {selectedResource.skills.map(
+
+                                                skill => (
+
+                                                    <div
+
+                                                        key={
+
+                                                            skill.id
+
+                                                        }
+
+                                                    >
+
+                                                        <strong>
+
+                                                            {
+
+                                                                skill.skillName
+
+                                                            }
+
+                                                        </strong>
+
+
+
+                                                        <span>
+
+                                                            {
+
+                                                                skill.proficiency ??
+
+                                                                "—"
+
+                                                            }
+
+                                                        </span>
+
+                                                    </div>
+
+                                                )
+
+                                            )}
+
+
+
+                                            {selectedResource.skills.length ===
+
+                                                0 && (
+
+                                                <p>
+
+                                                    No skills
+
+                                                    assigned.
+
+                                                </p>
+
+                                            )}
+
+                                        </div>
+
+                                    </div>
+
+
+
+                                    <div className="trade-resource-detail__section">
+
+                                        <h4>
+
+                                            Calendar
+
+                                        </h4>
+
+
+
+                                        {calendar.length ===
+
+                                        0 ? (
+
+                                            <p>
+
+                                                No calendar
+
+                                                entries.
+
+                                            </p>
+
+                                        ) : (
+
+                                            <div className="trade-resource-detail__calendar">
+
+                                                {calendar.map(
+
+                                                    entry => (
+
+                                                        <article
+
+                                                            key={
+
+                                                                entry.id
+
+                                                            }
+
+                                                        >
+
+                                                            <strong>
+
+                                                                {
+
+                                                                    entry.title
+
+                                                                }
+
+                                                            </strong>
+
+
+
+                                                            <span>
+
+                                                                {
+
+                                                                    entry.entryType
+
+                                                                }
+
+                                                                {" · "}
+
+                                                                {
+
+                                                                    entry.status
+
+                                                                }
+
+                                                            </span>
+
+
+
+                                                            <time>
+
+                                                                {
+
+                                                                    formatDateTime(
+
+                                                                        entry.startAt
+
+                                                                    )
+
+                                                                }
+
+                                                                {" – "}
+
+                                                                {
+
+                                                                    formatDateTime(
+
+                                                                        entry.endAt
+
+                                                                    )
+
+                                                                }
+
+                                                            </time>
+
+                                                        </article>
+
+                                                    )
+
+                                                )}
+
+                                            </div>
+
+                                        )}
+
+                                    </div>
+
+
+
+                                    {selectedResource.notes && (
+
+                                        <div className="trade-resource-detail__section">
+
+                                            <h4>
+
+                                                Notes
+
+                                            </h4>
+
+                                            <p>
+
+                                                {
+
+                                                    selectedResource.notes
+
+                                                }
+
+                                            </p>
+
+                                        </div>
+
+                                    )}
+
+                                </aside>
+
+                            )}
+
+                        </div>
+
+                    )}
+
+                </>
+
+            )}
+
+
+
+            {activeTab === "skills" && (
+
+                <div className="trade-skills">
+
+                    <div className="trade-skills__heading">
+
+                        <div>
+
+                            <h3>
+
+                                Skills Catalogue
+
+                            </h3>
+
+                            <p>
+
+                                Skills used to match
+
+                                qualified personnel to
+
+                                maintenance and asset
+
+                                activities.
+
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+
+                    <div className="trade-skills__grid">
+
+                        {skills.map(
+
+                            skill => {
+
+                                const assigned =
+
+                                    resources.filter(
+
+                                        resource =>
+
+                                            resource.skills.some(
+
+                                                item =>
+
+                                                    item.skillId ===
+
+                                                    skill.id
+
+                                            )
+
+                                    ).length;
+
+
+
+                                return (
+
+                                    <article
+
+                                        key={
+
+                                            skill.id
+
+                                        }
+
+                                    >
+
+                                        <span>
+
+                                            {
+
+                                                skill.code
+
+                                            }
+
+                                        </span>
+
+
+
+                                        <h4>
+
+                                            {
+
+                                                skill.name
+
+                                            }
+
+                                        </h4>
+
+
+
+                                        <p>
+
+                                            {assigned}{" "}
+
+                                            resource
+
+                                            {assigned ===
+
+                                            1
+
+                                                ? ""
+
+                                                : "s"}
+
+                                        </p>
+
+
+
+                                        <strong>
+
+                                            {
+
+                                                skill.status
+
+                                            }
+
+                                        </strong>
+
+                                    </article>
+
+                                );
+
+                            }
+
+                        )}
+
+                    </div>
+
+                </div>
+
+            )}
+
+
+
+            {showAddResource && (
+
+                <div
+
+                    className="trade-resource-modal"
+
+                    role="presentation"
+
+                >
+
+                    <div
+
+                        className="trade-resource-modal__dialog"
+
+                        role="dialog"
+
+                        aria-modal="true"
+
+                        aria-labelledby="add-tradesperson-title"
+
+                    >
+
+                        <header>
+
+                            <div>
+
+                                <span>
+
+                                    Workforce Resource
+
+                                </span>
+
+
+
+                                <h3 id="add-tradesperson-title">
+
+                                    Add Tradesperson
+
+                                </h3>
+
+                            </div>
+
+
+
+                            <button
+
+                                type="button"
+
+                                aria-label="Close"
+
+                                onClick={() =>
+
+                                    setShowAddResource(
+
+                                        false
+
+                                    )
+
+                                }
+
+                            >
+
+                                ×
+
+                            </button>
+
+                        </header>
+
+
+
+                        <div className="trade-resource-form">
+
+                            <label>
+
+                                Resource Number *
+
+                                <input
+
+                                    value={
+
+                                        form.resourceNumber
+
+                                    }
+
+                                    onChange={event =>
+
+                                        updateForm(
+
+                                            "resourceNumber",
+
+                                            event.target.value
+
+                                        )
+
+                                    }
+
+                                    placeholder="TECH-0002"
+
+                                />
+
+                            </label>
+
+
+
+                            <label>
+
+                                First Name *
+
+                                <input
+
+                                    value={
+
+                                        form.firstName
+
+                                    }
+
+                                    onChange={event =>
+
+                                        updateForm(
+
+                                            "firstName",
+
+                                            event.target.value
+
+                                        )
+
+                                    }
+
+                                />
+
+                            </label>
+
+
+
+                            <label>
+
+                                Last Name *
+
+                                <input
+
+                                    value={
+
+                                        form.lastName
+
+                                    }
+
+                                    onChange={event =>
+
+                                        updateForm(
+
+                                            "lastName",
+
+                                            event.target.value
+
+                                        )
+
+                                    }
+
+                                />
+
+                            </label>
+
+
+
+                            <label>
+                                Primary Trade *
+                                <select
+                                    value={form.trade}
+                                    onChange={event =>
+                                        updateForm(
+                                            "trade",
+                                            event.target.value
+                                        )
+                                    }
+                                >
+                                    <option value="">
+                                        Select primary trade...
+                                    </option>
+
+                                    {skills
+                                        .filter(skill =>
+                                            form.skillIds.includes(
+                                                skill.id
+                                            )
+                                        )
+                                        .map(skill => (
+                                            <option
+                                                key={skill.id}
+                                                value={skill.name}
+                                            >
+                                                {skill.name}
+                                            </option>
+                                        ))}
+                                </select>
+
+                                {form.skillIds.length === 0 && (
+                                    <small>
+                                        Select one or more skills below,
+                                        then choose the primary trade.
+                                    </small>
+                                )}
+                            </label>
+
+
+
+                            <label>
+
+                                Resource Type
+
+                                <select
+
+                                    value={
+
+                                        form.resourceType
+
+                                    }
+
+                                    onChange={event =>
+
+                                        updateForm(
+
+                                            "resourceType",
+
+                                            event.target.value as TradeResourceType
+
+                                        )
+
+                                    }
+
+                                >
+
+                                    <option value="EMPLOYEE">
+
+                                        Employee
+
+                                    </option>
+
+                                    <option value="CONTRACTOR">
+
+                                        Contractor
+
+                                    </option>
+
+                                    <option value="VENDOR">
+
+                                        Vendor
+
+                                    </option>
+
+                                </select>
+
+                            </label>
+
+
+
+                            <label>
+
+                                Employer / Company
+
+                                <input
+
+                                    value={
+
+                                        form.employerName
+
+                                    }
+
+                                    onChange={event =>
+
+                                        updateForm(
+
+                                            "employerName",
+
+                                            event.target.value
+
+                                        )
+
+                                    }
+
+                                />
+
+                            </label>
+
+
+
+                            <label>
+
+                                Email
+
+                                <input
+
+                                    type="email"
+
+                                    value={
+
+                                        form.email
+
+                                    }
+
+                                    onChange={event =>
+
+                                        updateForm(
+
+                                            "email",
+
+                                            event.target.value
+
+                                        )
+
+                                    }
+
+                                />
+
+                            </label>
+
+
+
+                            <label>
+
+                                Phone
+
+                                <input
+
+                                    value={
+
+                                        form.phone
+
+                                    }
+
+                                    onChange={event =>
+
+                                        updateForm(
+
+                                            "phone",
+
+                                            event.target.value
+
+                                        )
+
+                                    }
+
+                                />
+
+                            </label>
+
+
+
+                            <label>
+
+                                Service Region
+
+                                <input
+
+                                    value={
+
+                                        form.serviceRegion
+
+                                    }
+
+                                    onChange={event =>
+
+                                        updateForm(
+
+                                            "serviceRegion",
+
+                                            event.target.value
+
+                                        )
+
+                                    }
+
+                                />
+
+                            </label>
+
+
+
+                            <label>
+
+                                Hourly Rate
+
+                                <input
+
+                                    type="number"
+
+                                    min="0"
+
+                                    step="0.01"
+
+                                    value={
+
+                                        form.hourlyRate
+
+                                    }
+
+                                    onChange={event =>
+
+                                        updateForm(
+
+                                            "hourlyRate",
+
+                                            event.target.value
+
+                                        )
+
+                                    }
+
+                                />
+
+                            </label>
+
+
+
+                            <label>
+
+                                Currency
+
+                                <input
+
+                                    value={
+
+                                        form.currency
+
+                                    }
+
+                                    onChange={event =>
+
+                                        updateForm(
+
+                                            "currency",
+
+                                            event.target.value.toUpperCase()
+
+                                        )
+
+                                    }
+
+                                    maxLength={
+
+                                        3
+
+                                    }
+
+                                />
+
+                            </label>
+
+
+
+                            <label>
+
+                                Status
+
+                                <select
+
+                                    value={
+
+                                        form.status
+
+                                    }
+
+                                    onChange={event =>
+
+                                        updateForm(
+
+                                            "status",
+
+                                            event.target.value as TradeResourceStatus
+
+                                        )
+
+                                    }
+
+                                >
+
+                                    <option value="ACTIVE">
+
+                                        Active
+
+                                    </option>
+
+                                    <option value="INACTIVE">
+
+                                        Inactive
+
+                                    </option>
+
+                                </select>
+
+                            </label>
+
+
+
+                            <label className="trade-resource-form__wide">
+
+                                Notes
+
+                                <textarea
+
+                                    rows={
+
+                                        3
+
+                                    }
+
+                                    value={
+
+                                        form.notes
+
+                                    }
+
+                                    onChange={event =>
+
+                                        updateForm(
+
+                                            "notes",
+
+                                            event.target.value
+
+                                        )
+
+                                    }
+
+                                />
+
+                            </label>
+
+
+
+                            <fieldset className="trade-resource-form__skills">
+
+                                <legend>
+
+                                    Skills &amp;
+
+                                    Qualifications
+
+                                </legend>
+
+
+
+                                <p>
+
+                                    Select the skills
+
+                                    this resource is
+
+                                    qualified to perform.
+
+                                </p>
+
+
+
+                                <div>
+
+                                    {skills.map(
+
+                                        skill => (
+
+                                            <label
+
+                                                key={
+
+                                                    skill.id
+
+                                                }
+
+                                            >
+
+                                                <input
+
+                                                    type="checkbox"
+
+                                                    checked={form.skillIds.includes(
+
+                                                        skill.id
+
+                                                    )}
+
+                                                    onChange={() => {
+                                                            const isSelected =
+                                                                form.skillIds.includes(
+                                                                    skill.id
+                                                                );
+
+                                                            toggleSkill(
+                                                                skill.id
+                                                            );
+
+                                                            if (
+                                                                isSelected &&
+                                                                form.trade === skill.name
+                                                            ) {
+                                                                updateForm(
+                                                                    "trade",
+                                                                    ""
+                                                                );
+                                                            }
+                                                        }}
+
+                                                />
+
+
+
+                                                <span>
+
+                                                    <strong>
+
+                                                        {
+
+                                                            skill.name
+
+                                                        }
+
+                                                    </strong>
+
+                                                        {form.skillIds.includes(
+                                                            skill.id
+                                                        ) && (
+                                                            <label className="trade-resource-form__primary-skill">
+                                                                <input
+                                                                    type="radio"
+                                                                    name="primaryTrade"
+                                                                    checked={
+                                                                        form.trade ===
+                                                                        skill.name
+                                                                    }
+                                                                    onChange={() =>
+                                                                        updateForm(
+                                                                            "trade",
+                                                                            skill.name
+                                                                        )
+                                                                    }
+                                                                />
+                                                                Primary
+                                                            </label>
+                                                        )}
+
+
+
+                                                    <small>
+
+                                                        {
+
+                                                            skill.code
+
+                                                        }
+
+                                                    </small>
+
+                                                </span>
+
+                                            </label>
+
+                                        )
+
+                                    )}
+
+                                </div>
+
+                            </fieldset>
+
+                        </div>
+
+
+
+                        <footer>
+
+                            <button
+
+                                type="button"
+
+                                onClick={() =>
+
+                                    setShowAddResource(
+
+                                        false
+
+                                    )
+
+                                }
+
+                                disabled={
+
+                                    saving
+
+                                }
+
+                            >
+
+                                Cancel
+
+                            </button>
+
+
+
+                            <button
+
+                                className="trade-resources__primary"
+
+                                type="button"
+
+                                disabled={
+
+                                    saving
+
+                                }
+
+                                onClick={() =>
+
+                                    void createResource()
+
+                                }
+
+                            >
+
+                                {saving
+
+                                    ? "Creating..."
+
+                                    : "Create Tradesperson"}
+
+                            </button>
+
+                        </footer>
+
+                    </div>
+
+                </div>
+
+            )}
+
+        </section>
+
+    );
+
+}

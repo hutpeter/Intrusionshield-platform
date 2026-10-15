@@ -1,0 +1,84 @@
+import {
+    bootstrapConfig
+} from "./bootstrapConfig.js";
+
+import {
+    serviceRegistry
+} from "./serviceRegistry.js";
+
+import {
+    checkServiceHealth
+} from "./serviceHealth.js";
+
+type MonitorState = "healthy" | "unhealthy" | "unknown";
+
+let monitorStarted = false;
+let checkInProgress = false;
+let previousState: MonitorState = "unknown";
+
+async function checkTelemetryHealth(): Promise<void> {
+    if (checkInProgress) {
+        return;
+    }
+
+    checkInProgress = true;
+
+    try {
+        const service = serviceRegistry.find(
+            (candidate) => candidate.id === "telemetry-energy"
+        );
+
+        if (service === undefined) {
+            throw new Error(
+                "Telemetry Energy is missing from the service registry."
+            );
+        }
+
+        const health = await checkServiceHealth(service);
+
+        const currentState: MonitorState =
+            health.status === "healthy"
+                ? "healthy"
+                : "unhealthy";
+
+        if (currentState !== previousState) {
+            console.log(
+                `[Ruby Recovery] ${new Date().toISOString()} ` +
+                `[telemetry-energy] HEALTH_${currentState.toUpperCase()}: ` +
+                `Service status is ${health.status}.`
+            );
+
+            previousState = currentState;
+        }
+    } catch (error) {
+        console.error(
+            "[Ruby Recovery] Telemetry health check failed:",
+            error instanceof Error ? error.message : "Unknown error."
+        );
+
+        previousState = "unhealthy";
+    } finally {
+        checkInProgress = false;
+    }
+}
+
+export function startRecoveryMonitor(): void {
+    if (monitorStarted || !bootstrapConfig.enabled) {
+        return;
+    }
+
+    monitorStarted = true;
+
+    console.log(
+        "[Ruby Recovery] Starting telemetry health monitoring."
+    );
+
+    void checkTelemetryHealth();
+
+    setInterval(
+        () => {
+            void checkTelemetryHealth();
+        },
+        bootstrapConfig.healthCheckIntervalMs
+    );
+}

@@ -1,11 +1,12 @@
-import type {
+﻿import type {
     Request,
     Response
 } from "express";
 
 export type SiteStreamEventType =
     | "telemetry-reading"
-    | "energy-flow";
+    | "energy-flow"
+    | "bas-command";
 
 export interface SiteStreamEvent {
     readonly tenantId: string;
@@ -113,3 +114,4 @@ export class SiteEventStream {
         return this.subscribers.size;
     }
 }
+

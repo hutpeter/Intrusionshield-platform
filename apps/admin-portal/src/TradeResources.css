@@ -1,0 +1,510 @@
+.trade-resources {
+    padding: 24px;
+}
+
+.trade-resources__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 22px;
+}
+
+.trade-resources__header h2 {
+    margin: 2px 0 6px;
+    font-size: 28px;
+}
+
+.trade-resources__header p {
+    margin: 0;
+    max-width: 760px;
+}
+
+.trade-resources__eyebrow {
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+.trade-resources__primary {
+    border: 0;
+    border-radius: 8px;
+    padding: 11px 16px;
+    font-weight: 800;
+    cursor: pointer;
+    background: #176b87;
+    color: #ffffff;
+}
+
+.trade-resources__error {
+    margin-bottom: 16px;
+    padding: 12px 14px;
+    border: 1px solid #b42318;
+    border-radius: 8px;
+    background: #fff1f0;
+    color: #8a1c13;
+    font-weight: 700;
+}
+
+.trade-resources__tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 18px;
+    border-bottom: 1px solid #ccd6dc;
+}
+
+.trade-resources__tabs button {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 14px;
+    border: 0;
+    border-bottom: 3px solid transparent;
+    background: transparent;
+    cursor: pointer;
+    font-weight: 800;
+}
+
+.trade-resources__tabs button.is-active {
+    border-bottom-color: #176b87;
+}
+
+.trade-resources__tabs span {
+    min-width: 22px;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: #e5edf1;
+    font-size: 11px;
+}
+
+.trade-resources__toolbar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.trade-resources__toolbar input {
+    flex: 1;
+    max-width: 520px;
+    padding: 10px 12px;
+    border: 1px solid #aebdc6;
+    border-radius: 7px;
+}
+
+.trade-resources__toolbar button {
+    padding: 9px 14px;
+    border: 1px solid #aebdc6;
+    border-radius: 7px;
+    background: #ffffff;
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.trade-resources__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+}
+
+.trade-resources__layout:has(.trade-resource-detail) {
+    grid-template-columns: minmax(0, 1.7fr) minmax(330px, 0.8fr);
+}
+
+.trade-resources__table-wrap {
+    overflow-x: auto;
+    border: 1px solid #ccd6dc;
+    border-radius: 10px;
+    background: #ffffff;
+}
+
+.trade-resources__table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.trade-resources__table th,
+.trade-resources__table td {
+    padding: 12px 13px;
+    border-bottom: 1px solid #e2e8ec;
+    text-align: left;
+    vertical-align: top;
+}
+
+.trade-resources__table th {
+    background: #edf4f6;
+    font-size: 12px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 0.035em;
+}
+
+.trade-resources__table tbody tr {
+    cursor: pointer;
+}
+
+.trade-resources__table tbody tr:hover,
+.trade-resources__table tbody tr.is-selected {
+    background: #f0f8fa;
+}
+
+.trade-resources__table td small {
+    display: block;
+    margin-top: 3px;
+}
+
+.trade-resources__skill-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+}
+
+.trade-resources__skill-chips span {
+    padding: 3px 7px;
+    border-radius: 999px;
+    background: #dceff3;
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.trade-resources__status {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 900;
+}
+
+.trade-resources__status--active {
+    background: #d9f3e4;
+    color: #11613a;
+}
+
+.trade-resources__status--inactive {
+    background: #eceff1;
+    color: #4e5b62;
+}
+
+.trade-resources__empty {
+    padding: 28px !important;
+    text-align: center !important;
+}
+
+.trade-resource-detail {
+    padding: 18px;
+    border: 1px solid #b7c8d0;
+    border-radius: 10px;
+    background: #f8fbfc;
+}
+
+.trade-resource-detail__heading {
+    display: flex;
+    justify-content: space-between;
+    gap: 15px;
+}
+
+.trade-resource-detail__heading span {
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.trade-resource-detail__heading h3 {
+    margin: 3px 0;
+    font-size: 22px;
+}
+
+.trade-resource-detail__heading p {
+    margin: 0;
+}
+
+.trade-resource-detail__heading button {
+    width: 34px;
+    height: 34px;
+    border: 0;
+    background: transparent;
+    font-size: 25px;
+    cursor: pointer;
+}
+
+.trade-resource-detail__facts {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 20px 0;
+}
+
+.trade-resource-detail__facts div {
+    padding: 9px;
+    border-radius: 7px;
+    background: #ffffff;
+}
+
+.trade-resource-detail__facts dt {
+    margin-bottom: 3px;
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.trade-resource-detail__facts dd {
+    margin: 0;
+    overflow-wrap: anywhere;
+}
+
+.trade-resource-detail__section {
+    padding-top: 16px;
+    margin-top: 16px;
+    border-top: 1px solid #ccd6dc;
+}
+
+.trade-resource-detail__section h4 {
+    margin: 0 0 10px;
+}
+
+.trade-resource-detail__skills {
+    display: grid;
+    gap: 7px;
+}
+
+.trade-resource-detail__skills > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: #ffffff;
+}
+
+.trade-resource-detail__skills span {
+    font-size: 12px;
+}
+
+.trade-resource-detail__calendar {
+    display: grid;
+    gap: 8px;
+}
+
+.trade-resource-detail__calendar article {
+    display: grid;
+    gap: 3px;
+    padding: 10px;
+    border-left: 4px solid #176b87;
+    background: #ffffff;
+}
+
+.trade-resource-detail__calendar span,
+.trade-resource-detail__calendar time {
+    font-size: 12px;
+}
+
+.trade-skills__heading {
+    margin-bottom: 16px;
+}
+
+.trade-skills__heading h3 {
+    margin-bottom: 4px;
+}
+
+.trade-skills__heading p {
+    margin: 0;
+}
+
+.trade-skills__grid {
+    display: grid;
+    grid-template-columns: repeat(
+        auto-fill,
+        minmax(210px, 1fr)
+    );
+    gap: 12px;
+}
+
+.trade-skills__grid article {
+    padding: 16px;
+    border: 1px solid #c5d1d7;
+    border-radius: 9px;
+    background: #ffffff;
+}
+
+.trade-skills__grid article > span {
+    font-size: 11px;
+    font-weight: 900;
+    letter-spacing: 0.05em;
+}
+
+.trade-skills__grid h4 {
+    margin: 6px 0 14px;
+    font-size: 17px;
+}
+
+.trade-skills__grid p {
+    margin: 0 0 8px;
+}
+
+.trade-skills__grid strong {
+    font-size: 11px;
+}
+
+.trade-resource-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: grid;
+    place-items: center;
+    padding: 24px;
+    background: rgba(14, 31, 40, 0.55);
+}
+
+.trade-resource-modal__dialog {
+    width: min(920px, 100%);
+    max-height: 90vh;
+    overflow-y: auto;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 22px 70px rgba(0, 0, 0, 0.28);
+}
+
+.trade-resource-modal__dialog > header,
+.trade-resource-modal__dialog > footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px 20px;
+}
+
+.trade-resource-modal__dialog > header {
+    border-bottom: 1px solid #d6dfe4;
+}
+
+.trade-resource-modal__dialog > footer {
+    justify-content: flex-end;
+    border-top: 1px solid #d6dfe4;
+}
+
+.trade-resource-modal__dialog > header span {
+    font-size: 11px;
+    font-weight: 900;
+    text-transform: uppercase;
+}
+
+.trade-resource-modal__dialog > header h3 {
+    margin: 3px 0 0;
+}
+
+.trade-resource-modal__dialog > header button {
+    border: 0;
+    background: transparent;
+    font-size: 27px;
+    cursor: pointer;
+}
+
+.trade-resource-modal__dialog > footer button {
+    padding: 10px 15px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-weight: 800;
+}
+
+.trade-resource-form {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    padding: 20px;
+}
+
+.trade-resource-form > label {
+    display: grid;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 800;
+}
+
+.trade-resource-form input,
+.trade-resource-form select,
+.trade-resource-form textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 9px 10px;
+    border: 1px solid #aebdc6;
+    border-radius: 6px;
+    font: inherit;
+    background: #ffffff;
+}
+
+.trade-resource-form__wide,
+.trade-resource-form__skills {
+    grid-column: 1 / -1;
+}
+
+.trade-resource-form__skills {
+    padding: 16px;
+    border: 1px solid #c7d3d9;
+    border-radius: 8px;
+}
+
+.trade-resource-form__skills legend {
+    padding: 0 7px;
+    font-weight: 900;
+}
+
+.trade-resource-form__skills > p {
+    margin-top: 0;
+}
+
+.trade-resource-form__skills > div {
+    display: grid;
+    grid-template-columns: repeat(
+        auto-fill,
+        minmax(190px, 1fr)
+    );
+    gap: 8px;
+}
+
+.trade-resource-form__skills label {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 9px;
+    border: 1px solid #d5dfe4;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.trade-resource-form__skills input {
+    width: auto;
+    margin-top: 3px;
+}
+
+.trade-resource-form__skills label span {
+    display: grid;
+}
+
+.trade-resource-form__skills small {
+    margin-top: 2px;
+    font-weight: 500;
+}
+
+@media (max-width: 1000px) {
+    .trade-resources__layout:has(.trade-resource-detail) {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 700px) {
+    .trade-resources {
+        padding: 16px;
+    }
+
+    .trade-resources__header {
+        flex-direction: column;
+    }
+
+    .trade-resource-form {
+        grid-template-columns: 1fr;
+    }
+
+    .trade-resource-form__wide,
+    .trade-resource-form__skills {
+        grid-column: auto;
+    }
+}

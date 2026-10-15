@@ -1,10 +1,20 @@
 :root {
+    /* Ruby theme tokens shared by Athena and the platform shell. */
+    --ruby-ink: #10223d;
+    --ruby-blue: #1749bd;
+    --ruby-blue-hover: #103a9b;
+    --ruby-teal: #087f73;
+    --ruby-coral: #c44d45;
+    --ruby-gold: #a46909;
+    --ruby-canvas: #f0f5fb;
+    --ruby-border: #d8e2ef;
+    --ruby-surface: #ffffff;
     font-family:
         Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
         "Segoe UI", sans-serif;
 
-    color: #172033;
-    background: #f5f7fa;
+    color: var(--ruby-ink);
+    background: var(--ruby-canvas);
     font-synthesis: none;
     text-rendering: optimizeLegibility;
 }
@@ -37,7 +47,7 @@ button {
 .app-shell {
     display: flex;
     min-height: 100vh;
-    background: #f5f7fa;
+    background: var(--ruby-canvas);
 }
 
 /* Sidebar */
@@ -48,7 +58,7 @@ button {
     display: flex;
     width: 256px;
     flex-direction: column;
-    background: #111827;
+    background: linear-gradient(180deg, #0c2449 0%, #132d55 56%, #0b3c50 100%);
     color: #d7dce5;
 }
 
@@ -73,7 +83,8 @@ button {
     font-weight: 700;
     letter-spacing: 0.2px;
     background: #ffffff;
-    color: #000000;
+    color: var(--ruby-blue);
+    box-shadow: 0 3px 14px rgb(8 26 59 / 24%);
 }
 
 .brand-name {
@@ -106,9 +117,9 @@ button {
     gap: 10px;
     margin: 0 12px 18px;
     padding: 10px;
-    border: 1px solid #303b4d;
+    border: 1px solid rgb(255 255 255 / 23%);
     border-radius: 8px;
-    background: #192232;
+    background: rgb(255 255 255 / 9%);
 }
 
 .workspace-icon {
@@ -188,13 +199,14 @@ button {
 }
 
 .nav-item:hover {
-    background: #192232;
+    background: rgb(255 255 255 / 12%);
     color: #ffffff;
 }
 
 .nav-item.active {
-    background: #273449;
+    background: #1d58cc;
     color: #ffffff;
+    box-shadow: inset 3px 0 0 #54dac9, 0 3px 12px rgb(4 21 46 / 20%);
 }
 
 .nav-icon {
@@ -263,7 +275,8 @@ button {
     align-items: center;
     justify-content: space-between;
     padding: 0 32px;
-    border-bottom: 1px solid #e1e5eb;
+    border-bottom: 1px solid var(--ruby-border);
+    box-shadow: 0 2px 12px rgb(20 68 133 / 5%);
     background: #ffffff;
 }
 
@@ -362,7 +375,7 @@ button {
 
 .eyebrow {
     margin-bottom: 8px;
-    color: #7d8899;
+    color: var(--ruby-teal);
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.12em;
@@ -370,7 +383,7 @@ button {
 
 .page-heading h1 {
     margin: 0;
-    color: #1b2535;
+    color: var(--ruby-ink);
     font-size: 30px;
     font-weight: 700;
     letter-spacing: -0.035em;
@@ -390,7 +403,7 @@ button {
     padding: 0 15px;
     border: 0;
     border-radius: 6px;
-    background: #273449;
+    background: var(--ruby-blue);
     color: #ffffff;
     font-size: 12px;
     font-weight: 600;
@@ -398,7 +411,7 @@ button {
 }
 
 .primary-button:hover {
-    background: #1d293b;
+    background: var(--ruby-blue-hover);
 }
 
 .primary-button span {
@@ -418,10 +431,16 @@ button {
 .summary-card {
     min-height: 122px;
     padding: 19px 20px;
-    border: 1px solid #e3e7ed;
-    border-radius: 8px;
+    border: 1px solid var(--ruby-border);
+    border-top: 4px solid var(--ruby-blue);
+    border-radius: 10px;
     background: #ffffff;
+    box-shadow: 0 4px 16px rgb(20 68 133 / 5%);
 }
+
+.summary-card:nth-child(4n + 2) { border-top-color: var(--ruby-teal); }
+.summary-card:nth-child(4n + 3) { border-top-color: var(--ruby-coral); }
+.summary-card:nth-child(4n + 4) { border-top-color: var(--ruby-gold); }
 
 .summary-label {
     color: #8a94a4;
@@ -432,7 +451,7 @@ button {
 
 .summary-value {
     margin-top: 9px;
-    color: #1d2838;
+    color: var(--ruby-ink);
     font-size: 27px;
     font-weight: 700;
     letter-spacing: -0.035em;
@@ -461,9 +480,10 @@ button {
 
 .content-card {
     overflow: hidden;
-    border: 1px solid #e1e5eb;
-    border-radius: 8px;
+    border: 1px solid var(--ruby-border);
+    border-radius: 10px;
     background: #ffffff;
+    box-shadow: 0 5px 20px rgb(20 68 133 / 5%);
 }
 
 .card-header {
@@ -471,7 +491,8 @@ button {
     align-items: center;
     justify-content: space-between;
     padding: 21px 22px;
-    border-bottom: 1px solid #e7eaf0;
+    border-bottom: 1px solid var(--ruby-border);
+    background: linear-gradient(90deg, #edf4ff 0%, #f2faf9 100%);
 }
 
 .card-header h2 {
@@ -592,8 +613,8 @@ tbody tr:hover {
     height: 34px;
     place-items: center;
     border-radius: 50%;
-    background: #edf0f4;
-    color: #596678;
+    background: #e5efff;
+    color: var(--ruby-blue);
     font-size: 9px;
     font-weight: 700;
 }
@@ -652,8 +673,8 @@ tbody tr:hover {
 }
 
 .status-pill.active {
-    background: #edf8f3;
-    color: #388566;
+    background: #e3f7f1;
+    color: #086b57;
 }
 
 .status-pill.active > span {
@@ -730,10 +751,19 @@ tbody tr:hover {
 }
 
 .pagination button.current-page {
-    border-color: #d7dde5;
-    background: #f1f3f6;
-    color: #273449;
+    border-color: #a9c3f4;
+    background: #eaf2ff;
+    color: var(--ruby-blue);
     font-weight: 700;
+}
+
+.primary-button:focus-visible,
+.secondary-button:focus-visible,
+.nav-item:focus-visible,
+.pagination button:focus-visible,
+.login-submit:focus-visible {
+    outline: 3px solid #3bbdb1;
+    outline-offset: 2px;
 }
 
 .pagination span {
@@ -835,4 +865,634 @@ tbody tr:hover {
     .topbar-actions .icon-button {
         display: none;
     }
+}
+
+/* Ruby / Athena authentication */
+.login-page {
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    padding: 32px;
+    background:
+        radial-gradient(circle at top left, rgba(42, 91, 215, 0.12), transparent 34%),
+        #f5f7fb;
+    color: #172033;
+}
+
+.login-card {
+    width: min(100%, 440px);
+    padding: 36px;
+    border: 1px solid #dfe4ec;
+    border-radius: 16px;
+    background: #ffffff;
+    box-shadow: 0 18px 50px rgba(23, 32, 51, 0.12);
+}
+
+.login-brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 34px;
+}
+
+.login-brand-mark {
+    width: 44px;
+    height: 44px;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+    background: #172033;
+    color: #ffffff;
+    font-size: 22px;
+    font-weight: 700;
+}
+
+.login-platform {
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.login-company {
+    margin-top: 1px;
+    color: #475467;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.login-product {
+    margin-top: 3px;
+    color: #667085;
+    font-size: 13px;
+}
+
+.login-heading h1 {
+    margin: 0;
+    font-size: 28px;
+    line-height: 1.2;
+}
+
+.login-heading p {
+    margin: 8px 0 24px;
+    color: #667085;
+    font-size: 14px;
+}
+
+.login-form {
+    display: grid;
+    gap: 18px;
+}
+
+.login-field {
+    display: grid;
+    gap: 7px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.login-field input {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #cfd6e1;
+    border-radius: 8px;
+    padding: 11px 12px;
+    background: #ffffff;
+    color: #172033;
+    font: inherit;
+    font-weight: 400;
+    outline: none;
+}
+
+.login-field input:focus {
+    border-color: #5b76d6;
+    box-shadow: 0 0 0 3px rgba(91, 118, 214, 0.14);
+}
+
+.login-field input:disabled {
+    background: #f2f4f7;
+    cursor: not-allowed;
+}
+
+.login-error {
+    padding: 11px 12px;
+    border: 1px solid #f3b6b6;
+    border-radius: 8px;
+    background: #fff4f4;
+    color: #b42318;
+    font-size: 14px;
+}
+
+.login-submit {
+    min-height: 44px;
+    border: 0;
+    border-radius: 8px;
+    padding: 10px 16px;
+    background: #172033;
+    color: #ffffff;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.login-submit:hover:not(:disabled) {
+    filter: brightness(1.08);
+}
+
+.login-submit:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+/* Athena selectors used by the current React screen. */
+.workspace-selector { display: block; margin: 14px 12px 20px; padding: 0; }
+.workspace-label, .navigation-section-label {
+    display: block; padding: 12px 14px 7px; color: #c1d7ec;
+    font-size: 12px; font-weight: 750; letter-spacing: 0.09em; text-transform: uppercase;
+}
+.workspace-button {
+    display: flex; width: 100%; align-items: center; gap: 11px;
+    padding: 10px 12px; border: 1px solid rgb(255 255 255 / 24%);
+    border-radius: 9px; background: rgb(255 255 255 / 10%);
+    color: #fff; text-align: left;
+}
+.workspace-details small { margin-top: 3px; color: #c4d7e9; font-size: 12px; }
+.sidebar-navigation { display: grid; gap: 12px; padding: 0 10px; }
+.navigation-section { padding: 0; }
+.navigation-item {
+    display: flex; width: 100%; min-height: 44px; align-items: center; gap: 12px;
+    margin: 2px 0; padding: 8px 12px; border: 0; border-radius: 8px;
+    background: transparent; color: #e3edf8; font-size: 15px;
+    font-weight: 600; text-align: left;
+}
+.navigation-item:hover { background: rgb(255 255 255 / 14%); }
+.navigation-item.active {
+    background: #1d58cc; color: #fff;
+    box-shadow: inset 5px 0 #56dfc9, 0 4px 12px rgb(0 18 48 / 22%);
+}
+.navigation-icon { display: grid; width: 22px; flex: 0 0 22px; place-items: center; font-size: 18px; }
+.sidebar-footer .user-profile {
+    margin: 15px 0 0; padding: 15px 0 0; border-left: 0;
+    border-top: 1px solid rgb(255 255 255 / 18%);
+}
+.user-avatar {
+    display: grid; width: 38px; height: 38px; flex: 0 0 38px;
+    place-items: center; border-radius: 50%; background: #e7f2ff;
+    color: #12396b; font-size: 13px; font-weight: 750;
+}
+.sidebar .user-details strong { color: #fff; font-size: 13px; }
+.sidebar .user-details span { color: #c0d4e7; font-size: 12px; }
+.system-status { color: #d5e6ef; font-size: 12px; }
+.user-menu-button { margin-left: auto; border: 0; background: transparent; color: #fff; font-size: 18px; }
+.topbar-button {
+    position: relative; width: 38px; height: 38px;
+    border: 1px solid var(--ruby-border); border-radius: 8px;
+    background: #fff; color: var(--ruby-ink); font-size: 16px;
+}
+.notification-indicator {
+    position: absolute; top: 5px; right: 5px; width: 6px; height: 6px;
+    border-radius: 50%; background: var(--ruby-coral);
+}
+.page-header {
+    display: flex; align-items: end; justify-content: space-between;
+    gap: 18px; margin-bottom: 24px;
+}
+.page-eyebrow {
+    margin-bottom: 10px; color: var(--ruby-teal); font-size: 13px;
+    font-weight: 750; letter-spacing: 0.05em;
+}
+.page-header h1 { margin: 0; color: var(--ruby-ink); font-size: 34px; line-height: 1.2; }
+.page-header p { margin: 9px 0 0; color: #445670; font-size: 15px; line-height: 1.45; }
+.page-header-actions {
+    display: flex; flex-wrap: wrap; align-items: center;
+    justify-content: flex-end; gap: 8px;
+}
+.primary-button, .secondary-button { min-height: 42px; height: auto; padding: 9px 14px; font-size: 14px; }
+.summary-card {
+    min-height: 145px; border-top-width: 8px;
+    background: linear-gradient(180deg, #eaf1ff 0%, #fff 72%);
+}
+.summary-card:nth-child(4n + 2) { background: linear-gradient(180deg, #e3f7f3 0%, #fff 72%); }
+.summary-card:nth-child(4n + 3) { background: linear-gradient(180deg, #fff0eb 0%, #fff 72%); }
+.summary-card:nth-child(4n + 4) { background: linear-gradient(180deg, #fff4dd 0%, #fff 72%); }
+.summary-card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; color: #253957; font-size: 15px; font-weight: 700;
+}
+.summary-icon {
+    display: grid; width: 28px; height: 28px; place-items: center;
+    border-radius: 8px; background: rgb(255 255 255 / 70%); color: var(--ruby-blue);
+}
+.summary-value { margin-top: 10px; font-size: 34px; }
+.summary-footer { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 7px; color: #445670; font-size: 13px; }
+.content-card-header {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding: 21px 22px; border-bottom: 1px solid var(--ruby-border);
+    background: linear-gradient(90deg, #eaf2ff, #e6f8f3);
+}
+.content-card-header h2 { margin: 0; color: var(--ruby-ink); font-size: 20px; }
+.content-card-header p { margin: 5px 0 0; color: #40536d; font-size: 14px; }
+.table-actions { display: flex; align-items: center; gap: 9px; }
+.search-box input { font-size: 14px; }
+.search-icon { color: #58718f; font-size: 16px; }
+.filter-button {
+    min-height: 40px; padding: 0 13px; border: 1px solid var(--ruby-border);
+    border-radius: 7px; background: #fff; color: var(--ruby-ink); font-size: 14px;
+}
+.table-container { width: 100%; overflow-x: auto; }
+th { height: 44px; color: #314661; font-size: 12px; }
+td { height: 72px; color: #253957; font-size: 14px; }
+.person-avatar { width: 38px; height: 38px; font-size: 12px; }
+.person-cell strong { color: var(--ruby-ink); font-size: 14px; }
+.person-cell span { color: #62738b; font-size: 11px; }
+.type-badge, .status-badge {
+    display: inline-flex; align-items: center; padding: 5px 9px;
+    border-radius: 999px; font-size: 13px; font-weight: 650;
+}
+.type-badge { background: #eaf2ff; color: #17449d; }
+.status-badge.active { background: #e0f5ed; color: #086b57; }
+.status-badge.inactive { background: #edf0f5; color: #40536d; }
+.identifier { color: #254976; font-size: 13px; font-weight: 600; }
+.row-action {
+    min-width: 34px; min-height: 34px; border: 1px solid var(--ruby-border);
+    border-radius: 7px; background: #fff; color: var(--ruby-blue); font-size: 16px;
+}
+.pagination-info { color: #40536d; font-size: 13px; }
+.pagination-controls { display: flex; align-items: center; gap: 5px; }
+.pagination-controls button { width: auto; min-width: 34px; height: 34px; padding: 0 8px; font-size: 13px; }
+.navigation-item:focus-visible, .workspace-button:focus-visible,
+.topbar-button:focus-visible, .filter-button:focus-visible, .row-action:focus-visible {
+    outline: 3px solid #44c9b8; outline-offset: 2px;
+}
+@media (max-width: 1100px) {
+    .page-header { align-items: flex-start; flex-direction: column; }
+    .page-header-actions { justify-content: flex-start; }
+    .content-card-header { align-items: flex-start; flex-direction: column; }
+}
+@media (max-width: 800px) {
+    .workspace-selector, .navigation-section-label, .sidebar-footer { display: none; }
+    .sidebar-navigation { padding: 12px 8px; }
+    .navigation-item { justify-content: center; padding: 8px; }
+    .navigation-item > span:not(.navigation-icon) { display: none; }
+}
+
+
+/* Authenticated account actions */
+.logout-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-left: auto;
+    padding: 7px 9px;
+    border: 1px solid rgb(255 255 255 / 28%);
+    border-radius: 7px;
+    background: rgb(255 255 255 / 10%);
+    color: #ffffff;
+    font: inherit;
+    font-size: 11px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.logout-button:hover {
+    border-color: rgb(255 255 255 / 48%);
+    background: rgb(255 255 255 / 18%);
+}
+
+.logout-button:focus-visible {
+    outline: 2px solid #ffffff;
+    outline-offset: 2px;
+}
+
+.row-action { width: auto; padding: 6px 12px; font-size: 13px; font-weight: 650; white-space: nowrap; }
+
+/* Ruby Administration Workspace */
+
+.administration-workspace {
+    width: 100%;
+}
+
+.administration-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 24px 0 0;
+    padding: 6px 6px 0;
+    border-bottom: 1px solid #cbd5e1;
+}
+
+.administration-tab {
+    appearance: none;
+    border: 1px solid transparent;
+    border-bottom: none;
+    background: transparent;
+    padding: 11px 16px;
+    border-radius: 8px 8px 0 0;
+    font: inherit;
+    font-weight: 600;
+    color: #475569;
+    cursor: pointer;
+    transition:
+        background-color 120ms ease,
+        color 120ms ease,
+        border-color 120ms ease;
+}
+
+.administration-tab:hover {
+    background: #f8fafc;
+    color: #0f172a;
+}
+
+.administration-tab.active {
+    background: #ffffff;
+    color: #0f766e;
+    border-color: #cbd5e1;
+    position: relative;
+    bottom: -1px;
+}
+
+.administration-tab:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
+
+.administration-tab-content {
+    min-height: 320px;
+    padding: 28px 8px;
+}
+
+.administration-tab-content h2 {
+    margin-top: 0;
+    margin-bottom: 12px;
+    font-size: 1.35rem;
+}
+
+.administration-tab-content p {
+    max-width: 760px;
+    color: #64748b;
+}
+/* =========================================================
+   Ruby Platform Services
+   ========================================================= */
+
+.ruby-services-panel {
+    width: 100%;
+}
+
+.ruby-services-heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+.ruby-services-heading h2 {
+    margin: 0 0 8px;
+}
+
+.ruby-services-heading p {
+    margin: 0;
+    color: #64748b;
+}
+
+.ruby-services-refresh {
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    border-radius: 7px;
+    padding: 9px 16px;
+    font: inherit;
+    font-weight: 600;
+    color: #334155;
+    cursor: pointer;
+}
+
+.ruby-services-refresh:hover:not(:disabled) {
+    background: #f8fafc;
+}
+
+.ruby-services-refresh:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.ruby-services-summary {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 22px;
+}
+
+.ruby-service-summary-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #ffffff;
+    padding: 16px 18px;
+}
+
+.ruby-service-summary-card span {
+    display: block;
+    margin-bottom: 5px;
+    color: #64748b;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.ruby-service-summary-card strong {
+    color: #0f172a;
+    font-size: 1.6rem;
+}
+
+.ruby-services-list {
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    border-radius: 9px;
+    background: #ffffff;
+}
+
+.ruby-service-row {
+    display: grid;
+    grid-template-columns:
+        14px
+        minmax(220px, 1fr)
+        120px
+        100px
+        90px;
+    align-items: center;
+    gap: 14px;
+    min-height: 70px;
+    padding: 0 18px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.ruby-service-row:last-child {
+    border-bottom: none;
+}
+
+.ruby-service-status-indicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.ruby-service-status-healthy {
+    background: #16a34a;
+}
+
+.ruby-service-status-degraded {
+    background: #d97706;
+}
+
+.ruby-service-status-down {
+    background: #dc2626;
+}
+
+.ruby-service-identity {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.ruby-service-identity strong {
+    color: #0f172a;
+}
+
+.ruby-service-identity span {
+    color: #64748b;
+    font-size: 0.82rem;
+}
+
+.ruby-service-status-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}
+
+.ruby-service-status-label-healthy {
+    color: #15803d;
+}
+
+.ruby-service-status-label-degraded {
+    color: #b45309;
+}
+
+.ruby-service-status-label-down {
+    color: #b91c1c;
+}
+
+.ruby-service-port,
+.ruby-service-response {
+    color: #64748b;
+    font-size: 0.88rem;
+}
+
+.ruby-services-checked {
+    margin-top: 14px;
+    color: #64748b;
+    font-size: 0.82rem;
+}
+
+.ruby-services-error {
+    margin-bottom: 18px;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    background: #fef2f2;
+    padding: 12px 14px;
+    color: #991b1b;
+}
+
+.ruby-services-loading {
+    padding: 20px 0;
+    color: #64748b;
+}
+
+@media (max-width: 900px) {
+    .ruby-services-summary {
+        grid-template-columns:
+            repeat(2, minmax(0, 1fr));
+    }
+
+    .ruby-service-row {
+        grid-template-columns:
+            14px
+            minmax(180px, 1fr)
+            100px
+            90px;
+    }
+
+    .ruby-service-response {
+        display: none;
+    }
+}
+
+/* =========================================================
+   Sidebar Footer Layout Fix
+   ========================================================= */
+
+.sidebar-footer {
+    box-sizing: border-box;
+    width: 100%;
+    padding-left: 14px;
+    padding-right: 14px;
+    overflow: hidden;
+}
+
+.sidebar-footer .user-profile {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    gap: 8px;
+}
+
+.sidebar-footer .user-details {
+    min-width: 0;
+    flex: 1 1 auto;
+    overflow: hidden;
+}
+
+.sidebar-footer .user-details strong,
+.sidebar-footer .user-details span {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sidebar-footer .logout-button {
+    flex: 0 0 auto;
+    margin-left: 4px;
+}
+/* =========================================================
+   Ruby Service Management Actions
+   ========================================================= */
+
+.ruby-service-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    min-width: 100px;
+}
+
+.ruby-service-start-button {
+    min-width: 84px;
+    padding: 8px 16px;
+    border: 0;
+    border-radius: 7px;
+    background: #166534;
+    color: #ffffff;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition:
+        opacity 0.15s ease,
+        transform 0.15s ease;
+}
+
+.ruby-service-start-button:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+.ruby-service-start-button:disabled {
+    cursor: wait;
+    opacity: 0.6;
 }

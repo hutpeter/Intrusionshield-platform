@@ -1,5 +1,8 @@
-import { createPractitioner, type Practitioner } from "@intrusionshield/his";
-import type { PractitionerRepository } from "../infrastructure/repositories/PractitionerRepository.js";
+﻿import { createPractitioner, type Practitioner } from "@intrusionshield/his";
+import type {
+  PractitionerListItem,
+  PractitionerRepository
+} from "../infrastructure/repositories/PractitionerRepository.js";
 
 export class PractitionerService {
   public constructor(private readonly repository: PractitionerRepository) {}
@@ -8,6 +11,13 @@ export class PractitionerService {
     return this.repository.findById(id, tenantId);
   }
 
+  public async list(
+    tenantId: string
+  ): Promise<PractitionerListItem[]> {
+    return this.repository.list(
+      tenantId
+    );
+  }
   public async create(practitioner: Practitioner): Promise<Practitioner> {
     return this.repository.create(createPractitioner(practitioner));
   }
@@ -16,3 +26,4 @@ export class PractitionerService {
     return this.repository.update(createPractitioner(practitioner));
   }
 }
+

@@ -1,0 +1,26 @@
+.bas-dashboard { color: #edf3ff; background: #111a2b; border: 1px solid #48617f; border-radius: 18px; padding: 24px; font-family: system-ui, sans-serif; }
+.bas-header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 20px; }
+.bas-header h1 { margin: 0; font-size: 2rem; }
+.bas-header p { margin: 6px 0; color: #c5d3e9; }
+.bas-header .bas-eyebrow { color: #77d9cf; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+.bas-header nav { display: flex; gap: 8px; }
+.bas-header button { color: #edf3ff; background: #23344d; border: 2px solid #6882a4; border-radius: 9px; padding: 10px 18px; cursor: pointer; font: inherit; font-weight: 700; }
+.bas-header button[aria-current="page"] { background: #347d87; border-color: #87eee1; }
+.bas-header button:focus-visible { outline: 3px solid #ffdc82; outline-offset: 2px; }
+.bas-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; margin-top: 24px; }
+.bas-cards article { background: #202e43; border: 2px solid #6682a6; border-radius: 12px; padding: 18px; }
+.bas-cards span { display: block; color: #c8d7ea; font-size: .95rem; }
+.bas-cards strong { display: block; margin-top: 12px; font-size: 1.9rem; }
+.bas-timestamp, .bas-connection { color: #c8d7ea; }
+.bas-connection { font-weight: 700; }
+.bas-error { color: #ffe0e0; background: #662c38; border: 2px solid #f6a0ac; padding: 12px; border-radius: 8px; }
+.bas-history { background: #202e43; border: 2px solid #526e92; border-radius: 12px; padding: 18px; }
+.bas-history h2 { margin: 0 0 16px; }
+.bas-trends { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; margin-bottom: 22px; }
+.bas-trend { border: 1px solid #587397; border-radius: 8px; padding: 12px; }
+.bas-trend h3 { margin: 0 0 10px; font-size: 1rem; }
+.bas-trend svg { display: block; width: 100%; height: 120px; }
+.bas-table-scroll { overflow-x: auto; }
+.bas-history table { border-collapse: collapse; width: 100%; min-width: 520px; text-align: left; }
+.bas-history th, .bas-history td { border-bottom: 1px solid #526986; padding: 10px; }
+.bas-history th { color: #b5eae3; }

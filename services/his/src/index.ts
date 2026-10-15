@@ -7,14 +7,31 @@ import {
 } from "@intrusionshield/database";
 
 import {
+  AdmissionService,
+  AppointmentService,
+  AvailabilityService,
+  AdtService,
+  BedService,
+  ClinicalLocationService,
+  EncounterService,
   FacilityService,
+  PatientRegistrationService,
   PatientService,
   PersonService,
   PractitionerService
 } from "./application/index.js";
 
 import {
+  SqlAdmissionRepository,
+  SqlAppointmentRepository,
+  SqlAvailabilityRepository,
+  SqlAdtRepository,
+  SqlBedAssignmentRepository,
+  SqlBedRepository,
+  SqlClinicalLocationRepository,
+  SqlEncounterRepository,
   SqlFacilityRepository,
+  SqlPatientRegistrationRepository,
   SqlPatientRepository,
   SqlPersonRepository,
   SqlPractitionerRepository
@@ -60,11 +77,50 @@ async function start(): Promise<void> {
   const patientRepository =
     new SqlPatientRepository(database);
 
+  const patientRegistrationRepository =
+    new SqlPatientRegistrationRepository(
+      database
+    );
+
+  const encounterRepository =
+    new SqlEncounterRepository(database);
+
+  const admissionRepository =
+    new SqlAdmissionRepository(database);
+
+  const appointmentRepository =
+    new SqlAppointmentRepository(
+      database
+    );
+
+  const availabilityRepository =
+    new SqlAvailabilityRepository(
+      database
+    );
+
+  const bedAssignmentRepository =
+    new SqlBedAssignmentRepository(
+      database
+    );
+
+  const adtRepository =
+    new SqlAdtRepository(database);
+
   const practitionerRepository =
-    new SqlPractitionerRepository(database);
+    new SqlPractitionerRepository(
+      database
+    );
 
   const facilityRepository =
     new SqlFacilityRepository(database);
+
+  const clinicalLocationRepository =
+    new SqlClinicalLocationRepository(
+      database
+    );
+
+  const bedRepository =
+    new SqlBedRepository(database);
 
   const personService =
     new PersonService(
@@ -74,6 +130,41 @@ async function start(): Promise<void> {
   const patientService =
     new PatientService(
       patientRepository
+    );
+
+  const patientRegistrationService =
+    new PatientRegistrationService(
+      patientRegistrationRepository
+    );
+
+  const encounterService =
+    new EncounterService(
+      encounterRepository
+    );
+
+  const admissionService =
+    new AdmissionService(
+      admissionRepository
+    );
+
+  const appointmentService =
+    new AppointmentService(
+      appointmentRepository,
+      encounterRepository,
+      database
+    );
+
+  const availabilityService =
+    new AvailabilityService(
+      availabilityRepository,
+      appointmentRepository
+    );
+
+  const adtService =
+    new AdtService(
+      admissionRepository,
+      bedAssignmentRepository,
+      adtRepository
     );
 
   const practitionerService =
@@ -86,11 +177,29 @@ async function start(): Promise<void> {
       facilityRepository
     );
 
+  const clinicalLocationService =
+    new ClinicalLocationService(
+      clinicalLocationRepository
+    );
+
+  const bedService =
+    new BedService(
+      bedRepository
+    );
+
   const app = createApp({
     personService,
     patientService,
+    patientRegistrationService,
+    encounterService,
+    admissionService,
+    appointmentService,
+    availabilityService,
+    adtService,
     practitionerService,
-    facilityService
+    facilityService,
+    clinicalLocationService,
+    bedService
   });
 
   const port =

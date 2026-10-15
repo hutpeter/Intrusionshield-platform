@@ -1,0 +1,854 @@
+import { fileURLToPath } from "node:url";
+import {
+    ChildProcess,
+    execFile,
+    spawn
+} from "node:child_process";
+
+import {
+    resolve
+} from "node:path";
+
+import { existsSync } from "node:fs";
+
+
+export type StartableServiceId =
+    | "gateway"
+    | "authentication"
+    | "his"
+    | "telemetry-energy";
+
+
+type StartableServiceDefinition = {
+    readonly packageName: string;
+    readonly host: string;
+    readonly port: number;
+    readonly healthPath: string;
+};
+
+
+const startableServices:
+    Record<
+        StartableServiceId,
+        StartableServiceDefinition
+    > = {
+
+        gateway: {
+            packageName:
+                "@intrusionshield/gateway-service",
+            host: "localhost",
+            port: 4000,
+            healthPath: "/health"
+        },
+
+        authentication: {
+            packageName:
+                "@intrusionshield/authentication-service",
+            host: "localhost",
+            port: 4400,
+            healthPath: "/health"
+        },
+
+        his: {
+            packageName:
+                "@intrusionshield/his-service",
+            host: "localhost",
+            port: 4300,
+            healthPath: "/health"
+        },
+
+        "telemetry-energy": {
+            packageName:
+                "@intrusionshield/telemetry-energy-service",
+            host: "localhost",
+            port: 4401,
+            healthPath: "/health"
+        }
+    };
+
+
+type ManagedProcess = {
+    readonly serviceId: StartableServiceId;
+    readonly packageName: string;
+    readonly child: ChildProcess;
+    readonly startedAt: Date;
+};
+
+
+const managedProcesses =
+    new Map<
+        StartableServiceId,
+        ManagedProcess
+    >();
+
+
+const STARTUP_TIMEOUT_MS = 15000;
+const HEALTH_POLL_INTERVAL_MS = 500;
+const HEALTH_REQUEST_TIMEOUT_MS = 2000;
+
+
+function isStartableServiceId(
+    value: string
+): value is StartableServiceId {
+
+    return value in startableServices;
+}
+
+
+function getRepositoryRoot(): string {
+
+    return resolve(
+        fileURLToPath(import.meta.url),
+        "../../../../"
+    );
+}
+
+
+function getPnpmScript(): string {
+
+    if (process.env.APPDATA === undefined) {
+
+        throw new Error(
+            "Unable to locate the pnpm installation."
+        );
+    }
+
+    return resolve(
+        process.env.APPDATA,
+        "npm",
+        "node_modules",
+        "pnpm",
+        "bin",
+        "pnpm.mjs"
+    );
+}
+
+
+function delay(
+    milliseconds: number
+): Promise<void> {
+
+    return new Promise(
+        (resolvePromise) => {
+
+            setTimeout(
+                resolvePromise,
+                milliseconds
+            );
+        }
+    );
+}
+
+
+async function isHealthEndpointReady(
+    definition: StartableServiceDefinition
+): Promise<boolean> {
+
+    const controller =
+        new AbortController();
+
+    const timeout =
+        setTimeout(
+            () => {
+                controller.abort();
+            },
+            HEALTH_REQUEST_TIMEOUT_MS
+        );
+
+    try {
+
+        const url =
+            `http://${definition.host}:${definition.port}${definition.healthPath}`;
+
+        const response =
+            await fetch(
+                url,
+                {
+                    method: "GET",
+                    signal: controller.signal
+                }
+            );
+
+        return response.ok;
+
+    } catch {
+
+        return false;
+
+    } finally {
+
+        clearTimeout(
+            timeout
+        );
+    }
+}
+
+
+async function waitForServiceHealth(
+    serviceId: StartableServiceId,
+    definition: StartableServiceDefinition,
+    child: ChildProcess
+): Promise<void> {
+
+    const deadline =
+        Date.now() +
+        STARTUP_TIMEOUT_MS;
+
+    while (
+        Date.now() <
+        deadline
+    ) {
+
+        /*
+         * Detect a service process that terminated
+         * before becoming healthy.
+         */
+        if (
+            child.exitCode !== null ||
+            child.signalCode !== null
+        ) {
+
+            throw new Error(
+                `Service '${serviceId}' exited before becoming healthy` +
+                (
+                    child.exitCode !== null
+                        ? ` (exit code ${child.exitCode}).`
+                        : ` (signal ${child.signalCode}).`
+                )
+            );
+        }
+
+if (
+    await isHealthEndpointReady(
+        definition
+    )
+) {
+    if (
+        child.exitCode !== null ||
+        child.signalCode !== null
+    ) {
+        throw new Error(
+            `Service '${serviceId}' became healthy, but its supervised process exited.`
+        );
+    }
+
+    return;
+}
+
+        await delay(
+            HEALTH_POLL_INTERVAL_MS
+        );
+    }
+
+    throw new Error(
+        `Service '${serviceId}' did not become healthy within ${STARTUP_TIMEOUT_MS / 1000} seconds.`
+    );
+}
+
+
+export type StartServiceResult = {
+    readonly serviceId: StartableServiceId;
+    readonly packageName: string;
+    readonly started: boolean;
+    readonly processId: number | null;
+};
+
+
+export type StopServiceResult = {
+    readonly serviceId: StartableServiceId;
+    readonly stopped: boolean;
+    readonly processId: number | null;
+};
+
+
+export type RestartServiceResult = {
+    readonly serviceId: StartableServiceId;
+    readonly stoppedProcessId: number | null;
+    readonly startedProcessId: number | null;
+    readonly restarted: boolean;
+};
+
+
+export function isServiceManaged(
+    serviceId: string
+): boolean {
+
+    if (!isStartableServiceId(serviceId)) {
+        return false;
+    }
+
+    const managed =
+        managedProcesses.get(
+            serviceId
+        );
+
+    if (managed === undefined) {
+        return false;
+    }
+
+    if (
+        managed.child.exitCode !== null ||
+        managed.child.signalCode !== null
+    ) {
+
+        managedProcesses.delete(
+            serviceId
+        );
+
+        return false;
+    }
+
+    return true;
+}
+
+
+export async function startService(
+    serviceId: string
+): Promise<StartServiceResult> {
+
+    if (!isStartableServiceId(serviceId)) {
+
+        throw new Error(
+            `Service '${serviceId}' is not approved for local process startup.`
+        );
+    }
+
+
+    const existing =
+        managedProcesses.get(
+            serviceId
+        );
+
+
+    if (
+        existing !== undefined &&
+        existing.child.exitCode === null &&
+        existing.child.signalCode === null
+    ) {
+
+        throw new Error(
+            `Service '${serviceId}' is already managed by Platform Operations.`
+        );
+    }
+
+
+    if (existing !== undefined) {
+
+        managedProcesses.delete(
+            serviceId
+        );
+    }
+
+
+    const definition =
+        startableServices[serviceId];
+
+    /*
+     * Do not attempt to start a second copy if the
+     * configured health endpoint is already responding.
+     *
+     * This protects services that may have been started
+     * outside Platform Operations.
+     */
+    if (
+        await isHealthEndpointReady(
+            definition
+        )
+    ) {
+
+        throw new Error(
+            `Service '${serviceId}' is already healthy and cannot be started again.`
+        );
+    }
+
+    const repositoryRoot =
+        getRepositoryRoot();
+
+    const localEnvironmentFile =
+        resolve(repositoryRoot, ".env.local");
+
+    if (existsSync(localEnvironmentFile)) {
+        process.loadEnvFile(localEnvironmentFile);
+    }
+
+    const startupScript =
+        resolve(
+            repositoryRoot,
+            "scripts",
+            "start-ruby-service.ps1"
+        );
+
+    if (!existsSync(startupScript)) {
+        throw new Error(
+            "Ruby secure startup adapter was not found."
+        );
+    }
+
+    const child =
+        spawn(
+            "powershell.exe",
+            [
+                "-NoProfile",
+                "-NonInteractive",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                startupScript,
+                "-Service",
+                serviceId
+            ],
+            {
+                cwd: repositoryRoot,
+
+                env: {
+                    ...process.env
+                },
+
+                stdio: "ignore",
+
+                windowsHide: true
+            }
+        );
+
+
+    const processId =
+        child.pid ?? null;
+
+
+    /*
+     * Register the process immediately so that its
+     * lifecycle can be tracked while health polling
+     * is taking place.
+     */
+    managedProcesses.set(
+        serviceId,
+        {
+            serviceId,
+            packageName:
+                definition.packageName,
+            child,
+            startedAt:
+                new Date()
+        }
+    );
+
+
+    child.once(
+        "exit",
+        (
+            exitCode,
+            signal
+        ) => {
+
+            const timestamp =
+                new Date().toISOString();
+
+            console.info(
+                "[Ruby Supervisor] Service process exited.",
+                {
+                    serviceId,
+                    processId,
+                    exitCode,
+                    signal,
+                    timestamp
+                }
+            );
+
+            const current =
+                managedProcesses.get(
+                    serviceId
+                );
+
+            if (
+                current?.child ===
+                child
+            ) {
+
+                managedProcesses.delete(
+                    serviceId
+                );
+            }
+        }
+    );
+
+    /*
+     * Wait for Node to confirm that the child process
+     * itself was successfully created.
+     */
+    await new Promise<void>(
+        (
+            resolvePromise,
+            rejectPromise
+        ) => {
+
+            if (
+                child.pid !== undefined
+            ) {
+
+                resolvePromise();
+                return;
+            }
+
+
+            child.once(
+                "spawn",
+                () => {
+
+                    resolvePromise();
+                }
+            );
+
+
+            child.once(
+                "error",
+                (error) => {
+
+                    managedProcesses.delete(
+                        serviceId
+                    );
+
+                    rejectPromise(
+                        new Error(
+                            `Unable to launch ${definition.packageName}: ${error.message}`
+                        )
+                    );
+                }
+            );
+        }
+    );
+
+
+    try {
+
+        /*
+         * A successful spawn is not considered a
+         * successful Ruby service startup.
+         *
+         * The service must actually reach its
+         * configured health endpoint.
+         */
+        await waitForServiceHealth(
+            serviceId,
+            definition,
+            child
+        );
+
+    } catch (error) {
+
+        const current =
+            managedProcesses.get(
+                serviceId
+            );
+
+        if (
+            current?.child === child
+        ) {
+
+            managedProcesses.delete(
+                serviceId
+            );
+        }
+
+
+        /*
+         * If the process is still alive but never became
+         * healthy, attempt to terminate the process that
+         * Platform Operations itself created.
+         */
+        if (
+            child.exitCode === null &&
+            child.signalCode === null &&
+            child.pid !== undefined
+        ) {
+            try {
+                await terminateWindowsProcessTree(
+                    child.pid
+                );
+            } catch (cleanupError) {
+                console.error(
+                    `[Ruby Supervisor] Failed to clean up process tree for '${serviceId}'.`,
+                    cleanupError instanceof Error
+                        ? cleanupError.message
+                        : "Unknown cleanup error."
+                );
+            }
+        }
+
+
+        if (error instanceof Error) {
+            throw error;
+        }
+
+        throw new Error(
+            `Service '${serviceId}' failed during startup.`
+        );
+    }
+
+
+    return {
+        serviceId,
+        packageName:
+            definition.packageName,
+        started: true,
+        processId
+    };
+}
+async function terminateWindowsProcessTree(
+    processId: number
+): Promise<void> {
+
+    await new Promise<void>(
+        (
+            resolvePromise,
+            rejectPromise
+        ) => {
+
+            execFile(
+                "C:\\Windows\\System32\\taskkill.exe",
+                [
+                    "/PID",
+                    processId.toString(),
+                    "/T",
+                    "/F"
+                ],
+                {
+                    windowsHide: true
+                },
+                (
+                    error
+                ) => {
+
+                    if (error !== null) {
+
+                        rejectPromise(
+                            new Error(
+                                `Unable to terminate managed process tree rooted at PID ${processId}: ${error.message}`
+                            )
+                        );
+
+                        return;
+                    }
+
+                    resolvePromise();
+                }
+            );
+        }
+    );
+}
+
+export async function stopService(
+    serviceId: string
+): Promise<StopServiceResult> {
+
+    if (!isStartableServiceId(serviceId)) {
+
+        throw new Error(
+            `Service '${serviceId}' is not approved for local process control.`
+        );
+    }
+
+
+    const managed =
+        managedProcesses.get(
+            serviceId
+        );
+
+
+    if (managed === undefined) {
+
+        throw new Error(
+            `Service '${serviceId}' is not managed by this Platform Operations process.`
+        );
+    }
+
+
+    const processId =
+        managed.child.pid ?? null;
+
+
+    if (
+        managed.child.exitCode !== null ||
+        managed.child.signalCode !== null
+    ) {
+
+        managedProcesses.delete(
+            serviceId
+        );
+
+        return {
+            serviceId,
+            stopped: true,
+            processId
+        };
+    }
+
+
+    return await new Promise<
+        StopServiceResult
+    >(
+        (
+            resolvePromise,
+            rejectPromise
+        ) => {
+
+            let settled =
+                false;
+
+
+            const timeout =
+                setTimeout(
+                    () => {
+
+                        if (settled) {
+                            return;
+                        }
+
+                        settled = true;
+
+                        rejectPromise(
+                            new Error(
+                                `Timed out waiting for service '${serviceId}' to stop.`
+                            )
+                        );
+                    },
+                    10000
+                );
+
+
+            managed.child.once(
+                "exit",
+                () => {
+
+                    if (settled) {
+                        return;
+                    }
+
+                    settled = true;
+
+                    clearTimeout(
+                        timeout
+                    );
+
+                    managedProcesses.delete(
+                        serviceId
+                    );
+
+                    resolvePromise({
+                        serviceId,
+                        stopped: true,
+                        processId
+                    });
+                }
+            );
+
+
+if (processId === null) {
+
+    clearTimeout(
+        timeout
+    );
+
+    settled = true;
+
+    rejectPromise(
+        new Error(
+            `Unable to stop service '${serviceId}' because its managed process ID is unavailable.`
+        )
+    );
+
+    return;
+}
+
+
+terminateWindowsProcessTree(
+    processId
+).catch(
+    (error: unknown) => {
+
+        if (settled) {
+            return;
+        }
+
+        clearTimeout(
+            timeout
+        );
+
+        settled = true;
+
+        if (error instanceof Error) {
+
+            rejectPromise(
+                error
+            );
+
+            return;
+        }
+
+        rejectPromise(
+            new Error(
+                `Unable to stop service '${serviceId}'.`
+            )
+        );
+    }
+);
+        }
+    );
+}
+
+
+export async function restartService(
+    serviceId: string
+): Promise<RestartServiceResult> {
+
+    if (!isStartableServiceId(serviceId)) {
+
+        throw new Error(
+            `Service '${serviceId}' is not approved for local process restart.`
+        );
+    }
+
+
+    const managed =
+        managedProcesses.get(
+            serviceId
+        );
+
+
+    if (managed === undefined) {
+
+        throw new Error(
+            `Service '${serviceId}' was not started by this Platform Operations process and cannot yet be restarted safely.`
+        );
+    }
+
+
+    const stopResult =
+        await stopService(
+            serviceId
+        );
+
+
+    /*
+     * Allow Windows a short period to release
+     * the service port before starting again.
+     */
+    await delay(
+        500
+    );
+
+
+    const startResult =
+        await startService(
+            serviceId
+        );
+
+
+    return {
+        serviceId,
+        stoppedProcessId:
+            stopResult.processId,
+        startedProcessId:
+            startResult.processId,
+        restarted: true
+    };
+}

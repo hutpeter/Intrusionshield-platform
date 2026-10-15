@@ -1,19 +1,31 @@
 {
   "name": "@intrusionshield/authentication-service",
   "version": "1.0.0",
-  "description": "Authentication service for the IntrusionShield Platform.",
+  "description": "EIS authentication service.",
   "private": true,
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "scripts": {
+    "build": "tsc -p tsconfig.json",
     "clean": "rimraf dist",
     "start": "node dist/index.js",
     "dev": "node --watch dist/index.js"
   },
+  "dependencies": {
+    "@intrusionshield/config": "workspace:*",
+    "@intrusionshield/database": "workspace:*",
+    "@intrusionshield/identity": "workspace:*",
+    "@intrusionshield/internationalization": "workspace:*",
+    "@intrusionshield/tenant-configuration": "workspace:*",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2"
+  },
   "devDependencies": {
-    "@types/node": "^24.0.0",
-    "rimraf": "^6.0.0",
-    "typescript": "^5.9.0"
+    "@types/express": "^5.0.5",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^24.13.3",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.9.3"
   }
 }

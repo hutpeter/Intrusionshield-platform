@@ -1,4 +1,4 @@
-const BASE_URL = process.env.TELEMETRY_ENERGY_BASE_URL ?? "http://localhost:4400";
+const BASE_URL = process.env.TELEMETRY_ENERGY_BASE_URL ?? "http://localhost:4401";
 const TENANT_ID = process.env.SIMULATOR_TENANT_ID ?? "73c28616-633a-46b5-bd4d-2ad7971af02c";
 const SITE_ID = process.env.SIMULATOR_SITE_ID ?? "138c8b96-04ae-402d-93f9-89b3677734e1";
 const SOURCE = process.env.SIMULATOR_SOURCE ?? "simulator.miramichi";
@@ -391,3 +391,4 @@ void main().catch((error: unknown) => {
     );
     process.exitCode = 1;
 });
+

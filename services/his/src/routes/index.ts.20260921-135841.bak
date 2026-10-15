@@ -1,0 +1,463 @@
+﻿import { Router } from "express";
+
+import {
+  AdmissionController,
+  AppointmentController,
+  AvailabilityController,
+  AdtController,
+  BedController,
+  ClinicalLocationController,
+  EncounterController,
+  FacilityController,
+  PatientController,
+  PatientRegistrationController,
+  PersonController,
+  PractitionerController
+} from "../controllers/index.js";
+
+import {
+  tenantContext
+} from "../middleware/tenantContext.js";
+
+import type {
+  AdmissionService,
+  AppointmentService,
+  AvailabilityService,
+  AdtService,
+  BedService,
+  ClinicalLocationService,
+  EncounterService,
+  FacilityService,
+  PatientRegistrationService,
+  PatientService,
+  PersonService,
+  PractitionerService
+} from "../application/index.js";
+
+export interface HisServices {
+  personService: PersonService;
+  patientService: PatientService;
+
+  patientRegistrationService:
+    PatientRegistrationService;
+
+  encounterService: EncounterService;
+
+  admissionService: AdmissionService;
+  appointmentService: AppointmentService;
+  availabilityService: AvailabilityService;
+  adtService: AdtService;
+
+  practitionerService:
+    PractitionerService;
+
+  facilityService: FacilityService;
+
+  clinicalLocationService:
+    ClinicalLocationService;
+
+  bedService: BedService;
+}
+
+export function createHisRouter(
+  services: HisServices
+): Router {
+  const router = Router();
+
+  const person =
+    new PersonController(
+      services.personService
+    );
+
+  const patient =
+    new PatientController(
+      services.patientService
+    );
+
+  const patientRegistration =
+    new PatientRegistrationController(
+      services.patientRegistrationService
+    );
+
+  const encounter =
+    new EncounterController(
+      services.encounterService
+    );
+
+  const admission =
+    new AdmissionController(
+      services.admissionService
+    );
+
+  const appointment =
+    new AppointmentController(
+      services.appointmentService
+    );
+
+  const availability =
+    new AvailabilityController(
+      services.availabilityService
+    );
+
+  const adt =
+    new AdtController(
+      services.adtService
+    );
+
+  const practitioner =
+    new PractitionerController(
+      services.practitionerService
+    );
+
+  const facility =
+    new FacilityController(
+      services.facilityService
+    );
+
+  const clinicalLocation =
+    new ClinicalLocationController(
+      services.clinicalLocationService
+    );
+
+  const bed =
+    new BedController(
+      services.bedService
+    );
+
+  router.use(tenantContext);
+
+  router.get(
+    "/persons/summary",
+    person.summary
+  );
+
+  router.get(
+    "/persons",
+    person.list
+  );
+
+  router.get(
+    "/facilities/options",
+    person.facilityOptions
+  );
+
+  router.get(
+    "/persons/:id/facility-affiliations",
+    person.listFacilityAffiliations
+  );
+
+  router.put(
+    "/persons/:id/facility-affiliations",
+    person.replaceFacilityAffiliations
+  );
+
+  router.get(
+    "/persons/:id",
+    person.get
+  );
+
+  router.post(
+    "/persons",
+    person.create
+  );
+
+  router.put(
+    "/persons/:id",
+    person.update
+  );
+
+  router.get(
+    "/patients/:patientId/registrations",
+    patientRegistration.listForPatient
+  );
+
+  router.get(
+    "/patient-registrations/:id",
+    patientRegistration.get
+  );
+
+  router.post(
+    "/patient-registrations",
+    patientRegistration.create
+  );
+
+  router.put(
+    "/patient-registrations/:id",
+    patientRegistration.update
+  );
+
+  router.get(
+    "/patients/:patientId/encounters",
+    encounter.listForPatient
+  );
+
+  router.get(
+    "/encounters/:encounterId/admission",
+    admission.getForEncounter
+  );
+
+  router.get(
+    "/encounters/:id",
+    encounter.get
+  );
+
+  router.post(
+    "/encounters",
+    encounter.create
+  );
+
+  router.put(
+    "/encounters/:id",
+    encounter.update
+  );
+
+  // ------------------------------------------------------------
+  // Scheduling - Appointments
+  // ------------------------------------------------------------
+
+  router.get(
+    "/appointments",
+    appointment.search
+  );
+
+  router.get(
+    "/patients/:patientId/appointments",
+    appointment.listForPatient
+  );
+
+  router.get(
+    "/appointments/:id",
+    appointment.get
+  );
+
+  router.post(
+    "/appointments",
+    appointment.create
+  );
+
+  router.put(
+    "/appointments/:id",
+    appointment.update
+  );
+
+  router.post(
+    "/appointments/:id/confirm",
+    appointment.confirm
+  );
+
+  router.post(
+    "/appointments/:id/check-in",
+    appointment.checkIn
+  );
+
+  router.post(
+    "/appointments/:id/complete",
+    appointment.complete
+  );
+
+  router.post(
+    "/appointments/:id/cancel",
+    appointment.cancel
+  );
+
+  router.post(
+    "/appointments/:id/no-show",
+    appointment.noShow
+  );
+
+  // ------------------------------------------------------------
+  // Scheduling - Availability Slots
+  // ------------------------------------------------------------
+
+  router.get(
+    "/availability/slots",
+    availability.getSlots
+  );
+
+  // ------------------------------------------------------------
+  // Scheduling - Availability Rules
+  // ------------------------------------------------------------
+
+  router.get(
+    "/availability/rules",
+    availability.listRules
+  );
+
+  router.get(
+    "/availability/rules/:id",
+    availability.getRule
+  );
+
+  router.post(
+    "/availability/rules",
+    availability.createRule
+  );
+
+  router.put(
+    "/availability/rules/:id",
+    availability.updateRule
+  );
+
+  // ------------------------------------------------------------
+  // Scheduling - Availability Exceptions
+  // ------------------------------------------------------------
+
+  router.get(
+    "/availability/exceptions",
+    availability.listExceptions
+  );
+
+  router.get(
+    "/availability/exceptions/:id",
+    availability.getException
+  );
+
+  router.post(
+    "/availability/exceptions",
+    availability.createException
+  );
+
+  router.put(
+    "/availability/exceptions/:id",
+    availability.updateException
+  );
+
+  router.get(
+    "/patients/:patientId/admissions",
+    admission.listForPatient
+  );
+
+  router.get(
+    "/admissions/:admissionId/bed-assignments",
+    adt.listAssignments
+  );
+
+  router.post(
+    "/admissions/:admissionId/bed-assignments",
+    adt.assignBed
+  );
+
+  router.post(
+    "/admissions/:admissionId/transfers",
+    adt.transfer
+  );
+
+  router.post(
+    "/admissions/:admissionId/discharge",
+    adt.discharge
+  );
+
+  router.get(
+    "/admissions/:id",
+    admission.get
+  );
+
+  router.post(
+    "/admissions",
+    admission.create
+  );
+
+  router.get(
+    "/patients/by-person/:personId",
+    patient.getByPersonId
+  );
+
+  router.get(
+    "/patients/:id",
+    patient.get
+  );
+
+  router.post(
+    "/patients",
+    patient.create
+  );
+
+  router.put(
+    "/patients/:id",
+    patient.update
+  );
+
+  router.get(
+      "/practitioners",
+      practitioner.list
+    );
+
+    router.get(
+      "/practitioners/:id",
+      practitioner.get
+    );
+
+  router.post(
+    "/practitioners",
+    practitioner.create
+  );
+
+  router.put(
+    "/practitioners/:id",
+    practitioner.update
+  );
+
+  router.get(
+    "/facilities",
+    facility.list
+  );
+
+  router.get(
+    "/facilities/:facilityId/locations",
+    clinicalLocation.listForFacility
+  );
+
+  router.get(
+    "/locations/:locationId/beds",
+    bed.listForLocation
+  );
+
+  router.get(
+    "/locations/:id",
+    clinicalLocation.get
+  );
+
+  router.post(
+    "/locations",
+    clinicalLocation.create
+  );
+
+  router.put(
+    "/locations/:id",
+    clinicalLocation.update
+  );
+
+  router.get(
+    "/beds/:id",
+    bed.get
+  );
+
+  router.post(
+    "/beds",
+    bed.create
+  );
+
+  router.put(
+    "/beds/:id",
+    bed.update
+  );
+
+  router.get(
+    "/facilities/:id",
+    facility.get
+  );
+
+  router.post(
+    "/facilities",
+    facility.create
+  );
+
+  router.put(
+    "/facilities/:id",
+    facility.update
+  );
+
+  return router;
+}
+
+

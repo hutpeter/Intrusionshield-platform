@@ -1,0 +1,1717 @@
+0001: import {
+0002:     useEffect,
+0003:     useMemo,
+0004:     useState,
+0005:     type CSSProperties
+0006: } from "react";
+0007: 
+0008: import {
+0009:     useI18n
+0010: } from "./i18n/index.js";
+0011: 
+0012: type SchedulingPanelProps = {
+0013:     tenantId: string;
+0014:     onClose: () => void;
+0015: };
+0016: 
+0017: type PractitionerOption = {
+0018:     id: string;
+0019:     practitionerNumber?: string;
+0020:     personId?: string;
+0021:     displayName?: string;
+0022:     name?: string;
+0023:     firstName?: string;
+0024:     lastName?: string;
+0025: };
+0026: 
+0027: type FacilityOption = {
+0028:     id: string;
+0029:     code: string;
+0030:     name: string;
+0031:     facilityType?: string;
+0032: };
+0033: 
+0034: type ClinicalLocationOption = {
+0035:     id: string;
+0036:     facilityId?: string;
+0037:     code?: string;
+0038:     name: string;
+0039:     locationType?: string;
+0040:     active?: boolean;
+0041: };
+0042: 
+0043: type PatientOption = {
+0044:     id: string;
+0045:     personId: string;
+0046:     patientNumber: string;
+0047:     medicalRecordNumber: string;
+0048:     status: string;
+0049:     firstName: string;
+0050:     middleName?: string;
+0051:     lastName: string;
+0052:     preferredName?: string;
+0053: };
+0054: 
+0055: type AppointmentType =
+0056:     | "CONSULTATION"
+0057:     | "FOLLOW_UP"
+0058:     | "PROCEDURE"
+0059:     | "DIAGNOSTIC"
+0060:     | "THERAPY"
+0061:     | "VIRTUAL"
+0062:     | "OTHER";
+0063: 
+0064: type Appointment = {
+0065:     id: string;
+0066:     appointmentNumber: string;
+0067:     patientId: string;
+0068:     facilityId: string;
+0069:     practitionerId?: string;
+0070:     clinicalLocationId?: string;
+0071:     appointmentType: AppointmentType;
+0072:     status: string;
+0073:     source: string;
+0074:     scheduledStart: string;
+0075:     scheduledEnd: string;
+0076:     reason?: string;
+0077:     notes?: string;
+0078: };
+0079: 
+0080: type AvailabilitySlot = {
+0081:     start: string;
+0082:     end: string;
+0083: };
+0084: 
+0085: type AvailabilitySlotResponse = {
+0086:     practitionerId?: string;
+0087:     clinicalLocationId?: string;
+0088:     from: string;
+0089:     to: string;
+0090:     durationMinutes: number;
+0091:     timeZone: string;
+0092:     slots: AvailabilitySlot[];
+0093: };
+0094: 
+0095: type ApiCollection<T> =
+0096:     | T[]
+0097:     | {
+0098:         items?: T[];
+0099:         data?: T[];
+0100:     };
+0101: 
+0102: const APPOINTMENT_TYPES: ReadonlyArray<{
+0103:     value: AppointmentType;
+0104:     label: string;
+0105: }> = [
+0106:     {
+0107:         value: "CONSULTATION",
+0108:         label: "Consultation"
+0109:     },
+0110:     {
+0111:         value: "FOLLOW_UP",
+0112:         label: "Follow-up"
+0113:     },
+0114:     {
+0115:         value: "PROCEDURE",
+0116:         label: "Procedure"
+0117:     },
+0118:     {
+0119:         value: "DIAGNOSTIC",
+0120:         label: "Diagnostic"
+0121:     },
+0122:     {
+0123:         value: "THERAPY",
+0124:         label: "Therapy"
+0125:     },
+0126:     {
+0127:         value: "VIRTUAL",
+0128:         label: "Virtual"
+0129:     },
+0130:     {
+0131:         value: "OTHER",
+0132:         label: "Other"
+0133:     }
+0134: ];
+0135: 
+0136: const styles: Record<string, CSSProperties> = {
+0137:     backdrop: {
+0138:         position: "fixed",
+0139:         inset: 0,
+0140:         zIndex: 1100,
+0141:         background: "rgba(15, 23, 42, 0.44)",
+0142:         display: "flex",
+0143:         justifyContent: "flex-end"
+0144:     },
+0145:     panel: {
+0146:         width: "min(980px, 100vw)",
+0147:         height: "100vh",
+0148:         overflowY: "auto",
+0149:         background: "#ffffff",
+0150:         boxShadow: "-12px 0 30px rgba(15, 23, 42, 0.18)",
+0151:         padding: "28px"
+0152:     },
+0153:     header: {
+0154:         display: "flex",
+0155:         justifyContent: "space-between",
+0156:         alignItems: "flex-start",
+0157:         gap: "20px",
+0158:         marginBottom: "24px"
+0159:     },
+0160:     eyebrow: {
+0161:         margin: "0 0 6px",
+0162:         color: "#667085",
+0163:         fontSize: "12px",
+0164:         fontWeight: 700,
+0165:         letterSpacing: "0.08em",
+0166:         textTransform: "uppercase"
+0167:     },
+0168:     title: {
+0169:         margin: 0,
+0170:         color: "#172033",
+0171:         fontSize: "28px",
+0172:         lineHeight: 1.2
+0173:     },
+0174:     description: {
+0175:         margin: "8px 0 0",
+0176:         color: "#667085",
+0177:         fontSize: "14px",
+0178:         lineHeight: 1.5
+0179:     },
+0180:     close: {
+0181:         width: "38px",
+0182:         height: "38px",
+0183:         border: "1px solid #d0d5dd",
+0184:         borderRadius: "8px",
+0185:         background: "#ffffff",
+0186:         color: "#344054",
+0187:         fontSize: "20px",
+0188:         cursor: "pointer"
+0189:     },
+0190:     card: {
+0191:         border: "1px solid #e4e7ec",
+0192:         borderRadius: "12px",
+0193:         background: "#ffffff",
+0194:         padding: "20px",
+0195:         marginBottom: "20px"
+0196:     },
+0197:     cardTitle: {
+0198:         margin: "0 0 16px",
+0199:         color: "#172033",
+0200:         fontSize: "16px"
+0201:     },
+0202:     grid: {
+0203:         display: "grid",
+0204:         gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+0205:         gap: "16px"
+0206:     },
+0207:     field: {
+0208:         display: "block",
+0209:         minWidth: 0
+0210:     },
+0211:     fullField: {
+0212:         display: "block",
+0213:         minWidth: 0,
+0214:         gridColumn: "1 / -1"
+0215:     },
+0216:     label: {
+0217:         display: "block",
+0218:         marginBottom: "6px",
+0219:         color: "#475467",
+0220:         fontSize: "12px",
+0221:         fontWeight: 700
+0222:     },
+0223:     input: {
+0224:         width: "100%",
+0225:         minHeight: "42px",
+0226:         border: "1px solid #d0d5dd",
+0227:         borderRadius: "8px",
+0228:         background: "#ffffff",
+0229:         color: "#172033",
+0230:         padding: "8px 10px",
+0231:         fontSize: "14px",
+0232:         boxSizing: "border-box"
+0233:     },
+0234:     textarea: {
+0235:         width: "100%",
+0236:         minHeight: "92px",
+0237:         resize: "vertical",
+0238:         border: "1px solid #d0d5dd",
+0239:         borderRadius: "8px",
+0240:         background: "#ffffff",
+0241:         color: "#172033",
+0242:         padding: "10px",
+0243:         fontSize: "14px",
+0244:         lineHeight: 1.45,
+0245:         boxSizing: "border-box"
+0246:     },
+0247:     actions: {
+0248:         display: "flex",
+0249:         justifyContent: "flex-end",
+0250:         gap: "10px",
+0251:         marginTop: "18px"
+0252:     },
+0253:     primary: {
+0254:         minHeight: "42px",
+0255:         border: "1px solid #172033",
+0256:         borderRadius: "8px",
+0257:         background: "#172033",
+0258:         color: "#ffffff",
+0259:         padding: "0 18px",
+0260:         fontSize: "13px",
+0261:         fontWeight: 700,
+0262:         cursor: "pointer"
+0263:     },
+0264:     secondary: {
+0265:         minHeight: "42px",
+0266:         border: "1px solid #d0d5dd",
+0267:         borderRadius: "8px",
+0268:         background: "#ffffff",
+0269:         color: "#344054",
+0270:         padding: "0 16px",
+0271:         fontSize: "13px",
+0272:         fontWeight: 700,
+0273:         cursor: "pointer"
+0274:     },
+0275:     error: {
+0276:         borderRadius: "8px",
+0277:         background: "#fff4f4",
+0278:         color: "#b42318",
+0279:         padding: "12px 14px",
+0280:         marginBottom: "16px",
+0281:         fontSize: "14px"
+0282:     },
+0283:     success: {
+0284:         border: "1px solid #abefc6",
+0285:         borderRadius: "10px",
+0286:         background: "#ecfdf3",
+0287:         color: "#067647",
+0288:         padding: "14px 16px",
+0289:         marginBottom: "20px",
+0290:         fontSize: "14px",
+0291:         lineHeight: 1.5
+0292:     },
+0293:     empty: {
+0294:         border: "1px dashed #d0d5dd",
+0295:         borderRadius: "10px",
+0296:         color: "#667085",
+0297:         padding: "24px",
+0298:         textAlign: "center",
+0299:         fontSize: "14px"
+0300:     },
+0301:     slots: {
+0302:         display: "grid",
+0303:         gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
+0304:         gap: "10px"
+0305:     },
+0306:     slot: {
+0307:         minHeight: "48px",
+0308:         border: "1px solid #d0d5dd",
+0309:         borderRadius: "8px",
+0310:         background: "#ffffff",
+0311:         color: "#344054",
+0312:         padding: "8px 12px",
+0313:         fontSize: "13px",
+0314:         fontWeight: 700,
+0315:         cursor: "pointer"
+0316:     },
+0317:     selectedSlot: {
+0318:         border: "1px solid #172033",
+0319:         background: "#172033",
+0320:         color: "#ffffff"
+0321:     },
+0322:     selection: {
+0323:         marginTop: "16px",
+0324:         padding: "12px 14px",
+0325:         borderRadius: "8px",
+0326:         background: "#f8fafc",
+0327:         color: "#344054",
+0328:         fontSize: "14px"
+0329:     },
+0330:     hint: {
+0331:         margin: "6px 0 0",
+0332:         color: "#667085",
+0333:         fontSize: "12px",
+0334:         lineHeight: 1.4
+0335:     },
+0336:     bookingSummary: {
+0337:         marginBottom: "18px",
+0338:         padding: "14px",
+0339:         borderRadius: "8px",
+0340:         background: "#f8fafc",
+0341:         color: "#344054",
+0342:         fontSize: "14px",
+0343:         lineHeight: 1.55
+0344:     }
+0345: };
+0346: 
+0347: function collectionItems<T>(
+0348:     value: ApiCollection<T>
+0349: ): T[] {
+0350:     if (Array.isArray(value)) {
+0351:         return value;
+0352:     }
+0353: 
+0354:     if (Array.isArray(value.items)) {
+0355:         return value.items;
+0356:     }
+0357: 
+0358:     if (Array.isArray(value.data)) {
+0359:         return value.data;
+0360:     }
+0361: 
+0362:     return [];
+0363: }
+0364: 
+0365: function todayDateOnly(): string {
+0366:     const now = new Date();
+0367:     const year = now.getFullYear();
+0368:     const month =
+0369:         String(now.getMonth() + 1).padStart(2, "0");
+0370:     const day =
+0371:         String(now.getDate()).padStart(2, "0");
+0372: 
+0373:     return `${year}-${month}-${day}`;
+0374: }
+0375: 
+0376: function browserTimeZone(): string {
+0377:     return Intl.DateTimeFormat()
+0378:         .resolvedOptions()
+0379:         .timeZone || "UTC";
+0380: }
+0381: 
+0382: function practitionerLabel(
+0383:     practitioner: PractitionerOption
+0384: ): string {
+0385:     if (practitioner.displayName) {
+0386:         return practitioner.displayName;
+0387:     }
+0388: 
+0389:     if (practitioner.name) {
+0390:         return practitioner.name;
+0391:     }
+0392: 
+0393:     const personName = [
+0394:         practitioner.firstName,
+0395:         practitioner.lastName
+0396:     ]
+0397:         .filter(Boolean)
+0398:         .join(" ");
+0399: 
+0400:     if (personName) {
+0401:         return personName;
+0402:     }
+0403: 
+0404:     return practitioner.practitionerNumber ??
+0405:         practitioner.id;
+0406: }
+0407: 
+0408: function patientLabel(
+0409:     patient: PatientOption
+0410: ): string {
+0411:     const preferred =
+0412:         patient.preferredName?.trim();
+0413: 
+0414:     const legalName = [
+0415:         patient.firstName,
+0416:         patient.middleName,
+0417:         patient.lastName
+0418:     ]
+0419:         .filter(Boolean)
+0420:         .join(" ");
+0421: 
+0422:     const name =
+0423:         preferred
+0424:             ? `${preferred} ${patient.lastName}`
+0425:             : legalName;
+0426: 
+0427:     return `${name} - ${patient.patientNumber} / ${patient.medicalRecordNumber}`;
+0428: }
+0429: 
+0430: function formatSlot(
+0431:     slot: AvailabilitySlot,
+0432:     locale: string,
+0433:     timeZone: string
+0434: ): string {
+0435:     const start = new Date(slot.start);
+0436:     const end = new Date(slot.end);
+0437: 
+0438:     if (
+0439:         Number.isNaN(start.getTime()) ||
+0440:         Number.isNaN(end.getTime())
+0441:     ) {
+0442:         return `${slot.start} - ${slot.end}`;
+0443:     }
+0444: 
+0445:     const formatter =
+0446:         new Intl.DateTimeFormat(locale, {
+0447:             month: "short",
+0448:             day: "numeric",
+0449:             hour: "numeric",
+0450:             minute: "2-digit",
+0451:             timeZone
+0452:         });
+0453: 
+0454:     const timeFormatter =
+0455:         new Intl.DateTimeFormat(locale, {
+0456:             hour: "numeric",
+0457:             minute: "2-digit",
+0458:             timeZone
+0459:         });
+0460: 
+0461:     return `${formatter.format(start)} - ${timeFormatter.format(end)}`;
+0462: }
+0463: 
+0464: async function readError(
+0465:     response: Response,
+0466:     fallback: string
+0467: ): Promise<string> {
+0468:     try {
+0469:         const body =
+0470:             await response.json() as {
+0471:                 error?: string;
+0472:                 message?: string;
+0473:             };
+0474: 
+0475:         return body.message ??
+0476:             body.error ??
+0477:             fallback;
+0478:     } catch {
+0479:         return fallback;
+0480:     }
+0481: }
+0482: 
+0483: export function SchedulingPanel({
+0484:     tenantId,
+0485:     onClose
+0486: }: SchedulingPanelProps) {
+0487:     const {
+0488:         locale
+0489:     } = useI18n();
+0490: 
+0491:     const [
+0492:         practitioners,
+0493:         setPractitioners
+0494:     ] = useState<PractitionerOption[]>([]);
+0495: 
+0496:     const [
+0497:         facilities,
+0498:         setFacilities
+0499:     ] = useState<FacilityOption[]>([]);
+0500: 
+0501:     const [
+0502:         patients,
+0503:         setPatients
+0504:     ] = useState<PatientOption[]>([]);
+0505: 
+0506:     const [
+0507:         locations,
+0508:         setLocations
+0509:     ] = useState<ClinicalLocationOption[]>([]);
+0510: 
+0511:     const [
+0512:         practitionerId,
+0513:         setPractitionerId
+0514:     ] = useState("");
+0515: 
+0516:     const [
+0517:         facilityId,
+0518:         setFacilityId
+0519:     ] = useState("");
+0520: 
+0521:     const [
+0522:         clinicalLocationId,
+0523:         setClinicalLocationId
+0524:     ] = useState("");
+0525: 
+0526:     const [
+0527:         date,
+0528:         setDate
+0529:     ] = useState(todayDateOnly);
+0530: 
+0531:     const [
+0532:         durationMinutes,
+0533:         setDurationMinutes
+0534:     ] = useState(30);
+0535: 
+0536:     const [
+0537:         timeZone,
+0538:         setTimeZone
+0539:     ] = useState(browserTimeZone);
+0540: 
+0541:     const [
+0542:         slots,
+0543:         setSlots
+0544:     ] = useState<AvailabilitySlot[]>([]);
+0545: 
+0546:     const [
+0547:         selectedSlot,
+0548:         setSelectedSlot
+0549:     ] = useState<AvailabilitySlot | null>(null);
+0550: 
+0551:     const [
+0552:         patientId,
+0553:         setPatientId
+0554:     ] = useState("");
+0555: 
+0556:     const [
+0557:         appointmentType,
+0558:         setAppointmentType
+0559:     ] = useState<AppointmentType>(
+0560:         "CONSULTATION"
+0561:     );
+0562: 
+0563:     const [
+0564:         reason,
+0565:         setReason
+0566:     ] = useState("");
+0567: 
+0568:     const [
+0569:         notes,
+0570:         setNotes
+0571:     ] = useState("");
+0572: 
+0573:     const [
+0574:         loadingOptions,
+0575:         setLoadingOptions
+0576:     ] = useState(true);
+0577: 
+0578:     const [
+0579:         finding,
+0580:         setFinding
+0581:     ] = useState(false);
+0582: 
+0583:     const [
+0584:         creating,
+0585:         setCreating
+0586:     ] = useState(false);
+0587: 
+0588:     const [
+0589:         error,
+0590:         setError
+0591:     ] = useState<string | null>(null);
+0592: 
+0593:     const [
+0594:         createdAppointment,
+0595:         setCreatedAppointment
+0596:     ] = useState<Appointment | null>(null);
+0597: 
+0598:     const headers = useMemo(
+0599:         () => ({
+0600:             "x-tenant-id": tenantId
+0601:         }),
+0602:         [tenantId]
+0603:     );
+0604: 
+0605:     useEffect(() => {
+0606:         const controller =
+0607:             new AbortController();
+0608: 
+0609:         const load =
+0610:             async (): Promise<void> => {
+0611:                 setLoadingOptions(true);
+0612:                 setError(null);
+0613: 
+0614:                 try {
+0615:                     const [
+0616:                         practitionerResponse,
+0617:                         facilityResponse,
+0618:                         patientResponse
+0619:                     ] = await Promise.all([
+0620:                         fetch(
+0621:                             "/api/v1/his/practitioners",
+0622:                             {
+0623:                                 headers,
+0624:                                 signal:
+0625:                                     controller.signal
+0626:                             }
+0627:                         ),
+0628:                         fetch(
+0629:                             "/api/v1/his/facilities/options",
+0630:                             {
+0631:                                 headers,
+0632:                                 signal:
+0633:                                     controller.signal
+0634:                             }
+0635:                         ),
+0636:                         fetch(
+0637:                             "/api/v1/his/patients",
+0638:                             {
+0639:                                 headers,
+0640:                                 signal:
+0641:                                     controller.signal
+0642:                             }
+0643:                         )
+0644:                     ]);
+0645: 
+0646:                     if (!practitionerResponse.ok) {
+0647:                         throw new Error(
+0648:                             await readError(
+0649:                                 practitionerResponse,
+0650:                                 `Unable to load practitioners (${practitionerResponse.status}).`
+0651:                             )
+0652:                         );
+0653:                     }
+0654: 
+0655:                     if (!facilityResponse.ok) {
+0656:                         throw new Error(
+0657:                             await readError(
+0658:                                 facilityResponse,
+0659:                                 `Unable to load facilities (${facilityResponse.status}).`
+0660:                             )
+0661:                         );
+0662:                     }
+0663: 
+0664:                     if (!patientResponse.ok) {
+0665:                         throw new Error(
+0666:                             await readError(
+0667:                                 patientResponse,
+0668:                                 `Unable to load patients (${patientResponse.status}).`
+0669:                             )
+0670:                         );
+0671:                     }
+0672: 
+0673:                     const practitionerBody =
+0674:                         await practitionerResponse.json() as
+0675:                             ApiCollection<PractitionerOption>;
+0676: 
+0677:                     const facilityBody =
+0678:                         await facilityResponse.json() as
+0679:                             ApiCollection<FacilityOption>;
+0680: 
+0681:                     const patientBody =
+0682:                         await patientResponse.json() as
+0683:                             ApiCollection<PatientOption>;
+0684: 
+0685:                     setPractitioners(
+0686:                         collectionItems(
+0687:                             practitionerBody
+0688:                         )
+0689:                     );
+0690: 
+0691:                     setFacilities(
+0692:                         collectionItems(
+0693:                             facilityBody
+0694:                         )
+0695:                     );
+0696: 
+0697:                     setPatients(
+0698:                         collectionItems(
+0699:                             patientBody
+0700:                         ).filter(
+0701:                             (patient) =>
+0702:                                 patient.status === "ACTIVE"
+0703:                         )
+0704:                     );
+0705:                 } catch (caught) {
+0706:                     if (
+0707:                         caught instanceof DOMException &&
+0708:                         caught.name === "AbortError"
+0709:                     ) {
+0710:                         return;
+0711:                     }
+0712: 
+0713:                     setError(
+0714:                         caught instanceof Error
+0715:                             ? caught.message
+0716:                             : "Unable to load scheduling options."
+0717:                     );
+0718:                 } finally {
+0719:                     setLoadingOptions(false);
+0720:                 }
+0721:             };
+0722: 
+0723:         void load();
+0724: 
+0725:         return () =>
+0726:             controller.abort();
+0727:     }, [headers]);
+0728: 
+0729:     useEffect(() => {
+0730:         setClinicalLocationId("");
+0731:         setLocations([]);
+0732: 
+0733:         if (!facilityId) {
+0734:             return;
+0735:         }
+0736: 
+0737:         const controller =
+0738:             new AbortController();
+0739: 
+0740:         const loadLocations =
+0741:             async (): Promise<void> => {
+0742:                 try {
+0743:                     const response =
+0744:                         await fetch(
+0745:                             `/api/v1/his/facilities/${encodeURIComponent(facilityId)}/locations`,
+0746:                             {
+0747:                                 headers,
+0748:                                 signal:
+0749:                                     controller.signal
+0750:                             }
+0751:                         );
+0752: 
+0753:                     if (!response.ok) {
+0754:                         throw new Error(
+0755:                             await readError(
+0756:                                 response,
+0757:                                 `Unable to load clinical locations (${response.status}).`
+0758:                             )
+0759:                         );
+0760:                     }
+0761: 
+0762:                     const body =
+0763:                         await response.json() as
+0764:                             ApiCollection<ClinicalLocationOption>;
+0765: 
+0766:                     setLocations(
+0767:                         collectionItems(body)
+0768:                             .filter(
+0769:                                 (item) =>
+0770:                                     item.active !== false
+0771:                             )
+0772:                     );
+0773:                 } catch (caught) {
+0774:                     if (
+0775:                         caught instanceof DOMException &&
+0776:                         caught.name === "AbortError"
+0777:                     ) {
+0778:                         return;
+0779:                     }
+0780: 
+0781:                     setError(
+0782:                         caught instanceof Error
+0783:                             ? caught.message
+0784:                             : "Unable to load clinical locations."
+0785:                     );
+0786:                 }
+0787:             };
+0788: 
+0789:         void loadLocations();
+0790: 
+0791:         return () =>
+0792:             controller.abort();
+0793:     }, [facilityId, headers]);
+0794: 
+0795:     const loadSlots =
+0796:         async (
+0797:             clearSelection: boolean
+0798:         ): Promise<boolean> => {
+0799:             setError(null);
+0800: 
+0801:             if (clearSelection) {
+0802:                 setSelectedSlot(null);
+0803:             }
+0804: 
+0805:             setSlots([]);
+0806: 
+0807:             if (!facilityId) {
+0808:                 setError(
+0809:                     "Select a facility before finding appointment availability."
+0810:                 );
+0811:                 return false;
+0812:             }
+0813: 
+0814:             if (
+0815:                 !practitionerId &&
+0816:                 !clinicalLocationId
+0817:             ) {
+0818:                 setError(
+0819:                     "Select a practitioner or clinical location."
+0820:                 );
+0821:                 return false;
+0822:             }
+0823: 
+0824:             if (!date) {
+0825:                 setError(
+0826:                     "Select an appointment date."
+0827:                 );
+0828:                 return false;
+0829:             }
+0830: 
+0831:             if (!timeZone.trim()) {
+0832:                 setError(
+0833:                     "Enter a time zone."
+0834:                 );
+0835:                 return false;
+0836:             }
+0837: 
+0838:             if (
+0839:                 !Number.isInteger(durationMinutes) ||
+0840:                 durationMinutes <= 0
+0841:             ) {
+0842:                 setError(
+0843:                     "Appointment duration must be a positive number of minutes."
+0844:                 );
+0845:                 return false;
+0846:             }
+0847: 
+0848:             setFinding(true);
+0849: 
+0850:             try {
+0851:                 const parameters =
+0852:                     new URLSearchParams({
+0853:                         from: date,
+0854:                         to: date,
+0855:                         durationMinutes:
+0856:                             String(durationMinutes),
+0857:                         timeZone:
+0858:                             timeZone.trim()
+0859:                     });
+0860: 
+0861:                 if (practitionerId) {
+0862:                     parameters.set(
+0863:                         "practitionerId",
+0864:                         practitionerId
+0865:                     );
+0866:                 }
+0867: 
+0868:                 if (clinicalLocationId) {
+0869:                     parameters.set(
+0870:                         "clinicalLocationId",
+0871:                         clinicalLocationId
+0872:                     );
+0873:                 }
+0874: 
+0875:                 const response =
+0876:                     await fetch(
+0877:                         `/api/v1/his/availability/slots?${parameters.toString()}`,
+0878:                         {
+0879:                             headers
+0880:                         }
+0881:                     );
+0882: 
+0883:                 if (!response.ok) {
+0884:                     throw new Error(
+0885:                         await readError(
+0886:                             response,
+0887:                             `Unable to find available times (${response.status}).`
+0888:                         )
+0889:                     );
+0890:                 }
+0891: 
+0892:                 const body =
+0893:                     await response.json() as
+0894:                         AvailabilitySlotResponse;
+0895: 
+0896:                 setSlots(
+0897:                     Array.isArray(body.slots)
+0898:                         ? body.slots
+0899:                         : []
+0900:                 );
+0901: 
+0902:                 return true;
+0903:             } catch (caught) {
+0904:                 setError(
+0905:                     caught instanceof Error
+0906:                         ? caught.message
+0907:                         : "Unable to find available times."
+0908:                 );
+0909: 
+0910:                 return false;
+0911:             } finally {
+0912:                 setFinding(false);
+0913:             }
+0914:         };
+0915: 
+0916:     const findSlots =
+0917:         async (): Promise<void> => {
+0918:             setCreatedAppointment(null);
+0919:             await loadSlots(true);
+0920:         };
+0921: 
+0922:     const bookAppointment =
+0923:         async (): Promise<void> => {
+0924:             setError(null);
+0925:             setCreatedAppointment(null);
+0926: 
+0927:             if (!selectedSlot) {
+0928:                 setError(
+0929:                     "Select an available appointment time."
+0930:                 );
+0931:                 return;
+0932:             }
+0933: 
+0934:             if (!patientId) {
+0935:                 setError(
+0936:                     "Select a patient."
+0937:                 );
+0938:                 return;
+0939:             }
+0940: 
+0941:             if (!facilityId) {
+0942:                 setError(
+0943:                     "Select a facility."
+0944:                 );
+0945:                 return;
+0946:             }
+0947: 
+0948:             setCreating(true);
+0949: 
+0950:             try {
+0951:                 const payload: {
+0952:                     patientId: string;
+0953:                     facilityId: string;
+0954:                     practitionerId?: string;
+0955:                     clinicalLocationId?: string;
+0956:                     appointmentType: AppointmentType;
+0957:                     source: "STAFF";
+0958:                     scheduledStart: string;
+0959:                     scheduledEnd: string;
+0960:                     reason?: string;
+0961:                     notes?: string;
+0962:                 } = {
+0963:                     patientId,
+0964:                     facilityId,
+0965:                     appointmentType,
+0966:                     source: "STAFF",
+0967:                     scheduledStart:
+0968:                         selectedSlot.start,
+0969:                     scheduledEnd:
+0970:                         selectedSlot.end
+0971:                 };
+0972: 
+0973:                 if (practitionerId) {
+0974:                     payload.practitionerId =
+0975:                         practitionerId;
+0976:                 }
+0977: 
+0978:                 if (clinicalLocationId) {
+0979:                     payload.clinicalLocationId =
+0980:                         clinicalLocationId;
+0981:                 }
+0982: 
+0983:                 const trimmedReason =
+0984:                     reason.trim();
+0985: 
+0986:                 const trimmedNotes =
+0987:                     notes.trim();
+0988: 
+0989:                 if (trimmedReason) {
+0990:                     payload.reason =
+0991:                         trimmedReason;
+0992:                 }
+0993: 
+0994:                 if (trimmedNotes) {
+0995:                     payload.notes =
+0996:                         trimmedNotes;
+0997:                 }
+0998: 
+0999:                 const response =
+1000:                     await fetch(
+1001:                         "/api/v1/his/appointments",
+1002:                         {
+1003:                             method: "POST",
+1004:                             headers: {
+1005:                                 ...headers,
+1006:                                 "Content-Type":
+1007:                                     "application/json"
+1008:                             },
+1009:                             body:
+1010:                                 JSON.stringify(
+1011:                                     payload
+1012:                                 )
+1013:                         }
+1014:                     );
+1015: 
+1016:                 if (!response.ok) {
+1017:                     const message =
+1018:                         await readError(
+1019:                             response,
+1020:                             `Unable to book appointment (${response.status}).`
+1021:                         );
+1022: 
+1023:                     if (response.status === 409) {
+1024:                         setSelectedSlot(null);
+1025:                         await loadSlots(false);
+1026: 
+1027:                         throw new Error(
+1028:                             `${message} Availability has been refreshed.`
+1029:                         );
+1030:                     }
+1031: 
+1032:                     throw new Error(message);
+1033:                 }
+1034: 
+1035:                 const appointment =
+1036:                     await response.json() as Appointment;
+1037: 
+1038:                 setCreatedAppointment(
+1039:                     appointment
+1040:                 );
+1041: 
+1042:                 setSelectedSlot(null);
+1043:                 setReason("");
+1044:                 setNotes("");
+1045: 
+1046:                 await loadSlots(false);
+1047:             } catch (caught) {
+1048:                 setError(
+1049:                     caught instanceof Error
+1050:                         ? caught.message
+1051:                         : "Unable to book appointment."
+1052:                 );
+1053:             } finally {
+1054:                 setCreating(false);
+1055:             }
+1056:         };
+1057: 
+1058:     const selectedPatient =
+1059:         patients.find(
+1060:             (patient) =>
+1061:                 patient.id === patientId
+1062:         );
+1063: 
+1064:     return (
+1065:         <div
+1066:             style={styles.backdrop}
+1067:             role="presentation"
+1068:         >
+1069:             <section
+1070:                 style={styles.panel}
+1071:                 role="dialog"
+1072:                 aria-modal="true"
+1073:                 aria-label="Athena Scheduling"
+1074:             >
+1075:                 <header style={styles.header}>
+1076:                     <div>
+1077:                         <p style={styles.eyebrow}>
+1078:                             ATHENA - HOSPITAL INFORMATION SYSTEM
+1079:                         </p>
+1080: 
+1081:                         <h2 style={styles.title}>
+1082:                             Scheduling
+1083:                         </h2>
+1084: 
+1085:                         <p style={styles.description}>
+1086:                             Find appointment availability and book
+1087:                             a patient into an available time.
+1088:                         </p>
+1089:                     </div>
+1090: 
+1091:                     <button
+1092:                         type="button"
+1093:                         style={styles.close}
+1094:                         aria-label="Close scheduling"
+1095:                         onClick={onClose}
+1096:                     >
+1097:                         X
+1098:                     </button>
+1099:                 </header>
+1100: 
+1101:                 {error && (
+1102:                     <div style={styles.error}>
+1103:                         {error}
+1104:                     </div>
+1105:                 )}
+1106: 
+1107:                 {createdAppointment && (
+1108:                     <div style={styles.success}>
+1109:                         <strong>
+1110:                             Appointment booked successfully.
+1111:                         </strong>
+1112:                         <br />
+1113:                         Appointment:{" "}
+1114:                         {createdAppointment.appointmentNumber}
+1115:                         {" · "}
+1116:                         Status: {createdAppointment.status}
+1117:                         {" · "}
+1118:                         {formatSlot(
+1119:                             {
+1120:                                 start:
+1121:                                     createdAppointment.scheduledStart,
+1122:                                 end:
+1123:                                     createdAppointment.scheduledEnd
+1124:                             },
+1125:                             locale,
+1126:                             timeZone
+1127:                         )}
+1128:                     </div>
+1129:                 )}
+1130: 
+1131:                 <section style={styles.card}>
+1132:                     <h3 style={styles.cardTitle}>
+1133:                         Find Available Times
+1134:                     </h3>
+1135: 
+1136:                     <div style={styles.grid}>
+1137:                         <label style={styles.field}>
+1138:                             <span style={styles.label}>
+1139:                                 Practitioner
+1140:                             </span>
+1141: 
+1142:                             <select
+1143:                                 style={styles.input}
+1144:                                 value={practitionerId}
+1145:                                 disabled={
+1146:                                     loadingOptions ||
+1147:                                     creating
+1148:                                 }
+1149:                                 onChange={(event) => {
+1150:                                     setPractitionerId(
+1151:                                         event.target.value
+1152:                                     );
+1153:                                     setSlots([]);
+1154:                                     setSelectedSlot(null);
+1155:                                     setCreatedAppointment(null);
+1156:                                 }}
+1157:                             >
+1158:                                 <option value="">
+1159:                                     Any practitioner
+1160:                                 </option>
+1161: 
+1162:                                 {practitioners.map(
+1163:                                     (practitioner) => (
+1164:                                         <option
+1165:                                             key={
+1166:                                                 practitioner.id
+1167:                                             }
+1168:                                             value={
+1169:                                                 practitioner.id
+1170:                                             }
+1171:                                         >
+1172:                                             {practitionerLabel(
+1173:                                                 practitioner
+1174:                                             )}
+1175:                                         </option>
+1176:                                     )
+1177:                                 )}
+1178:                             </select>
+1179:                         </label>
+1180: 
+1181:                         <label style={styles.field}>
+1182:                             <span style={styles.label}>
+1183:                                 Facility
+1184:                             </span>
+1185: 
+1186:                             <select
+1187:                                 style={styles.input}
+1188:                                 value={facilityId}
+1189:                                 disabled={
+1190:                                     loadingOptions ||
+1191:                                     creating
+1192:                                 }
+1193:                                 onChange={(event) => {
+1194:                                     setFacilityId(
+1195:                                         event.target.value
+1196:                                     );
+1197:                                     setSlots([]);
+1198:                                     setSelectedSlot(null);
+1199:                                     setCreatedAppointment(null);
+1200:                                 }}
+1201:                             >
+1202:                                 <option value="">
+1203:                                     Select facility
+1204:                                 </option>
+1205: 
+1206:                                 {facilities.map(
+1207:                                     (facility) => (
+1208:                                         <option
+1209:                                             key={facility.id}
+1210:                                             value={facility.id}
+1211:                                         >
+1212:                                             {facility.name}{" "}
+1213:                                             ({facility.code})
+1214:                                         </option>
+1215:                                     )
+1216:                                 )}
+1217:                             </select>
+1218:                         </label>
+1219: 
+1220:                         <label style={styles.field}>
+1221:                             <span style={styles.label}>
+1222:                                 Clinical location
+1223:                             </span>
+1224: 
+1225:                             <select
+1226:                                 style={styles.input}
+1227:                                 value={
+1228:                                     clinicalLocationId
+1229:                                 }
+1230:                                 disabled={
+1231:                                     !facilityId ||
+1232:                                     creating
+1233:                                 }
+1234:                                 onChange={(event) => {
+1235:                                     setClinicalLocationId(
+1236:                                         event.target.value
+1237:                                     );
+1238:                                     setSlots([]);
+1239:                                     setSelectedSlot(null);
+1240:                                     setCreatedAppointment(null);
+1241:                                 }}
+1242:                             >
+1243:                                 <option value="">
+1244:                                     Any clinical location
+1245:                                 </option>
+1246: 
+1247:                                 {locations.map(
+1248:                                     (location) => (
+1249:                                         <option
+1250:                                             key={location.id}
+1251:                                             value={location.id}
+1252:                                         >
+1253:                                             {location.name}
+1254:                                             {location.code
+1255:                                                 ? ` (${location.code})`
+1256:                                                 : ""}
+1257:                                         </option>
+1258:                                     )
+1259:                                 )}
+1260:                             </select>
+1261:                         </label>
+1262: 
+1263:                         <label style={styles.field}>
+1264:                             <span style={styles.label}>
+1265:                                 Appointment date
+1266:                             </span>
+1267: 
+1268:                             <input
+1269:                                 type="date"
+1270:                                 style={styles.input}
+1271:                                 value={date}
+1272:                                 disabled={creating}
+1273:                                 onChange={(event) => {
+1274:                                     setDate(
+1275:                                         event.target.value
+1276:                                     );
+1277:                                     setSlots([]);
+1278:                                     setSelectedSlot(null);
+1279:                                     setCreatedAppointment(null);
+1280:                                 }}
+1281:                             />
+1282:                         </label>
+1283: 
+1284:                         <label style={styles.field}>
+1285:                             <span style={styles.label}>
+1286:                                 Duration
+1287:                             </span>
+1288: 
+1289:                             <select
+1290:                                 style={styles.input}
+1291:                                 value={durationMinutes}
+1292:                                 disabled={creating}
+1293:                                 onChange={(event) => {
+1294:                                     setDurationMinutes(
+1295:                                         Number(
+1296:                                             event.target.value
+1297:                                         )
+1298:                                     );
+1299:                                     setSlots([]);
+1300:                                     setSelectedSlot(null);
+1301:                                     setCreatedAppointment(null);
+1302:                                 }}
+1303:                             >
+1304:                                 <option value={15}>
+1305:                                     15 minutes
+1306:                                 </option>
+1307:                                 <option value={30}>
+1308:                                     30 minutes
+1309:                                 </option>
+1310:                                 <option value={45}>
+1311:                                     45 minutes
+1312:                                 </option>
+1313:                                 <option value={60}>
+1314:                                     60 minutes
+1315:                                 </option>
+1316:                                 <option value={90}>
+1317:                                     90 minutes
+1318:                                 </option>
+1319:                             </select>
+1320:                         </label>
+1321: 
+1322:                         <label style={styles.field}>
+1323:                             <span style={styles.label}>
+1324:                                 Time zone
+1325:                             </span>
+1326: 
+1327:                             <input
+1328:                                 style={styles.input}
+1329:                                 value={timeZone}
+1330:                                 disabled={creating}
+1331:                                 onChange={(event) => {
+1332:                                     setTimeZone(
+1333:                                         event.target.value
+1334:                                     );
+1335:                                     setSlots([]);
+1336:                                     setSelectedSlot(null);
+1337:                                     setCreatedAppointment(null);
+1338:                                 }}
+1339:                             />
+1340:                         </label>
+1341:                     </div>
+1342: 
+1343:                     <div style={styles.actions}>
+1344:                         <button
+1345:                             type="button"
+1346:                             style={styles.secondary}
+1347:                             disabled={
+1348:                                 finding ||
+1349:                                 creating
+1350:                             }
+1351:                             onClick={() => {
+1352:                                 setPractitionerId("");
+1353:                                 setFacilityId("");
+1354:                                 setClinicalLocationId("");
+1355:                                 setDate(
+1356:                                     todayDateOnly()
+1357:                                 );
+1358:                                 setDurationMinutes(30);
+1359:                                 setTimeZone(
+1360:                                     browserTimeZone()
+1361:                                 );
+1362:                                 setSlots([]);
+1363:                                 setSelectedSlot(null);
+1364:                                 setPatientId("");
+1365:                                 setAppointmentType(
+1366:                                     "CONSULTATION"
+1367:                                 );
+1368:                                 setReason("");
+1369:                                 setNotes("");
+1370:                                 setError(null);
+1371:                                 setCreatedAppointment(null);
+1372:                             }}
+1373:                         >
+1374:                             Reset
+1375:                         </button>
+1376: 
+1377:                         <button
+1378:                             type="button"
+1379:                             style={styles.primary}
+1380:                             disabled={
+1381:                                 finding ||
+1382:                                 creating ||
+1383:                                 loadingOptions
+1384:                             }
+1385:                             onClick={() => {
+1386:                                 void findSlots();
+1387:                             }}
+1388:                         >
+1389:                             {finding
+1390:                                 ? "Finding..."
+1391:                                 : "Find Available Times"}
+1392:                         </button>
+1393:                     </div>
+1394:                 </section>
+1395: 
+1396:                 <section style={styles.card}>
+1397:                     <h3 style={styles.cardTitle}>
+1398:                         Available Appointment Times
+1399:                     </h3>
+1400: 
+1401:                     {slots.length === 0 ? (
+1402:                         <div style={styles.empty}>
+1403:                             {finding
+1404:                                 ? "Searching availability..."
+1405:                                 : "Choose scheduling criteria and find available times."}
+1406:                         </div>
+1407:                     ) : (
+1408:                         <>
+1409:                             <div style={styles.slots}>
+1410:                                 {slots.map(
+1411:                                     (slot) => {
+1412:                                         const selected =
+1413:                                             selectedSlot
+1414:                                                 ?.start ===
+1415:                                             slot.start;
+1416: 
+1417:                                         return (
+1418:                                             <button
+1419:                                                 key={
+1420:                                                     `${slot.start}-${slot.end}`
+1421:                                                 }
+1422:                                                 type="button"
+1423:                                                 disabled={
+1424:                                                     creating
+1425:                                                 }
+1426:                                                 style={{
+1427:                                                     ...styles.slot,
+1428:                                                     ...(selected
+1429:                                                         ? styles.selectedSlot
+1430:                                                         : {})
+1431:                                                 }}
+1432:                                                 onClick={() => {
+1433:                                                     setSelectedSlot(
+1434:                                                         slot
+1435:                                                     );
+1436:                                                     setError(null);
+1437:                                                     setCreatedAppointment(
+1438:                                                         null
+1439:                                                     );
+1440:                                                 }}
+1441:                                             >
+1442:                                                 {formatSlot(
+1443:                                                     slot,
+1444:                                                     locale,
+1445:                                                     timeZone
+1446:                                                 )}
+1447:                                             </button>
+1448:                                         );
+1449:                                     }
+1450:                                 )}
+1451:                             </div>
+1452: 
+1453:                             {selectedSlot && (
+1454:                                 <div
+1455:                                     style={
+1456:                                         styles.selection
+1457:                                     }
+1458:                                 >
+1459:                                     <strong>
+1460:                                         Selected time:
+1461:                                     </strong>{" "}
+1462:                                     {formatSlot(
+1463:                                         selectedSlot,
+1464:                                         locale,
+1465:                                         timeZone
+1466:                                     )}
+1467:                                 </div>
+1468:                             )}
+1469:                         </>
+1470:                     )}
+1471:                 </section>
+1472: 
+1473:                 {selectedSlot && (
+1474:                     <section style={styles.card}>
+1475:                         <h3 style={styles.cardTitle}>
+1476:                             Book Appointment
+1477:                         </h3>
+1478: 
+1479:                         <div
+1480:                             style={
+1481:                                 styles.bookingSummary
+1482:                             }
+1483:                         >
+1484:                             <strong>
+1485:                                 Appointment time:
+1486:                             </strong>{" "}
+1487:                             {formatSlot(
+1488:                                 selectedSlot,
+1489:                                 locale,
+1490:                                 timeZone
+1491:                             )}
+1492:                             <br />
+1493: 
+1494:                             <strong>
+1495:                                 Facility:
+1496:                             </strong>{" "}
+1497:                             {facilities.find(
+1498:                                 (facility) =>
+1499:                                     facility.id ===
+1500:                                     facilityId
+1501:                             )?.name ?? facilityId}
+1502: 
+1503:                             {practitionerId && (
+1504:                                 <>
+1505:                                     <br />
+1506:                                     <strong>
+1507:                                         Practitioner:
+1508:                                     </strong>{" "}
+1509:                                     {practitioners.find(
+1510:                                         (practitioner) =>
+1511:                                             practitioner.id ===
+1512:                                             practitionerId
+1513:                                     )
+1514:                                         ? practitionerLabel(
+1515:                                             practitioners.find(
+1516:                                                 (practitioner) =>
+1517:                                                     practitioner.id ===
+1518:                                                     practitionerId
+1519:                                             )!
+1520:                                         )
+1521:                                         : practitionerId}
+1522:                                 </>
+1523:                             )}
+1524: 
+1525:                             {clinicalLocationId && (
+1526:                                 <>
+1527:                                     <br />
+1528:                                     <strong>
+1529:                                         Clinical location:
+1530:                                     </strong>{" "}
+1531:                                     {locations.find(
+1532:                                         (location) =>
+1533:                                             location.id ===
+1534:                                             clinicalLocationId
+1535:                                     )?.name ??
+1536:                                         clinicalLocationId}
+1537:                                 </>
+1538:                             )}
+1539:                         </div>
+1540: 
+1541:                         <div style={styles.grid}>
+1542:                             <label
+1543:                                 style={
+1544:                                     styles.fullField
+1545:                                 }
+1546:                             >
+1547:                                 <span style={styles.label}>
+1548:                                     Patient
+1549:                                 </span>
+1550: 
+1551:                                 <select
+1552:                                     style={styles.input}
+1553:                                     value={patientId}
+1554:                                     disabled={
+1555:                                         loadingOptions ||
+1556:                                         creating
+1557:                                     }
+1558:                                     onChange={(event) => {
+1559:                                         setPatientId(
+1560:                                             event.target.value
+1561:                                         );
+1562:                                         setError(null);
+1563:                                     }}
+1564:                                 >
+1565:                                     <option value="">
+1566:                                         Select patient
+1567:                                     </option>
+1568: 
+1569:                                     {patients.map(
+1570:                                         (patient) => (
+1571:                                             <option
+1572:                                                 key={
+1573:                                                     patient.id
+1574:                                                 }
+1575:                                                 value={
+1576:                                                     patient.id
+1577:                                                 }
+1578:                                             >
+1579:                                                 {patientLabel(
+1580:                                                     patient
+1581:                                                 )}
+1582:                                             </option>
+1583:                                         )
+1584:                                     )}
+1585:                                 </select>
+1586: 
+1587:                                 {selectedPatient && (
+1588:                                     <p
+1589:                                         style={
+1590:                                             styles.hint
+1591:                                         }
+1592:                                     >
+1593:                                         Patient number:{" "}
+1594:                                         {
+1595:                                             selectedPatient.patientNumber
+1596:                                         }
+1597:                                         {" · "}
+1598:                                         MRN:{" "}
+1599:                                         {
+1600:                                             selectedPatient.medicalRecordNumber
+1601:                                         }
+1602:                                     </p>
+1603:                                 )}
+1604:                             </label>
+1605: 
+1606:                             <label style={styles.field}>
+1607:                                 <span style={styles.label}>
+1608:                                     Appointment type
+1609:                                 </span>
+1610: 
+1611:                                 <select
+1612:                                     style={styles.input}
+1613:                                     value={
+1614:                                         appointmentType
+1615:                                     }
+1616:                                     disabled={creating}
+1617:                                     onChange={(event) =>
+1618:                                         setAppointmentType(
+1619:                                             event.target
+1620:                                                 .value as
+1621:                                                 AppointmentType
+1622:                                         )
+1623:                                     }
+1624:                                 >
+1625:                                     {APPOINTMENT_TYPES.map(
+1626:                                         (type) => (
+1627:                                             <option
+1628:                                                 key={
+1629:                                                     type.value
+1630:                                                 }
+1631:                                                 value={
+1632:                                                     type.value
+1633:                                                 }
+1634:                                             >
+1635:                                                 {type.label}
+1636:                                             </option>
+1637:                                         )
+1638:                                     )}
+1639:                                 </select>
+1640:                             </label>
+1641: 
+1642:                             <label style={styles.field}>
+1643:                                 <span style={styles.label}>
+1644:                                     Reason
+1645:                                 </span>
+1646: 
+1647:                                 <input
+1648:                                     style={styles.input}
+1649:                                     value={reason}
+1650:                                     disabled={creating}
+1651:                                     placeholder="Reason for appointment"
+1652:                                     onChange={(event) =>
+1653:                                         setReason(
+1654:                                             event.target.value
+1655:                                         )
+1656:                                     }
+1657:                                 />
+1658:                             </label>
+1659: 
+1660:                             <label
+1661:                                 style={
+1662:                                     styles.fullField
+1663:                                 }
+1664:                             >
+1665:                                 <span style={styles.label}>
+1666:                                     Notes
+1667:                                 </span>
+1668: 
+1669:                                 <textarea
+1670:                                     style={styles.textarea}
+1671:                                     value={notes}
+1672:                                     disabled={creating}
+1673:                                     placeholder="Optional scheduling notes"
+1674:                                     onChange={(event) =>
+1675:                                         setNotes(
+1676:                                             event.target.value
+1677:                                         )
+1678:                                     }
+1679:                                 />
+1680:                             </label>
+1681:                         </div>
+1682: 
+1683:                         <div style={styles.actions}>
+1684:                             <button
+1685:                                 type="button"
+1686:                                 style={styles.secondary}
+1687:                                 disabled={creating}
+1688:                                 onClick={() => {
+1689:                                     setSelectedSlot(null);
+1690:                                     setError(null);
+1691:                                 }}
+1692:                             >
+1693:                                 Cancel
+1694:                             </button>
+1695: 
+1696:                             <button
+1697:                                 type="button"
+1698:                                 style={styles.primary}
+1699:                                 disabled={
+1700:                                     creating ||
+1701:                                     !patientId
+1702:                                 }
+1703:                                 onClick={() => {
+1704:                                     void bookAppointment();
+1705:                                 }}
+1706:                             >
+1707:                                 {creating
+1708:                                     ? "Booking..."
+1709:                                     : "Book Appointment"}
+1710:                             </button>
+1711:                         </div>
+1712:                     </section>
+1713:                 )}
+1714:             </section>
+1715:         </div>
+1716:     );
+1717: }

@@ -1,0 +1,60 @@
+            const data = frame.split("\n").find(line => line.startsWith("data: "))?.slice(6);
+                        if (!data) continue;
+                        try {
+                            const event = JSON.parse(data) as { reading?: Reading };
+                            if (event.reading) setReadings(previous =>
+                                [event.reading!, ...previous.filter(item => item.id !== event.reading!.id)].slice(0, 500)
+                            );
+                        } catch { /* ignore malformed event */ }
+                    }
+                }
+            } catch (cause) {
+                if (!controller.signal.aborted) setError(String(cause));
+            } finally { if (!controller.signal.aborted) setConnected(false); }
+        }
+        void stream();
+        return () => { controller.abort(); setConnected(false); };
+    }, [tab, prefix, tenantId, siteId]);
+
+    const basDevice = devices.find(device => device.code === "HVAC-COMM-44092");
+    const samples = useMemo(() => {
+        const codes = new Map(definitions.map(def => [def.id.toLowerCase(), def.code]));
+        const grouped = new Map<string, Sample>();
+        for (const reading of readings) {
+            if (!basDevice || reading.deviceId.toLowerCase() !== basDevice.id.toLowerCase()) continue;
+            const code = codes.get(reading.measurementDefinitionId.toLowerCase());
+            if (!Object.values(CODES).includes(code as typeof CODES[keyof typeof CODES])) continue;
+            const at = new Date(reading.observedAt).toISOString();
+            const sample = grouped.get(at) ?? { at };
+            if (code === CODES.temperature) sample.temperature = reading.numericValue;
+            if (code === CODES.humidity) sample.humidity = reading.numericValue;
+            if (code === CODES.state) sample.state = reading.stringValue;
+            grouped.set(at, sample);
+        }
+        return [...grouped.values()].sort((a, b) => b.at.localeCompare(a.at));
+    }, [readings, definitions, basDevice]);
+    const latest = samples[0];
+    const chart = [...samples].reverse();
+    const fmt = (value?: number, unit = "") => value === undefined ? "—" : `${value.toFixed(1)}${unit}`;
+    return <section className="bas-dashboard">
+        <header className="bas-header"><div><p className="bas-eyebrow">Ruby EMS / BAS</p><h1>{labels.title}</h1><p>{labels.zone} · {basDevice?.name ?? "HVAC-COMM-44092"}</p></div>
+            <nav aria-label="BAS views"><button aria-current={tab === "overview" ? "page" : undefined} onClick={() => setTab("overview")}>{labels.overview}</button><button aria-current={tab === "live" ? "page" : undefined} onClick={() => setTab("live")}>{labels.live}</button></nav></header>
+        {error && <p className="bas-error" role="alert">{error}</p>}
+        {tab === "live" && <p className="bas-connection" role="status">{connected ? labels.connected : labels.connecting}</p>}
+        <div className="bas-cards"><article><span>{labels.temperature}</span><strong>{fmt(latest?.temperature, " °F")}</strong></article><article><span>{labels.humidity}</span><strong>{fmt(latest?.humidity, "%")}</strong></article><article><span>{labels.state}</span><strong>{latest?.state ?? "—"}</strong></article></div>
+        <p className="bas-timestamp">{latest ? `${labels.last}: ${new Date(latest.at).toLocaleString(language)}` : labels.waiting}</p>
+        <div className="bas-history"><h2>{tab === "live" ? labels.recent : labels.history}</h2>
+            {chart.length > 1 && <div className="bas-trends"><Trend title={`${labels.temperature} (°F)`} values={chart.map(s => s.temperature)} color="#4e7cff"/><Trend title={`${labels.humidity} (%)`} values={chart.map(s => s.humidity)} color="#33b49b"/></div>}
+            <div className="bas-table-scroll"><table><thead><tr><th>{labels.observed}</th><th>{labels.temperature}</th><th>{labels.humidity}</th><th>{labels.hvac}</th></tr></thead><tbody>{samples.slice(0, tab === "live" ? 12 : 30).map(s => <tr key={s.at}><td>{new Date(s.at).toLocaleString(language)}</td><td>{fmt(s.temperature, " °F")}</td><td>{fmt(s.humidity, "%")}</td><td>{s.state ?? "—"}</td></tr>)}</tbody></table></div>
+        </div>
+    </section>;
+}
+
+function Trend({ title, values, color }: { title: string; values: (number | undefined)[]; color: string }) {
+    const points = values.map((value, index) => ({ value, index })).filter((point): point is { value: number; index: number } => point.value !== undefined);
+    if (points.length < 2) return null;
+    const min = Math.min(...points.map(p => p.value)) - 0.5;
+    const max = Math.max(...points.map(p => p.value)) + 0.5;
+    const path = points.map(p => `${p.index / Math.max(1, values.length - 1) * 100},${95 - (p.value - min) / (max - min) * 90}`).join(" ");
+    return <div className="bas-trend"><h3>{title}</h3><svg viewBox="0 0 100 100" preserveAspectRatio="none" role="img" aria-label={`${title} trend`}><polyline points={path} fill="none" stroke={color} strokeWidth="2" vectorEffect="non-scaling-stroke"/></svg></div>;
+}

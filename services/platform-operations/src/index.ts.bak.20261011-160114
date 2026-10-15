@@ -1,0 +1,260 @@
+import express from "express";
+
+import {
+    serviceRegistry
+} from "./serviceRegistry.js";
+
+import {
+    restartService,
+    startService
+} from "./serviceSupervisor.js";
+
+import {
+    checkAllServices,
+    checkServiceHealth
+} from "./serviceHealth.js";
+
+import {
+    bootstrapServices
+} from "./bootstrapSupervisor.js";
+const DEFAULT_PORT = 4402;
+
+const port =
+    Number(
+        process.env.PLATFORM_OPERATIONS_PORT ??
+        DEFAULT_PORT
+    );
+
+if (
+    !Number.isInteger(port) ||
+    port <= 0 ||
+    port > 65535
+) {
+    throw new Error(
+        "PLATFORM_OPERATIONS_PORT must be a valid TCP port."
+    );
+}
+
+
+const app =
+    express();
+
+
+app.use(
+    express.json()
+);
+
+
+/*
+ * Platform Operations health
+ */
+
+app.get(
+    "/health",
+    (_, res) => {
+
+        res.json({
+            status: "healthy",
+            service: "Ruby Platform Operations",
+            timestamp: new Date().toISOString()
+        });
+
+    }
+);
+
+
+/*
+ * Ruby service health registry
+ */
+
+app.get(
+    "/api/v1/platform/services",
+    async (_, res) => {
+
+        const services =
+            await checkAllServices(
+                serviceRegistry
+            );
+
+        const summary = {
+            total: services.length,
+            healthy:
+                services.filter(
+                    (service) =>
+                        service.status === "healthy"
+                ).length,
+            degraded:
+                services.filter(
+                    (service) =>
+                        service.status === "degraded"
+                ).length,
+            down:
+                services.filter(
+                    (service) =>
+                        service.status === "down"
+                ).length
+        };
+
+        res.json({
+            status:
+                summary.down > 0
+                    ? "degraded"
+                    : "healthy",
+            checkedAt:
+                new Date().toISOString(),
+            summary,
+            services
+        });
+
+    }
+);
+
+/*
+ * Start an approved Ruby service.
+ *
+ * This endpoint does not accept commands or package names.
+ * Only service IDs registered in the local supervisor
+ * may be started.
+ */
+
+app.post(
+    "/api/v1/platform/services/:id/start",
+    async (req, res) => {
+
+        const serviceId =
+            req.params.id;
+
+        const service =
+            serviceRegistry.find(
+                (candidate) =>
+                    candidate.id === serviceId
+            );
+
+        if (service === undefined) {
+            res.status(404).json({
+                error: "SERVICE_NOT_FOUND",
+                message:
+                    `Ruby service '${serviceId}' is not registered.`
+            });
+
+            return;
+        }
+
+        const currentHealth =
+            await checkServiceHealth(
+                service
+            );
+
+        if (currentHealth.status !== "down") {
+            res.status(409).json({
+                error: "SERVICE_ALREADY_RUNNING",
+                message:
+                    `Ruby service '${service.name}' is already ${currentHealth.status}.`,
+                service: currentHealth
+            });
+
+            return;
+        }
+
+        try {
+            const result =
+                await startService(
+                    serviceId
+                );
+            res.status(202).json({
+                status: "starting",
+                serviceId,
+                processId:
+                    result.processId,
+                message:
+                    `Start request accepted for '${service.name}'.`
+            });
+
+        } catch (error) {
+
+            const message =
+                error instanceof Error
+                    ? error.message
+                    : "Unable to start Ruby service.";
+
+            res.status(400).json({
+                error: "SERVICE_START_FAILED",
+                message
+            });
+        }
+    }
+);
+app.post(
+    "/api/v1/platform/services/:id/restart",
+    async (
+        req,
+        res
+    ) => {
+        const serviceId =
+            req.params.id;
+
+        const service =
+            serviceRegistry.find(
+                (candidate) =>
+                    candidate.id === serviceId
+            );
+
+        if (service === undefined) {
+            res.status(404).json({
+                code:
+                    "SERVICE_NOT_FOUND",
+                message:
+                    `Unknown Ruby service '${serviceId}'.`
+            });
+
+            return;
+        }
+
+        try {
+            const result =
+                await restartService(
+                    serviceId
+                );
+
+            res.status(202).json({
+                status:
+                    "restarting",
+                serviceId:
+                    result.serviceId,
+                stoppedProcessId:
+                    result.stoppedProcessId,
+                startedProcessId:
+                    result.startedProcessId,
+                message:
+                    `Restart request completed for '${service.name}'.`
+            });
+
+        } catch (error) {
+            res.status(409).json({
+                code:
+                    "SERVICE_RESTART_FAILED",
+                message:
+                    error instanceof Error
+                        ? error.message
+                        : `Unable to restart '${service.name}'.`
+            });
+        }
+    }
+);
+
+app.listen(port, "127.0.0.1",
+    () => {
+        console.log(
+            `Ruby Platform Operations service listening on port ${port}`
+        );
+
+        void bootstrapServices().catch(
+            (error: unknown) => {
+                console.error(
+                    "[Ruby Bootstrap] Unexpected bootstrap failure:",
+                    error
+                );
+            }
+        );
+    }
+);

@@ -1,4 +1,4 @@
-﻿import {
+import {
     normalizeUuid,
     type IDatabaseProvider
 } from "@intrusionshield/database";
@@ -143,6 +143,14 @@ export class SqlAssetRepository {
         const row = result.rows[0];
 
         return row ? mapAsset(row) : null;
+    }
+
+    public async findAll(tenantId: string): Promise<readonly Asset[]> {
+        const result = await this.database.query<AssetRow>(
+            `SELECT id, tenant_id AS tenantId, site_id AS siteId, parent_asset_id AS parentAssetId, code, name, asset_type AS assetType, manufacturer, model, serial_number AS serialNumber, status, created_at AS createdAt, updated_at AS updatedAt, version FROM Telemetry.Assets WHERE tenant_id = @tenantId ORDER BY name, code`,
+            [{ name: "tenantId", value: tenantId }]
+        );
+        return result.rows.map(mapAsset);
     }
 
     public async findBySite(

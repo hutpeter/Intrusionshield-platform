@@ -8,8 +8,96 @@ import type {
     CSSProperties
 } from "react";
 
+import { PatientRegistrationPanel } from "./PatientRegistrationPanel";
+import { HospitalStructurePanel } from "./HospitalStructurePanel";
+import { SchedulingPanel } from "./SchedulingPanel";
+import { AdtWorkspace } from "./AdtWorkspace";
+import { CensusBedBoardPanel } from "./CensusBedBoardPanel";
+import { EncounterManagement } from "./EncounterManagement";
+import { BasDashboard } from "./BasDashboard";
+import { EnergyContracts } from "./EnergyContracts";
+import { TradeResources } from "./TradeResources";
+import { AdministrationWorkspace } from "./AdministrationWorkspace";
+
+import {
+    useAuth
+} from "./auth/index.js";
+
+import {
+    LanguageSelector,
+    useI18n
+} from "./i18n/index.js";
+
+type PatientRecord = {
+    id: string;
+    tenantId: string;
+    personId: string;
+    medicalRecordNumber: string;
+    patientNumber: string;
+    status: string;
+};
+
+type EncounterRecord = {
+    id: string;
+    patientId: string;
+    facilityId: string;
+    encounterNumber: string;
+    encounterType:
+        | "OUTPATIENT"
+        | "INPATIENT"
+        | "EMERGENCY"
+        | "OBSERVATION"
+        | "DAY_CASE"
+        | "VIRTUAL";
+    status:
+        | "PLANNED"
+        | "ARRIVED"
+        | "IN_PROGRESS"
+        | "ON_HOLD"
+        | "FINISHED"
+        | "CANCELLED";
+    source:
+        | "REGISTRATION"
+        | "SCHEDULED"
+        | "WALK_IN"
+        | "REFERRAL"
+        | "TRANSFER"
+        | "EMERGENCY"
+        | "OTHER";
+    registrationId?: string;
+    attendingPractitionerId?: string;
+    startedAt: string;
+    endedAt?: string;
+    reasonForEncounter?: string;
+    referralSource?: string;
+    locationDescription?: string;
+    version: number;
+};
+
+type EncounterListResponse = {
+    items: EncounterRecord[];
+    total: number;
+};
+
+type PatientClinicalView =
+    | "OVERVIEW"
+    | "ENCOUNTERS"
+    | "ADT";
+
+type NavigationKey =
+    | "dashboard"
+    | "athena"
+    | "ems"
+    | "compliance"
+    | "workflow"
+    | "security"
+    | "aiHub"
+    | "administration"
+    | "audit";
+
 type NavigationItem = {
-    label: string;
+    key: NavigationKey;
+    labelKey: import("./i18n/index.js").TranslationKey;
     icon: string;
 };
 
@@ -166,30 +254,19 @@ type PaginationItem =
     | "ellipsis";
 
 const navigation: NavigationItem[] = [
-    { label: "Dashboard", icon: "⌂" },
-    { label: "Athena", icon: "✚" },
-    { label: "Compliance", icon: "✓" },
-    { label: "Workflow", icon: "↗" },
-    { label: "Security", icon: "◈" },
-    { label: "AI Hub", icon: "✦" }
+    { key: "dashboard", labelKey: "shell.navigation.dashboard", icon: "" },
+    { key: "athena", labelKey: "shell.navigation.athena", icon: "" },
+    { key: "ems", labelKey: "shell.navigation.ems", icon: "" },
+    { key: "compliance", labelKey: "shell.navigation.compliance", icon: "" },
+    { key: "workflow", labelKey: "shell.navigation.workflow", icon: "" },
+    { key: "security", labelKey: "shell.navigation.security", icon: "" },
+    { key: "aiHub", labelKey: "shell.navigation.aiHub", icon: "" }
 ];
 
 const administrationNavigation: NavigationItem[] = [
-    { label: "Administration", icon: "⚙" },
-    { label: "Audit", icon: "◷" }
+    { key: "administration", labelKey: "shell.navigation.administration", icon: "" },
+    { key: "audit", labelKey: "shell.navigation.audit", icon: "" }
 ];
-
-/*
- * Temporary development tenant.
- *
- * This will eventually come from EIS authentication /
- * tenant context rather than being defined by Athena.
- *
- * It is intentionally a syntactically valid UUID so the
- * HIS tenant middleware accepts development requests.
- */
-const DEVELOPMENT_TENANT_ID =
-    "11111111-1111-4111-8111-111111111111";
 
 const PAGE_SIZE = 25;
 
@@ -516,7 +593,7 @@ function formatUpdatedDate(
     const date = new Date(value);
 
     if (Number.isNaN(date.getTime())) {
-        return "—";
+        return "--";
     }
 
     return new Intl.DateTimeFormat(
@@ -533,13 +610,13 @@ function formatOptionalDate(
     value?: string
 ): string {
     if (!value) {
-        return "—";
+        return "--";
     }
 
     const date = new Date(value);
 
     if (Number.isNaN(date.getTime())) {
-        return "—";
+        return "--";
     }
 
     return new Intl.DateTimeFormat(
@@ -734,10 +811,52 @@ function createPaginationItems(
 }
 
 function App() {
+    const { identity, logout } = useAuth();
+    const { locale, t } = useI18n();
+
+    if (!identity) {
+        throw new Error(
+            "Authenticated identity is unavailable."
+        );
+    }
+
+    const tenantId = identity.tenantId;
+
+    const formatStatusLabel = (status: PersonStatus): string => {
+        switch (status) {
+            case "ACTIVE": return t("athena.ui.active");
+            case "INACTIVE": return t("athena.ui.inactive");
+            case "DECEASED": return t("athena.ui.deceased");
+        }
+    };
+
+    const formatPersonTypeLabel = (roles?: readonly PersonRole[]): string => {
+        const safeRoles = roles ?? [];
+        const patient = safeRoles.includes("PATIENT");
+        const practitioner = safeRoles.includes("PRACTITIONER");
+        if (patient && practitioner) return t("athena.ui.patientPractitioner");
+        if (patient) return t("athena.ui.patient");
+        if (practitioner) return t("athena.ui.practitioner");
+        return t("athena.ui.person");
+    };
+
+    const formatLocalizedDate = (value?: string): string => {
+        if (!value) return "--";
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return "--";
+        return new Intl.DateTimeFormat(locale, { year: "numeric", month: "short", day: "numeric" }).format(date);
+    };
+
     const [
         activeNavigation,
         setActiveNavigation
-    ] = useState("Athena");
+    ] = useState<NavigationKey>("athena");
+    const [emsView, setEmsView] 
+        =useState<"bas" | "contracts" | "resources">("bas");
+    const [
+        schedulingOpen,
+        setSchedulingOpen
+    ] = useState(false);
 
     const [
         search,
@@ -796,6 +915,36 @@ function App() {
     );
 
     const [
+        patientRecord,
+        setPatientRecord
+    ] = useState<PatientRecord | null>(null);
+
+    const [
+        patientEncounters,
+        setPatientEncounters
+    ] = useState<EncounterRecord[]>([]);
+
+    const [
+        selectedEncounter,
+        setSelectedEncounter
+    ] = useState<EncounterRecord | null>(null);
+
+    const [
+        patientClinicalView,
+        setPatientClinicalView
+    ] = useState<PatientClinicalView>("OVERVIEW");
+
+    const [
+        clinicalLoading,
+        setClinicalLoading
+    ] = useState(false);
+
+    const [
+        clinicalError,
+        setClinicalError
+    ] = useState<string | null>(null);
+
+    const [
         detailLoading,
         setDetailLoading
     ] = useState(false);
@@ -810,6 +959,11 @@ function App() {
     const [
         isEditingPerson,
         setIsEditingPerson
+    ] = useState(false);
+
+    const [
+        isCreatingPerson,
+        setIsCreatingPerson
     ] = useState(false);
 
     const [
@@ -852,6 +1006,21 @@ function App() {
         facilityAffiliationEditForm,
         setFacilityAffiliationEditForm
     ] = useState<PersonFacilityAffiliationEditForm[]>([]);
+
+    const [
+        patientRegistrationOpen,
+        setPatientRegistrationOpen
+    ] = useState(false);
+
+    const [
+        hospitalStructureOpen,
+        setHospitalStructureOpen
+    ] = useState(false);
+
+    const [
+        censusBedBoardOpen,
+        setCensusBedBoardOpen
+    ] = useState(false);
 
     useEffect(() => {
         const timer = window.setTimeout(
@@ -900,7 +1069,7 @@ function App() {
                             {
                                 headers: {
                                     "x-tenant-id":
-                                        DEVELOPMENT_TENANT_ID
+                                        tenantId
                                 },
                                 signal:
                                     controller.signal
@@ -1004,7 +1173,7 @@ function App() {
                             {
                                 headers: {
                                     "x-tenant-id":
-                                        DEVELOPMENT_TENANT_ID
+                                        tenantId
                                 },
                                 signal:
                                     controller.signal
@@ -1064,9 +1233,13 @@ function App() {
         );
 
     const handleNavigation = (
-        label: string
+        key: NavigationKey
     ) => {
-        setActiveNavigation(label);
+        setActiveNavigation(key);
+
+        if (key === "athena") {
+            setSchedulingOpen(true);
+        }
     };
 
     const handlePageChange = (
@@ -1090,6 +1263,7 @@ function App() {
         setDetailError(null);
         setDetailLoading(false);
         setIsEditingPerson(false);
+        setIsCreatingPerson(false);
         setEditForm(null);
         setSaveLoading(false);
         setSaveError(null);
@@ -1097,6 +1271,149 @@ function App() {
         setFacilityOptions([]);
         setFacilityAffiliations([]);
         setFacilityAffiliationEditForm([]);
+        setPatientRecord(null);
+        setPatientEncounters([]);
+        setSelectedEncounter(null);
+        setPatientClinicalView("OVERVIEW");
+        setClinicalLoading(false);
+        setClinicalError(null);
+    };
+
+    const handleNewPerson = async (): Promise<void> => {
+        const now = new Date().toISOString();
+
+        const draftListPerson: PersonListItem = {
+            id: "NEW",
+            firstName: "New",
+            lastName: "Person",
+            status: "ACTIVE",
+            roles: [],
+            updatedAt: now
+        };
+
+        const draftPerson: PersonDetail = {
+            id: "NEW",
+            tenantId: tenantId,
+            firstName: "",
+            lastName: "",
+            sex: "UNKNOWN",
+            identifiers: [],
+            addresses: [],
+            status: "ACTIVE",
+            createdAt: now,
+            updatedAt: now,
+            version: 0
+        };
+
+        setSelectedListPerson(draftListPerson);
+        setSelectedPerson(draftPerson);
+        setDetailError(null);
+        setDetailLoading(true);
+        setIsCreatingPerson(true);
+        setIsEditingPerson(true);
+        setEditForm(createPersonEditForm(draftPerson));
+        setSaveLoading(false);
+        setSaveError(null);
+        setSaveSuccess(null);
+        setFacilityOptions([]);
+        setFacilityAffiliations([]);
+        setFacilityAffiliationEditForm([]);
+
+        try {
+            const response = await fetch(
+                "/api/v1/his/facilities/options",
+                {
+                    headers: {
+                        "x-tenant-id": tenantId
+                    }
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error(
+                    `Unable to load Facility options (${response.status}).`
+                );
+            }
+
+            const body = await response.json() as FacilityOption[];
+            setFacilityOptions(Array.isArray(body) ? body : []);
+        } catch (loadError) {
+            setDetailError(
+                loadError instanceof Error
+                    ? loadError.message
+                    : "Unable to load Facility options."
+            );
+        } finally {
+            setDetailLoading(false);
+        }
+    };
+
+    const loadPatientClinicalContext = async (
+        personId: string
+    ): Promise<void> => {
+        setClinicalLoading(true);
+        setClinicalError(null);
+        setPatientRecord(null);
+        setPatientEncounters([]);
+        setSelectedEncounter(null);
+
+        const headers = {
+            "x-tenant-id": tenantId
+        };
+
+        try {
+            const patientResponse = await fetch(
+                `/api/v1/his/patients/by-person/${encodeURIComponent(
+                    personId
+                )}`,
+                { headers }
+            );
+
+            if (patientResponse.status === 404) {
+                return;
+            }
+
+            if (!patientResponse.ok) {
+                throw new Error(
+                    `Unable to load Patient record (${patientResponse.status}).`
+                );
+            }
+
+            const patient =
+                await patientResponse.json() as PatientRecord;
+
+            setPatientRecord(patient);
+
+            const encountersResponse = await fetch(
+                `/api/v1/his/patients/${encodeURIComponent(
+                    patient.id
+                )}/encounters`,
+                { headers }
+            );
+
+            if (!encountersResponse.ok) {
+                throw new Error(
+                    `Unable to load encounters (${encountersResponse.status}).`
+                );
+            }
+
+            const body =
+                await encountersResponse.json() as EncounterListResponse;
+
+            setPatientEncounters(
+                Array.isArray(body.items)
+                    ? body.items
+                    : []
+            );
+        } catch (clinicalFailure) {
+            setClinicalError(
+                clinicalFailure instanceof Error
+                    ? clinicalFailure.message
+                    : "Unable to load Patient clinical context."
+            );
+        } finally {
+            setClinicalLoading(false);
+        }
     };
 
     const handleOpenPerson = async (
@@ -1107,6 +1424,7 @@ function App() {
         setDetailError(null);
         setDetailLoading(true);
         setIsEditingPerson(false);
+        setIsCreatingPerson(false);
         setEditForm(null);
         setSaveLoading(false);
         setSaveError(null);
@@ -1114,11 +1432,18 @@ function App() {
         setFacilityOptions([]);
         setFacilityAffiliations([]);
         setFacilityAffiliationEditForm([]);
+        setPatientRecord(null);
+        setPatientEncounters([]);
+        setSelectedEncounter(null);
+        setPatientClinicalView("OVERVIEW");
+        setClinicalError(null);
 
         const tenantHeaders = {
             "x-tenant-id":
-                DEVELOPMENT_TENANT_ID
+                tenantId
         };
+
+        void loadPatientClinicalContext(person.id);
 
         try {
             const [
@@ -1284,6 +1609,55 @@ function App() {
         }
     };
 
+    const handleOpenScheduledEncounter = async (
+        personId: string
+    ): Promise<void> => {
+        let person =
+            result.items.find(
+                (item) =>
+                    item.id === personId
+            );
+
+        if (!person) {
+            const response =
+                await fetch(
+                    `/api/v1/his/persons/${encodeURIComponent(
+                        personId
+                    )}`,
+                    {
+                        headers: {
+                            "x-tenant-id":
+                                tenantId
+                        }
+                    }
+                );
+
+            if (!response.ok) {
+                throw new Error(
+                    `Unable to open Patient encounter (${response.status}).`
+                );
+            }
+
+            const detail =
+                await response.json() as PersonDetail;
+
+            person = {
+                id: detail.id,
+                firstName: detail.firstName,
+                middleName: detail.middleName,
+                lastName: detail.lastName,
+                preferredName: detail.preferredName,
+                status: detail.status,
+                roles: ["PATIENT"],
+                updatedAt: detail.updatedAt
+            };
+        }
+
+        await handleOpenPerson(person);
+        setPatientClinicalView("ENCOUNTERS");
+        setSchedulingOpen(false);
+    };
+
     const handleStartEdit = () => {
         if (!selectedPerson) {
             return;
@@ -1314,6 +1688,11 @@ function App() {
     };
 
     const handleCancelEdit = () => {
+        if (isCreatingPerson) {
+            closePersonDetail();
+            return;
+        }
+
         if (selectedPerson) {
             setEditForm(
                 createPersonEditForm(
@@ -1644,7 +2023,7 @@ function App() {
             !lastName
         ) {
             setSaveError(
-                "First name and last name are required."
+                t("athena.ui.firstNameAndLastNameAreRequired")
             );
             return;
         }
@@ -1673,7 +2052,7 @@ function App() {
             )
         ) {
             setSaveError(
-                "Every identifier must include both a system and a value."
+                t("athena.ui.everyIdentifierMustIncludeBothASystemAndAValue")
             );
             return;
         }
@@ -1721,7 +2100,7 @@ function App() {
             )
         ) {
             setSaveError(
-                "Every address must include address line 1, city, and country."
+                t("athena.ui.everyAddressMustIncludeAddressLine1CityAndCountry")
             );
             return;
         }
@@ -1733,7 +2112,7 @@ function App() {
             )
         ) {
             setSaveError(
-                "Every Facility affiliation must select a Facility."
+                t("athena.ui.everyFacilityAffiliationMustSelectAFacility")
             );
             return;
         }
@@ -1746,7 +2125,7 @@ function App() {
 
         if (primaryCount > 1) {
             setSaveError(
-                "Only one Facility affiliation can be primary."
+                t("athena.ui.onlyOneFacilityAffiliationCanBePrimary")
             );
             return;
         }
@@ -1764,7 +2143,7 @@ function App() {
             affiliationKeys.length
         ) {
             setSaveError(
-                "The same Facility and affiliation type cannot be added more than once."
+                t("athena.ui.theSameFacilityAndAffiliationTypeCannotBeAddedMoreThanOnce")
             );
             return;
         }
@@ -1811,24 +2190,27 @@ function App() {
             contactInformation,
             identifiers,
             addresses,
-            version:
-                selectedPerson.version
+            ...(isCreatingPerson
+                ? {}
+                : { version: selectedPerson.version })
         };
 
         try {
             const response =
                 await fetch(
-                    `/api/v1/his/persons/${encodeURIComponent(
-                        selectedPerson.id
-                    )}`,
+                    isCreatingPerson
+                        ? "/api/v1/his/persons"
+                        : `/api/v1/his/persons/${encodeURIComponent(
+                              selectedPerson.id
+                          )}`,
                     {
                         method:
-                            "PUT",
+                            isCreatingPerson ? "POST" : "PUT",
                         headers: {
                             "Content-Type":
                                 "application/json",
                             "x-tenant-id":
-                                DEVELOPMENT_TENANT_ID
+                                tenantId
                         },
                         body:
                             JSON.stringify(
@@ -1892,7 +2274,7 @@ function App() {
             const affiliationResponse =
                 await fetch(
                     `/api/v1/his/persons/${encodeURIComponent(
-                        selectedPerson.id
+                        normalizedPerson.id
                     )}/facility-affiliations`,
                     {
                         method:
@@ -1901,7 +2283,7 @@ function App() {
                             "Content-Type":
                                 "application/json",
                             "x-tenant-id":
-                                DEVELOPMENT_TENANT_ID
+                                tenantId
                         },
                         body:
                             JSON.stringify({
@@ -1975,7 +2357,12 @@ function App() {
 
             const updatedListPerson:
                 PersonListItem = {
-                    ...selectedListPerson,
+                    ...(isCreatingPerson
+                        ? {
+                              id: normalizedPerson.id,
+                              roles: [] as PersonRole[]
+                          }
+                        : selectedListPerson),
                     firstName:
                         normalizedPerson.firstName,
                     middleName:
@@ -2000,20 +2387,41 @@ function App() {
                 updatedListPerson
             );
 
+            if (isCreatingPerson) {
+                setSummary((current) =>
+                    current
+                        ? {
+                              ...current,
+                              totalPersons:
+                                  current.totalPersons + 1
+                          }
+                        : current
+                );
+            }
+
             setResult(
                 (current) => ({
                     ...current,
+                    total:
+                        isCreatingPerson
+                            ? current.total + 1
+                            : current.total,
                     items:
-                        current.items.map(
-                            (person) =>
-                                person.id ===
-                                updatedListPerson.id
-                                    ? {
-                                        ...person,
-                                        ...updatedListPerson
-                                    }
-                                    : person
-                        )
+                        isCreatingPerson
+                            ? [
+                                  updatedListPerson,
+                                  ...current.items
+                              ].slice(0, PAGE_SIZE)
+                            : current.items.map(
+                                  (person) =>
+                                      person.id ===
+                                      updatedListPerson.id
+                                          ? {
+                                                ...person,
+                                                ...updatedListPerson
+                                            }
+                                          : person
+                              )
                 })
             );
 
@@ -2024,8 +2432,11 @@ function App() {
             );
 
             setIsEditingPerson(false);
+            setIsCreatingPerson(false);
             setSaveSuccess(
-                "Person and Facility affiliations updated successfully."
+                isCreatingPerson
+                    ? t("athena.ui.personCreatedSuccessfully")
+                    : t("athena.ui.personAndFacilityAffiliationsUpdatedSuccessfully")
             );
         } catch (saveFailure) {
             const message =
@@ -2054,11 +2465,11 @@ function App() {
 
         const headers = [
             "ID",
-            "Name",
-            "Type",
-            "Identifier",
-            "Facility",
-            "Status",
+            t("athena.ui.name"),
+            t("athena.ui.type"),
+            t("athena.ui.identifier"),
+            t("athena.ui.facility"),
+            t("athena.ui.status"),
             "Last Updated"
         ];
 
@@ -2067,17 +2478,17 @@ function App() {
                 (person) => [
                     person.id,
                     formatPersonName(person),
-                    formatPersonType(
+                    formatPersonTypeLabel(
                         person.roles
                     ),
                     person.primaryIdentifier ??
                         "",
                     person.primaryFacilityName ??
                         "",
-                    formatStatus(
+                    formatStatusLabel(
                         person.status
                     ),
-                    formatUpdatedDate(
+                    formatLocalizedDate(
                         person.updatedAt
                     )
                 ]
@@ -2164,14 +2575,14 @@ function App() {
                         </div>
 
                         <div className="brand-subtitle">
-                            Enterprise Intelligence System
+                            {t("athena.ui.enterpriseIntelligenceSystem")}
                         </div>
                     </div>
                 </div>
 
                 <div className="workspace-selector">
                     <div className="workspace-label">
-                        WORKSPACE
+                        {t("athena.ui.workspace")}
                     </div>
 
                     <button
@@ -2184,16 +2595,16 @@ function App() {
 
                         <span className="workspace-details">
                             <strong>
-                                Enterprise
+                                {t("athena.ui.enterprise")}
                             </strong>
 
                             <small>
-                                Production
+                                {t("athena.ui.production")}
                             </small>
                         </span>
 
                         <span className="workspace-chevron">
-                            ⌄
+                            â–¾
                         </span>
                     </button>
                 </div>
@@ -2201,25 +2612,25 @@ function App() {
                 <nav className="sidebar-navigation">
                     <div className="navigation-section">
                         <div className="navigation-section-label">
-                            PLATFORM
+                            {t("athena.ui.platform")}
                         </div>
 
                         {navigation.map(
                             (item) => (
                                 <button
                                     key={
-                                        item.label
+                                        item.key
                                     }
                                     type="button"
                                     className={`navigation-item ${
                                         activeNavigation ===
-                                        item.label
+                                        item.key
                                             ? "active"
                                             : ""
                                     }`}
                                     onClick={() =>
                                         handleNavigation(
-                                            item.label
+                                            item.key
                                         )
                                     }
                                 >
@@ -2231,7 +2642,7 @@ function App() {
 
                                     <span>
                                         {
-                                            item.label
+                                            t(item.labelKey)
                                         }
                                     </span>
                                 </button>
@@ -2241,25 +2652,25 @@ function App() {
 
                     <div className="navigation-section">
                         <div className="navigation-section-label">
-                            ADMINISTRATION
+                            {t("athena.ui.administration")}
                         </div>
 
                         {administrationNavigation.map(
                             (item) => (
                                 <button
                                     key={
-                                        item.label
+                                        item.key
                                     }
                                     type="button"
                                     className={`navigation-item ${
                                         activeNavigation ===
-                                        item.label
+                                        item.key
                                             ? "active"
                                             : ""
                                     }`}
                                     onClick={() =>
                                         handleNavigation(
-                                            item.label
+                                            item.key
                                         )
                                     }
                                 >
@@ -2271,7 +2682,7 @@ function App() {
 
                                     <span>
                                         {
-                                            item.label
+                                            t(item.labelKey)
                                         }
                                     </span>
                                 </button>
@@ -2284,31 +2695,51 @@ function App() {
                     <div className="system-status">
                         <span className="status-dot" />
                         <span>
-                            All systems operational
+                            {t("athena.ui.allSystemsOperational")}
                         </span>
                     </div>
 
                     <div className="user-profile">
                         <div className="user-avatar">
-                            PH
+                            {identity.displayName
+                                .split(/\s+/)
+                                .filter(Boolean)
+                                .slice(0, 2)
+                                .map(part => part[0]?.toUpperCase() ?? "")
+                                .join("") || "U"}
                         </div>
 
                         <div className="user-details">
                             <strong>
-                                Administrator
+                                {identity.displayName || t("athena.ui.administrator")}
                             </strong>
 
                             <span>
-                                Platform Admin
+                                {t("athena.ui.platformAdmin")}
                             </span>
                         </div>
 
                         <button
-                            className="user-menu-button"
+                            className="logout-button"
                             type="button"
-                            aria-label="User menu"
+                            onClick={logout}
+                            aria-label={
+                                identity.language === "es"
+                                    ? "Cerrar sesiÃ³n"
+                                    : "Sign out"
+                            }
+                            title={
+                                identity.language === "es"
+                                    ? "Cerrar sesiÃ³n"
+                                    : "Sign out"
+                            }
                         >
-                            ⋮
+                            <span aria-hidden="true">â†ª</span>
+                            <span>
+                                {identity.language === "es"
+                                    ? "Salir"
+                                    : "Sign out"}
+                            </span>
                         </button>
                     </div>
                 </div>
@@ -2317,57 +2748,106 @@ function App() {
             <main className="main-content">
                 <header className="topbar">
                     <div className="breadcrumb">
-                        <span>EIS</span>
+                        <span>Ruby</span>
 
                         <span className="breadcrumb-separator">
                             /
                         </span>
 
-                        <span>Athena</span>
+                        <span>{activeNavigation === "ems" ? "EMS" : "Athena"}</span>
 
                         <span className="breadcrumb-separator">
                             /
                         </span>
 
                         <strong>
-                            Persons
+                            {activeNavigation === "ems"
+                                ? emsView === "contracts"
+                                    ? "Energy Contracts"
+                                    : emsView === "resources"
+                                        ? "Tradespeople & Resources"
+                                        : "BAS"
+                                : t("athena.ui.persons")}
                         </strong>
                     </div>
 
                     <div className="topbar-actions">
-                        <button
-                            className="topbar-button"
-                            type="button"
-                            aria-label="Notifications"
-                        >
-                            ♢
-                            <span className="notification-indicator" />
-                        </button>
+                        <LanguageSelector />
 
-                        <button
-                            className="topbar-button"
-                            type="button"
-                            aria-label="Help"
-                        >
-                            ?
-                        </button>
                     </div>
                 </header>
 
-                <div className="content">
+                {activeNavigation === "ems" ? (
+                    <div className="content">
+                        {emsView === "contracts" ? (
+                            <EnergyContracts
+                                onBack={() => setEmsView("bas")}
+                                tenantId={tenantId}
+                            />
+                        ) : emsView === "resources" ? (
+                            <TradeResources
+                                tenantId={tenantId}
+                            />
+                        ) : (
+                            <>
+                                <div
+                                    style={{
+                                        display: "flex",
+                                        justifyContent: "flex-end",
+                                        gap: "10px",
+                                        marginBottom: "14px"
+                                    }}
+                                >
+                                    <button
+                                        className="secondary-button"
+                                        type="button"
+                                        onClick={() =>
+                                            setEmsView("contracts")
+                                        }
+                                    >
+                                        Energy Contracts
+                                    </button>
+
+                                    <button
+                                        className="secondary-button"
+                                        type="button"
+                                        onClick={() =>
+                                            setEmsView("resources")
+                                        }
+                                    >
+                                        Tradespeople &amp; Resources
+                                    </button>
+                                </div>
+
+                                <BasDashboard
+                                    tenantId={tenantId}
+                                    siteId={
+                                        import.meta.env.VITE_BAS_SITE_ID ??
+                                        "f304a249-4bfd-4bae-908b-42f6f843770f"
+                                    }
+                                    language={identity.language}
+                                />
+                            </>
+                        )}
+                    </div>
+                ) : activeNavigation === "administration" ? (
+                    <div className="content">
+                        <AdministrationWorkspace />
+                    </div>
+                ) : (
+                    <div className="content">
                     <div className="page-header">
                         <div>
                             <div className="page-eyebrow">
-                                ATHENA · HOSPITAL INFORMATION SYSTEM
+                                {t("athena.ui.athenaHOSPITALINFORMATIONSYSTEM")}
                             </div>
 
                             <h1>
-                                Persons
+                                {t("athena.ui.persons")}
                             </h1>
 
                             <p>
-                                Manage people across your Athena
-                                environment.
+                                {t("athena.ui.managePeopleAcrossYourAthenaEnvironment")}
                             </p>
                         </div>
 
@@ -2383,14 +2863,47 @@ function App() {
                                         .length === 0
                                 }
                             >
-                                Export
+                                {t("athena.ui.export")}
+                            </button>
+
+                            <button
+                                className="secondary-button"
+                                type="button"
+                                onClick={() =>
+                                    setHospitalStructureOpen(true)
+                                }
+                            >
+                                {t("athena.ui.hospitalStructure")}
+                            </button>
+
+                            <button
+                                className="secondary-button"
+                                type="button"
+                                onClick={() =>
+                                    setCensusBedBoardOpen(true)
+                                }
+                            >
+                                Census / Bed Board
+                            </button>
+
+                            <button
+                                className="secondary-button"
+                                type="button"
+                                onClick={() =>
+                                    setPatientRegistrationOpen(true)
+                                }
+                            >
+                                {t("athena.ui.registerPatient")}
                             </button>
 
                             <button
                                 className="primary-button"
                                 type="button"
+                                onClick={() =>
+                                    void handleNewPerson()
+                                }
                             >
-                                + New Person
+                                {t("athena.ui.newPerson")}
                             </button>
                         </div>
                     </div>
@@ -2399,27 +2912,23 @@ function App() {
                         <div className="summary-card">
                             <div className="summary-card-header">
                                 <span>
-                                    Total Persons
-                                </span>
-
-                                <span className="summary-icon">
-                                    ◎
+                                    {t("athena.ui.totalPersons")}
                                 </span>
                             </div>
 
                             <div className="summary-value">
                                 {summary
-                                    ? summary.totalPersons.toLocaleString()
-                                    : "—"}
+                                    ? summary.totalPersons.toLocaleString(locale)
+                                    : "--"}
                             </div>
 
                             <div className="summary-footer">
                                 <span>
-                                    Live
+                                    {t("athena.ui.live")}
                                 </span>
 
                                 <span>
-                                    from Athena
+                                    {t("athena.ui.fromAthena")}
                                 </span>
                             </div>
                         </div>
@@ -2427,27 +2936,23 @@ function App() {
                         <div className="summary-card">
                             <div className="summary-card-header">
                                 <span>
-                                    Patients
-                                </span>
-
-                                <span className="summary-icon">
-                                    ♙
+                                    {t("athena.ui.patients")}
                                 </span>
                             </div>
 
                             <div className="summary-value">
                                 {summary
-                                    ? summary.totalPatients.toLocaleString()
-                                    : "—"}
+                                    ? summary.totalPatients.toLocaleString(locale)
+                                    : "--"}
                             </div>
 
                             <div className="summary-footer">
                                 <span>
-                                    Live
+                                    {t("athena.ui.live")}
                                 </span>
 
                                 <span>
-                                    from Athena
+                                    {t("athena.ui.fromAthena")}
                                 </span>
                             </div>
                         </div>
@@ -2455,27 +2960,23 @@ function App() {
                         <div className="summary-card">
                             <div className="summary-card-header">
                                 <span>
-                                    Practitioners
-                                </span>
-
-                                <span className="summary-icon">
-                                    ✚
+                                    {t("athena.ui.practitioners")}
                                 </span>
                             </div>
 
                             <div className="summary-value">
                                 {summary
-                                    ? summary.totalPractitioners.toLocaleString()
-                                    : "—"}
+                                    ? summary.totalPractitioners.toLocaleString(locale)
+                                    : "--"}
                             </div>
 
                             <div className="summary-footer">
                                 <span>
-                                    Live
+                                    {t("athena.ui.live")}
                                 </span>
 
                                 <span>
-                                    from Athena
+                                    {t("athena.ui.fromAthena")}
                                 </span>
                             </div>
                         </div>
@@ -2483,25 +2984,21 @@ function App() {
                         <div className="summary-card">
                             <div className="summary-card-header">
                                 <span>
-                                    Active Today
-                                </span>
-
-                                <span className="summary-icon">
-                                    ◉
+                                    {t("athena.ui.activeToday")}
                                 </span>
                             </div>
 
                             <div className="summary-value">
-                                —
+                                --
                             </div>
 
                             <div className="summary-footer">
                                 <span>
-                                    Awaiting
+                                    {t("athena.ui.awaiting")}
                                 </span>
 
                                 <span>
-                                    activity metrics
+                                    {t("athena.ui.activityMetrics")}
                                 </span>
                             </div>
                         </div>
@@ -2511,24 +3008,23 @@ function App() {
                         <div className="content-card-header">
                             <div>
                                 <h2>
-                                    All Persons
+                                    {t("athena.ui.allPersons")}
                                 </h2>
 
                                 <p>
-                                    Search and manage persons registered
-                                    in Athena.
+                                    {t("athena.ui.searchAndManagePersonsRegisteredInAthena")}
                                 </p>
                             </div>
 
                             <div className="table-actions">
                                 <div className="search-box">
-                                    <span className="search-icon">
-                                        ⌕
+                                    <span className="search-icon" aria-hidden="true">
+                                        âŒ•
                                     </span>
 
                                     <input
                                         type="search"
-                                        placeholder="Search persons..."
+                                        placeholder={t("athena.ui.searchPersons")}
                                         value={
                                             search
                                         }
@@ -2544,15 +3040,7 @@ function App() {
                                     />
                                 </div>
 
-                                <button
-                                    className="filter-button"
-                                    type="button"
-                                >
-                                    ☷
-                                    <span>
-                                        Filter
-                                    </span>
-                                </button>
+
                             </div>
                         </div>
 
@@ -2561,27 +3049,27 @@ function App() {
                                 <thead>
                                     <tr>
                                         <th>
-                                            Person
+                                            {t("athena.ui.person")}
                                         </th>
 
                                         <th>
-                                            Type
+                                            {t("athena.ui.type")}
                                         </th>
 
                                         <th>
-                                            Identifier
+                                            {t("athena.ui.identifier")}
                                         </th>
 
                                         <th>
-                                            Facility
+                                            {t("athena.ui.facility")}
                                         </th>
 
                                         <th>
-                                            Status
+                                            {t("athena.ui.status")}
                                         </th>
 
                                         <th>
-                                            Last Updated
+                                            {t("athena.ui.lastUpdated")}
                                         </th>
 
                                         <th aria-label="Actions" />
@@ -2627,7 +3115,7 @@ function App() {
 
                                                     <td>
                                                         <span className="type-badge">
-                                                            {formatPersonType(
+                                                            {formatPersonTypeLabel(
                                                                 person.roles
                                                             )}
                                                         </span>
@@ -2636,13 +3124,13 @@ function App() {
                                                     <td>
                                                         <span className="identifier">
                                                             {person.primaryIdentifier ??
-                                                                "—"}
+                                                                "--"}
                                                         </span>
                                                     </td>
 
                                                     <td>
                                                         {person.primaryFacilityName ??
-                                                            "—"}
+                                                            "--"}
                                                     </td>
 
                                                     <td>
@@ -2656,14 +3144,14 @@ function App() {
                                                         >
                                                             <span />
 
-                                                            {formatStatus(
+                                                            {formatStatusLabel(
                                                                 person.status
                                                             )}
                                                         </span>
                                                     </td>
 
                                                     <td>
-                                                        {formatUpdatedDate(
+                                                        {formatLocalizedDate(
                                                             person.updatedAt
                                                         )}
                                                     </td>
@@ -2675,14 +3163,14 @@ function App() {
                                                             aria-label={`View ${formatPersonName(
                                                                 person
                                                             )}`}
-                                                            title="View Person"
+                                                            title={t("athena.ui.viewPerson")}
                                                             onClick={() =>
                                                                 void handleOpenPerson(
                                                                     person
                                                                 )
                                                             }
                                                         >
-                                                            ⋮
+                                                            {t("athena.ui.viewPerson")}
                                                         </button>
                                                     </td>
                                                 </tr>
@@ -2697,7 +3185,7 @@ function App() {
                                                 }
                                                 className="empty-state"
                                             >
-                                                Loading persons...
+                                                {t("athena.ui.loadingPersons")}
                                             </td>
                                         </tr>
                                     )}
@@ -2742,7 +3230,7 @@ function App() {
 
                         <div className="pagination">
                             <div className="pagination-info">
-                                Showing{" "}
+                                {t("athena.ui.showing")}{" "}
                                 <strong>
                                     {
                                         showingStart
@@ -2752,11 +3240,11 @@ function App() {
                                         showingEnd
                                     }
                                 </strong>{" "}
-                                of{" "}
+                                {t("athena.ui.of")}{" "}
                                 <strong>
-                                    {result.total.toLocaleString()}
+                                    {result.total.toLocaleString(locale)}
                                 </strong>{" "}
-                                persons
+                                {t("athena.ui.personsApp")}
                             </div>
 
                             <div className="pagination-controls">
@@ -2775,7 +3263,7 @@ function App() {
                                         )
                                     }
                                 >
-                                    ‹
+                                    &lt;
                                 </button>
 
                                 {paginationItems.map(
@@ -2842,13 +3330,53 @@ function App() {
                                         )
                                     }
                                 >
-                                    ›
+                                    &gt;
                                 </button>
                             </div>
-                        </div>
+                        </div> 
                     </section>
                 </div>
+                )}
             </main>
+
+            {schedulingOpen && (
+                <SchedulingPanel
+                    tenantId={tenantId}
+                    onClose={() =>
+                        setSchedulingOpen(false)
+                    }
+                    onOpenEncounter={
+                        handleOpenScheduledEncounter
+                    }
+                />
+            )}
+
+            {hospitalStructureOpen && (
+                <HospitalStructurePanel
+                    tenantId={tenantId}
+                    onClose={() =>
+                        setHospitalStructureOpen(false)
+                    }
+                />
+            )}
+
+            {censusBedBoardOpen && (
+                <CensusBedBoardPanel
+                    tenantId={tenantId}
+                    onClose={() =>
+                        setCensusBedBoardOpen(false)
+                    }
+                />
+            )}
+
+            {patientRegistrationOpen && (
+                <PatientRegistrationPanel
+                    tenantId={tenantId}
+                    onClose={() =>
+                        setPatientRegistrationOpen(false)
+                    }
+                />
+            )}
 
             {selectedListPerson && (
                 <div
@@ -2888,7 +3416,9 @@ function App() {
                                         detailStyles.eyebrow
                                     }
                                 >
-                                    ATHENA · PERSON
+                                    {isCreatingPerson
+                                        ? t("athena.ui.athenaNEWPERSON")
+                                        : t("athena.ui.athenaPERSON")}
                                 </p>
 
                                 <h2
@@ -2896,13 +3426,15 @@ function App() {
                                         detailStyles.title
                                     }
                                 >
-                                    {selectedPerson
+                                    {isCreatingPerson
+                                        ? t("athena.ui.createPerson")
+                                        : selectedPerson
                                         ? formatDetailName(
-                                            selectedPerson
-                                        )
+                                              selectedPerson
+                                          )
                                         : formatPersonName(
-                                            selectedListPerson
-                                        )}
+                                              selectedListPerson
+                                          )}
                                 </h2>
 
                                 <p
@@ -2910,9 +3442,9 @@ function App() {
                                         detailStyles.subtitle
                                     }
                                 >
-                                    {
-                                        selectedListPerson.id
-                                    }
+                                    {isCreatingPerson
+                                        ? t("athena.ui.enterThePersonDetailsBelow")
+                                        : selectedListPerson.id}
                                 </p>
                             </div>
 
@@ -2932,14 +3464,14 @@ function App() {
                                                 handleStartEdit
                                             }
                                         >
-                                            Edit
+                                            {t("athena.ui.edit")}
                                         </button>
                                     )}
 
                                 <button
                                     type="button"
-                                    aria-label="Close Person details"
-                                    title="Close"
+                                    aria-label={t("athena.ui.closePersonDetails")}
+                                    title={t("athena.ui.close")}
                                     style={
                                         detailStyles.closeButton
                                     }
@@ -2950,11 +3482,12 @@ function App() {
                                         saveLoading
                                     }
                                 >
-                                    ×
+                                    X
                                 </button>
                             </div>
                         </div>
 
+                        {!isCreatingPerson && (
                         <div
                             style={
                                 detailStyles.badgeRow
@@ -2965,7 +3498,7 @@ function App() {
                                     detailStyles.badge
                                 }
                             >
-                                {formatPersonType(
+                                {formatPersonTypeLabel(
                                     selectedListPerson.roles
                                 )}
                             </span>
@@ -2975,7 +3508,7 @@ function App() {
                                     detailStyles.badge
                                 }
                             >
-                                {formatStatus(
+                                {formatStatusLabel(
                                     selectedListPerson.status
                                 )}
                             </span>
@@ -2987,9 +3520,10 @@ function App() {
                             >
                                 {selectedListPerson
                                     .primaryFacilityName ??
-                                    "No current facility"}
+                                    t("athena.ui.noCurrentFacility")}
                             </span>
                         </div>
+                        )}
 
                         {saveSuccess && (
                             <div
@@ -3034,7 +3568,7 @@ function App() {
                                             saveLoading
                                         }
                                     >
-                                        Cancel
+                                        {t("athena.ui.cancel")}
                                     </button>
 
                                     <button
@@ -3051,6 +3585,8 @@ function App() {
                                     >
                                         {saveLoading
                                             ? "Saving..."
+                                            : isCreatingPerson
+                                            ? "Create Person"
                                             : "Save changes"}
                                     </button>
                                 </div>
@@ -3083,6 +3619,211 @@ function App() {
                             !detailError &&
                             selectedPerson && (
                                 <>
+                                    {!isCreatingPerson && (
+                                        <section
+                                            style={
+                                                detailStyles.section
+                                            }
+                                        >
+                                            <h3
+                                                style={
+                                                    detailStyles.sectionTitle
+                                                }
+                                            >
+                                                Patient Clinical
+                                            </h3>
+
+                                            <div
+                                                style={{
+                                                    display: "flex",
+                                                    gap: 8,
+                                                    flexWrap: "wrap",
+                                                    marginBottom: 14
+                                                }}
+                                            >
+                                                {(
+                                                    [
+                                                        ["OVERVIEW", "Overview"],
+                                                        ["ENCOUNTERS", "Encounters"],
+                                                        ["ADT", "ADT / Bed Management"]
+                                                    ] as const
+                                                ).map(([key, label]) => (
+                                                    <button
+                                                        key={key}
+                                                        type="button"
+                                                        onClick={() =>
+                                                            setPatientClinicalView(
+                                                                key
+                                                            )
+                                                        }
+                                                        disabled={
+                                                            key !== "OVERVIEW" &&
+                                                            !patientRecord
+                                                        }
+                                                        style={{
+                                                            ...detailStyles.editButton,
+                                                            opacity:
+                                                                key !== "OVERVIEW" &&
+                                                                !patientRecord
+                                                                    ? 0.5
+                                                                    : 1,
+                                                            background:
+                                                                patientClinicalView === key
+                                                                    ? "#eef4ff"
+                                                                    : undefined
+                                                        }}
+                                                    >
+                                                        {label}
+                                                    </button>
+                                                ))}
+                                            </div>
+
+                                            {clinicalLoading && (
+                                                <div style={detailStyles.message}>
+                                                    Loading Patient clinical information...
+                                                </div>
+                                            )}
+
+                                            {clinicalError && (
+                                                <div style={detailStyles.error}>
+                                                    {clinicalError}
+                                                </div>
+                                            )}
+
+                                            {!clinicalLoading &&
+                                                !clinicalError &&
+                                                !patientRecord && (
+                                                    <div style={detailStyles.value}>
+                                                        This Person does not have a Patient record.
+                                                    </div>
+                                                )}
+
+                                            {patientRecord &&
+                                                patientClinicalView === "OVERVIEW" && (
+                                                    <div style={detailStyles.grid}>
+                                                        <div style={detailStyles.field}>
+                                                            <span style={detailStyles.label}>
+                                                                Patient number
+                                                            </span>
+                                                            <div style={detailStyles.value}>
+                                                                {patientRecord.patientNumber}
+                                                            </div>
+                                                        </div>
+                                                        <div style={detailStyles.field}>
+                                                            <span style={detailStyles.label}>
+                                                                MRN
+                                                            </span>
+                                                            <div style={detailStyles.value}>
+                                                                {patientRecord.medicalRecordNumber}
+                                                            </div>
+                                                        </div>
+                                                        <div style={detailStyles.field}>
+                                                            <span style={detailStyles.label}>
+                                                                Patient status
+                                                            </span>
+                                                            <div style={detailStyles.value}>
+                                                                {patientRecord.status}
+                                                            </div>
+                                                        </div>
+                                                        <div style={detailStyles.field}>
+                                                            <span style={detailStyles.label}>
+                                                                Encounters
+                                                            </span>
+                                                            <div style={detailStyles.value}>
+                                                                {patientEncounters.length}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                            {patientRecord &&
+                                                patientClinicalView === "ENCOUNTERS" && (
+                                                    <EncounterManagement
+                                                        tenantId={tenantId}
+                                                        patientId={patientRecord.id}
+                                                        encounters={patientEncounters}
+                                                        facilities={facilityOptions}
+                                                        onRefresh={() =>
+                                                            loadPatientClinicalContext(
+                                                                selectedPerson.id
+                                                            )
+                                                        }
+                                                        onOpenAdt={(encounter) => {
+                                                            setSelectedEncounter(
+                                                                encounter
+                                                            );
+                                                            setPatientClinicalView(
+                                                                "ADT"
+                                                            );
+                                                        }}
+                                                    />
+                                                )}
+
+                                            {patientRecord &&
+                                                patientClinicalView === "ADT" && (
+                                                    <div>
+                                                        {!selectedEncounter ? (
+                                                            <div style={detailStyles.value}>
+                                                                Select an encounter from the Encounters tab to open Patient ADT.
+                                                            </div>
+                                                        ) : (
+                                                            <>
+                                                                <div
+                                                                    style={{
+                                                                        display: "flex",
+                                                                        justifyContent: "space-between",
+                                                                        gap: 12,
+                                                                        alignItems: "center",
+                                                                        marginBottom: 12
+                                                                    }}
+                                                                >
+                                                                    <div>
+                                                                        <strong>
+                                                                            {selectedEncounter.encounterNumber}
+                                                                        </strong>
+                                                                        <div>
+                                                                            {selectedEncounter.encounterType
+                                                                                .replaceAll("_", " ")}{" "}
+                                                                            Â· {selectedEncounter.status
+                                                                                .replaceAll("_", " ")}
+                                                                        </div>
+                                                                    </div>
+                                                                    <button
+                                                                        type="button"
+                                                                        style={detailStyles.editButton}
+                                                                        onClick={() =>
+                                                                            setPatientClinicalView(
+                                                                                "ENCOUNTERS"
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        Change encounter
+                                                                    </button>
+                                                                </div>
+
+                                                                <AdtWorkspace
+                                                                    tenantId={tenantId}
+                                                                    encounter={{
+                                                                        id: selectedEncounter.id,
+                                                                        patientId:
+                                                                            selectedEncounter.patientId,
+                                                                        facilityId:
+                                                                            selectedEncounter.facilityId,
+                                                                        encounterNumber:
+                                                                            selectedEncounter.encounterNumber,
+                                                                        encounterType:
+                                                                            selectedEncounter.encounterType,
+                                                                        reasonForEncounter:
+                                                                            selectedEncounter.reasonForEncounter
+                                                                    }}
+                                                                />
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                )}
+                                        </section>
+                                    )}
+
                                     <section
                                         style={
                                             detailStyles.section
@@ -3093,7 +3834,7 @@ function App() {
                                                 detailStyles.sectionTitle
                                             }
                                         >
-                                            Demographics
+                                            {t("athena.ui.demographics")}
                                         </h3>
 
                                         {isEditingPerson &&
@@ -3301,7 +4042,7 @@ function App() {
                                                         }
                                                     >
                                                         {selectedPerson.middleName ??
-                                                            "—"}
+                                                            "--"}
                                                     </div>
                                                 </div>
 
@@ -3346,7 +4087,7 @@ function App() {
                                                         }
                                                     >
                                                         {selectedPerson.preferredName ??
-                                                            "—"}
+                                                            "--"}
                                                     </div>
                                                 </div>
 
@@ -3367,7 +4108,7 @@ function App() {
                                                             detailStyles.value
                                                         }
                                                     >
-                                                        {formatOptionalDate(
+                                                        {formatLocalizedDate(
                                                             selectedPerson.dateOfBirth
                                                         )}
                                                     </div>
@@ -3414,7 +4155,7 @@ function App() {
                                                         }
                                                     >
                                                         {selectedPerson.gender ??
-                                                            "—"}
+                                                            "--"}
                                                     </div>
                                                 </div>
                                             </div>
@@ -3437,7 +4178,7 @@ function App() {
                                                     marginBottom: 0
                                                 }}
                                             >
-                                                Identifiers
+                                                {t("athena.ui.identifiers")}
                                             </h3>
 
                                             {isEditingPerson &&
@@ -3503,7 +4244,7 @@ function App() {
                                                                         saveLoading
                                                                     }
                                                                 >
-                                                                    Remove
+                                                                    {t("athena.ui.remove")}
                                                                 </button>
                                                             </div>
 
@@ -3647,7 +4388,7 @@ function App() {
                                                 detailStyles.sectionTitle
                                             }
                                         >
-                                            Contact information
+                                            {t("athena.ui.contactInformation")}
                                         </h3>
 
                                         {isEditingPerson &&
@@ -3734,7 +4475,7 @@ function App() {
                                                             detailStyles.label
                                                         }
                                                     >
-                                                        Facility
+                                                        {t("athena.ui.facility")}
                                                     </span>
 
                                                     <div
@@ -3744,7 +4485,7 @@ function App() {
                                                     >
                                                         {selectedListPerson
                                                             .primaryFacilityName ??
-                                                            "—"}
+                                                            "--"}
                                                     </div>
                                                 </div>
                                             </div>
@@ -3775,7 +4516,7 @@ function App() {
                                                         {selectedPerson
                                                             .contactInformation
                                                             ?.email ??
-                                                            "—"}
+                                                            "--"}
                                                     </div>
                                                 </div>
 
@@ -3800,7 +4541,7 @@ function App() {
                                                         {selectedPerson
                                                             .contactInformation
                                                             ?.phone ??
-                                                            "—"}
+                                                            "--"}
                                                     </div>
                                                 </div>
 
@@ -3825,7 +4566,7 @@ function App() {
                                                         {selectedPerson
                                                             .contactInformation
                                                             ?.mobilePhone ??
-                                                            "—"}
+                                                            "--"}
                                                     </div>
                                                 </div>
 
@@ -3839,7 +4580,7 @@ function App() {
                                                             detailStyles.label
                                                         }
                                                     >
-                                                        Facility
+                                                        {t("athena.ui.facility")}
                                                     </span>
 
                                                     <div
@@ -3849,7 +4590,7 @@ function App() {
                                                     >
                                                         {selectedListPerson
                                                             .primaryFacilityName ??
-                                                            "—"}
+                                                            "--"}
                                                     </div>
                                                 </div>
                                             </div>
@@ -3872,7 +4613,7 @@ function App() {
                                                     marginBottom: 0
                                                 }}
                                             >
-                                                Facility Affiliations
+                                                {t("athena.ui.facilityAffiliations")}
                                             </h3>
 
                                             {isEditingPerson && (
@@ -3937,7 +4678,7 @@ function App() {
                                                                             detailStyles.label
                                                                         }
                                                                     >
-                                                                        Facility
+                                                                        {t("athena.ui.facility")}
                                                                     </span>
 
                                                                     <select
@@ -4080,7 +4821,7 @@ function App() {
                                                                         saveLoading
                                                                     }
                                                                 >
-                                                                    Remove
+                                                                    {t("athena.ui.remove")}
                                                                 </button>
                                                             </div>
                                                         </div>
@@ -4148,7 +4889,7 @@ function App() {
                                                                           "PRACTITIONER_ASSIGNMENT"
                                                                         ? "Practitioner Assignment"
                                                                         : "General"}
-                                                                    {" · "}
+                                                                    {" - "}
                                                                     {
                                                                         affiliation.facilityCode
                                                                     }
@@ -4195,7 +4936,7 @@ function App() {
                                                     marginBottom: 0
                                                 }}
                                             >
-                                                Addresses
+                                                {t("athena.ui.addresses")}
                                             </h3>
 
                                             {isEditingPerson &&
@@ -4261,7 +5002,7 @@ function App() {
                                                                         saveLoading
                                                                     }
                                                                 >
-                                                                    Remove
+                                                                    {t("athena.ui.remove")}
                                                                 </button>
                                                             </div>
 
@@ -4387,11 +5128,12 @@ function App() {
                                                     detailStyles.value
                                                 }
                                             >
-                                                No addresses recorded.
+                                                {t("athena.ui.noAddressesRecorded")}
                                             </div>
                                         )}
                                     </section>
 
+                                    {!isCreatingPerson && (
                                     <section
                                         style={
                                             detailStyles.section
@@ -4402,7 +5144,7 @@ function App() {
                                                 detailStyles.sectionTitle
                                             }
                                         >
-                                            Record information
+                                            {t("athena.ui.recordInformation")}
                                         </h3>
 
                                         <div
@@ -4420,7 +5162,7 @@ function App() {
                                                         detailStyles.label
                                                     }
                                                 >
-                                                    Roles
+                                                    {t("athena.ui.roles")}
                                                 </span>
 
                                                 <div
@@ -4428,7 +5170,7 @@ function App() {
                                                         detailStyles.value
                                                     }
                                                 >
-                                                    {formatPersonType(
+                                                    {formatPersonTypeLabel(
                                                         selectedListPerson.roles
                                                     )}
                                                 </div>
@@ -4444,7 +5186,7 @@ function App() {
                                                         detailStyles.label
                                                     }
                                                 >
-                                                    Version
+                                                    {t("athena.ui.version")}
                                                 </span>
 
                                                 <div
@@ -4468,7 +5210,7 @@ function App() {
                                                         detailStyles.label
                                                     }
                                                 >
-                                                    Created
+                                                    {t("athena.ui.created")}
                                                 </span>
 
                                                 <div
@@ -4476,7 +5218,7 @@ function App() {
                                                         detailStyles.value
                                                     }
                                                 >
-                                                    {formatOptionalDate(
+                                                    {formatLocalizedDate(
                                                         selectedPerson
                                                             .createdAt
                                                     )}
@@ -4493,7 +5235,7 @@ function App() {
                                                         detailStyles.label
                                                     }
                                                 >
-                                                    Last updated
+                                                    {t("athena.ui.lastUpdatedApp")}
                                                 </span>
 
                                                 <div
@@ -4501,7 +5243,7 @@ function App() {
                                                         detailStyles.value
                                                     }
                                                 >
-                                                    {formatOptionalDate(
+                                                    {formatLocalizedDate(
                                                         selectedPerson
                                                             .updatedAt
                                                     )}
@@ -4509,6 +5251,7 @@ function App() {
                                             </div>
                                         </div>
                                     </section>
+                                    )}
                                 </>
                             )}
                     </aside>
@@ -4519,3 +5262,5 @@ function App() {
 }
 
 export default App;
+
+

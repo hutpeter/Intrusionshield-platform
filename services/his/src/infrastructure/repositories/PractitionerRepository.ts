@@ -1,9 +1,21 @@
-
+﻿
 import type { IDatabaseProvider } from "@intrusionshield/database";
 import type { Practitioner } from "@intrusionshield/his";
 
+export interface PractitionerListItem {
+  id: string;
+  personId: string;
+  practitionerNumber: string;
+  practitionerType: Practitioner["practitionerType"];
+  status: Practitioner["status"];
+  firstName: string;
+  middleName?: string;
+  lastName: string;
+  preferredName?: string;
+}
 export interface PractitionerRepository {
   findById(id: string, tenantId: string): Promise<Practitioner | null>;
+  list(tenantId: string): Promise<PractitionerListItem[]>;
   create(practitioner: Practitioner): Promise<Practitioner>;
   update(practitioner: Practitioner): Promise<Practitioner>;
 }
@@ -96,6 +108,60 @@ export class SqlPractitionerRepository implements PractitionerRepository {
     };
   }
 
+  public async list(
+    tenantId: string
+  ): Promise<PractitionerListItem[]> {
+    const result =
+      await this.database.query<PractitionerListRow>(
+        `SELECT
+           practitioner.id,
+           practitioner.person_id AS personId,
+           practitioner.practitioner_number AS practitionerNumber,
+           practitioner.practitioner_type AS practitionerType,
+           practitioner.status,
+           person.first_name AS firstName,
+           person.middle_name AS middleName,
+           person.last_name AS lastName,
+           person.preferred_name AS preferredName
+         FROM HIS.Practitioners practitioner
+         INNER JOIN HIS.Persons person
+           ON person.id = practitioner.person_id
+          AND person.tenant_id = practitioner.tenant_id
+         WHERE practitioner.tenant_id = @tenantId
+         ORDER BY
+           CASE practitioner.status
+             WHEN 'ACTIVE' THEN 1
+             ELSE 2
+           END,
+           person.last_name,
+           person.first_name,
+           practitioner.practitioner_number`,
+        [
+          {
+            name: "tenantId",
+            value: tenantId
+          }
+        ]
+      );
+
+    return result.rows.map(
+      (row) => ({
+        id: row.id,
+        personId: row.personId,
+        practitionerNumber:
+          row.practitionerNumber,
+        practitionerType:
+          row.practitionerType,
+        status: row.status,
+        firstName: row.firstName,
+        middleName:
+          row.middleName ?? undefined,
+        lastName: row.lastName,
+        preferredName:
+          row.preferredName ?? undefined
+      })
+    );
+  }
   public async create(practitioner: Practitioner): Promise<Practitioner> {
     await this.database.beginTransaction();
 
@@ -317,6 +383,17 @@ await this.insertLicenses(practitioner);
   }
 }
 
+interface PractitionerListRow {
+  id: string;
+  personId: string;
+  practitionerNumber: string;
+  practitionerType: Practitioner["practitionerType"];
+  status: Practitioner["status"];
+  firstName: string;
+  middleName: string | null;
+  lastName: string;
+  preferredName: string | null;
+}
 interface PractitionerRow {
   id: string;
   tenantId: string;
@@ -337,4 +414,5 @@ interface PractitionerLicenseRow {
   issuedAt: Date | null;
   expiresAt: Date | null;
 }
+
 

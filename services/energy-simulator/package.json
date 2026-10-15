@@ -8,6 +8,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
+    "start:bas": "node dist/bas.js",
     "dev": "node --watch dist/index.js"
   },
   "devDependencies": {

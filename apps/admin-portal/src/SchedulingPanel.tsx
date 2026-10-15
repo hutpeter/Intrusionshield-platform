@@ -1,0 +1,2640 @@
+import {
+    useEffect,
+    useMemo,
+    useState,
+    type CSSProperties
+} from "react";
+
+import {
+    useI18n
+} from "./i18n/index.js";
+
+type SchedulingPanelProps = {
+    tenantId: string;
+    onClose: () => void;
+    onOpenEncounter: (personId: string) => Promise<void> | void;
+};
+
+type PractitionerOption = {
+    id: string;
+    practitionerNumber?: string;
+    personId?: string;
+    displayName?: string;
+    name?: string;
+    firstName?: string;
+    lastName?: string;
+};
+
+type FacilityOption = {
+    id: string;
+    code: string;
+    name: string;
+    facilityType?: string;
+};
+
+type ClinicalLocationOption = {
+    id: string;
+    facilityId?: string;
+    code?: string;
+    name: string;
+    locationType?: string;
+    active?: boolean;
+};
+
+type PatientOption = {
+    id: string;
+    personId: string;
+    patientNumber: string;
+    medicalRecordNumber: string;
+    status: string;
+    firstName: string;
+    middleName?: string;
+    lastName: string;
+    preferredName?: string;
+};
+
+type AppointmentType =
+    | "CONSULTATION"
+    | "FOLLOW_UP"
+    | "PROCEDURE"
+    | "DIAGNOSTIC"
+    | "THERAPY"
+    | "VIRTUAL"
+    | "OTHER";
+
+type Appointment = {
+    id: string;
+    appointmentNumber: string;
+    patientId: string;
+    facilityId: string;
+    practitionerId?: string;
+    clinicalLocationId?: string;
+    encounterId?: string;
+    appointmentType: AppointmentType;
+    status: string;
+    source: string;
+    scheduledStart: string;
+    scheduledEnd: string;
+    reason?: string;
+    notes?: string;
+    cancellationReason?: string;
+    version?: number;
+};
+
+type AvailabilitySlot = {
+    start: string;
+    end: string;
+};
+
+type AvailabilitySlotResponse = {
+    practitionerId?: string;
+    clinicalLocationId?: string;
+    from: string;
+    to: string;
+    durationMinutes: number;
+    timeZone: string;
+    slots: AvailabilitySlot[];
+};
+
+type ApiCollection<T> =
+    | T[]
+    | {
+        items?: T[];
+        data?: T[];
+    };
+
+function zonedMidnight(date: string, timeZone: string): Date {
+    const [year, month, day] = date.split("-").map(Number);
+    const target = Date.UTC(year, month - 1, day);
+    const formatter = new Intl.DateTimeFormat("en-US", {
+        timeZone, year: "numeric", month: "2-digit", day: "2-digit",
+        hour: "2-digit", minute: "2-digit", second: "2-digit",
+        hourCycle: "h23"
+    });
+    let instant = target;
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+        const parts = Object.fromEntries(
+            formatter.formatToParts(new Date(instant))
+                .filter(part => part.type !== "literal")
+                .map(part => [part.type, Number(part.value)])
+        );
+        const shown = Date.UTC(parts.year, parts.month - 1, parts.day,
+            parts.hour, parts.minute, parts.second);
+        instant += target - shown;
+    }
+    return new Date(instant);
+}
+
+const APPOINTMENT_TYPES: ReadonlyArray<{
+    value: AppointmentType;
+    label: string;
+}> = [
+    {
+        value: "CONSULTATION",
+        label: "Consultation"
+    },
+    {
+        value: "FOLLOW_UP",
+        label: "Follow-up"
+    },
+    {
+        value: "PROCEDURE",
+        label: "Procedure"
+    },
+    {
+        value: "DIAGNOSTIC",
+        label: "Diagnostic"
+    },
+    {
+        value: "THERAPY",
+        label: "Therapy"
+    },
+    {
+        value: "VIRTUAL",
+        label: "Virtual"
+    },
+    {
+        value: "OTHER",
+        label: "Other"
+    }
+];
+
+const styles: Record<string, CSSProperties> = {
+    backdrop: {
+        position: "fixed",
+        inset: 0,
+        zIndex: 1100,
+        background: "rgba(15, 23, 42, 0.44)",
+        display: "flex",
+        justifyContent: "flex-end"
+    },
+    panel: {
+        width: "min(980px, 100vw)",
+        height: "100vh",
+        overflowY: "auto",
+        background: "#ffffff",
+        boxShadow: "-12px 0 30px rgba(15, 23, 42, 0.18)",
+        padding: "28px"
+    },
+    header: {
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "flex-start",
+        gap: "20px",
+        marginBottom: "24px"
+    },
+    eyebrow: {
+        margin: "0 0 6px",
+        color: "#667085",
+        fontSize: "12px",
+        fontWeight: 700,
+        letterSpacing: "0.08em",
+        textTransform: "uppercase"
+    },
+    title: {
+        margin: 0,
+        color: "#172033",
+        fontSize: "28px",
+        lineHeight: 1.2
+    },
+    description: {
+        margin: "8px 0 0",
+        color: "#667085",
+        fontSize: "14px",
+        lineHeight: 1.5
+    },
+    close: {
+        width: "38px",
+        height: "38px",
+        border: "1px solid #d0d5dd",
+        borderRadius: "8px",
+        background: "#ffffff",
+        color: "#344054",
+        fontSize: "20px",
+        cursor: "pointer"
+    },
+    card: {
+        border: "1px solid #e4e7ec",
+        borderRadius: "12px",
+        background: "#ffffff",
+        padding: "20px",
+        marginBottom: "20px"
+    },
+    cardTitle: {
+        margin: "0 0 16px",
+        color: "#172033",
+        fontSize: "16px"
+    },
+    grid: {
+        display: "grid",
+        gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+        gap: "16px"
+    },
+    field: {
+        display: "block",
+        minWidth: 0
+    },
+    fullField: {
+        display: "block",
+        minWidth: 0,
+        gridColumn: "1 / -1"
+    },
+    label: {
+        display: "block",
+        marginBottom: "6px",
+        color: "#475467",
+        fontSize: "12px",
+        fontWeight: 700
+    },
+    input: {
+        width: "100%",
+        minHeight: "42px",
+        border: "1px solid #d0d5dd",
+        borderRadius: "8px",
+        background: "#ffffff",
+        color: "#172033",
+        padding: "8px 10px",
+        fontSize: "14px",
+        boxSizing: "border-box"
+    },
+    textarea: {
+        width: "100%",
+        minHeight: "92px",
+        resize: "vertical",
+        border: "1px solid #d0d5dd",
+        borderRadius: "8px",
+        background: "#ffffff",
+        color: "#172033",
+        padding: "10px",
+        fontSize: "14px",
+        lineHeight: 1.45,
+        boxSizing: "border-box"
+    },
+    actions: {
+        display: "flex",
+        justifyContent: "flex-end",
+        gap: "10px",
+        marginTop: "18px"
+    },
+    primary: {
+        minHeight: "42px",
+        border: "1px solid #172033",
+        borderRadius: "8px",
+        background: "#172033",
+        color: "#ffffff",
+        padding: "0 18px",
+        fontSize: "13px",
+        fontWeight: 700,
+        cursor: "pointer"
+    },
+    secondary: {
+        minHeight: "42px",
+        border: "1px solid #d0d5dd",
+        borderRadius: "8px",
+        background: "#ffffff",
+        color: "#344054",
+        padding: "0 16px",
+        fontSize: "13px",
+        fontWeight: 700,
+        cursor: "pointer"
+    },
+    error: {
+        borderRadius: "8px",
+        background: "#fff4f4",
+        color: "#b42318",
+        padding: "12px 14px",
+        marginBottom: "16px",
+        fontSize: "14px"
+    },
+    success: {
+        border: "1px solid #abefc6",
+        borderRadius: "10px",
+        background: "#ecfdf3",
+        color: "#067647",
+        padding: "14px 16px",
+        marginBottom: "20px",
+        fontSize: "14px",
+        lineHeight: 1.5
+    },
+    empty: {
+        border: "1px dashed #d0d5dd",
+        borderRadius: "10px",
+        color: "#667085",
+        padding: "24px",
+        textAlign: "center",
+        fontSize: "14px"
+    },
+    slots: {
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
+        gap: "10px"
+    },
+    slot: {
+        minHeight: "48px",
+        border: "1px solid #d0d5dd",
+        borderRadius: "8px",
+        background: "#ffffff",
+        color: "#344054",
+        padding: "8px 12px",
+        fontSize: "13px",
+        fontWeight: 700,
+        cursor: "pointer"
+    },
+    selectedSlot: {
+        border: "1px solid #172033",
+        background: "#172033",
+        color: "#ffffff"
+    },
+    selection: {
+        marginTop: "16px",
+        padding: "12px 14px",
+        borderRadius: "8px",
+        background: "#f8fafc",
+        color: "#344054",
+        fontSize: "14px"
+    },
+    hint: {
+        margin: "6px 0 0",
+        color: "#667085",
+        fontSize: "12px",
+        lineHeight: 1.4
+    },
+    bookingSummary: {
+        marginBottom: "18px",
+        padding: "14px",
+        borderRadius: "8px",
+        background: "#f8fafc",
+        color: "#344054",
+        fontSize: "14px",
+        lineHeight: 1.55
+    },
+    tabs: {
+        display: "flex",
+        gap: "8px",
+        marginBottom: "20px",
+        borderBottom: "1px solid #e4e7ec",
+        paddingBottom: "10px"
+    },
+    tab: {
+        minHeight: "38px",
+        border: "1px solid #d0d5dd",
+        borderRadius: "8px",
+        background: "#ffffff",
+        color: "#344054",
+        padding: "0 14px",
+        fontSize: "13px",
+        fontWeight: 700,
+        cursor: "pointer"
+    },
+    activeTab: {
+        border: "1px solid #172033",
+        background: "#172033",
+        color: "#ffffff"
+    },
+    scheduleHeader: {
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        gap: "12px",
+        marginBottom: "16px"
+    },
+    appointmentList: {
+        display: "grid",
+        gap: "12px"
+    },
+    appointmentRow: {
+        border: "1px solid #e4e7ec",
+        borderRadius: "10px",
+        padding: "14px",
+        background: "#ffffff"
+    },
+    appointmentTop: {
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "flex-start",
+        gap: "12px"
+    },
+    appointmentNumber: {
+        margin: 0,
+        color: "#172033",
+        fontSize: "14px",
+        fontWeight: 700
+    },
+    appointmentMeta: {
+        margin: "5px 0 0",
+        color: "#667085",
+        fontSize: "13px",
+        lineHeight: 1.5
+    },
+    badge: {
+        display: "inline-block",
+        border: "1px solid #d0d5dd",
+        borderRadius: "999px",
+        background: "#f8fafc",
+        color: "#344054",
+        padding: "4px 8px",
+        fontSize: "11px",
+        fontWeight: 700,
+        whiteSpace: "nowrap"
+    },
+    rowActions: {
+        display: "flex",
+        flexWrap: "wrap",
+        gap: "8px",
+        marginTop: "12px"
+    },
+    smallButton: {
+        minHeight: "34px",
+        border: "1px solid #d0d5dd",
+        borderRadius: "7px",
+        background: "#ffffff",
+        color: "#344054",
+        padding: "0 11px",
+        fontSize: "12px",
+        fontWeight: 700,
+        cursor: "pointer"
+    },
+    dangerButton: {
+        minHeight: "34px",
+        border: "1px solid #fecdca",
+        borderRadius: "7px",
+        background: "#fff4f4",
+        color: "#b42318",
+        padding: "0 11px",
+        fontSize: "12px",
+        fontWeight: 700,
+        cursor: "pointer"
+    }
+};
+
+function collectionItems<T>(
+    value: ApiCollection<T>
+): T[] {
+    if (Array.isArray(value)) {
+        return value;
+    }
+
+    if (Array.isArray(value.items)) {
+        return value.items;
+    }
+
+    if (Array.isArray(value.data)) {
+        return value.data;
+    }
+
+    return [];
+}
+
+function todayDateOnly(): string {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month =
+        String(now.getMonth() + 1).padStart(2, "0");
+    const day =
+        String(now.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+}
+
+function browserTimeZone(): string {
+    return Intl.DateTimeFormat()
+        .resolvedOptions()
+        .timeZone || "UTC";
+}
+
+function practitionerLabel(
+    practitioner: PractitionerOption
+): string {
+    if (practitioner.displayName) {
+        return practitioner.displayName;
+    }
+
+    if (practitioner.name) {
+        return practitioner.name;
+    }
+
+    const personName = [
+        practitioner.firstName,
+        practitioner.lastName
+    ]
+        .filter(Boolean)
+        .join(" ");
+
+    if (personName) {
+        return personName;
+    }
+
+    return practitioner.practitionerNumber ??
+        practitioner.id;
+}
+
+function patientLabel(
+    patient: PatientOption
+): string {
+    const preferred =
+        patient.preferredName?.trim();
+
+    const legalName = [
+        patient.firstName,
+        patient.middleName,
+        patient.lastName
+    ]
+        .filter(Boolean)
+        .join(" ");
+
+    const name =
+        preferred
+            ? `${preferred} ${patient.lastName}`
+            : legalName;
+
+    return `${name} - ${patient.patientNumber} / ${patient.medicalRecordNumber}`;
+}
+
+function formatSlot(
+    slot: AvailabilitySlot,
+    locale: string,
+    timeZone: string
+): string {
+    const start = new Date(slot.start);
+    const end = new Date(slot.end);
+
+    if (
+        Number.isNaN(start.getTime()) ||
+        Number.isNaN(end.getTime())
+    ) {
+        return `${slot.start} - ${slot.end}`;
+    }
+
+    const formatter =
+        new Intl.DateTimeFormat(locale, {
+            month: "short",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+            timeZone
+        });
+
+    const timeFormatter =
+        new Intl.DateTimeFormat(locale, {
+            hour: "numeric",
+            minute: "2-digit",
+            timeZone
+        });
+
+    return `${formatter.format(start)} - ${timeFormatter.format(end)}`;
+}
+
+async function readError(
+    response: Response,
+    fallback: string
+): Promise<string> {
+    try {
+        const body =
+            await response.json() as {
+                error?: string;
+                message?: string;
+            };
+
+        return body.message ??
+            body.error ??
+            fallback;
+    } catch {
+        return fallback;
+    }
+}
+
+export function SchedulingPanel({
+    tenantId,
+    onClose,
+    onOpenEncounter
+}: SchedulingPanelProps) {
+    const {
+        locale
+    } = useI18n();
+
+    const [
+        practitioners,
+        setPractitioners
+    ] = useState<PractitionerOption[]>([]);
+
+    const [
+        facilities,
+        setFacilities
+    ] = useState<FacilityOption[]>([]);
+
+    const [
+        patients,
+        setPatients
+    ] = useState<PatientOption[]>([]);
+
+    const [
+        locations,
+        setLocations
+    ] = useState<ClinicalLocationOption[]>([]);
+
+    const [
+        practitionerId,
+        setPractitionerId
+    ] = useState("");
+
+    const [
+        facilityId,
+        setFacilityId
+    ] = useState("");
+
+    const [
+        clinicalLocationId,
+        setClinicalLocationId
+    ] = useState("");
+
+    const [
+        date,
+        setDate
+    ] = useState(todayDateOnly);
+
+    const [
+        durationMinutes,
+        setDurationMinutes
+    ] = useState(30);
+
+    const [
+        timeZone,
+        setTimeZone
+    ] = useState(browserTimeZone);
+
+    const [
+        slots,
+        setSlots
+    ] = useState<AvailabilitySlot[]>([]);
+
+    const [
+        selectedSlot,
+        setSelectedSlot
+    ] = useState<AvailabilitySlot | null>(null);
+
+    const [
+        patientId,
+        setPatientId
+    ] = useState("");
+
+    const [
+        appointmentType,
+        setAppointmentType
+    ] = useState<AppointmentType>(
+        "CONSULTATION"
+    );
+
+    const [
+        reason,
+        setReason
+    ] = useState("");
+
+    const [
+        notes,
+        setNotes
+    ] = useState("");
+
+    const [
+        loadingOptions,
+        setLoadingOptions
+    ] = useState(true);
+
+    const [
+        finding,
+        setFinding
+    ] = useState(false);
+
+    const [
+        creating,
+        setCreating
+    ] = useState(false);
+
+    const [
+        error,
+        setError
+    ] = useState<string | null>(null);
+
+    const [
+        createdAppointment,
+        setCreatedAppointment
+    ] = useState<Appointment | null>(null);
+
+    const [
+        rescheduleSucceeded,
+        setRescheduleSucceeded
+    ] = useState(false);
+
+    const [
+        view,
+        setView
+    ] = useState<"book" | "appointments">("book");
+
+    const [
+        availabilitySearched,
+        setAvailabilitySearched
+    ] = useState(false);
+
+    const [
+        appointments,
+        setAppointments
+    ] = useState<Appointment[]>([]);
+
+    const [
+        appointmentDate,
+        setAppointmentDate
+    ] = useState(todayDateOnly);
+
+    const [
+        appointmentStatus,
+        setAppointmentStatus
+    ] = useState("");
+
+    const [
+        loadingAppointments,
+        setLoadingAppointments
+    ] = useState(false);
+
+    const [
+        transitioningAppointmentId,
+        setTransitioningAppointmentId
+    ] = useState<string | null>(null);
+
+    const [
+        editingAppointment,
+        setEditingAppointment
+    ] = useState<Appointment | null>(null);
+
+    const headers = useMemo(
+        () => ({
+            "x-tenant-id": tenantId
+        }),
+        [tenantId]
+    );
+
+    useEffect(() => {
+        const controller =
+            new AbortController();
+
+        const load =
+            async (): Promise<void> => {
+                setLoadingOptions(true);
+                setError(null);
+
+                try {
+                    const [
+                        practitionerResponse,
+                        facilityResponse,
+                        patientResponse
+                    ] = await Promise.all([
+                        fetch(
+                            "/api/v1/his/practitioners",
+                            {
+                                headers,
+                                signal:
+                                    controller.signal
+                            }
+                        ),
+                        fetch(
+                            "/api/v1/his/facilities/options",
+                            {
+                                headers,
+                                signal:
+                                    controller.signal
+                            }
+                        ),
+                        fetch(
+                            "/api/v1/his/patients",
+                            {
+                                headers,
+                                signal:
+                                    controller.signal
+                            }
+                        )
+                    ]);
+
+                    if (!practitionerResponse.ok) {
+                        throw new Error(
+                            await readError(
+                                practitionerResponse,
+                                `Unable to load practitioners (${practitionerResponse.status}).`
+                            )
+                        );
+                    }
+
+                    if (!facilityResponse.ok) {
+                        throw new Error(
+                            await readError(
+                                facilityResponse,
+                                `Unable to load facilities (${facilityResponse.status}).`
+                            )
+                        );
+                    }
+
+                    if (!patientResponse.ok) {
+                        throw new Error(
+                            await readError(
+                                patientResponse,
+                                `Unable to load patients (${patientResponse.status}).`
+                            )
+                        );
+                    }
+
+                    const practitionerBody =
+                        await practitionerResponse.json() as
+                            ApiCollection<PractitionerOption>;
+
+                    const facilityBody =
+                        await facilityResponse.json() as
+                            ApiCollection<FacilityOption>;
+
+                    const patientBody =
+                        await patientResponse.json() as
+                            ApiCollection<PatientOption>;
+
+                    setPractitioners(
+                        collectionItems(
+                            practitionerBody
+                        )
+                    );
+
+                    setFacilities(
+                        collectionItems(
+                            facilityBody
+                        )
+                    );
+
+                    setPatients(
+                        collectionItems(
+                            patientBody
+                        ).filter(
+                            (patient) =>
+                                patient.status === "ACTIVE"
+                        )
+                    );
+                } catch (caught) {
+                    if (
+                        caught instanceof DOMException &&
+                        caught.name === "AbortError"
+                    ) {
+                        return;
+                    }
+
+                    setError(
+                        caught instanceof Error
+                            ? caught.message
+                            : "Unable to load scheduling options."
+                    );
+                } finally {
+                    setLoadingOptions(false);
+                }
+            };
+
+        void load();
+
+        return () =>
+            controller.abort();
+    }, [headers]);
+
+    useEffect(() => {
+        setClinicalLocationId("");
+        setLocations([]);
+
+        if (!facilityId) {
+            return;
+        }
+
+        const controller =
+            new AbortController();
+
+        const loadLocations =
+            async (): Promise<void> => {
+                try {
+                    const response =
+                        await fetch(
+                            `/api/v1/his/facilities/${encodeURIComponent(facilityId)}/locations`,
+                            {
+                                headers,
+                                signal:
+                                    controller.signal
+                            }
+                        );
+
+                    if (!response.ok) {
+                        throw new Error(
+                            await readError(
+                                response,
+                                `Unable to load clinical locations (${response.status}).`
+                            )
+                        );
+                    }
+
+                    const body =
+                        await response.json() as
+                            ApiCollection<ClinicalLocationOption>;
+
+                    setLocations(
+                        collectionItems(body)
+                            .filter(
+                                (item) =>
+                                    item.active !== false
+                            )
+                    );
+                } catch (caught) {
+                    if (
+                        caught instanceof DOMException &&
+                        caught.name === "AbortError"
+                    ) {
+                        return;
+                    }
+
+                    setError(
+                        caught instanceof Error
+                            ? caught.message
+                            : "Unable to load clinical locations."
+                    );
+                }
+            };
+
+        void loadLocations();
+
+        return () =>
+            controller.abort();
+    }, [facilityId, headers]);
+
+    const loadSlots =
+        async (
+            clearSelection: boolean
+        ): Promise<boolean> => {
+            setError(null);
+
+            if (clearSelection) {
+                setSelectedSlot(null);
+            }
+
+            setSlots([]);
+            setAvailabilitySearched(false);
+
+            if (!facilityId) {
+                setError(
+                    "Select a facility before finding appointment availability."
+                );
+                return false;
+            }
+
+            if (
+                !practitionerId &&
+                !clinicalLocationId
+            ) {
+                setError(
+                    "Select a practitioner or clinical location."
+                );
+                return false;
+            }
+
+            if (!date) {
+                setError(
+                    "Select an appointment date."
+                );
+                return false;
+            }
+
+            if (!timeZone.trim()) {
+                setError(
+                    "Enter a time zone."
+                );
+                return false;
+            }
+
+            if (
+                !Number.isInteger(durationMinutes) ||
+                durationMinutes <= 0
+            ) {
+                setError(
+                    "Appointment duration must be a positive number of minutes."
+                );
+                return false;
+            }
+
+            setFinding(true);
+
+            try {
+                const parameters =
+                    new URLSearchParams({
+                        from: date,
+                        to: date,
+                        durationMinutes:
+                            String(durationMinutes),
+                        timeZone:
+                            timeZone.trim()
+                    });
+
+                if (practitionerId) {
+                    parameters.set(
+                        "practitionerId",
+                        practitionerId
+                    );
+                }
+
+                if (clinicalLocationId) {
+                    parameters.set(
+                        "clinicalLocationId",
+                        clinicalLocationId
+                    );
+                }
+
+                const response =
+                    await fetch(
+                        `/api/v1/his/availability/slots?${parameters.toString()}`,
+                        {
+                            headers
+                        }
+                    );
+
+                if (!response.ok) {
+                    throw new Error(
+                        await readError(
+                            response,
+                            `Unable to find available times (${response.status}).`
+                        )
+                    );
+                }
+
+                const body =
+                    await response.json() as
+                        AvailabilitySlotResponse;
+
+                setSlots(
+                    Array.isArray(body.slots)
+                        ? body.slots
+                        : []
+                );
+                setAvailabilitySearched(true);
+
+                return true;
+            } catch (caught) {
+                setError(
+                    caught instanceof Error
+                        ? caught.message
+                        : "Unable to find available times."
+                );
+
+                return false;
+            } finally {
+                setFinding(false);
+            }
+        };
+
+    const findSlots =
+        async (): Promise<void> => {
+            setCreatedAppointment(null);
+            await loadSlots(true);
+        };
+
+    const beginEditAppointment =
+        (appointment: Appointment): void => {
+            const start =
+                new Date(appointment.scheduledStart);
+            const end =
+                new Date(appointment.scheduledEnd);
+
+            const duration =
+                Math.max(
+                    15,
+                    Math.round(
+                        (end.getTime() - start.getTime()) /
+                        60000
+                    )
+                );
+
+            const dateParts =
+                new Intl.DateTimeFormat(
+                    "en-CA",
+                    {
+                        year: "numeric",
+                        month: "2-digit",
+                        day: "2-digit",
+                        timeZone
+                    }
+                ).formatToParts(start);
+
+            const part =
+                (type: string): string =>
+                    dateParts.find(
+                        (item) => item.type === type
+                    )?.value ?? "";
+
+            setEditingAppointment(appointment);
+            setPractitionerId(
+                appointment.practitionerId ?? ""
+            );
+            setFacilityId(appointment.facilityId);
+            setClinicalLocationId(
+                appointment.clinicalLocationId ?? ""
+            );
+            setDate(
+                `${part("year")}-${part("month")}-${part("day")}`
+            );
+            setDurationMinutes(duration);
+            setPatientId(appointment.patientId);
+            setAppointmentType(
+                appointment.appointmentType
+            );
+            setReason(appointment.reason ?? "");
+            setNotes(appointment.notes ?? "");
+            setSlots([]);
+            setSelectedSlot(null);
+            setAvailabilitySearched(false);
+            setCreatedAppointment(null);
+            setError(null);
+            setView("book");
+        };
+
+    const bookAppointment =
+        async (): Promise<void> => {
+            setError(null);
+            setCreatedAppointment(null);
+
+            if (!selectedSlot) {
+                setError(
+                    "Select an available appointment time."
+                );
+                return;
+            }
+
+            if (!patientId) {
+                setError(
+                    "Select a patient."
+                );
+                return;
+            }
+
+            if (!facilityId) {
+                setError(
+                    "Select a facility."
+                );
+                return;
+            }
+
+            setCreating(true);
+
+            try {
+                const payload: {
+                    patientId: string;
+                    facilityId: string;
+                    practitionerId?: string;
+                    clinicalLocationId?: string;
+                    appointmentType: AppointmentType;
+                    source: "STAFF";
+                    scheduledStart: string;
+                    scheduledEnd: string;
+                    reason?: string;
+                    notes?: string;
+                    version?: number;
+                } = {
+                    patientId,
+                    facilityId,
+                    appointmentType,
+                    source: "STAFF",
+                    scheduledStart:
+                        selectedSlot.start,
+                    scheduledEnd:
+                        selectedSlot.end
+                };
+
+                if (practitionerId) {
+                    payload.practitionerId =
+                        practitionerId;
+                }
+
+                if (clinicalLocationId) {
+                    payload.clinicalLocationId =
+                        clinicalLocationId;
+                }
+
+                const trimmedReason =
+                    reason.trim();
+
+                const trimmedNotes =
+                    notes.trim();
+
+                if (trimmedReason) {
+                    payload.reason =
+                        trimmedReason;
+                }
+
+                if (trimmedNotes) {
+                    payload.notes =
+                        trimmedNotes;
+                }
+
+                if (editingAppointment) {
+                    payload.version =
+                        editingAppointment.version;
+                }
+
+                const endpoint =
+                    editingAppointment
+                        ? `/api/v1/his/appointments/${encodeURIComponent(
+                            editingAppointment.id
+                        )}`
+                        : "/api/v1/his/appointments";
+
+                const response =
+                    await fetch(
+                        endpoint,
+                        {
+                            method:
+                                editingAppointment
+                                    ? "PUT"
+                                    : "POST",
+                            headers: {
+                                ...headers,
+                                "Content-Type":
+                                    "application/json"
+                            },
+                            body:
+                                JSON.stringify(
+                                    payload
+                                )
+                        }
+                    );
+
+                if (!response.ok) {
+                    const message =
+                        await readError(
+                            response,
+                            editingAppointment
+                                ? `Unable to reschedule appointment (${response.status}).`
+                                : `Unable to book appointment (${response.status}).`
+                        );
+
+                    if (response.status === 409) {
+                        setSelectedSlot(null);
+                        await loadSlots(false);
+
+                        throw new Error(
+                            `${message} Availability has been refreshed.`
+                        );
+                    }
+
+                    throw new Error(message);
+                }
+
+                const appointment =
+                    await response.json() as Appointment;
+
+                setCreatedAppointment(
+                    appointment
+                );
+                setRescheduleSucceeded(Boolean(editingAppointment));
+
+                setSelectedSlot(null);
+                setReason("");
+                setNotes("");
+
+                if (editingAppointment) {
+                    setEditingAppointment(null);
+                    setView("appointments");
+                    await loadAppointments();
+                } else {
+                    await loadSlots(false);
+                }
+            } catch (caught) {
+                setError(
+                    caught instanceof Error
+                        ? caught.message
+                        : editingAppointment
+                            ? "Unable to reschedule appointment."
+                            : "Unable to book appointment."
+                );
+            } finally {
+                setCreating(false);
+            }
+        };
+
+    const loadAppointments =
+        async (): Promise<void> => {
+            setLoadingAppointments(true);
+            setError(null);
+
+            try {
+                const parameters =
+                    new URLSearchParams();
+
+                if (appointmentDate) {
+                    const start = zonedMidnight(appointmentDate, timeZone);
+                    const nextDay = new Date(`${appointmentDate}T00:00:00Z`);
+                    nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+                    const end = zonedMidnight(
+                        nextDay.toISOString().slice(0, 10), timeZone
+                    );
+                    parameters.set(
+                        "from",
+                        start.toISOString()
+                    );
+                    parameters.set(
+                        "to",
+                        new Date(end.getTime() - 1).toISOString()
+                    );
+                }
+
+                if (appointmentStatus) {
+                    parameters.set(
+                        "status",
+                        appointmentStatus
+                    );
+                }
+
+                const response =
+                    await fetch(
+                        `/api/v1/his/appointments?${parameters.toString()}`,
+                        {
+                            headers
+                        }
+                    );
+
+                if (!response.ok) {
+                    throw new Error(
+                        await readError(
+                            response,
+                            `Unable to load appointments (${response.status}).`
+                        )
+                    );
+                }
+
+                const body =
+                    await response.json() as
+                        ApiCollection<Appointment>;
+
+                const items =
+                    collectionItems(body)
+                        .sort(
+                            (left, right) =>
+                                new Date(
+                                    left.scheduledStart
+                                ).getTime() -
+                                new Date(
+                                    right.scheduledStart
+                                ).getTime()
+                        );
+
+                setAppointments(items);
+            } catch (caught) {
+                setError(
+                    caught instanceof Error
+                        ? caught.message
+                        : "Unable to load appointments."
+                );
+            } finally {
+                setLoadingAppointments(false);
+            }
+        };
+
+    const transitionAppointment =
+        async (
+            appointment: Appointment,
+            action:
+                | "confirm"
+                | "check-in"
+                | "complete"
+                | "cancel"
+                | "no-show"
+        ): Promise<void> => {
+            let body: string | undefined;
+
+            if (action === "cancel") {
+                const cancellationReason =
+                    window.prompt(
+                        "Cancellation reason (optional):"
+                    );
+
+                if (cancellationReason === null) {
+                    return;
+                }
+
+                body = JSON.stringify({
+                    reason:
+                        cancellationReason.trim() ||
+                        undefined
+                });
+            }
+
+            setTransitioningAppointmentId(
+                appointment.id
+            );
+            setError(null);
+
+            try {
+                const response =
+                    await fetch(
+                        `/api/v1/his/appointments/${encodeURIComponent(appointment.id)}/${action}`,
+                        {
+                            method: "POST",
+                            headers: {
+                                ...headers,
+                                ...(body
+                                    ? {
+                                        "Content-Type":
+                                            "application/json"
+                                    }
+                                    : {})
+                            },
+                            body
+                        }
+                    );
+
+                if (!response.ok) {
+                    throw new Error(
+                        await readError(
+                            response,
+                            `Unable to update appointment (${response.status}).`
+                        )
+                    );
+                }
+
+                await loadAppointments();
+            } catch (caught) {
+                setError(
+                    caught instanceof Error
+                        ? caught.message
+                        : "Unable to update appointment."
+                );
+            } finally {
+                setTransitioningAppointmentId(null);
+            }
+        };
+
+    const patientNameById =
+        (id: string): string => {
+            const patient =
+                patients.find(
+                    (item) =>
+                        item.id === id
+                );
+
+            if (!patient) {
+                return id;
+            }
+
+            const preferred =
+                patient.preferredName?.trim();
+
+            return preferred
+                ? `${preferred} ${patient.lastName}`
+                : [
+                    patient.firstName,
+                    patient.middleName,
+                    patient.lastName
+                ]
+                    .filter(Boolean)
+                    .join(" ");
+        };
+
+    const practitionerNameById =
+        (id?: string): string => {
+            if (!id) {
+                return "Unassigned";
+            }
+
+            const practitioner =
+                practitioners.find(
+                    (item) =>
+                        item.id === id
+                );
+
+            return practitioner
+                ? practitionerLabel(practitioner)
+                : id;
+        };
+
+    const facilityNameById =
+        (id: string): string =>
+            facilities.find(
+                (item) =>
+                    item.id === id
+            )?.name ?? id;
+
+    const formatAppointmentTime =
+        (appointment: Appointment): string =>
+            formatSlot(
+                {
+                    start:
+                        appointment.scheduledStart,
+                    end:
+                        appointment.scheduledEnd
+                },
+                locale,
+                timeZone
+            );
+
+    const selectedPatient =
+        patients.find(
+            (patient) =>
+                patient.id === patientId
+        );
+
+    return (
+        <div
+            style={styles.backdrop}
+            role="presentation"
+        >
+            <section
+                style={styles.panel}
+                role="dialog"
+                aria-modal="true"
+                aria-label="Athena Scheduling"
+            >
+                <header style={styles.header}>
+                    <div>
+                        <p style={styles.eyebrow}>
+                            ATHENA - HOSPITAL INFORMATION SYSTEM
+                        </p>
+
+                        <h2 style={styles.title}>
+                            Scheduling
+                        </h2>
+
+                        <p style={styles.description}>
+                            Find appointment availability and book
+                            a patient into an available time.
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        style={styles.close}
+                        aria-label="Close scheduling"
+                        onClick={onClose}
+                    >
+                        X
+                    </button>
+                </header>
+
+                <div style={styles.tabs}>
+                    <button
+                        type="button"
+                        style={{
+                            ...styles.tab,
+                            ...(view === "book"
+                                ? styles.activeTab
+                                : {})
+                        }}
+                        onClick={() => {
+                            setEditingAppointment(null);
+                            setView("book");
+                            setError(null);
+                        }}
+                    >
+                        {editingAppointment
+                            ? "Edit Appointment"
+                            : "Book Appointment"}
+                    </button>
+
+                    <button
+                        type="button"
+                        style={{
+                            ...styles.tab,
+                            ...(view === "appointments"
+                                ? styles.activeTab
+                                : {})
+                        }}
+                        onClick={() => {
+                            setEditingAppointment(null);
+                            setView("appointments");
+                            setError(null);
+                            void loadAppointments();
+                        }}
+                    >
+                        Appointments
+                    </button>
+                </div>
+
+                {error && (
+                    <div style={styles.error} role="alert">
+                        {error}
+                    </div>
+                )}
+
+                {view === "book" ? (
+                    <>
+
+                {createdAppointment && (
+                    <div style={styles.success}>
+                        <strong>
+                            {rescheduleSucceeded
+                                ? "Appointment rescheduled successfully."
+                                : "Appointment booked successfully."}
+                        </strong>
+                        <br />
+                        Appointment:{" "}
+                        {createdAppointment.appointmentNumber}
+                        {" · "}
+                        Status: {createdAppointment.status}
+                        {" · "}
+                        {formatSlot(
+                            {
+                                start:
+                                    createdAppointment.scheduledStart,
+                                end:
+                                    createdAppointment.scheduledEnd
+                            },
+                            locale,
+                            timeZone
+                        )}
+                    </div>
+                )}
+
+                <section style={styles.card}>
+                    <h3 style={styles.cardTitle}>
+                        {editingAppointment
+                            ? `Reschedule ${editingAppointment.appointmentNumber}`
+                            : "Find Available Times"}
+                    </h3>
+
+                    <div style={styles.grid}>
+                        <label style={styles.field}>
+                            <span style={styles.label}>
+                                Practitioner
+                            </span>
+
+                            <select
+                                style={styles.input}
+                                value={practitionerId}
+                                disabled={
+                                    loadingOptions ||
+                                    creating
+                                }
+                                onChange={(event) => {
+                                    setPractitionerId(
+                                        event.target.value
+                                    );
+                                    setSlots([]);
+                                    setSelectedSlot(null);
+                                    setCreatedAppointment(null);
+                                }}
+                            >
+                                <option value="">
+                                    Any practitioner
+                                </option>
+
+                                {practitioners.map(
+                                    (practitioner) => (
+                                        <option
+                                            key={
+                                                practitioner.id
+                                            }
+                                            value={
+                                                practitioner.id
+                                            }
+                                        >
+                                            {practitionerLabel(
+                                                practitioner
+                                            )}
+                                        </option>
+                                    )
+                                )}
+                            </select>
+                        </label>
+
+                        <label style={styles.field}>
+                            <span style={styles.label}>
+                                Facility
+                            </span>
+
+                            <select
+                                style={styles.input}
+                                value={facilityId}
+                                disabled={
+                                    loadingOptions ||
+                                    creating
+                                }
+                                onChange={(event) => {
+                                    setFacilityId(
+                                        event.target.value
+                                    );
+                                    setSlots([]);
+                                    setSelectedSlot(null);
+                                    setCreatedAppointment(null);
+                                }}
+                            >
+                                <option value="">
+                                    Select facility
+                                </option>
+
+                                {facilities.map(
+                                    (facility) => (
+                                        <option
+                                            key={facility.id}
+                                            value={facility.id}
+                                        >
+                                            {facility.name}{" "}
+                                            ({facility.code})
+                                        </option>
+                                    )
+                                )}
+                            </select>
+                        </label>
+
+                        <label style={styles.field}>
+                            <span style={styles.label}>
+                                Clinical location
+                            </span>
+
+                            <select
+                                style={styles.input}
+                                value={
+                                    clinicalLocationId
+                                }
+                                disabled={
+                                    !facilityId ||
+                                    creating
+                                }
+                                onChange={(event) => {
+                                    setClinicalLocationId(
+                                        event.target.value
+                                    );
+                                    setSlots([]);
+                                    setSelectedSlot(null);
+                                    setCreatedAppointment(null);
+                                }}
+                            >
+                                <option value="">
+                                    Any clinical location
+                                </option>
+
+                                {locations.map(
+                                    (location) => (
+                                        <option
+                                            key={location.id}
+                                            value={location.id}
+                                        >
+                                            {location.name}
+                                            {location.code
+                                                ? ` (${location.code})`
+                                                : ""}
+                                        </option>
+                                    )
+                                )}
+                            </select>
+                        </label>
+
+                        <label style={styles.field}>
+                            <span style={styles.label}>
+                                Appointment date
+                            </span>
+
+                            <input
+                                type="date"
+                                style={styles.input}
+                                value={date}
+                                disabled={creating}
+                                onChange={(event) => {
+                                    setDate(
+                                        event.target.value
+                                    );
+                                    setSlots([]);
+                                    setSelectedSlot(null);
+                                    setCreatedAppointment(null);
+                                }}
+                            />
+                        </label>
+
+                        <label style={styles.field}>
+                            <span style={styles.label}>
+                                Duration
+                            </span>
+
+                            <select
+                                style={styles.input}
+                                value={durationMinutes}
+                                disabled={creating}
+                                onChange={(event) => {
+                                    setDurationMinutes(
+                                        Number(
+                                            event.target.value
+                                        )
+                                    );
+                                    setSlots([]);
+                                    setSelectedSlot(null);
+                                    setCreatedAppointment(null);
+                                }}
+                            >
+                                <option value={15}>
+                                    15 minutes
+                                </option>
+                                <option value={30}>
+                                    30 minutes
+                                </option>
+                                <option value={45}>
+                                    45 minutes
+                                </option>
+                                <option value={60}>
+                                    60 minutes
+                                </option>
+                                <option value={90}>
+                                    90 minutes
+                                </option>
+                            </select>
+                        </label>
+
+                        <label style={styles.field}>
+                            <span style={styles.label}>
+                                Time zone
+                            </span>
+
+                            <input
+                                style={styles.input}
+                                value={timeZone}
+                                disabled={creating}
+                                onChange={(event) => {
+                                    setTimeZone(
+                                        event.target.value
+                                    );
+                                    setSlots([]);
+                                    setSelectedSlot(null);
+                                    setCreatedAppointment(null);
+                                }}
+                            />
+                        </label>
+                    </div>
+
+                    <div style={styles.actions}>
+                        <button
+                            type="button"
+                            style={styles.secondary}
+                            disabled={
+                                finding ||
+                                creating
+                            }
+                            onClick={() => {
+                                setPractitionerId("");
+                                setFacilityId("");
+                                setClinicalLocationId("");
+                                setDate(
+                                    todayDateOnly()
+                                );
+                                setDurationMinutes(30);
+                                setTimeZone(
+                                    browserTimeZone()
+                                );
+                                setSlots([]);
+                                setSelectedSlot(null);
+                                setPatientId("");
+                                setAppointmentType(
+                                    "CONSULTATION"
+                                );
+                                setReason("");
+                                setNotes("");
+                                setError(null);
+                                setCreatedAppointment(null);
+                                setEditingAppointment(null);
+                            }}
+                        >
+                            Reset
+                        </button>
+
+                        <button
+                            type="button"
+                            style={styles.primary}
+                            disabled={
+                                finding ||
+                                creating ||
+                                loadingOptions
+                            }
+                            onClick={() => {
+                                void findSlots();
+                            }}
+                        >
+                            {finding
+                                ? "Finding..."
+                                : "Find Available Times"}
+                        </button>
+                    </div>
+                </section>
+
+                <section style={styles.card}>
+                    <h3 style={styles.cardTitle}>
+                        Available Appointment Times
+                    </h3>
+
+                    {slots.length === 0 ? (
+                        <div style={styles.empty}>
+                            {finding
+                                ? "Searching availability..."
+                                : availabilitySearched
+                                    ? "No available appointment times found."
+                                    : "Choose scheduling criteria and find available times."}
+                        </div>
+                    ) : (
+                        <>
+                            <div style={styles.slots}>
+                                {slots.map(
+                                    (slot) => {
+                                        const selected =
+                                            selectedSlot
+                                                ?.start ===
+                                            slot.start;
+
+                                        return (
+                                            <button
+                                                key={
+                                                    `${slot.start}-${slot.end}`
+                                                }
+                                                type="button"
+                                                disabled={
+                                                    creating
+                                                }
+                                                style={{
+                                                    ...styles.slot,
+                                                    ...(selected
+                                                        ? styles.selectedSlot
+                                                        : {})
+                                                }}
+                                                onClick={() => {
+                                                    setSelectedSlot(
+                                                        slot
+                                                    );
+                                                    setError(null);
+                                                    setCreatedAppointment(
+                                                        null
+                                                    );
+                                                }}
+                                            >
+                                                {formatSlot(
+                                                    slot,
+                                                    locale,
+                                                    timeZone
+                                                )}
+                                            </button>
+                                        );
+                                    }
+                                )}
+                            </div>
+
+                            {selectedSlot && (
+                                <div
+                                    style={
+                                        styles.selection
+                                    }
+                                >
+                                    <strong>
+                                        Selected time:
+                                    </strong>{" "}
+                                    {formatSlot(
+                                        selectedSlot,
+                                        locale,
+                                        timeZone
+                                    )}
+                                </div>
+                            )}
+                        </>
+                    )}
+                </section>
+
+                {selectedSlot && (
+                    <section style={styles.card}>
+                        <h3 style={styles.cardTitle}>
+                            Book Appointment
+                        </h3>
+
+                        <div
+                            style={
+                                styles.bookingSummary
+                            }
+                        >
+                            <strong>
+                                Appointment time:
+                            </strong>{" "}
+                            {formatSlot(
+                                selectedSlot,
+                                locale,
+                                timeZone
+                            )}
+                            <br />
+
+                            <strong>
+                                Facility:
+                            </strong>{" "}
+                            {facilities.find(
+                                (facility) =>
+                                    facility.id ===
+                                    facilityId
+                            )?.name ?? facilityId}
+
+                            {practitionerId && (
+                                <>
+                                    <br />
+                                    <strong>
+                                        Practitioner:
+                                    </strong>{" "}
+                                    {practitioners.find(
+                                        (practitioner) =>
+                                            practitioner.id ===
+                                            practitionerId
+                                    )
+                                        ? practitionerLabel(
+                                            practitioners.find(
+                                                (practitioner) =>
+                                                    practitioner.id ===
+                                                    practitionerId
+                                            )!
+                                        )
+                                        : practitionerId}
+                                </>
+                            )}
+
+                            {clinicalLocationId && (
+                                <>
+                                    <br />
+                                    <strong>
+                                        Clinical location:
+                                    </strong>{" "}
+                                    {locations.find(
+                                        (location) =>
+                                            location.id ===
+                                            clinicalLocationId
+                                    )?.name ??
+                                        clinicalLocationId}
+                                </>
+                            )}
+                        </div>
+
+                        <div style={styles.grid}>
+                            <label
+                                style={
+                                    styles.fullField
+                                }
+                            >
+                                <span style={styles.label}>
+                                    Patient
+                                </span>
+
+                                <select
+                                    style={styles.input}
+                                    value={patientId}
+                                    disabled={
+                                        loadingOptions ||
+                                        creating ||
+                                        editingAppointment !== null
+                                    }
+                                    onChange={(event) => {
+                                        setPatientId(
+                                            event.target.value
+                                        );
+                                        setError(null);
+                                    }}
+                                >
+                                    <option value="">
+                                        Select patient
+                                    </option>
+
+                                    {patients.map(
+                                        (patient) => (
+                                            <option
+                                                key={
+                                                    patient.id
+                                                }
+                                                value={
+                                                    patient.id
+                                                }
+                                            >
+                                                {patientLabel(
+                                                    patient
+                                                )}
+                                            </option>
+                                        )
+                                    )}
+                                </select>
+
+                                {selectedPatient && (
+                                    <p
+                                        style={
+                                            styles.hint
+                                        }
+                                    >
+                                        Patient number:{" "}
+                                        {
+                                            selectedPatient.patientNumber
+                                        }
+                                        {" · "}
+                                        MRN:{" "}
+                                        {
+                                            selectedPatient.medicalRecordNumber
+                                        }
+                                    </p>
+                                )}
+                            </label>
+
+                            <label style={styles.field}>
+                                <span style={styles.label}>
+                                    Appointment type
+                                </span>
+
+                                <select
+                                    style={styles.input}
+                                    value={
+                                        appointmentType
+                                    }
+                                    disabled={creating}
+                                    onChange={(event) =>
+                                        setAppointmentType(
+                                            event.target
+                                                .value as
+                                                AppointmentType
+                                        )
+                                    }
+                                >
+                                    {APPOINTMENT_TYPES.map(
+                                        (type) => (
+                                            <option
+                                                key={
+                                                    type.value
+                                                }
+                                                value={
+                                                    type.value
+                                                }
+                                            >
+                                                {type.label}
+                                            </option>
+                                        )
+                                    )}
+                                </select>
+                            </label>
+
+                            <label style={styles.field}>
+                                <span style={styles.label}>
+                                    Reason
+                                </span>
+
+                                <input
+                                    style={styles.input}
+                                    value={reason}
+                                    disabled={creating}
+                                    placeholder="Reason for appointment"
+                                    onChange={(event) =>
+                                        setReason(
+                                            event.target.value
+                                        )
+                                    }
+                                />
+                            </label>
+
+                            <label
+                                style={
+                                    styles.fullField
+                                }
+                            >
+                                <span style={styles.label}>
+                                    Notes
+                                </span>
+
+                                <textarea
+                                    style={styles.textarea}
+                                    value={notes}
+                                    disabled={creating}
+                                    placeholder="Optional scheduling notes"
+                                    onChange={(event) =>
+                                        setNotes(
+                                            event.target.value
+                                        )
+                                    }
+                                />
+                            </label>
+                        </div>
+
+                        <div style={styles.actions}>
+                            <button
+                                type="button"
+                                style={styles.secondary}
+                                disabled={creating}
+                                onClick={() => {
+                                    setSelectedSlot(null);
+                                    setError(null);
+
+                                    if (editingAppointment) {
+                                        setEditingAppointment(null);
+                                        setView("appointments");
+                                        void loadAppointments();
+                                    }
+                                }}
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                type="button"
+                                style={styles.primary}
+                                disabled={
+                                    creating ||
+                                    !patientId
+                                }
+                                onClick={() => {
+                                    void bookAppointment();
+                                }}
+                            >
+                                {creating
+                                    ? editingAppointment
+                                        ? "Saving..."
+                                        : "Booking..."
+                                    : editingAppointment
+                                        ? "Save Reschedule"
+                                        : "Book Appointment"}
+                            </button>
+                        </div>
+                    </section>
+                )}
+                    </>
+                ) : (
+                    <>
+                        {rescheduleSucceeded && createdAppointment && (
+                            <div style={styles.success} role="status">
+                                Appointment {createdAppointment.appointmentNumber} rescheduled successfully.
+                            </div>
+                        )}
+                        <section style={styles.card}>
+                            <div style={styles.scheduleHeader}>
+                                <div>
+                                    <h3
+                                        style={{
+                                            ...styles.cardTitle,
+                                            marginBottom: "4px"
+                                        }}
+                                    >
+                                        Appointment Schedule
+                                    </h3>
+                                    <p
+                                        style={{
+                                            ...styles.description,
+                                            marginTop: 0
+                                        }}
+                                    >
+                                        Review appointments and manage their current lifecycle status.
+                                    </p>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    style={styles.secondary}
+                                    disabled={
+                                        loadingAppointments
+                                    }
+                                    onClick={() => {
+                                        void loadAppointments();
+                                    }}
+                                >
+                                    {loadingAppointments
+                                        ? "Refreshing..."
+                                        : "Refresh"}
+                                </button>
+                            </div>
+
+                            <div style={styles.grid}>
+                                <label style={styles.field}>
+                                    <span style={styles.label}>
+                                        Schedule date
+                                    </span>
+                                    <input
+                                        type="date"
+                                        style={styles.input}
+                                        value={appointmentDate}
+                                        onChange={(event) => {
+                                            setAppointmentDate(
+                                                event.target.value
+                                            );
+                                        }}
+                                    />
+                                </label>
+
+                                <label style={styles.field}>
+                                    <span style={styles.label}>
+                                        Status
+                                    </span>
+                                    <select
+                                        style={styles.input}
+                                        value={appointmentStatus}
+                                        onChange={(event) => {
+                                            setAppointmentStatus(
+                                                event.target.value
+                                            );
+                                        }}
+                                    >
+                                        <option value="">
+                                            All statuses
+                                        </option>
+                                        <option value="BOOKED">
+                                            Booked
+                                        </option>
+                                        <option value="CONFIRMED">
+                                            Confirmed
+                                        </option>
+                                        <option value="CHECKED_IN">
+                                            Checked in
+                                        </option>
+                                        <option value="COMPLETED">
+                                            Completed
+                                        </option>
+                                        <option value="CANCELLED">
+                                            Cancelled
+                                        </option>
+                                        <option value="NO_SHOW">
+                                            No-show
+                                        </option>
+                                    </select>
+                                </label>
+                            </div>
+
+                            <div style={styles.actions}>
+                                <button
+                                    type="button"
+                                    style={styles.primary}
+                                    disabled={
+                                        loadingAppointments
+                                    }
+                                    onClick={() => {
+                                        void loadAppointments();
+                                    }}
+                                >
+                                    {loadingAppointments
+                                        ? "Loading..."
+                                        : "Load Schedule"}
+                                </button>
+                            </div>
+                        </section>
+
+                        <section style={styles.card}>
+                            <h3 style={styles.cardTitle}>
+                                Appointments
+                            </h3>
+
+                            {loadingAppointments ? (
+                                <div style={styles.empty}>
+                                    Loading appointments...
+                                </div>
+                            ) : appointments.length === 0 ? (
+                                <div style={styles.empty}>
+                                    No appointments found for the selected criteria.
+                                </div>
+                            ) : (
+                                <div style={styles.appointmentList}>
+                                    {appointments.map(
+                                        (appointment) => {
+                                            const busy =
+                                                transitioningAppointmentId ===
+                                                appointment.id;
+
+                                            return (
+                                                <article
+                                                    key={appointment.id}
+                                                    style={styles.appointmentRow}
+                                                >
+                                                    <div
+                                                        style={
+                                                            styles.appointmentTop
+                                                        }
+                                                    >
+                                                        <div>
+                                                            <p
+                                                                style={
+                                                                    styles.appointmentNumber
+                                                                }
+                                                            >
+                                                                {
+                                                                    appointment.appointmentNumber
+                                                                }
+                                                                {" · "}
+                                                                {
+                                                                    patientNameById(
+                                                                        appointment.patientId
+                                                                    )
+                                                                }
+                                                            </p>
+
+                                                            <p
+                                                                style={
+                                                                    styles.appointmentMeta
+                                                                }
+                                                            >
+                                                                {
+                                                                    formatAppointmentTime(
+                                                                        appointment
+                                                                    )
+                                                                }
+                                                                <br />
+                                                                Practitioner:{" "}
+                                                                {
+                                                                    practitionerNameById(
+                                                                        appointment.practitionerId
+                                                                    )
+                                                                }
+                                                                {" · "}
+                                                                Facility:{" "}
+                                                                {
+                                                                    facilityNameById(
+                                                                        appointment.facilityId
+                                                                    )
+                                                                }
+                                                                <br />
+                                                                Type:{" "}
+                                                                {
+                                                                    appointment.appointmentType
+                                                                }
+                                                                {appointment.reason
+                                                                    ? ` · Reason: ${appointment.reason}`
+                                                                    : ""}
+                                                            </p>
+                                                        </div>
+
+                                                        <span
+                                                            style={
+                                                                styles.badge
+                                                            }
+                                                        >
+                                                            {
+                                                                appointment.status
+                                                            }
+                                                        </span>
+                                                    </div>
+
+                                                    <div
+                                                        style={
+                                                            styles.rowActions
+                                                        }
+                                                    >
+                                                        {(
+                                                            appointment.status ===
+                                                                "BOOKED" ||
+                                                            appointment.status ===
+                                                                "CONFIRMED"
+                                                        ) && (
+                                                            <button
+                                                                type="button"
+                                                                style={
+                                                                    styles.smallButton
+                                                                }
+                                                                disabled={busy}
+                                                                onClick={() => {
+                                                                    beginEditAppointment(
+                                                                        appointment
+                                                                    );
+                                                                }}
+                                                            >
+                                                                Edit / Reschedule
+                                                            </button>
+                                                        )}
+
+                                                        {appointment.status ===
+                                                            "BOOKED" && (
+                                                            <button
+                                                                type="button"
+                                                                style={
+                                                                    styles.smallButton
+                                                                }
+                                                                disabled={busy}
+                                                                onClick={() => {
+                                                                    void transitionAppointment(
+                                                                        appointment,
+                                                                        "confirm"
+                                                                    );
+                                                                }}
+                                                            >
+                                                                Confirm
+                                                            </button>
+                                                        )}
+
+                                                        {appointment.status ===
+                                                            "CONFIRMED" && (
+                                                            <button
+                                                                type="button"
+                                                                style={
+                                                                    styles.smallButton
+                                                                }
+                                                                disabled={busy}
+                                                                onClick={() => {
+                                                                    void transitionAppointment(
+                                                                        appointment,
+                                                                        "check-in"
+                                                                    );
+                                                                }}
+                                                            >
+                                                                Check In
+                                                            </button>
+                                                        )}
+
+                                                        {appointment.encounterId && (
+                                                            <button
+                                                                type="button"
+                                                                style={
+                                                                    styles.smallButton
+                                                                }
+                                                                disabled={
+                                                                    transitioningAppointmentId ===
+                                                                    appointment.id
+                                                                }
+                                                                onClick={() => {
+                                                                    const patient =
+                                                                        patients.find(
+                                                                            (item) =>
+                                                                                item.id ===
+                                                                                appointment.patientId
+                                                                        );
+
+                                                                    if (!patient) {
+                                                                        setError(
+                                                                            "Unable to open the linked encounter because the patient record is not loaded."
+                                                                        );
+                                                                        return;
+                                                                    }
+
+                                                                    void onOpenEncounter(
+                                                                        patient.personId
+                                                                    );
+                                                                }}
+                                                            >
+                                                                Open Encounter
+                                                            </button>
+                                                        )}
+
+                                                        {appointment.status ===
+                                                            "CHECKED_IN" && (
+                                                            <button
+                                                                type="button"
+                                                                style={
+                                                                    styles.smallButton
+                                                                }
+                                                                disabled={busy}
+                                                                onClick={() => {
+                                                                    void transitionAppointment(
+                                                                        appointment,
+                                                                        "complete"
+                                                                    );
+                                                                }}
+                                                            >
+                                                                Complete
+                                                            </button>
+                                                        )}
+
+                                                        {appointment.status ===
+                                                            "CONFIRMED" && (
+                                                            <button
+                                                                type="button"
+                                                                style={
+                                                                    styles.smallButton
+                                                                }
+                                                                disabled={busy}
+                                                                onClick={() => {
+                                                                    void transitionAppointment(
+                                                                        appointment,
+                                                                        "no-show"
+                                                                    );
+                                                                }}
+                                                            >
+                                                                No-show
+                                                            </button>
+                                                        )}
+
+                                                        {(
+                                                            appointment.status ===
+                                                                "BOOKED" ||
+                                                            appointment.status ===
+                                                                "CONFIRMED"
+                                                        ) && (
+                                                            <button
+                                                                type="button"
+                                                                style={
+                                                                    styles.dangerButton
+                                                                }
+                                                                disabled={busy}
+                                                                onClick={() => {
+                                                                    void transitionAppointment(
+                                                                        appointment,
+                                                                        "cancel"
+                                                                    );
+                                                                }}
+                                                            >
+                                                                Cancel
+                                                            </button>
+                                                        )}
+
+                                                        {busy && (
+                                                            <span
+                                                                style={
+                                                                    styles.hint
+                                                                }
+                                                            >
+                                                                Updating...
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </article>
+                                            );
+                                        }
+                                    )}
+                                </div>
+                            )}
+                        </section>
+                    </>
+                )}
+            </section>
+        </div>
+    );
+}

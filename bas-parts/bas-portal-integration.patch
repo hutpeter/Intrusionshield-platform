@@ -1,0 +1,126 @@
+--- a/apps/admin-portal/src/App.tsx
++++ b/apps/admin-portal/src/App.tsx
+@@ -14,6 +14,7 @@
+ import { AdtWorkspace } from "./AdtWorkspace";
+ import { CensusBedBoardPanel } from "./CensusBedBoardPanel";
+ import { EncounterManagement } from "./EncounterManagement";
++import { BasDashboard } from "./BasDashboard";
+ 
+ import {
+     useAuth
+@@ -83,6 +84,7 @@
+ type NavigationKey =
+     | "dashboard"
+     | "athena"
++    | "ems"
+     | "compliance"
+     | "workflow"
+     | "security"
+@@ -251,6 +253,7 @@
+ const navigation: NavigationItem[] = [
+     { key: "dashboard", labelKey: "shell.navigation.dashboard", icon: "" },
+     { key: "athena", labelKey: "shell.navigation.athena", icon: "" },
++    { key: "ems", labelKey: "shell.navigation.ems", icon: "" },
+     { key: "compliance", labelKey: "shell.navigation.compliance", icon: "" },
+     { key: "workflow", labelKey: "shell.navigation.workflow", icon: "" },
+     { key: "security", labelKey: "shell.navigation.security", icon: "" },
+@@ -2740,20 +2743,20 @@
+             <main className="main-content">
+                 <header className="topbar">
+                     <div className="breadcrumb">
+-                        <span>EIS</span>
++                        <span>Ruby</span>
+ 
+                         <span className="breadcrumb-separator">
+                             /
+                         </span>
+ 
+-                        <span>Athena</span>
++                        <span>{activeNavigation === "ems" ? "EMS" : "Athena"}</span>
+ 
+                         <span className="breadcrumb-separator">
+                             /
+                         </span>
+ 
+                         <strong>
+-                            {t("athena.ui.persons")}
++                            {activeNavigation === "ems" ? "BAS" : t("athena.ui.persons")}
+                         </strong>
+                     </div>
+ 
+@@ -2763,7 +2766,15 @@
+                     </div>
+                 </header>
+ 
+-                <div className="content">
++                {activeNavigation === "ems" ? (
++                    <div className="content">
++                        <BasDashboard
++                            tenantId={tenantId}
++                            siteId={import.meta.env.VITE_BAS_SITE_ID ?? "138c8b96-04ae-402d-93f9-89b3677734e1"}
++                            language={identity.language}
++                        />
++                    </div>
++                ) : <div className="content">
+                     <div className="page-header">
+                         <div>
+                             <div className="page-eyebrow">
+@@ -3263,7 +3274,7 @@
+                             </div>
+                         </div>
+                     </section>
+-                </div>
++                </div>}
+             </main>
+ 
+             {schedulingOpen && (
+@@ -5190,4 +5201,3 @@
+ 
+ export default App;
+ 
+-
+--- a/apps/admin-portal/src/i18n/locales/en.ts
++++ b/apps/admin-portal/src/i18n/locales/en.ts
+@@ -54,6 +54,7 @@
+         navigation: {
+             dashboard: "Dashboard",
+             athena: "Athena",
++            ems: "EMS · BAS",
+             compliance: "Compliance",
+             workflow: "Workflow",
+             security: "Security",
+@@ -657,4 +658,3 @@
+ 
+ export type TranslationParameters =
+     Readonly<Record<string, string | number>>;
+-
+--- a/apps/admin-portal/src/i18n/locales/es.ts
++++ b/apps/admin-portal/src/i18n/locales/es.ts
+@@ -58,6 +58,7 @@
+         navigation: {
+             dashboard: "Panel",
+             athena: "Athena",
++            ems: "EMS · BAS",
+             compliance: "Cumplimiento",
+             workflow: "Flujo de trabajo",
+             security: "Seguridad",
+@@ -633,4 +634,3 @@
+         }
+     }
+ };
+-
+--- a/apps/admin-portal/vite.config.ts
++++ b/apps/admin-portal/vite.config.ts
+@@ -24,6 +24,12 @@
+                 target:
+                     "http://localhost:4400",
+                 changeOrigin: true
++            },
++
++            "/api/v1/telemetry": {
++                target:
++                    "http://localhost:4401",
++                changeOrigin: true
+             }
+         }
+     }

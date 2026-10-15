@@ -1,0 +1,1024 @@
+﻿import {
+    useEffect,
+    useMemo,
+    useState,
+    type CSSProperties
+} from "react";
+
+import {
+    useI18n
+} from "./i18n/index.js";
+
+type SchedulingPanelProps = {
+    tenantId: string;
+    onClose: () => void;
+};
+
+type PractitionerOption = {
+    id: string;
+    practitionerNumber?: string;
+    personId?: string;
+    displayName?: string;
+    name?: string;
+    firstName?: string;
+    lastName?: string;
+};
+
+type FacilityOption = {
+    id: string;
+    code: string;
+    name: string;
+    facilityType?: string;
+};
+
+type ClinicalLocationOption = {
+    id: string;
+    facilityId?: string;
+    code?: string;
+    name: string;
+    locationType?: string;
+    active?: boolean;
+};
+
+type AvailabilitySlot = {
+    start: string;
+    end: string;
+};
+
+type AvailabilitySlotResponse = {
+    practitionerId?: string;
+    clinicalLocationId?: string;
+    from: string;
+    to: string;
+    durationMinutes: number;
+    timeZone: string;
+    slots: AvailabilitySlot[];
+};
+
+type ApiCollection<T> =
+    | T[]
+    | {
+        items?: T[];
+        data?: T[];
+    };
+
+const styles: Record<string, CSSProperties> = {
+    backdrop: {
+        position: "fixed",
+        inset: 0,
+        zIndex: 1100,
+        background: "rgba(15, 23, 42, 0.44)",
+        display: "flex",
+        justifyContent: "flex-end"
+    },
+    panel: {
+        width: "min(980px, 100vw)",
+        height: "100vh",
+        overflowY: "auto",
+        background: "#ffffff",
+        boxShadow: "-12px 0 30px rgba(15, 23, 42, 0.18)",
+        padding: "28px"
+    },
+    header: {
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "flex-start",
+        gap: "20px",
+        marginBottom: "24px"
+    },
+    eyebrow: {
+        margin: "0 0 6px",
+        color: "#667085",
+        fontSize: "12px",
+        fontWeight: 700,
+        letterSpacing: "0.08em",
+        textTransform: "uppercase"
+    },
+    title: {
+        margin: 0,
+        color: "#172033",
+        fontSize: "28px",
+        lineHeight: 1.2
+    },
+    description: {
+        margin: "8px 0 0",
+        color: "#667085",
+        fontSize: "14px",
+        lineHeight: 1.5
+    },
+    close: {
+        width: "38px",
+        height: "38px",
+        border: "1px solid #d0d5dd",
+        borderRadius: "8px",
+        background: "#ffffff",
+        color: "#344054",
+        fontSize: "20px",
+        cursor: "pointer"
+    },
+    card: {
+        border: "1px solid #e4e7ec",
+        borderRadius: "12px",
+        background: "#ffffff",
+        padding: "20px",
+        marginBottom: "20px"
+    },
+    cardTitle: {
+        margin: "0 0 16px",
+        color: "#172033",
+        fontSize: "16px"
+    },
+    grid: {
+        display: "grid",
+        gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+        gap: "16px"
+    },
+    field: {
+        display: "block",
+        minWidth: 0
+    },
+    label: {
+        display: "block",
+        marginBottom: "6px",
+        color: "#475467",
+        fontSize: "12px",
+        fontWeight: 700
+    },
+    input: {
+        width: "100%",
+        minHeight: "42px",
+        border: "1px solid #d0d5dd",
+        borderRadius: "8px",
+        background: "#ffffff",
+        color: "#172033",
+        padding: "8px 10px",
+        fontSize: "14px",
+        boxSizing: "border-box"
+    },
+    actions: {
+        display: "flex",
+        justifyContent: "flex-end",
+        gap: "10px",
+        marginTop: "18px"
+    },
+    primary: {
+        minHeight: "42px",
+        border: "1px solid #172033",
+        borderRadius: "8px",
+        background: "#172033",
+        color: "#ffffff",
+        padding: "0 18px",
+        fontSize: "13px",
+        fontWeight: 700,
+        cursor: "pointer"
+    },
+    secondary: {
+        minHeight: "42px",
+        border: "1px solid #d0d5dd",
+        borderRadius: "8px",
+        background: "#ffffff",
+        color: "#344054",
+        padding: "0 16px",
+        fontSize: "13px",
+        fontWeight: 700,
+        cursor: "pointer"
+    },
+    error: {
+        borderRadius: "8px",
+        background: "#fff4f4",
+        color: "#b42318",
+        padding: "12px 14px",
+        marginBottom: "16px",
+        fontSize: "14px"
+    },
+    empty: {
+        border: "1px dashed #d0d5dd",
+        borderRadius: "10px",
+        color: "#667085",
+        padding: "24px",
+        textAlign: "center",
+        fontSize: "14px"
+    },
+    slots: {
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fill, minmax(150px, 1fr))",
+        gap: "10px"
+    },
+    slot: {
+        minHeight: "48px",
+        border: "1px solid #d0d5dd",
+        borderRadius: "8px",
+        background: "#ffffff",
+        color: "#344054",
+        padding: "8px 12px",
+        fontSize: "13px",
+        fontWeight: 700,
+        cursor: "pointer"
+    },
+    selectedSlot: {
+        border: "1px solid #172033",
+        background: "#172033",
+        color: "#ffffff"
+    },
+    selection: {
+        marginTop: "16px",
+        padding: "12px 14px",
+        borderRadius: "8px",
+        background: "#f8fafc",
+        color: "#344054",
+        fontSize: "14px"
+    }
+};
+
+function collectionItems<T>(
+    value: ApiCollection<T>
+): T[] {
+    if (Array.isArray(value)) {
+        return value;
+    }
+
+    if (Array.isArray(value.items)) {
+        return value.items;
+    }
+
+    if (Array.isArray(value.data)) {
+        return value.data;
+    }
+
+    return [];
+}
+
+function todayDateOnly(): string {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+}
+
+function browserTimeZone(): string {
+    return Intl.DateTimeFormat()
+        .resolvedOptions()
+        .timeZone || "UTC";
+}
+
+function practitionerLabel(
+    practitioner: PractitionerOption
+): string {
+    if (practitioner.displayName) {
+        return practitioner.displayName;
+    }
+
+    if (practitioner.name) {
+        return practitioner.name;
+    }
+
+    const personName = [
+        practitioner.firstName,
+        practitioner.lastName
+    ]
+        .filter(Boolean)
+        .join(" ");
+
+    if (personName) {
+        return personName;
+    }
+
+    return practitioner.practitionerNumber ??
+        practitioner.id;
+}
+
+function formatSlot(
+    slot: AvailabilitySlot,
+    locale: string,
+    timeZone: string
+): string {
+    const start = new Date(slot.start);
+    const end = new Date(slot.end);
+
+    if (
+        Number.isNaN(start.getTime()) ||
+        Number.isNaN(end.getTime())
+    ) {
+        return `${slot.start} - ${slot.end}`;
+    }
+
+    const formatter =
+        new Intl.DateTimeFormat(locale, {
+            month: "short",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+            timeZone
+        });
+
+    const timeFormatter =
+        new Intl.DateTimeFormat(locale, {
+            hour: "numeric",
+            minute: "2-digit",
+            timeZone
+        });
+
+    return `${formatter.format(start)} - ${timeFormatter.format(end)}`;
+}
+
+async function readError(
+    response: Response,
+    fallback: string
+): Promise<string> {
+    try {
+        const body =
+            await response.json() as {
+                error?: string;
+                message?: string;
+            };
+
+        return body.message ??
+            body.error ??
+            fallback;
+    } catch {
+        return fallback;
+    }
+}
+
+export function SchedulingPanel({
+    tenantId,
+    onClose
+}: SchedulingPanelProps) {
+    const {
+        locale
+    } = useI18n();
+
+    const [
+        practitioners,
+        setPractitioners
+    ] = useState<PractitionerOption[]>([]);
+
+    const [
+        facilities,
+        setFacilities
+    ] = useState<FacilityOption[]>([]);
+
+    const [
+        locations,
+        setLocations
+    ] = useState<ClinicalLocationOption[]>([]);
+
+    const [
+        practitionerId,
+        setPractitionerId
+    ] = useState("");
+
+    const [
+        facilityId,
+        setFacilityId
+    ] = useState("");
+
+    const [
+        clinicalLocationId,
+        setClinicalLocationId
+    ] = useState("");
+
+    const [
+        date,
+        setDate
+    ] = useState(todayDateOnly);
+
+    const [
+        durationMinutes,
+        setDurationMinutes
+    ] = useState(30);
+
+    const [
+        timeZone,
+        setTimeZone
+    ] = useState(browserTimeZone);
+
+    const [
+        slots,
+        setSlots
+    ] = useState<AvailabilitySlot[]>([]);
+
+    const [
+        selectedSlot,
+        setSelectedSlot
+    ] = useState<AvailabilitySlot | null>(null);
+
+    const [
+        loadingOptions,
+        setLoadingOptions
+    ] = useState(true);
+
+    const [
+        finding,
+        setFinding
+    ] = useState(false);
+
+    const [
+        error,
+        setError
+    ] = useState<string | null>(null);
+
+    const headers = useMemo(
+        () => ({
+            "x-tenant-id": tenantId
+        }),
+        [tenantId]
+    );
+
+    useEffect(() => {
+        const controller =
+            new AbortController();
+
+        const load =
+            async (): Promise<void> => {
+                setLoadingOptions(true);
+                setError(null);
+
+                try {
+                    const [
+                        practitionerResponse,
+                        facilityResponse
+                    ] = await Promise.all([
+                        fetch(
+                            "/api/v1/his/practitioners",
+                            {
+                                headers,
+                                signal:
+                                    controller.signal
+                            }
+                        ),
+                        fetch(
+                            "/api/v1/his/facilities/options",
+                            {
+                                headers,
+                                signal:
+                                    controller.signal
+                            }
+                        )
+                    ]);
+
+                    if (!practitionerResponse.ok) {
+                        throw new Error(
+                            await readError(
+                                practitionerResponse,
+                                `Unable to load practitioners (${practitionerResponse.status}).`
+                            )
+                        );
+                    }
+
+                    if (!facilityResponse.ok) {
+                        throw new Error(
+                            await readError(
+                                facilityResponse,
+                                `Unable to load facilities (${facilityResponse.status}).`
+                            )
+                        );
+                    }
+
+                    const practitionerBody =
+                        await practitionerResponse.json() as
+                            ApiCollection<PractitionerOption>;
+
+                    const facilityBody =
+                        await facilityResponse.json() as
+                            ApiCollection<FacilityOption>;
+
+                    setPractitioners(
+                        collectionItems(
+                            practitionerBody
+                        )
+                    );
+
+                    setFacilities(
+                        collectionItems(
+                            facilityBody
+                        )
+                    );
+                } catch (caught) {
+                    if (
+                        caught instanceof DOMException &&
+                        caught.name === "AbortError"
+                    ) {
+                        return;
+                    }
+
+                    setError(
+                        caught instanceof Error
+                            ? caught.message
+                            : "Unable to load scheduling options."
+                    );
+                } finally {
+                    setLoadingOptions(false);
+                }
+            };
+
+        void load();
+
+        return () =>
+            controller.abort();
+    }, [headers]);
+
+    useEffect(() => {
+        setClinicalLocationId("");
+        setLocations([]);
+
+        if (!facilityId) {
+            return;
+        }
+
+        const controller =
+            new AbortController();
+
+        const loadLocations =
+            async (): Promise<void> => {
+                try {
+                    const parameters =
+                        new URLSearchParams({
+                            facilityId
+                        });
+
+                    const response =
+                        await fetch(
+                            `/api/v1/his/clinical-locations?${parameters.toString()}`,
+                            {
+                                headers,
+                                signal:
+                                    controller.signal
+                            }
+                        );
+
+                    if (!response.ok) {
+                        throw new Error(
+                            await readError(
+                                response,
+                                `Unable to load clinical locations (${response.status}).`
+                            )
+                        );
+                    }
+
+                    const body =
+                        await response.json() as
+                            ApiCollection<ClinicalLocationOption>;
+
+                    setLocations(
+                        collectionItems(body)
+                            .filter(
+                                (item) =>
+                                    item.active !== false
+                            )
+                    );
+                } catch (caught) {
+                    if (
+                        caught instanceof DOMException &&
+                        caught.name === "AbortError"
+                    ) {
+                        return;
+                    }
+
+                    setError(
+                        caught instanceof Error
+                            ? caught.message
+                            : "Unable to load clinical locations."
+                    );
+                }
+            };
+
+        void loadLocations();
+
+        return () =>
+            controller.abort();
+    }, [facilityId, headers]);
+
+    const findSlots =
+        async (): Promise<void> => {
+            setError(null);
+            setSelectedSlot(null);
+            setSlots([]);
+
+            if (
+                !practitionerId &&
+                !clinicalLocationId
+            ) {
+                setError(
+                    "Select a practitioner or clinical location."
+                );
+                return;
+            }
+
+            if (!date) {
+                setError(
+                    "Select an appointment date."
+                );
+                return;
+            }
+
+            if (
+                !Number.isInteger(durationMinutes) ||
+                durationMinutes <= 0
+            ) {
+                setError(
+                    "Appointment duration must be a positive number of minutes."
+                );
+                return;
+            }
+
+            setFinding(true);
+
+            try {
+                const parameters =
+                    new URLSearchParams({
+                        from: date,
+                        to: date,
+                        durationMinutes:
+                            String(durationMinutes),
+                        timeZone
+                    });
+
+                if (practitionerId) {
+                    parameters.set(
+                        "practitionerId",
+                        practitionerId
+                    );
+                }
+
+                if (clinicalLocationId) {
+                    parameters.set(
+                        "clinicalLocationId",
+                        clinicalLocationId
+                    );
+                }
+
+                const response =
+                    await fetch(
+                        `/api/v1/his/availability/slots?${parameters.toString()}`,
+                        {
+                            headers
+                        }
+                    );
+
+                if (!response.ok) {
+                    throw new Error(
+                        await readError(
+                            response,
+                            `Unable to find available times (${response.status}).`
+                        )
+                    );
+                }
+
+                const body =
+                    await response.json() as
+                        AvailabilitySlotResponse;
+
+                setSlots(
+                    Array.isArray(body.slots)
+                        ? body.slots
+                        : []
+                );
+            } catch (caught) {
+                setError(
+                    caught instanceof Error
+                        ? caught.message
+                        : "Unable to find available times."
+                );
+            } finally {
+                setFinding(false);
+            }
+        };
+
+    return (
+        <div
+            style={styles.backdrop}
+            role="presentation"
+        >
+            <section
+                style={styles.panel}
+                role="dialog"
+                aria-modal="true"
+                aria-label="Athena Scheduling"
+            >
+                <header style={styles.header}>
+                    <div>
+                        <p style={styles.eyebrow}>
+                            ATHENA Â· HOSPITAL INFORMATION SYSTEM
+                        </p>
+
+                        <h2 style={styles.title}>
+                            Scheduling
+                        </h2>
+
+                        <p style={styles.description}>
+                            Find appointment availability by practitioner,
+                            clinical location, date and duration.
+                        </p>
+                    </div>
+
+                    <button
+                        type="button"
+                        style={styles.close}
+                        aria-label="Close scheduling"
+                        onClick={onClose}
+                    >
+                        Ã—
+                    </button>
+                </header>
+
+                {error && (
+                    <div style={styles.error}>
+                        {error}
+                    </div>
+                )}
+
+                <section style={styles.card}>
+                    <h3 style={styles.cardTitle}>
+                        Find Available Times
+                    </h3>
+
+                    <div style={styles.grid}>
+                        <label style={styles.field}>
+                            <span style={styles.label}>
+                                Practitioner
+                            </span>
+
+                            <select
+                                style={styles.input}
+                                value={practitionerId}
+                                disabled={loadingOptions}
+                                onChange={(event) => {
+                                    setPractitionerId(
+                                        event.target.value
+                                    );
+                                    setSlots([]);
+                                    setSelectedSlot(null);
+                                }}
+                            >
+                                <option value="">
+                                    Any practitioner
+                                </option>
+
+                                {practitioners.map(
+                                    (practitioner) => (
+                                        <option
+                                            key={practitioner.id}
+                                            value={practitioner.id}
+                                        >
+                                            {practitionerLabel(
+                                                practitioner
+                                            )}
+                                        </option>
+                                    )
+                                )}
+                            </select>
+                        </label>
+
+                        <label style={styles.field}>
+                            <span style={styles.label}>
+                                Facility
+                            </span>
+
+                            <select
+                                style={styles.input}
+                                value={facilityId}
+                                disabled={loadingOptions}
+                                onChange={(event) => {
+                                    setFacilityId(
+                                        event.target.value
+                                    );
+                                    setSlots([]);
+                                    setSelectedSlot(null);
+                                }}
+                            >
+                                <option value="">
+                                    Select facility
+                                </option>
+
+                                {facilities.map(
+                                    (facility) => (
+                                        <option
+                                            key={facility.id}
+                                            value={facility.id}
+                                        >
+                                            {facility.name} ({facility.code})
+                                        </option>
+                                    )
+                                )}
+                            </select>
+                        </label>
+
+                        <label style={styles.field}>
+                            <span style={styles.label}>
+                                Clinical location
+                            </span>
+
+                            <select
+                                style={styles.input}
+                                value={clinicalLocationId}
+                                disabled={!facilityId}
+                                onChange={(event) => {
+                                    setClinicalLocationId(
+                                        event.target.value
+                                    );
+                                    setSlots([]);
+                                    setSelectedSlot(null);
+                                }}
+                            >
+                                <option value="">
+                                    Any clinical location
+                                </option>
+
+                                {locations.map(
+                                    (location) => (
+                                        <option
+                                            key={location.id}
+                                            value={location.id}
+                                        >
+                                            {location.name}
+                                            {location.code
+                                                ? ` (${location.code})`
+                                                : ""}
+                                        </option>
+                                    )
+                                )}
+                            </select>
+                        </label>
+
+                        <label style={styles.field}>
+                            <span style={styles.label}>
+                                Appointment date
+                            </span>
+
+                            <input
+                                type="date"
+                                style={styles.input}
+                                value={date}
+                                onChange={(event) => {
+                                    setDate(
+                                        event.target.value
+                                    );
+                                    setSlots([]);
+                                    setSelectedSlot(null);
+                                }}
+                            />
+                        </label>
+
+                        <label style={styles.field}>
+                            <span style={styles.label}>
+                                Duration
+                            </span>
+
+                            <select
+                                style={styles.input}
+                                value={durationMinutes}
+                                onChange={(event) => {
+                                    setDurationMinutes(
+                                        Number(
+                                            event.target.value
+                                        )
+                                    );
+                                    setSlots([]);
+                                    setSelectedSlot(null);
+                                }}
+                            >
+                                <option value={15}>
+                                    15 minutes
+                                </option>
+                                <option value={30}>
+                                    30 minutes
+                                </option>
+                                <option value={45}>
+                                    45 minutes
+                                </option>
+                                <option value={60}>
+                                    60 minutes
+                                </option>
+                                <option value={90}>
+                                    90 minutes
+                                </option>
+                            </select>
+                        </label>
+
+                        <label style={styles.field}>
+                            <span style={styles.label}>
+                                Time zone
+                            </span>
+
+                            <input
+                                style={styles.input}
+                                value={timeZone}
+                                onChange={(event) => {
+                                    setTimeZone(
+                                        event.target.value
+                                    );
+                                    setSlots([]);
+                                    setSelectedSlot(null);
+                                }}
+                            />
+                        </label>
+                    </div>
+
+                    <div style={styles.actions}>
+                        <button
+                            type="button"
+                            style={styles.secondary}
+                            onClick={() => {
+                                setPractitionerId("");
+                                setFacilityId("");
+                                setClinicalLocationId("");
+                                setDate(todayDateOnly());
+                                setDurationMinutes(30);
+                                setTimeZone(browserTimeZone());
+                                setSlots([]);
+                                setSelectedSlot(null);
+                                setError(null);
+                            }}
+                        >
+                            Reset
+                        </button>
+
+                        <button
+                            type="button"
+                            style={styles.primary}
+                            disabled={finding}
+                            onClick={() => {
+                                void findSlots();
+                            }}
+                        >
+                            {finding
+                                ? "Finding..."
+                                : "Find Available Times"}
+                        </button>
+                    </div>
+                </section>
+
+                <section style={styles.card}>
+                    <h3 style={styles.cardTitle}>
+                        Available Appointment Times
+                    </h3>
+
+                    {slots.length === 0 ? (
+                        <div style={styles.empty}>
+                            {finding
+                                ? "Searching availability..."
+                                : "Choose scheduling criteria and find available times."}
+                        </div>
+                    ) : (
+                        <>
+                            <div style={styles.slots}>
+                                {slots.map(
+                                    (slot) => {
+                                        const selected =
+                                            selectedSlot?.start ===
+                                            slot.start;
+
+                                        return (
+                                            <button
+                                                key={`${slot.start}-${slot.end}`}
+                                                type="button"
+                                                style={{
+                                                    ...styles.slot,
+                                                    ...(selected
+                                                        ? styles.selectedSlot
+                                                        : {})
+                                                }}
+                                                onClick={() =>
+                                                    setSelectedSlot(
+                                                        slot
+                                                    )
+                                                }
+                                            >
+                                                {formatSlot(
+                                                    slot,
+                                                    locale,
+                                                    timeZone
+                                                )}
+                                            </button>
+                                        );
+                                    }
+                                )}
+                            </div>
+
+                            {selectedSlot && (
+                                <div style={styles.selection}>
+                                    <strong>
+                                        Selected time:
+                                    </strong>{" "}
+                                    {formatSlot(
+                                        selectedSlot,
+                                        locale,
+                                        timeZone
+                                    )}
+                                    <br />
+                                    <span>
+                                        Appointment creation will be connected
+                                        in the next Scheduling increment.
+                                    </span>
+                                </div>
+                            )}
+                        </>
+                    )}
+                </section>
+            </section>
+        </div>
+    );
+}

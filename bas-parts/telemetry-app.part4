@@ -1,0 +1,535 @@
+} catch (error) {
+                sendBadRequest(response, error);
+            }
+        }
+    );
+
+    app.post(
+        "/api/v1/energy/alarm-events/:id/resolve",
+        async (request: TenantRequest, response: Response) => {
+            try {
+                const event = await alarmEvents.resolve(
+                    String(request.params.id ?? ""),
+                    requireTenantId(request),
+                    getRequiredString(getBody(request), "resolvedBy")
+                );
+                if (!event) {
+                    sendNotFound(response, "Alarm event");
+                    return;
+                }
+                response.json(event);
+            } catch (error) {
+                sendBadRequest(response, error);
+            }
+        }
+    );
+
+    app.post(
+        "/api/v1/energy/sites/:siteId/performance/calculate",
+        async (request: TenantRequest, response: Response) => {
+            try {
+                const body = getBody(request);
+                const metrics = await performanceEngine.calculate({
+                    tenantId: requireTenantId(request),
+                    siteId: String(request.params.siteId ?? ""),
+                    periodStart: getRequiredDate(body, "periodStart"),
+                    periodEnd: getRequiredDate(body, "periodEnd")
+                });
+                response.status(201).json(metrics);
+            } catch (error) {
+                sendBadRequest(response, error);
+            }
+        }
+    );
+
+    app.post(
+        "/api/v1/energy/performance-metrics",
+        async (request: TenantRequest, response: Response) => {
+            try {
+                const body = getBody(request);
+                const metric = await performanceMetrics.create({
+                    tenantId: requireTenantId(request),
+                    siteId: getRequiredString(body, "siteId"),
+                    assetId: getOptionalString(body, "assetId"),
+                    metricCode: getRequiredString(body, "metricCode"),
+                    value: getRequiredNumber(body, "value"),
+                    unit: getOptionalString(body, "unit"),
+                    periodStart: getRequiredDate(body, "periodStart"),
+                    periodEnd: getRequiredDate(body, "periodEnd"),
+                    source: getRequiredString(body, "source")
+                });
+                response.status(201).json(metric);
+            } catch (error) {
+                sendBadRequest(response, error);
+            }
+        }
+    );
+
+    app.get(
+        "/api/v1/energy/sites/:siteId/performance-metrics",
+        async (request: TenantRequest, response: Response) => {
+            response.json(await performanceMetrics.findBySite(
+                requireTenantId(request),
+                String(request.params.siteId ?? ""),
+                getOptionalPositiveIntegerQuery(request.query.limit, "limit", 100, 1000)
+            ));
+        }
+    );
+
+    return app;
+}
+
+
+function getOptionalNonNegativeInteger(
+    body: Record<string, unknown>,
+    property: string
+): number | undefined {
+    const value = body[property];
+    if (value === undefined || value === null) return undefined;
+    if (typeof value !== "number" || !Number.isInteger(value) || value < 0) {
+        throw new Error(`${property} must be a non-negative integer.`);
+    }
+    return value;
+}
+
+function parseAlarmOperator(value: unknown): AlarmOperator {
+    if (
+        value === "GT" || value === "GTE" || value === "LT" ||
+        value === "LTE" || value === "EQ" || value === "NEQ"
+    ) return value;
+    throw new Error("operator must be GT, GTE, LT, LTE, EQ, or NEQ.");
+}
+
+function parseAlarmSeverity(value: unknown): AlarmSeverity {
+    if (value === "INFO" || value === "WARNING" || value === "CRITICAL") {
+        return value;
+    }
+    throw new Error("severity must be INFO, WARNING, or CRITICAL.");
+}
+
+function getBody(
+    request: TenantRequest
+): Record<string, unknown> {
+    if (
+        typeof request.body !== "object" ||
+        request.body === null ||
+        Array.isArray(request.body)
+    ) {
+        throw new Error(
+            "Request body must be a JSON object."
+        );
+    }
+
+    return request.body as
+        Record<string, unknown>;
+}
+
+function hasProperty(
+    body: Record<string, unknown>,
+    property: string
+): boolean {
+    return Object.prototype.hasOwnProperty.call(
+        body,
+        property
+    );
+}
+
+function getRequiredString(
+    body: Record<string, unknown>,
+    property: string
+): string {
+    const value = body[property];
+
+    if (
+        typeof value !== "string" ||
+        !value.trim()
+    ) {
+        throw new Error(
+            `${property} is required.`
+        );
+    }
+
+    return value.trim();
+}
+
+function getOptionalString(
+    body: Record<string, unknown>,
+    property: string
+): string | undefined {
+    const value = body[property];
+
+    if (
+        value === undefined ||
+        value === null
+    ) {
+        return undefined;
+    }
+
+    if (typeof value !== "string") {
+        throw new Error(
+            `${property} must be a string.`
+        );
+    }
+
+    const normalized = value.trim();
+
+    return normalized || undefined;
+}
+
+function getOptionalNumber(
+    body: Record<string, unknown>,
+    property: string
+): number | undefined {
+    const value = body[property];
+
+    if (
+        value === undefined ||
+        value === null
+    ) {
+        return undefined;
+    }
+
+    if (
+        typeof value !== "number" ||
+        !Number.isFinite(value)
+    ) {
+        throw new Error(
+            `${property} must be a finite number.`
+        );
+    }
+
+    return value;
+}
+
+function getRequiredNumber(
+    body: Record<string, unknown>,
+    property: string
+): number {
+    const value = body[property];
+
+    if (
+        typeof value !== "number" ||
+        !Number.isFinite(value)
+    ) {
+        throw new Error(
+            `${property} must be a finite number.`
+        );
+    }
+
+    return value;
+}
+
+function getRequiredDate(
+    body: Record<string, unknown>,
+    property: string
+): Date {
+    const value =
+        getRequiredString(
+            body,
+            property
+        );
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        throw new Error(
+            `${property} must be a valid date/time string.`
+        );
+    }
+
+    return date;
+}
+
+function getOptionalPositiveIntegerQuery(
+    value: unknown,
+    property: string,
+    defaultValue: number,
+    maximum: number
+): number {
+    if (value === undefined) {
+        return defaultValue;
+    }
+
+    if (
+        typeof value !== "string" ||
+        !/^\d+$/.test(value)
+    ) {
+        throw new Error(
+            `${property} must be a positive integer.`
+        );
+    }
+
+    const parsed = Number(value);
+
+    if (
+        !Number.isInteger(parsed) ||
+        parsed < 1 ||
+        parsed > maximum
+    ) {
+        throw new Error(
+            `${property} must be between 1 and ${maximum}.`
+        );
+    }
+
+    return parsed;
+}
+
+function getRequiredInteger(
+    body: Record<string, unknown>,
+    property: string
+): number {
+    const value = body[property];
+
+    if (
+        typeof value !== "number" ||
+        !Number.isInteger(value) ||
+        value < 1
+    ) {
+        throw new Error(
+            `${property} must be a positive integer.`
+        );
+    }
+
+    return value;
+}
+
+function getOptionalBoolean(
+    body: Record<string, unknown>,
+    property: string
+): boolean | undefined {
+    const value = body[property];
+
+    if (
+        value === undefined ||
+        value === null
+    ) {
+        return undefined;
+    }
+
+    if (typeof value !== "boolean") {
+        throw new Error(
+            `${property} must be a boolean.`
+        );
+    }
+
+    return value;
+}
+
+function getOptionalDate(
+    body: Record<string, unknown>,
+    property: string
+): Date | undefined {
+    const value = body[property];
+
+    if (
+        value === undefined ||
+        value === null
+    ) {
+        return undefined;
+    }
+
+    if (
+        typeof value !== "string" ||
+        !value.trim()
+    ) {
+        throw new Error(
+            `${property} must be a valid date/time string.`
+        );
+    }
+
+    const date = new Date(value);
+
+    if (Number.isNaN(date.getTime())) {
+        throw new Error(
+            `${property} must be a valid date/time string.`
+        );
+    }
+
+    return date;
+}
+
+function parseAssetStatus(
+    value: unknown
+): AssetStatus {
+    const allowed: readonly AssetStatus[] = [
+        "ACTIVE",
+        "INACTIVE",
+        "MAINTENANCE",
+        "RETIRED"
+    ];
+
+    if (value === undefined) {
+        return "ACTIVE";
+    }
+
+    if (
+        typeof value === "string" &&
+        allowed.includes(
+            value as AssetStatus
+        )
+    ) {
+        return value as AssetStatus;
+    }
+
+    throw new Error(
+        "status is not a valid asset status."
+    );
+}
+
+function parseDeviceStatus(
+    value: unknown
+): DeviceStatus {
+    const allowed: readonly DeviceStatus[] = [
+        "ONLINE",
+        "OFFLINE",
+        "DEGRADED",
+        "MAINTENANCE",
+        "RETIRED"
+    ];
+
+    if (value === undefined) {
+        return "ONLINE";
+    }
+
+    if (
+        typeof value === "string" &&
+        allowed.includes(
+            value as DeviceStatus
+        )
+    ) {
+        return value as DeviceStatus;
+    }
+
+    throw new Error(
+        "status is not a valid device status."
+    );
+}
+
+function parseMeasurementDataType(
+    value: unknown
+): MeasurementDataType {
+    if (
+        value === "NUMBER" ||
+        value === "BOOLEAN" ||
+        value === "STRING"
+    ) {
+        return value;
+    }
+
+    throw new Error(
+        "dataType must be NUMBER, BOOLEAN, or STRING."
+    );
+}
+
+function parseTelemetryQuality(
+    value: unknown
+): TelemetryQuality {
+    if (value === undefined) {
+        return "GOOD";
+    }
+
+    if (
+        value === "GOOD" ||
+        value === "UNCERTAIN" ||
+        value === "BAD" ||
+        value === "MISSING"
+    ) {
+        return value;
+    }
+
+    throw new Error(
+        "quality must be GOOD, UNCERTAIN, BAD, or MISSING."
+    );
+}
+
+function parseEnergyFlowDirection(
+    value: unknown
+): EnergyFlowDirection {
+    const allowed:
+        readonly EnergyFlowDirection[] = [
+            "PRODUCTION",
+            "CONSUMPTION",
+            "IMPORT",
+            "EXPORT",
+            "CHARGE",
+            "DISCHARGE",
+            "TRANSFER"
+        ];
+
+    if (
+        typeof value === "string" &&
+        allowed.includes(
+            value as EnergyFlowDirection
+        )
+    ) {
+        return value as EnergyFlowDirection;
+    }
+
+    throw new Error(
+        "direction must be PRODUCTION, CONSUMPTION, IMPORT, EXPORT, CHARGE, DISCHARGE, or TRANSFER."
+    );
+}
+
+async function validateEnergyFlowAsset(
+    assets: SqlAssetRepository,
+    assetId: string | undefined,
+    siteId: string,
+    tenantId: string,
+    property: string
+): Promise<void> {
+    if (!assetId) {
+        return;
+    }
+
+    const asset =
+        await assets.findById(
+            assetId,
+            tenantId
+        );
+
+    if (
+        !asset ||
+        asset.siteId !== siteId
+    ) {
+        throw new Error(
+            `${property} must identify an asset in the same tenant and site as the energy flow.`
+        );
+    }
+}
+
+function sendNotFound(
+    response: Response,
+    entityName: string
+): void {
+    response
+        .status(404)
+        .json({
+            error:
+                `${entityName} not found.`
+        });
+}
+
+function sendConflict(
+    response: Response,
+    message: string
+): void {
+    response
+        .status(409)
+        .json({
+            error: message
+        });
+}
+
+function sendBadRequest(
+    response: Response,
+    error: unknown
+): void {
+    response
+        .status(400)
+        .json({
+            error:
+                error instanceof Error
+                    ? error.message
+                    : "Unexpected error."
+        });
+}

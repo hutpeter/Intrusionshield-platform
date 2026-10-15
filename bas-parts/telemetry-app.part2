@@ -1,0 +1,377 @@
+
+                            ),
+                        model:
+                            getOptionalString(
+                                body,
+                                "model"
+                            ),
+                        serialNumber:
+                            getOptionalString(
+                                body,
+                                "serialNumber"
+                            ),
+                        protocol:
+                            getOptionalString(
+                                body,
+                                "protocol"
+                            ),
+                        externalDeviceId:
+                            getOptionalString(
+                                body,
+                                "externalDeviceId"
+                            ),
+                        status:
+                            parseDeviceStatus(
+                                body.status
+                            )
+                    });
+
+                response
+                    .status(201)
+                    .json(device);
+            } catch (error) {
+                sendBadRequest(
+                    response,
+                    error
+                );
+            }
+        }
+    );
+
+    app.get(
+        "/api/v1/telemetry/devices/:id",
+        async (
+            request: TenantRequest,
+            response: Response
+        ) => {
+            const device =
+                await devices.findById(
+                    String(
+                        request.params.id ?? ""
+                    ),
+                    requireTenantId(request)
+                );
+
+            if (!device) {
+                sendNotFound(
+                    response,
+                    "Device"
+                );
+                return;
+            }
+
+            response.json(device);
+        }
+    );
+
+    app.put(
+        "/api/v1/telemetry/devices/:id",
+        async (
+            request: TenantRequest,
+            response: Response
+        ) => {
+            try {
+                const tenantId =
+                    requireTenantId(request);
+
+                const id =
+                    String(
+                        request.params.id ?? ""
+                    );
+
+                const existing =
+                    await devices.findById(
+                        id,
+                        tenantId
+                    );
+
+                if (!existing) {
+                    sendNotFound(
+                        response,
+                        "Device"
+                    );
+                    return;
+                }
+
+                const body = getBody(request);
+
+                const version =
+                    getRequiredInteger(
+                        body,
+                        "version"
+                    );
+
+                const lastSeenAt =
+                    getOptionalDate(
+                        body,
+                        "lastSeenAt"
+                    );
+
+                const result =
+                    await devices.update({
+                        id,
+                        tenantId,
+                        siteId:
+                            getOptionalString(
+                                body,
+                                "siteId"
+                            ) ??
+                            existing.siteId,
+                        assetId:
+                            hasProperty(
+                                body,
+                                "assetId"
+                            )
+                                ? getOptionalString(
+                                      body,
+                                      "assetId"
+                                  )
+                                : existing.assetId,
+                        code:
+                            getOptionalString(
+                                body,
+                                "code"
+                            ) ??
+                            existing.code,
+                        name:
+                            getOptionalString(
+                                body,
+                                "name"
+                            ) ??
+                            existing.name,
+                        deviceType:
+                            getOptionalString(
+                                body,
+                                "deviceType"
+                            ) ??
+                            existing.deviceType,
+                        manufacturer:
+                            hasProperty(
+                                body,
+                                "manufacturer"
+                            )
+                                ? getOptionalString(
+                                      body,
+                                      "manufacturer"
+                                  )
+                                : existing.manufacturer,
+                        model:
+                            hasProperty(
+                                body,
+                                "model"
+                            )
+                                ? getOptionalString(
+                                      body,
+                                      "model"
+                                  )
+                                : existing.model,
+                        serialNumber:
+                            hasProperty(
+                                body,
+                                "serialNumber"
+                            )
+                                ? getOptionalString(
+                                      body,
+                                      "serialNumber"
+                                  )
+                                : existing.serialNumber,
+                        protocol:
+                            hasProperty(
+                                body,
+                                "protocol"
+                            )
+                                ? getOptionalString(
+                                      body,
+                                      "protocol"
+                                  )
+                                : existing.protocol,
+                        externalDeviceId:
+                            hasProperty(
+                                body,
+                                "externalDeviceId"
+                            )
+                                ? getOptionalString(
+                                      body,
+                                      "externalDeviceId"
+                                  )
+                                : existing.externalDeviceId,
+                        status:
+                            body.status ===
+                            undefined
+                                ? existing.status
+                                : parseDeviceStatus(
+                                      body.status
+                                  ),
+                        lastSeenAt:
+                            hasProperty(
+                                body,
+                                "lastSeenAt"
+                            )
+                                ? lastSeenAt
+                                : existing.lastSeenAt,
+                        version
+                    });
+
+                if (
+                    result.status ===
+                    "NOT_FOUND"
+                ) {
+                    sendNotFound(
+                        response,
+                        "Device"
+                    );
+                    return;
+                }
+
+                if (
+                    result.status ===
+                    "CONFLICT"
+                ) {
+                    sendConflict(
+                        response,
+                        "Device was modified by another request. Refresh the device and retry."
+                    );
+                    return;
+                }
+
+                response.json(
+                    result.device
+                );
+            } catch (error) {
+                sendBadRequest(
+                    response,
+                    error
+                );
+            }
+        }
+    );
+
+    app.get(
+        "/api/v1/telemetry/sites/:siteId/devices",
+        async (
+            request: TenantRequest,
+            response: Response
+        ) => {
+            response.json(
+                await devices.findBySite(
+                    String(
+                        request.params.siteId ??
+                        ""
+                    ),
+                    requireTenantId(request)
+                )
+            );
+        }
+    );
+
+    app.post(
+        "/api/v1/telemetry/measurement-definitions",
+        async (
+            request: TenantRequest,
+            response: Response
+        ) => {
+            try {
+                const body = getBody(request);
+
+                const definition =
+                    await measurementDefinitions.create({
+                        tenantId:
+                            requireTenantId(
+                                request
+                            ),
+                        code:
+                            getRequiredString(
+                                body,
+                                "code"
+                            ),
+                        name:
+                            getRequiredString(
+                                body,
+                                "name"
+                            ),
+                        description:
+                            getOptionalString(
+                                body,
+                                "description"
+                            ),
+                        unit:
+                            getOptionalString(
+                                body,
+                                "unit"
+                            ),
+                        dataType:
+                            parseMeasurementDataType(
+                                body.dataType
+                            ),
+                        minimumValue:
+                            getOptionalNumber(
+                                body,
+                                "minimumValue"
+                            ),
+                        maximumValue:
+                            getOptionalNumber(
+                                body,
+                                "maximumValue"
+                            )
+                    });
+
+                response
+                    .status(201)
+                    .json(definition);
+            } catch (error) {
+                sendBadRequest(
+                    response,
+                    error
+                );
+            }
+        }
+    );
+
+    app.get(
+        "/api/v1/telemetry/measurement-definitions",
+        async (
+            request: TenantRequest,
+            response: Response
+        ) => {
+            response.json(
+                await measurementDefinitions.findAll(
+                    requireTenantId(request)
+                )
+            );
+        }
+    );
+
+    app.get(
+        "/api/v1/telemetry/measurement-definitions/:id",
+        async (
+            request: TenantRequest,
+            response: Response
+        ) => {
+            const definition =
+                await measurementDefinitions.findById(
+                    String(
+                        request.params.id ?? ""
+                    ),
+                    requireTenantId(request)
+                );
+
+            if (!definition) {
+                sendNotFound(
+                    response,
+                    "Measurement definition"
+                );
+                return;
+            }
+
+            response.json(definition);
+        }
+    );
+
+    app.post(
+        "/api/v1/telemetry/readings",
+        async (
+            request: TenantRequest,
+            response: Response
+        ) => {
+            try {
+               

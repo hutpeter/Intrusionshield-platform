@@ -1,0 +1,539 @@
+﻿import { useEffect, useMemo, useState } from "react";
+import "./BasDashboard.css";
+import { apparentTemperatureF, suggestedCoolingTargetF } from "./basComfort";
+import {
+    defaultTemperatureSchedules,
+    evaluateTemperatureAutomation,
+    moveSimulatedTemperature,
+    type TemperatureSchedule
+} from "./basTemperatureAutomation";
+
+type Reading = {
+    id: string; deviceId: string; measurementDefinitionId: string;
+    observedAt: string; numericValue?: number; stringValue?: string;
+};
+type Definition = { id: string; code: string };
+type Device = { id: string; code: string; name: string };
+type Asset = { id: string; code: string; name: string; assetType: string };
+type Sample = { at: string; temperature?: number; humidity?: number; state?: string };
+type Tab = "overview" | "live";
+type EquipmentMode = "AUTO" | "MANUAL";
+type EquipmentCommand = "IDLE" | "HEATING" | "COOLING";
+type BasCommandResponse = {
+    id: string;
+    tenantId: string;
+    siteId: string;
+    assetId?: string;
+    deviceId?: string;
+    commandType: string;
+    commandPayload: {
+        enabled?: boolean;
+        mode?: EquipmentMode;
+        command?: EquipmentCommand;
+        setpointF?: number;
+    };
+    status: "PENDING" | "ACCEPTED" | "EXECUTED" | "FAILED";
+    requestedBy?: string;
+    correlationId?: string;
+    requestedAt: string;
+    createdAt: string;
+    updatedAt: string;
+    version: number;
+};
+const CODES = {
+    temperature: "bas.zone.temperature",
+    humidity: "bas.zone.humidity",
+    state: "hvac.operating_state"
+} as const;
+
+export interface BasDashboardProps {
+    baseUrl?: string;
+    tenantId: string;
+    siteId: string;
+    language?: "en" | "es";
+}
+
+export function BasDashboard({ baseUrl = "", tenantId, siteId, language = "en" }: BasDashboardProps) {
+    const labels = language === "es" ? {
+        title: "AutomatizaciÃ³n de edificios", zone: "Zona de muestra",
+        overview: "Resumen", live: "Tiempo real", temperature: "Temperatura",
+        humidity: "Humedad relativa", state: "Estado de climatizaciÃ³n",
+        connected: "â— Datos en vivo conectados", connecting: "â—‹ Conectando datos en vivo",
+        last: "Ãšltima muestra", waiting: "Esperando lecturas BAS",
+        recent: "Lecturas recientes", history: "Historial de temperatura y humedad",
+        observed: "Registrado", hvac: "ClimatizaciÃ³n"
+    } : {
+        title: "Building automation", zone: "Sample zone",
+        overview: "Overview", live: "Real-Time", temperature: "Temperature",
+        humidity: "Relative humidity", state: "HVAC state",
+        connected: "â— Live feed connected", connecting: "â—‹ Connecting to live feed",
+        last: "Last sample", waiting: "Waiting for BAS readings",
+        recent: "Recent readings", history: "Temperature and humidity history",
+        observed: "Observed", hvac: "HVAC"
+    };
+    const comfortLabels = language === "es" ? {
+        apparent: "Temperatura percibida estimada", suggested: "Objetivo de enfriamiento sugerido",
+        chosen: "Objetivo de planificaciÃ³n", reset: "Usar sugerencia",
+        advisory: "EstimaciÃ³n basada en temperatura y humedad; se supone una velocidad del aire de 0,1 m/s. Se guarda en este navegador y no controla el equipo.",
+        waiting: "El objetivo estarÃ¡ disponible cuando lleguen lecturas de temperatura y humedad."
+    } : {
+        apparent: "Estimated apparent temperature", suggested: "Suggested cooling target",
+        chosen: "Planning target", reset: "Use suggestion",
+        advisory: "Estimate from temperature and humidity; assumes 0.1 m/s indoor air speed. Saved in this browser; does not control equipment.",
+        waiting: "The target will appear when temperature and humidity readings arrive."
+    };
+    const automationLabels = language === "es" ? {
+        title: "AutomatizaciÃ³n de temperatura", enabled: "AutomatizaciÃ³n activada",
+        current: "Temperatura de control", target: "Objetivo activo", state: "Estado HVAC",
+        schedule: "Programa activo", noSchedule: "Sin programa activo", deadband: "Banda muerta",
+        speed: "Velocidad de prueba", fast: "Prueba rÃ¡pida", reset: "Restablecer simulaciÃ³n",
+        name: "Nombre", days: "DÃ­as", start: "Inicio", end: "Fin", targetTemp: "Objetivo Â°F",
+        on: "Activo", note: "Modo de prueba: la temperatura de control se mueve rÃ¡pidamente hacia el objetivo para validar la automatizaciÃ³n. El adaptador de equipo fÃ­sico se conectarÃ¡ posteriormente.",
+        heating: "CALENTANDO", cooling: "ENFRIANDO", idle: "INACTIVO"
+    } : {
+        title: "Temperature automation", enabled: "Automation enabled",
+        current: "Control temperature", target: "Active target", state: "HVAC state",
+        schedule: "Active schedule", noSchedule: "No active schedule", deadband: "Deadband",
+        speed: "Test speed", fast: "Fast test", reset: "Reset simulation",
+        name: "Name", days: "Days", start: "Start", end: "End", targetTemp: "Target Â°F",
+        on: "Enabled", note: "Test mode: the control temperature moves quickly toward the target so automation can be validated without waiting for real building response. A physical equipment adapter will be connected later.",
+        heating: "HEATING", cooling: "COOLING", idle: "IDLE"
+    };
+    const [tab, setTab] = useState<Tab>("overview");
+    const [readings, setReadings] = useState<Reading[]>([]);
+    const [definitions, setDefinitions] = useState<Definition[]>([]);
+    const [devices, setDevices] = useState<Device[]>([]);
+    const [assets, setAssets] = useState<Asset[]>([]);
+    const [connected, setConnected] = useState(false);
+    const [error, setError] = useState("");
+    const [targetOverride, setTargetOverride] = useState<number | null>(null);
+    const preferenceKey = `ruby.bas.target.${tenantId}.${siteId}`;
+    useEffect(() => {
+        try {
+            const stored = localStorage.getItem(preferenceKey);
+            const value = stored === null ? null : Number(stored);
+            setTargetOverride(value !== null && Number.isFinite(value) && value >= 68 && value <= 78 ? value : null);
+        } catch { setTargetOverride(null); }
+    }, [preferenceKey]);
+    function setPlanningTarget(value: number | null) {
+        setTargetOverride(value);
+        try {
+            if (value === null) localStorage.removeItem(preferenceKey);
+            else localStorage.setItem(preferenceKey, String(value));
+        } catch { /* Browser storage may be unavailable. */ }
+    }    const automationKey = `ruby.bas.temperatureAutomation.${tenantId}.${siteId}`;
+    const [automationEnabled, setAutomationEnabled] = useState(true);
+    const [deadbandF, setDeadbandF] = useState(1);
+    const [simulationSpeed, setSimulationSpeed] = useState(8);
+    const [temperatureSchedules, setTemperatureSchedules] = useState<TemperatureSchedule[]>(defaultTemperatureSchedules);
+    const [simulatedControlTemperature, setSimulatedControlTemperature] = useState<number | null>(null);
+    const equipmentKey = `ruby.bas.equipmentControl.${tenantId}.${siteId}`;
+    const [equipmentEnabled, setEquipmentEnabled] = useState(true);
+    const [equipmentMode, setEquipmentMode] = useState<EquipmentMode>("AUTO");
+    const [manualCommand, setManualCommand] = useState<EquipmentCommand>("IDLE");
+    const [manualSetpointF, setManualSetpointF] = useState(72);
+    const [commandStatus, setCommandStatus] = useState("Waiting for equipment device");
+    const [lastCommand, setLastCommand] = useState<BasCommandResponse | null>(null);
+
+    useEffect(() => {
+        try {
+            const stored = localStorage.getItem(equipmentKey);
+            if (!stored) return;
+            const parsed = JSON.parse(stored) as {
+                enabled?: boolean;
+                mode?: EquipmentMode;
+                manualCommand?: EquipmentCommand;
+                setpointF?: number;
+            };
+            if (typeof parsed.enabled === "boolean") setEquipmentEnabled(parsed.enabled);
+            if (parsed.mode === "AUTO" || parsed.mode === "MANUAL") setEquipmentMode(parsed.mode);
+            if (parsed.manualCommand === "IDLE" || parsed.manualCommand === "HEATING" || parsed.manualCommand === "COOLING") {
+                setManualCommand(parsed.manualCommand);
+            }
+            if (typeof parsed.setpointF === "number" && parsed.setpointF >= 55 && parsed.setpointF <= 85) {
+                setManualSetpointF(parsed.setpointF);
+            }
+        } catch { /* Keep safe defaults. */ }
+    }, [equipmentKey]);
+
+    useEffect(() => {
+        try {
+            localStorage.setItem(equipmentKey, JSON.stringify({
+                enabled: equipmentEnabled,
+                mode: equipmentMode,
+                manualCommand,
+                setpointF: manualSetpointF
+            }));
+        } catch { /* Browser storage may be unavailable. */ }
+    }, [equipmentKey, equipmentEnabled, equipmentMode, manualCommand, manualSetpointF]);
+
+    useEffect(() => {
+        try {
+            const stored = localStorage.getItem(automationKey);
+            if (!stored) return;
+            const parsed = JSON.parse(stored) as {
+                enabled?: boolean; deadbandF?: number; speed?: number; schedules?: TemperatureSchedule[];
+            };
+            if (typeof parsed.enabled === "boolean") setAutomationEnabled(parsed.enabled);
+            if (typeof parsed.deadbandF === "number" && parsed.deadbandF >= 0.5 && parsed.deadbandF <= 4) setDeadbandF(parsed.deadbandF);
+            if (typeof parsed.speed === "number" && parsed.speed >= 1 && parsed.speed <= 20) setSimulationSpeed(parsed.speed);
+            if (Array.isArray(parsed.schedules) && parsed.schedules.length > 0) setTemperatureSchedules(parsed.schedules);
+        } catch { /* Keep safe defaults. */ }
+    }, [automationKey]);
+
+    useEffect(() => {
+        try {
+            localStorage.setItem(automationKey, JSON.stringify({
+                enabled: automationEnabled, deadbandF, speed: simulationSpeed, schedules: temperatureSchedules
+            }));
+        } catch { /* Browser storage may be unavailable. */ }
+    }, [automationKey, automationEnabled, deadbandF, simulationSpeed, temperatureSchedules]);
+    const prefix = `${baseUrl}/api/v1/telemetry`;
+    useEffect(() => {
+        const controller = new AbortController();
+        const headers = { "x-tenant-id": tenantId };
+        async function get<T>(path: string): Promise<T> {
+            const response = await fetch(`${prefix}${path}`, { headers, signal: controller.signal });
+            if (!response.ok) throw new Error(`${path}: HTTP ${response.status}`);
+            return response.json() as Promise<T>;
+        }
+        async function initial() {
+            try {
+                const [defs, devs, assetResult] = await Promise.all([
+                    get<Definition[]>("/measurement-definitions"),
+                    get<Device[]>(`/sites/${siteId}/devices`),
+                    get<Asset[] | { value?: Asset[]; items?: Asset[] }>("/assets")
+                ]);
+                const bas = devs.find(device => device.code === "HVAC-COMM-44092");
+                const latest = bas ? await get<Reading[]>(`/sites/${siteId}/devices/${bas.id}/readings`) : [];
+                if (!controller.signal.aborted) {
+                    setDefinitions(defs);
+                    setDevices(devs);
+                    const loadedAssets = Array.isArray(assetResult)
+                        ? assetResult
+                        : assetResult.value ?? assetResult.items ?? [];
+                    setAssets(loadedAssets);
+                    setReadings(previous => [...previous.filter(reading => !latest.some(item => item.id === reading.id)), ...latest].slice(0, 500));
+                    setError("");
+                }
+            } catch (cause) {
+                if (!controller.signal.aborted) setError(String(cause));
+            }
+        }
+        void initial();
+        const refresh = setInterval(() => { void initial(); }, 60_000);
+        return () => { controller.abort(); clearInterval(refresh); };
+    }, [prefix, tenantId, siteId]);
+
+    useEffect(() => {
+        if (tab !== "live") return;
+        const controller = new AbortController();
+        async function stream() {
+            try {
+                const response = await fetch(`${prefix}/sites/${siteId}/stream`, {
+                    headers: { "x-tenant-id": tenantId }, signal: controller.signal
+                });
+                if (!response.ok || !response.body) throw new Error(`Live stream: HTTP ${response.status}`);
+                setConnected(true); setError("");
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = "";
+                while (!controller.signal.aborted) {
+                    const result = await reader.read();
+                    if (result.done) break;
+                    buffer += decoder.decode(result.value, { stream: true }).replaceAll("\r\n", "\n");
+                    let boundary: number;
+                    while ((boundary = buffer.indexOf("\n\n")) >= 0) {
+                        const frame = buffer.slice(0, boundary);
+                        buffer = buffer.slice(boundary + 2);
+                        if (!frame.includes("event: telemetry-reading")) continue;
+                        const data = frame.split("\n").find(line => line.startsWith("data: "))?.slice(6);
+                        if (!data) continue;
+                        try {
+                            const event = JSON.parse(data) as { reading?: Reading };
+                            if (event.reading) setReadings(previous =>
+                                [event.reading!, ...previous.filter(item => item.id !== event.reading!.id)].slice(0, 500)
+                            );
+                        } catch { /* ignore malformed event */ }
+                    }
+                }
+            } catch (cause) {
+                if (!controller.signal.aborted) setError(String(cause));
+            } finally { if (!controller.signal.aborted) setConnected(false); }
+        }
+        void stream();
+        return () => { controller.abort(); setConnected(false); };
+    }, [tab, prefix, tenantId, siteId]);
+
+    const basDevice = devices.find(device => device.code === "HVAC-COMM-44092");
+    const basAsset = assets.find(asset => asset.code === "BAS-ZONE-001");
+    const samples = useMemo(() => {
+        const codes = new Map(definitions.map(def => [def.id.toLowerCase(), def.code]));
+        const grouped = new Map<string, Sample>();
+        for (const reading of readings) {
+            if (!basDevice || reading.deviceId.toLowerCase() !== basDevice.id.toLowerCase()) continue;
+            const code = codes.get(reading.measurementDefinitionId.toLowerCase());
+            if (!Object.values(CODES).includes(code as typeof CODES[keyof typeof CODES])) continue;
+            const at = new Date(reading.observedAt).toISOString();
+            const sample = grouped.get(at) ?? { at };
+            if (code === CODES.temperature) sample.temperature = reading.numericValue;
+            if (code === CODES.humidity) sample.humidity = reading.numericValue;
+            if (code === CODES.state) sample.state = reading.stringValue;
+            grouped.set(at, sample);
+        }
+        return [...grouped.values()].sort((a, b) => b.at.localeCompare(a.at));
+    }, [readings, definitions, basDevice]);
+    const latest = samples[0];
+    const apparent = latest?.temperature !== undefined && latest.humidity !== undefined
+        ? apparentTemperatureF(latest.temperature, latest.humidity) : null;
+    const suggested = latest?.humidity !== undefined ? suggestedCoolingTargetF(latest.humidity) : null;
+    const planningTarget = targetOverride ?? suggested;
+    const automation = evaluateTemperatureAutomation(
+        new Date(), temperatureSchedules, simulatedControlTemperature ?? latest?.temperature ?? null,
+        deadbandF, automationEnabled && equipmentEnabled
+    );
+    const effectiveTargetF = equipmentMode === "MANUAL" ? manualSetpointF : automation.targetF;
+    const effectiveState: EquipmentCommand = !equipmentEnabled
+        ? "IDLE"
+        : equipmentMode === "MANUAL"
+            ? manualCommand
+            : automation.state;
+
+    useEffect(() => {
+        if (!basDevice || !basAsset) {
+            setCommandStatus("Waiting for equipment identity");
+            return;
+        }
+
+        const controller = new AbortController();
+
+        const timer = window.setTimeout(async () => {
+            try {
+                setCommandStatus("Sending command...");
+
+                const energyPrefix = `${baseUrl}/api/v1/energy`;
+
+                const response = await fetch(
+                    `${energyPrefix}/bas/commands`,
+                    {
+                        method: "POST",
+                        headers: {
+                            "x-tenant-id": tenantId,
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            siteId,
+                            assetId: basAsset.id,
+                            deviceId: basDevice.id,
+                            commandType: "HVAC_CONTROL",
+                            commandPayload: {
+                                enabled: equipmentEnabled,
+                                mode: equipmentMode,
+                                command: effectiveState,
+                                setpointF: effectiveTargetF ?? undefined
+                            },
+                            requestedBy: "admin-portal",
+                            correlationId: crypto.randomUUID()
+                        }),
+                        signal: controller.signal
+                    }
+                );
+
+                if (!response.ok) {
+                    const detail = await response.text();
+                    throw new Error(
+                        `Equipment command: HTTP ${response.status}${detail ? ` - ${detail}` : ""}`
+                    );
+                }
+
+                const command = await response.json() as BasCommandResponse;
+
+                if (!controller.signal.aborted) {
+                    setLastCommand(command);
+                    setCommandStatus(`Backend command ${command.status.toLowerCase()}`);
+                    setError("");
+                }
+            } catch (cause) {
+                if (!controller.signal.aborted) {
+                    setCommandStatus("Command failed");
+                    setError(String(cause));
+                }
+            }
+        }, 300);
+
+        return () => {
+            window.clearTimeout(timer);
+            controller.abort();
+        };
+    }, [
+        basDevice?.id,
+        basAsset?.id,
+        baseUrl,
+        siteId,
+        tenantId,
+        equipmentEnabled,
+        equipmentMode,
+        effectiveState,
+        effectiveTargetF
+    ]);
+
+    useEffect(() => {
+        if (simulatedControlTemperature === null && latest?.temperature !== undefined) {
+            setSimulatedControlTemperature(latest.temperature);
+        }
+    }, [latest?.temperature, simulatedControlTemperature]);
+
+    useEffect(() => {
+        if (!equipmentEnabled || effectiveTargetF === null || simulatedControlTemperature === null) return;
+        const targetF = effectiveTargetF;
+        const state = effectiveState;
+        const timer = window.setInterval(() => {
+            setSimulatedControlTemperature(current => current === null ? current :
+                moveSimulatedTemperature(current, targetF, state, simulationSpeed));
+        }, 1000);
+        return () => window.clearInterval(timer);
+    }, [equipmentEnabled, effectiveTargetF, effectiveState, simulationSpeed, simulatedControlTemperature === null]);
+
+    function updateTemperatureSchedule(id: string, patch: Partial<TemperatureSchedule>) {
+        setTemperatureSchedules(current => current.map(item => item.id === id ? { ...item, ...patch } : item));
+    }
+    const chart = [...samples].reverse();
+    const fmt = (value?: number, unit = "") => value === undefined ? "â€”" : `${value.toFixed(1)}${unit}`;
+    return <section className="bas-dashboard">
+        <header className="bas-header"><div><p className="bas-eyebrow">Ruby EMS / BAS</p><h1>{tab === "live" ? (language === "es" ? "Panel BAS en tiempo real" : "BAS Real-Time Dashboard") : labels.title}</h1><p>{labels.zone} Â· {basDevice?.name ?? "HVAC-COMM-44092"}</p></div>
+            <nav aria-label="BAS views"><button aria-current={tab === "overview" ? "page" : undefined} onClick={() => setTab("overview")}>{labels.overview}</button><button aria-current={tab === "live" ? "page" : undefined} onClick={() => setTab("live")}>{labels.live}</button></nav></header>
+        {error && <p className="bas-error" role="alert">{error}</p>}
+        {tab === "live" && <p className="bas-connection" role="status">{connected ? labels.connected : labels.connecting}</p>}
+        <div className="bas-cards"><article><span>{labels.temperature}</span><strong>{fmt(latest?.temperature, " Â°F")}</strong></article><article><span>{labels.humidity}</span><strong>{fmt(latest?.humidity, "%")}</strong></article><article><span>{labels.state}</span><strong>{latest?.state ?? "â€”"}</strong></article></div>
+        <p className="bas-timestamp">{latest ? `${labels.last}: ${new Date(latest.at).toLocaleString(language)}` : labels.waiting}</p>
+        <section className="bas-equipment-control">
+            <div className="bas-equipment-heading">
+                <div>
+                    <h2>Equipment control</h2>
+                    <p>Commands are sent to the telemetry-energy backend. The simulator consumes the same command API that future Modbus/BACnet adapters will use.</p>
+                </div>
+                <label className="bas-equipment-enable">
+                    <input type="checkbox" checked={equipmentEnabled}
+                        onChange={event => setEquipmentEnabled(event.target.checked)} />
+                    <span>{equipmentEnabled ? "Equipment enabled" : "Equipment disabled"}</span>
+                </label>
+            </div>
+            <div className="bas-equipment-grid">
+                <label>Control mode
+                    <select value={equipmentMode} onChange={event => setEquipmentMode(event.target.value as EquipmentMode)}>
+                        <option value="AUTO">Automatic</option>
+                        <option value="MANUAL">Manual</option>
+                    </select>
+                </label>
+                <label>Manual setpoint
+                    <input type="number" min="55" max="85" step="0.5" value={manualSetpointF}
+                        disabled={equipmentMode !== "MANUAL"}
+                        onChange={event => setManualSetpointF(Number(event.target.value))} />
+                </label>
+                <label>Manual command
+                    <select value={manualCommand} disabled={equipmentMode !== "MANUAL" || !equipmentEnabled}
+                        onChange={event => setManualCommand(event.target.value as EquipmentCommand)}>
+                        <option value="IDLE">Idle / Off</option>
+                        <option value="HEATING">Heat</option>
+                        <option value="COOLING">Cool</option>
+                    </select>
+                </label>
+                <div className="bas-equipment-effective">
+                    <span>Effective command</span>
+                    <strong>{effectiveState}</strong>
+                    <small>{effectiveTargetF === null ? "No active target" : `${effectiveTargetF.toFixed(1)} Â°F target`}</small>
+                    <small>{commandStatus}{lastCommand ? ` Â· ${new Date(lastCommand.requestedAt).toLocaleTimeString()}` : ""}</small>
+                </div>
+            </div>
+        </section>
+
+        <section className="bas-automation">
+            <div className="bas-automation-heading">
+                <div>
+                    <h2>{automationLabels.title}</h2>
+                    <p>{automationLabels.note}</p>
+                </div>
+                <label className="bas-automation-toggle">
+                    <input type="checkbox" checked={automationEnabled}
+                        onChange={event => setAutomationEnabled(event.target.checked)} />
+                    <span>{automationLabels.enabled}</span>
+                </label>
+            </div>
+
+            <div className="bas-automation-status">
+                <p><span>{automationLabels.current}</span><strong>{fmt(simulatedControlTemperature ?? undefined, " Â°F")}</strong></p>
+                <p><span>{automationLabels.target}</span><strong>{fmt(automation.targetF ?? undefined, " Â°F")}</strong></p>
+                <p><span>{automationLabels.state}</span><strong className={`bas-hvac-${automation.state.toLowerCase()}`}>
+                    {automation.state === "HEATING" ? automationLabels.heating : automation.state === "COOLING" ? automationLabels.cooling : automationLabels.idle}
+                </strong></p>
+                <p><span>{automationLabels.schedule}</span><strong>{automation.schedule?.name ?? automationLabels.noSchedule}</strong></p>
+            </div>
+
+            <div className="bas-automation-controls">
+                <label>{automationLabels.deadband}: <strong>{deadbandF.toFixed(1)} Â°F</strong>
+                    <input type="range" min="0.5" max="4" step="0.5" value={deadbandF}
+                        onChange={event => setDeadbandF(Number(event.target.value))} />
+                </label>
+                <label>{automationLabels.speed}: <strong>{simulationSpeed}Ã—</strong>
+                    <input type="range" min="1" max="20" step="1" value={simulationSpeed}
+                        onChange={event => setSimulationSpeed(Number(event.target.value))} />
+                </label>
+                <button type="button" onClick={() => setSimulationSpeed(20)}>{automationLabels.fast}</button>
+                <button type="button" onClick={() => setSimulatedControlTemperature(latest?.temperature ?? null)}>{automationLabels.reset}</button>
+            </div>
+
+            <div className="bas-schedule-table-wrap">
+                <table className="bas-schedule-table">
+                    <thead><tr>
+                        <th>{automationLabels.on}</th><th>{automationLabels.name}</th><th>{automationLabels.days}</th>
+                        <th>{automationLabels.start}</th><th>{automationLabels.end}</th><th>{automationLabels.targetTemp}</th>
+                    </tr></thead>
+                    <tbody>{temperatureSchedules.map(item => <tr key={item.id}>
+                        <td><input type="checkbox" checked={item.enabled} onChange={event => updateTemperatureSchedule(item.id, { enabled: event.target.checked })} /></td>
+                        <td><input value={item.name} onChange={event => updateTemperatureSchedule(item.id, { name: event.target.value })} /></td>
+                        <td><input value={item.days.join(",")} title="0=Sun, 1=Mon ... 6=Sat"
+                            onChange={event => updateTemperatureSchedule(item.id, { days: event.target.value.split(",").map(Number).filter(day => day >= 0 && day <= 6) })} /></td>
+                        <td><input type="time" value={item.startTime} onChange={event => updateTemperatureSchedule(item.id, { startTime: event.target.value })} /></td>
+                        <td><input type="time" value={item.endTime} onChange={event => updateTemperatureSchedule(item.id, { endTime: event.target.value })} /></td>
+                        <td><input type="number" min="55" max="85" step="0.5" value={item.targetF}
+                            onChange={event => updateTemperatureSchedule(item.id, { targetF: Number(event.target.value) })} /></td>
+                    </tr>)}</tbody>
+                </table>
+            </div>
+        </section>
+
+        <div className="bas-comfort">
+            <h2>{comfortLabels.suggested}</h2>
+            {suggested === null || apparent === null ? <p>{comfortLabels.waiting}</p> : <>
+                <div className="bas-comfort-values">
+                    <p><span>{comfortLabels.apparent}</span><strong>{fmt(apparent, " Â°F")}</strong></p>
+                    <p><span>{comfortLabels.suggested}</span><strong>{fmt(suggested, " Â°F")}</strong></p>
+                </div>
+                <label htmlFor="bas-target">{comfortLabels.chosen}: <strong>{fmt(planningTarget ?? undefined, " Â°F")}</strong></label>
+                <input id="bas-target" type="range" min="68" max="78" step="0.5"
+                    value={planningTarget ?? 72} onChange={event => setPlanningTarget(Number(event.target.value))} />
+                {targetOverride !== null && <button type="button" onClick={() => setPlanningTarget(null)}>{comfortLabels.reset}</button>}
+                <p className="bas-comfort-note">{comfortLabels.advisory}</p>
+            </>}
+        </div>
+        <div className="bas-history"><h2>{tab === "live" ? labels.recent : labels.history}</h2>
+            {chart.length > 1 && <div className="bas-trends"><Trend title={`${labels.temperature} (Â°F)`} values={chart.map(s => s.temperature)} color="#4e7cff"/><Trend title={`${labels.humidity} (%)`} values={chart.map(s => s.humidity)} color="#33b49b"/></div>}
+            <div className="bas-table-scroll"><table><thead><tr><th>{labels.observed}</th><th>{labels.temperature}</th><th>{labels.humidity}</th><th>{labels.hvac}</th></tr></thead><tbody>{samples.slice(0, tab === "live" ? 12 : 30).map(s => <tr key={s.at}><td>{new Date(s.at).toLocaleString(language)}</td><td>{fmt(s.temperature, " Â°F")}</td><td>{fmt(s.humidity, "%")}</td><td>{s.state ?? "â€”"}</td></tr>)}</tbody></table></div>
+        </div>
+    </section>;
+}
+
+function Trend({ title, values, color }: { title: string; values: (number | undefined)[]; color: string }) {
+    const points = values.map((value, index) => ({ value, index })).filter((point): point is { value: number; index: number } => point.value !== undefined);
+    if (points.length < 2) return null;
+    const min = Math.min(...points.map(p => p.value)) - 0.5;
+    const max = Math.max(...points.map(p => p.value)) + 0.5;
+    const path = points.map(p => `${p.index / Math.max(1, values.length - 1) * 100},${95 - (p.value - min) / (max - min) * 90}`).join(" ");
+    return <div className="bas-trend"><h3>{title}</h3><svg viewBox="0 0 100 100" preserveAspectRatio="none" role="img" aria-label={`${title} trend`}><polyline points={path} fill="none" stroke={color} strokeWidth="2" vectorEffect="non-scaling-stroke"/></svg></div>;
+}
+
+
+
+
+
+

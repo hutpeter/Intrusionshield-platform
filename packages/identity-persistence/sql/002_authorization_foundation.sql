@@ -1,0 +1,200 @@
+/*
+    Ruby Authorization Foundation
+    Migration: 002_authorization_foundation.sql
+
+    Defines platform and tenant authorization structures.
+    Does not grant permissions or assign administrator roles.
+    SQL Server.
+*/
+
+SET ANSI_NULLS ON;
+SET QUOTED_IDENTIFIER ON;
+SET ANSI_PADDING ON;
+SET ANSI_WARNINGS ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET ARITHABORT ON;
+SET NUMERIC_ROUNDABORT OFF;
+SET XACT_ABORT ON;
+GO
+
+BEGIN TRY
+    BEGIN TRANSACTION;
+
+IF OBJECT_ID(N'Identity.Permissions', N'U') IS NULL
+BEGIN
+    CREATE TABLE [Identity].[Permissions]
+    (
+        Id uniqueidentifier NOT NULL
+            CONSTRAINT DF_IdentityPermissions_Id DEFAULT NEWID(),
+        Name nvarchar(200) NOT NULL,
+        Resource nvarchar(150) NOT NULL,
+        Action nvarchar(100) NOT NULL,
+        Scope nvarchar(20) NOT NULL,
+
+        CONSTRAINT PK_IdentityPermissions PRIMARY KEY (Id),
+        CONSTRAINT UQ_IdentityPermissions_ResourceActionScope
+            UNIQUE (Resource, Action, Scope),
+        CONSTRAINT UQ_IdentityPermissions_IdScope
+            UNIQUE (Id, Scope),
+        CONSTRAINT CK_IdentityPermissions_Scope
+            CHECK (Scope IN (N'PLATFORM', N'TENANT'))
+    );
+END;
+
+IF OBJECT_ID(N'Identity.Roles', N'U') IS NULL
+BEGIN
+    CREATE TABLE [Identity].[Roles]
+    (
+        Id uniqueidentifier NOT NULL
+            CONSTRAINT DF_IdentityRoles_Id DEFAULT NEWID(),
+        TenantId uniqueidentifier NULL,
+        Name nvarchar(200) NOT NULL,
+        Scope nvarchar(20) NOT NULL,
+        CreatedAt datetime2(7) NOT NULL
+            CONSTRAINT DF_IdentityRoles_CreatedAt DEFAULT SYSUTCDATETIME(),
+
+        CONSTRAINT PK_IdentityRoles PRIMARY KEY (Id),
+        CONSTRAINT UQ_IdentityRoles_IdScope UNIQUE (Id, Scope),
+        CONSTRAINT UQ_IdentityRoles_IdTenant UNIQUE (Id, TenantId),
+        CONSTRAINT CK_IdentityRoles_Scope
+            CHECK (
+                (Scope = N'PLATFORM' AND TenantId IS NULL)
+                OR
+                (Scope = N'TENANT' AND TenantId IS NOT NULL)
+            )
+    );
+
+    CREATE UNIQUE INDEX UX_IdentityRoles_PlatformName
+        ON [Identity].[Roles] (Name)
+        WHERE TenantId IS NULL;
+
+    CREATE UNIQUE INDEX UX_IdentityRoles_TenantName
+        ON [Identity].[Roles] (TenantId, Name)
+        WHERE Scope = N'TENANT';
+END;
+
+IF OBJECT_ID(N'Identity.RolePermissions', N'U') IS NULL
+BEGIN
+    CREATE TABLE [Identity].[RolePermissions]
+    (
+        RoleId uniqueidentifier NOT NULL,
+        PermissionId uniqueidentifier NOT NULL,
+        Scope nvarchar(20) NOT NULL,
+
+        CONSTRAINT PK_IdentityRolePermissions
+            PRIMARY KEY (RoleId, PermissionId),
+
+        CONSTRAINT FK_IdentityRolePermissions_Role
+            FOREIGN KEY (RoleId, Scope)
+            REFERENCES [Identity].[Roles] (Id, Scope),
+
+        CONSTRAINT FK_IdentityRolePermissions_Permission
+            FOREIGN KEY (PermissionId, Scope)
+            REFERENCES [Identity].[Permissions] (Id, Scope)
+    );
+END;
+
+IF OBJECT_ID(N'Identity.IdentityRoles', N'U') IS NULL
+BEGIN
+    CREATE TABLE [Identity].[IdentityRoles]
+    (
+        TenantId uniqueidentifier NOT NULL,
+        IdentityId uniqueidentifier NOT NULL,
+        RoleId uniqueidentifier NOT NULL,
+        Scope nvarchar(20) NOT NULL
+            CONSTRAINT DF_IdentityIdentityRoles_Scope DEFAULT N'TENANT',
+        AssignedAt datetime2(7) NOT NULL
+            CONSTRAINT DF_IdentityIdentityRoles_AssignedAt
+            DEFAULT SYSUTCDATETIME(),
+
+        CONSTRAINT PK_IdentityIdentityRoles
+            PRIMARY KEY (TenantId, IdentityId, RoleId),
+
+        CONSTRAINT CK_IdentityIdentityRoles_Scope
+            CHECK (Scope = N'TENANT'),
+
+        CONSTRAINT FK_IdentityIdentityRoles_Identity
+            FOREIGN KEY (TenantId, IdentityId)
+            REFERENCES [Identity].[Identities] (TenantId, Id),
+
+        CONSTRAINT FK_IdentityIdentityRoles_TenantRole
+            FOREIGN KEY (RoleId, TenantId)
+            REFERENCES [Identity].[Roles] (Id, TenantId),
+
+        CONSTRAINT FK_IdentityIdentityRoles_RoleScope
+            FOREIGN KEY (RoleId, Scope)
+            REFERENCES [Identity].[Roles] (Id, Scope)
+    );
+END;
+
+/*
+    Platform assignments are separate from tenant role assignments.
+    They must be provisioned only through a privileged administrative
+    workflow, never through ordinary tenant administration.
+*/
+
+IF OBJECT_ID(N'Identity.PlatformRoleAssignments', N'U') IS NULL
+BEGIN
+    CREATE TABLE [Identity].[PlatformRoleAssignments]
+    (
+        TenantId uniqueidentifier NOT NULL,
+        IdentityId uniqueidentifier NOT NULL,
+        RoleId uniqueidentifier NOT NULL,
+        Scope nvarchar(20) NOT NULL
+            CONSTRAINT DF_IdentityPlatformRoleAssignments_Scope
+            DEFAULT N'PLATFORM',
+        AssignedAt datetime2(7) NOT NULL
+            CONSTRAINT DF_IdentityPlatformRoleAssignments_AssignedAt
+            DEFAULT SYSUTCDATETIME(),
+
+        CONSTRAINT PK_IdentityPlatformRoleAssignments
+            PRIMARY KEY (TenantId, IdentityId, RoleId),
+
+        CONSTRAINT CK_IdentityPlatformRoleAssignments_Scope
+            CHECK (Scope = N'PLATFORM'),
+
+        CONSTRAINT FK_IdentityPlatformRoleAssignments_Identity
+            FOREIGN KEY (TenantId, IdentityId)
+            REFERENCES [Identity].[Identities] (TenantId, Id),
+
+        CONSTRAINT FK_IdentityPlatformRoleAssignments_Role
+            FOREIGN KEY (RoleId, Scope)
+            REFERENCES [Identity].[Roles] (Id, Scope)
+    );
+END;
+
+IF OBJECT_ID(N'Identity.AuthorizationAudit', N'U') IS NULL
+BEGIN
+    CREATE TABLE [Identity].[AuthorizationAudit]
+    (
+        Id bigint IDENTITY(1,1) NOT NULL
+            CONSTRAINT PK_IdentityAuthorizationAudit PRIMARY KEY,
+        OccurredAt datetime2(7) NOT NULL
+            CONSTRAINT DF_IdentityAuthorizationAudit_OccurredAt
+            DEFAULT SYSUTCDATETIME(),
+        TenantId uniqueidentifier NULL,
+        IdentityId uniqueidentifier NULL,
+        Resource nvarchar(150) NOT NULL,
+        Action nvarchar(100) NOT NULL,
+        Allowed bit NOT NULL,
+        Reason nvarchar(500) NULL,
+        CorrelationId nvarchar(100) NULL
+    );
+
+    CREATE INDEX IX_IdentityAuthorizationAudit_OccurredAt
+        ON [Identity].[AuthorizationAudit] (OccurredAt);
+
+    CREATE INDEX IX_IdentityAuthorizationAudit_Identity
+        ON [Identity].[AuthorizationAudit]
+        (TenantId, IdentityId, OccurredAt);
+END;
+
+    COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0
+        ROLLBACK TRANSACTION;
+
+    THROW;
+END CATCH;
+GO

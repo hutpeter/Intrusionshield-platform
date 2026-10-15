@@ -1,0 +1,450 @@
+import express, {
+    type Express,
+    type Response
+} from "express";
+
+import type {
+    IDatabaseProvider
+} from "@intrusionshield/database";
+
+import type {
+    AssetStatus,
+    DeviceStatus,
+    MeasurementDataType,
+    TelemetryQuality
+} from "@intrusionshield/telemetry";
+
+import type {
+    EnergyFlowDirection
+} from "@intrusionshield/energy";
+
+import type {
+    AlarmOperator,
+    AlarmSeverity
+} from "@intrusionshield/energy";
+
+import {
+    SqlAlarmRuleRepository
+} from "./infrastructure/repositories/AlarmRuleRepository.js";
+
+import {
+    SqlAlarmEventRepository
+} from "./infrastructure/repositories/AlarmEventRepository.js";
+
+import {
+    SqlPerformanceMetricRepository
+} from "./infrastructure/repositories/PerformanceMetricRepository.js";
+
+import {
+    AlarmEvaluator
+} from "./application/AlarmEvaluator.js";
+
+import {
+    PerformanceEngine
+} from "./application/PerformanceEngine.js";
+
+import {
+    SiteEventStream
+} from "./application/SiteEventStream.js";
+
+
+import {
+    SqlAssetRepository
+} from "./infrastructure/repositories/AssetRepository.js";
+
+import {
+    SqlDeviceRepository
+} from "./infrastructure/repositories/DeviceRepository.js";
+
+import {
+    SqlMeasurementDefinitionRepository
+} from "./infrastructure/repositories/MeasurementDefinitionRepository.js";
+
+import {
+    SqlSiteRepository
+} from "./infrastructure/repositories/SiteRepository.js";
+
+import {
+    SqlTelemetryRepository
+} from "./infrastructure/repositories/TelemetryRepository.js";
+
+import {
+    SqlEnergyFlowRepository
+} from "./infrastructure/repositories/EnergyFlowRepository.js";
+
+import {
+    requireTenantId,
+    tenantContext,
+    type TenantRequest
+} from "./middleware/tenantContext.js";
+
+export function createApp(
+    database: IDatabaseProvider
+): Express {
+    const app = express();
+
+    const sites =
+        new SqlSiteRepository(database);
+
+    const assets =
+        new SqlAssetRepository(database);
+
+    const devices =
+        new SqlDeviceRepository(database);
+
+    const measurementDefinitions =
+        new SqlMeasurementDefinitionRepository(
+            database
+        );
+
+    const readings =
+        new SqlTelemetryRepository(database);
+
+    const energyFlows =
+        new SqlEnergyFlowRepository(database);
+
+    const alarmRules =
+        new SqlAlarmRuleRepository(database);
+
+    const alarmEvents =
+        new SqlAlarmEventRepository(database);
+
+    const performanceMetrics =
+        new SqlPerformanceMetricRepository(database);
+
+    const performanceEngine =
+        new PerformanceEngine(
+            database,
+            performanceMetrics
+        );
+
+    const alarmEvaluator =
+        new AlarmEvaluator(
+            alarmRules,
+            alarmEvents
+        );
+
+    const liveStream =
+        new SiteEventStream();
+
+    app.use(
+        express.json({
+            limit: "1mb"
+        })
+    );
+
+    app.get(
+        "/health",
+        (_request, response) => {
+            response.json({
+                service:
+                    "EIS Telemetry & Energy",
+                status: "ok"
+            });
+        }
+    );
+
+    app.use(
+        "/api/v1/telemetry",
+        tenantContext
+    );
+
+    app.use(
+        "/api/v1/energy",
+        tenantContext
+    );
+
+    app.get(
+        "/api/v1/telemetry/sites/:siteId/stream",
+        (
+            request: TenantRequest,
+            response: Response
+        ) => {
+            const tenantId =
+                requireTenantId(request);
+            const siteId = String(
+                request.params.siteId ?? ""
+            );
+
+            if (!siteId) {
+                sendBadRequest(
+                    response,
+                    new Error("siteId is required.")
+                );
+                return;
+            }
+
+            liveStream.connect({
+                tenantId,
+                siteId,
+                request,
+                response
+            });
+        }
+    );
+
+    app.post(
+        "/api/v1/telemetry/sites",
+        async (
+            request: TenantRequest,
+            response: Response
+        ) => {
+            try {
+                const body = getBody(request);
+
+                const site =
+                    await sites.create({
+                        tenantId:
+                            requireTenantId(
+                                request
+                            ),
+                        code:
+                            getRequiredString(
+                                body,
+                                "code"
+                            ),
+                        name:
+                            getRequiredString(
+                                body,
+                                "name"
+                            ),
+                        description:
+                            getOptionalString(
+                                body,
+                                "description"
+                            ),
+                        timezone:
+                            getRequiredString(
+                                body,
+                                "timezone"
+                            ),
+                        latitude:
+                            getOptionalNumber(
+                                body,
+                                "latitude"
+                            ),
+                        longitude:
+                            getOptionalNumber(
+                                body,
+                                "longitude"
+                            ),
+                        status:
+                            body.status ===
+                            "INACTIVE"
+                                ? "INACTIVE"
+                                : "ACTIVE"
+                    });
+
+                response
+                    .status(201)
+                    .json(site);
+            } catch (error) {
+                sendBadRequest(
+                    response,
+                    error
+                );
+            }
+        }
+    );
+
+    app.get(
+        "/api/v1/telemetry/sites",
+        async (
+            request: TenantRequest,
+            response: Response
+        ) => {
+            response.json(
+                await sites.findAll(
+                    requireTenantId(request)
+                )
+            );
+        }
+    );
+
+    app.get(
+        "/api/v1/telemetry/sites/:id",
+        async (
+            request: TenantRequest,
+            response: Response
+        ) => {
+            const site =
+                await sites.findById(
+                    String(
+                        request.params.id ?? ""
+                    ),
+                    requireTenantId(request)
+                );
+
+            if (!site) {
+                sendNotFound(
+                    response,
+                    "Site"
+                );
+                return;
+            }
+
+            response.json(site);
+        }
+    );
+
+    app.post(
+        "/api/v1/telemetry/assets",
+        async (
+            request: TenantRequest,
+            response: Response
+        ) => {
+            try {
+                const body = getBody(request);
+
+                const asset =
+                    await assets.create({
+                        tenantId:
+                            requireTenantId(
+                                request
+                            ),
+                        siteId:
+                            getRequiredString(
+                                body,
+                                "siteId"
+                            ),
+                        parentAssetId:
+                            getOptionalString(
+                                body,
+                                "parentAssetId"
+                            ),
+                        code:
+                            getRequiredString(
+                                body,
+                                "code"
+                            ),
+                        name:
+                            getRequiredString(
+                                body,
+                                "name"
+                            ),
+                        assetType:
+                            getRequiredString(
+                                body,
+                                "assetType"
+                            ),
+                        manufacturer:
+                            getOptionalString(
+                                body,
+                                "manufacturer"
+                            ),
+                        model:
+                            getOptionalString(
+                                body,
+                                "model"
+                            ),
+                        serialNumber:
+                            getOptionalString(
+                                body,
+                                "serialNumber"
+                            ),
+                        status:
+                            parseAssetStatus(
+                                body.status
+                            )
+                    });
+
+                response
+                    .status(201)
+                    .json(asset);
+            } catch (error) {
+                sendBadRequest(
+                    response,
+                    error
+                );
+            }
+        }
+    );
+
+    app.get(
+        "/api/v1/telemetry/assets/:id",
+        async (
+            request: TenantRequest,
+            response: Response
+        ) => {
+            const asset =
+                await assets.findById(
+                    String(
+                        request.params.id ?? ""
+                    ),
+                    requireTenantId(request)
+                );
+
+            if (!asset) {
+                sendNotFound(
+                    response,
+                    "Asset"
+                );
+                return;
+            }
+
+            response.json(asset);
+        }
+    );
+
+    app.get(
+        "/api/v1/telemetry/sites/:siteId/assets",
+        async (
+            request: TenantRequest,
+            response: Response
+        ) => {
+            response.json(
+                await assets.findBySite(
+                    String(
+                        request.params.siteId ??
+                        ""
+                    ),
+                    requireTenantId(request)
+                )
+            );
+        }
+    );
+
+    app.post(
+        "/api/v1/telemetry/devices",
+        async (
+            request: TenantRequest,
+            response: Response
+        ) => {
+            try {
+                const body = getBody(request);
+
+                const device =
+                    await devices.create({
+                        tenantId:
+                            requireTenantId(
+                                request
+                            ),
+                        siteId:
+                            getRequiredString(
+                                body,
+                                "siteId"
+                            ),
+                        assetId:
+                            getOptionalString(
+                                body,
+                                "assetId"
+                            ),
+                        code:
+                            getRequiredString(
+                                body,
+                                "code"
+                            ),
+                        name:
+                            getRequiredString(
+                                body,
+                                "name"
+                            ),
+                        deviceType:
+                            getRequiredString(
+                                body,
+                                "deviceType"
+                            ),
+                        manufacturer:
+                            getOptionalString(
+                                body,
+                                "manufacturer"
