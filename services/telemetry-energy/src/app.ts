@@ -387,6 +387,14 @@ export function createApp(
             );
         }
     );
+    app.get(
+        "/api/v1/telemetry/devices",
+        async (request: TenantRequest, response: Response) => {
+            response.json(
+                await devices.findAll(requireTenantId(request))
+            );
+        }
+    );
     app.post(
         "/api/v1/telemetry/devices",
         async (
