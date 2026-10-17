@@ -43,9 +43,12 @@
     "TELEMETRY_ISOLATED": {
       "migrationRoot": "database-isolation/sql/telemetry",
       "orderedMigrations": [
-        "001_telemetry_foundation.sql"
+        "001_telemetry_foundation.sql",
+        "002_telemetry_reading_source.sql",
+        "003_telemetry_asset_hierarchy.sql",
+        "004_telemetry_storage_policies.sql"
       ],
-      "note": "FOUNDATION ONLY, plan-only. Remaining telemetry migrations not yet split. Never apply as a complete schema."
+      "note": "Telemetry-owned foundation, reading source, asset hierarchy and storage policies. PLAN ONLY; deployment and data migration not approved."
     },
     "BAS_EMS_ISOLATED": {
       "migrationRoot": "database-isolation/sql/bas-ems",
