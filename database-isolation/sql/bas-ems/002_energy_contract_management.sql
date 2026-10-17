@@ -11,8 +11,9 @@ BEGIN
   created_at datetime2 NOT NULL, updated_at datetime2 NOT NULL, version int NOT NULL,
   CONSTRAINT PK_Energy_Contracts PRIMARY KEY(id), CONSTRAINT UQ_Energy_Contracts_Tenant_Number UNIQUE(tenant_id,contract_number),
   CONSTRAINT CK_Energy_Contracts_Status CHECK(status IN('DRAFT','ACTIVE','EXPIRING','EXPIRED','TERMINATED')),
-  CONSTRAINT CK_Energy_Contracts_Dates CHECK(end_date>=start_date), CONSTRAINT CK_Energy_Contracts_Version CHECK(version>0)
-  /* Cross-database FK_Energy_Contracts_Site: validate tenant/site ownership in application services. */);
+  CONSTRAINT CK_Energy_Contracts_Dates CHECK(end_date>=start_date), CONSTRAINT CK_Energy_Contracts_Version CHECK(version>0),
+  /* External Telemetry reference: service must validate tenant and site ownership. */
+ );
  CREATE INDEX IX_Energy_Contracts_Tenant_Status_EndDate ON Energy.Contracts(tenant_id,status,end_date);
 END;
 GO
@@ -21,9 +22,10 @@ BEGIN
  CREATE TABLE Energy.ContractCoverage(
   id uniqueidentifier NOT NULL, tenant_id uniqueidentifier NOT NULL, contract_id uniqueidentifier NOT NULL,
   site_id uniqueidentifier NULL, asset_id uniqueidentifier NULL, created_at datetime2 NOT NULL,
-  CONSTRAINT PK_Energy_ContractCoverage PRIMARY KEY(id)
-  /* Cross-database FK_Energy_ContractCoverage_Contract: validate tenant/site ownership in application services. */
-        /* Cross-database FK_Energy_ContractCoverage_Asset: validate tenant/site ownership in application services. */
+  CONSTRAINT PK_Energy_ContractCoverage PRIMARY KEY(id),
+  CONSTRAINT FK_Energy_ContractCoverage_Contract FOREIGN KEY(contract_id) REFERENCES Energy.Contracts(id),
+  /* External Telemetry reference: service must validate tenant and site ownership. */,
+  /* External Telemetry reference: service must validate tenant and site ownership. */,
   CONSTRAINT CK_Energy_ContractCoverage_Target CHECK(site_id IS NOT NULL OR asset_id IS NOT NULL)
  );
  CREATE INDEX IX_Energy_ContractCoverage_Tenant_Contract ON Energy.ContractCoverage(tenant_id,contract_id);
@@ -36,8 +38,9 @@ BEGIN
   asset_id uniqueidentifier NULL, activity nvarchar(500) NOT NULL, frequency nvarchar(100) NULL, next_due_date datetime2 NULL,
   responsible_party nvarchar(250) NULL, sla nvarchar(500) NULL, status nvarchar(20) NOT NULL,
   last_completed_at datetime2 NULL, notes nvarchar(max) NULL, created_at datetime2 NOT NULL, updated_at datetime2 NOT NULL, version int NOT NULL,
-  CONSTRAINT PK_Energy_ContractMaintenance PRIMARY KEY(id)
-  /* Cross-database FK_Energy_ContractMaintenance_Contract: validate tenant/site ownership in application services. */
+  CONSTRAINT PK_Energy_ContractMaintenance PRIMARY KEY(id),
+  CONSTRAINT FK_Energy_ContractMaintenance_Contract FOREIGN KEY(contract_id) REFERENCES Energy.Contracts(id),
+  /* External Telemetry reference: service must validate tenant and site ownership. */,
   CONSTRAINT CK_Energy_ContractMaintenance_Status CHECK(status IN('UPCOMING','DUE','OVERDUE','COMPLETED')),
   CONSTRAINT CK_Energy_ContractMaintenance_Version CHECK(version>0)
  );
