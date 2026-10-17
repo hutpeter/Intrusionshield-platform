@@ -1,3 +1,4 @@
+-- Cross-database Telemetry site/asset identifiers require tenant-aware service validation.
 IF SCHEMA_ID(N'Energy') IS NULL EXEC(N'CREATE SCHEMA Energy');
 GO
 IF OBJECT_ID(N'Energy.Contracts',N'U') IS NULL
@@ -11,8 +12,7 @@ BEGIN
   created_at datetime2 NOT NULL, updated_at datetime2 NOT NULL, version int NOT NULL,
   CONSTRAINT PK_Energy_Contracts PRIMARY KEY(id), CONSTRAINT UQ_Energy_Contracts_Tenant_Number UNIQUE(tenant_id,contract_number),
   CONSTRAINT CK_Energy_Contracts_Status CHECK(status IN('DRAFT','ACTIVE','EXPIRING','EXPIRED','TERMINATED')),
-  CONSTRAINT CK_Energy_Contracts_Dates CHECK(end_date>=start_date), CONSTRAINT CK_Energy_Contracts_Version CHECK(version>0),
-  /* External Telemetry reference: service must validate tenant and site ownership. */
+  CONSTRAINT CK_Energy_Contracts_Dates CHECK(end_date>=start_date), CONSTRAINT CK_Energy_Contracts_Version CHECK(version>0)
  );
  CREATE INDEX IX_Energy_Contracts_Tenant_Status_EndDate ON Energy.Contracts(tenant_id,status,end_date);
 END;
@@ -24,8 +24,6 @@ BEGIN
   site_id uniqueidentifier NULL, asset_id uniqueidentifier NULL, created_at datetime2 NOT NULL,
   CONSTRAINT PK_Energy_ContractCoverage PRIMARY KEY(id),
   CONSTRAINT FK_Energy_ContractCoverage_Contract FOREIGN KEY(contract_id) REFERENCES Energy.Contracts(id),
-  /* External Telemetry reference: service must validate tenant and site ownership. */,
-  /* External Telemetry reference: service must validate tenant and site ownership. */,
   CONSTRAINT CK_Energy_ContractCoverage_Target CHECK(site_id IS NOT NULL OR asset_id IS NOT NULL)
  );
  CREATE INDEX IX_Energy_ContractCoverage_Tenant_Contract ON Energy.ContractCoverage(tenant_id,contract_id);
@@ -40,7 +38,6 @@ BEGIN
   last_completed_at datetime2 NULL, notes nvarchar(max) NULL, created_at datetime2 NOT NULL, updated_at datetime2 NOT NULL, version int NOT NULL,
   CONSTRAINT PK_Energy_ContractMaintenance PRIMARY KEY(id),
   CONSTRAINT FK_Energy_ContractMaintenance_Contract FOREIGN KEY(contract_id) REFERENCES Energy.Contracts(id),
-  /* External Telemetry reference: service must validate tenant and site ownership. */,
   CONSTRAINT CK_Energy_ContractMaintenance_Status CHECK(status IN('UPCOMING','DUE','OVERDUE','COMPLETED')),
   CONSTRAINT CK_Energy_ContractMaintenance_Version CHECK(version>0)
  );
