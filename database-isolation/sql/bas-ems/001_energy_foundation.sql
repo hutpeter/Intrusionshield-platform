@@ -31,11 +31,11 @@ BEGIN TRY
             CONSTRAINT PK_Energy_Flows
                 PRIMARY KEY (id),
 
-            /* External Telemetry reference validated by service boundary: FK_Energy_Flows_Site */
+            /* External Telemetry reference validated at service boundary: FK_Energy_Flows_Site */
 
-            /* External Telemetry reference validated by service boundary: FK_Energy_Flows_SourceAsset */
+            /* External Telemetry reference validated at service boundary: FK_Energy_Flows_SourceAsset */
 
-            /* External Telemetry reference validated by service boundary: FK_Energy_Flows_DestinationAsset */
+            /* External Telemetry reference validated at service boundary: FK_Energy_Flows_DestinationAsset */
 
             CONSTRAINT CK_Energy_Flows_Direction
                 CHECK (direction IN (
@@ -95,7 +95,7 @@ BEGIN TRY
             CONSTRAINT UQ_Energy_AlarmRules_Tenant_Id
                 UNIQUE (tenant_id, id),
 
-            /* External Telemetry reference validated by service boundary: FK_Energy_AlarmRules_Site */
+            /* External Telemetry reference validated at service boundary: FK_Energy_AlarmRules_Site */
 
             CONSTRAINT CK_Energy_AlarmRules_Operator
                 CHECK (operator IN (
@@ -155,18 +155,91 @@ BEGIN TRY
             CONSTRAINT PK_Energy_AlarmEvents
                 PRIMARY KEY (id),
 
-            /* External Telemetry reference validated by service boundary: FK_Energy_AlarmEvents_Site */
+            /* External Telemetry reference validated at service boundary: FK_Energy_AlarmEvents_Site */
 
-            /* External Telemetry reference validated by service boundary: FK_Energy_AlarmEvents_Asset */
+            /* External Telemetry reference validated at service boundary: FK_Energy_AlarmEvents_Asset */
 
             /*
              * Device is also constrained to the event's site.
              */
-            /* External Telemetry reference validated by service boundary: FK_Energy_AlarmEvents_Device */
+            /* External Telemetry reference validated at service boundary: FK_Energy_AlarmEvents_Device */
 
-            /* External Telemetry reference validated by service boundary: FK_Energy_AlarmEvents_Rule */
+            CONSTRAINT FK_Energy_AlarmEvents_Rule
+                FOREIGN KEY (
+                    tenant_id,
+                    rule_id
+                )
+                REFERENCES Energy.AlarmRules (
+                    tenant_id,
+                    id
+                ),
 
-            /* External Telemetry reference validated by service boundary: FK_Energy_PerformanceMetrics_Asset */
+            CONSTRAINT CK_Energy_AlarmEvents_Severity
+                CHECK (severity IN (
+                    N'INFO',
+                    N'WARNING',
+                    N'CRITICAL'
+                )),
+
+            CONSTRAINT CK_Energy_AlarmEvents_State
+                CHECK (state IN (
+                    N'OPEN',
+                    N'ACKNOWLEDGED',
+                    N'RESOLVED'
+                )),
+
+            CONSTRAINT CK_Energy_AlarmEvents_Timestamps
+                CHECK (
+                    (
+                        acknowledged_at IS NULL OR
+                        acknowledged_at >= occurred_at
+                    )
+                    AND
+                    (
+                        resolved_at IS NULL OR
+                        resolved_at >= occurred_at
+                    )
+                )
+        );
+
+        CREATE INDEX IX_Energy_AlarmEvents_Tenant_Site_State_Occurred
+            ON Energy.AlarmEvents (
+                tenant_id,
+                site_id,
+                state,
+                occurred_at DESC
+            );
+    END;
+
+    /* ============================================================
+       Energy.PerformanceMetrics
+       ============================================================ */
+
+    IF OBJECT_ID(N'Energy.PerformanceMetrics', N'U') IS NULL
+    BEGIN
+        CREATE TABLE Energy.PerformanceMetrics
+        (
+            id UNIQUEIDENTIFIER NOT NULL,
+            tenant_id UNIQUEIDENTIFIER NOT NULL,
+            site_id UNIQUEIDENTIFIER NOT NULL,
+            asset_id UNIQUEIDENTIFIER NULL,
+
+            metric_code NVARCHAR(200) NOT NULL,
+            metric_value DECIMAL(28, 10) NOT NULL,
+            unit NVARCHAR(50) NULL,
+
+            period_start DATETIME2(7) NOT NULL,
+            period_end DATETIME2(7) NOT NULL,
+
+            calculated_at DATETIME2(7) NOT NULL,
+            created_at DATETIME2(7) NOT NULL,
+
+            CONSTRAINT PK_Energy_PerformanceMetrics
+                PRIMARY KEY (id),
+
+            /* External Telemetry reference validated at service boundary: FK_Energy_PerformanceMetrics_Site */
+
+            /* External Telemetry reference validated at service boundary: FK_Energy_PerformanceMetrics_Asset */
 
             CONSTRAINT CK_Energy_PerformanceMetrics_Period
                 CHECK (period_end >= period_start)
