@@ -39,12 +39,27 @@
         "012_telemetry_storage_policies.sql"
       ],
       "note": "Combined BAS/EMS + telemetry database only. Do not apply to independently separated telemetry DB."
+    },
+    "TELEMETRY_ISOLATED": {
+      "migrationRoot": "database-isolation/sql/telemetry",
+      "orderedMigrations": [
+        "001_telemetry_foundation.sql"
+      ],
+      "note": "FOUNDATION ONLY, plan-only. Remaining telemetry migrations not yet split. Never apply as a complete schema."
+    },
+    "BAS_EMS_ISOLATED": {
+      "migrationRoot": "database-isolation/sql/bas-ems",
+      "orderedMigrations": [
+        "001_energy_foundation.sql"
+      ],
+      "note": "FOUNDATION ONLY, plan-only. External Telemetry foreign keys removed; service validation and other Energy migrations remain outstanding."
     }
   },
   "warnings": [
     "No migrations are executed by this manifest.",
     "Never run existing schema migrations against a populated target without backup and review.",
     "Telemetry.Readings and Telemetry.StoragePolicies depend on Telemetry.Devices/Sites/MeasurementDefinitions; BAS equipment commands and Energy contracts depend on Telemetry tables.",
-    "Regional configuration needs explicit product/platform ownership before relocation."
+    "Regional configuration needs explicit product/platform ownership before relocation.",
+    "TELEMETRY_ISOLATED and BAS_EMS_ISOLATED are incomplete review-only foundation plans. No isolated apply is permitted."
   ]
 }
