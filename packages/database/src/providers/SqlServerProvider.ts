@@ -29,7 +29,7 @@ export class SqlServerProvider implements IDatabaseProvider {
             return;
         }
 
-        this.pool = await sql.connect({
+        const pool = new sql.ConnectionPool({
             server: this.options.server,
             port: this.options.port,
             database: this.options.database,
@@ -41,6 +41,8 @@ export class SqlServerProvider implements IDatabaseProvider {
                     this.options.trustServerCertificate
             }
         });
+        await pool.connect();
+        this.pool = pool;
     }
 
     /** Closes the SQL Server connection. */
