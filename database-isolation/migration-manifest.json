@@ -53,9 +53,16 @@
     "BAS_EMS_ISOLATED": {
       "migrationRoot": "database-isolation/sql/bas-ems",
       "orderedMigrations": [
-        "001_energy_foundation.sql"
+        "001_energy_foundation.sql",
+        "002_energy_contract_management.sql",
+        "004_energy_flow_source.sql",
+        "005_energy_alerts_performance.sql",
+        "006_performance_metric_source.sql",
+        "007_trade_resources.sql",
+        "010_bas_equipment_commands.sql",
+        "011_bas_equipment_command_verification.sql"
       ],
-      "note": "FOUNDATION ONLY, plan-only. External Telemetry foreign keys removed; service validation and other Energy migrations remain outstanding."
+      "note": "REVIEW ONLY: Energy-owned migrations excluding mixed regional configuration (008/009); cross-database reference validation and complete schema testing remain outstanding. Do not apply."
     }
   },
   "warnings": [
