@@ -251,6 +251,34 @@ export class SqlDeviceRepository {
             : null;
     }
 
+    public async findAll(tenantId: string): Promise<readonly Device[]> {
+        const result = await this.database.query<DeviceRow>(
+            `SELECT
+                 id,
+                 tenant_id AS tenantId,
+                 site_id AS siteId,
+                 asset_id AS assetId,
+                 code,
+                 name,
+                 device_type AS deviceType,
+                 manufacturer,
+                 model,
+                 serial_number AS serialNumber,
+                 protocol,
+                 external_identifier AS externalDeviceId,
+                 status,
+                 last_seen_at AS lastSeenAt,
+                 created_at AS createdAt,
+                 updated_at AS updatedAt,
+                 version
+             FROM Telemetry.Devices
+             WHERE tenant_id = @tenantId
+             ORDER BY name, code`,
+            [{ name: "tenantId", value: tenantId }]
+        );
+        return result.rows.map(mapDevice);
+    }
+
     public async findBySite(
         siteId: string,
         tenantId: string
