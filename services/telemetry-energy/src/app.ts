@@ -80,7 +80,8 @@ import {
     type TenantRequest
 } from "./middleware/tenantContext.js";
 export function createApp(
-    database: IDatabaseProvider
+    database: IDatabaseProvider,
+    energyDatabase: IDatabaseProvider = database
 ): Express {
     const app = express();
     const sites =
@@ -96,16 +97,16 @@ export function createApp(
     const readings =
         new SqlTelemetryRepository(database);
     const energyFlows =
-        new SqlEnergyFlowRepository(database);
+        new SqlEnergyFlowRepository(energyDatabase);
     const alarmRules =
-        new SqlAlarmRuleRepository(database);
+        new SqlAlarmRuleRepository(energyDatabase);
     const alarmEvents =
-        new SqlAlarmEventRepository(database);
+        new SqlAlarmEventRepository(energyDatabase);
     const performanceMetrics =
-        new SqlPerformanceMetricRepository(database);
+        new SqlPerformanceMetricRepository(energyDatabase);
     const performanceEngine =
         new PerformanceEngine(
-            database,
+            energyDatabase,
             performanceMetrics
         );
     const alarmEvaluator =
@@ -116,12 +117,12 @@ export function createApp(
     const liveStream =
         new SiteEventStream();
     const energyContracts =
-        new SqlEnergyContractRepository(database);
+        new SqlEnergyContractRepository(energyDatabase);
 
     const tradeResources =
-        new SqlTradeResourceRepository(database);
+        new SqlTradeResourceRepository(energyDatabase);
     const basCommands =
-        new SqlBasEquipmentCommandRepository(database);
+        new SqlBasEquipmentCommandRepository(energyDatabase);
     const storagePolicies =
         new SqlTelemetryStoragePolicyRepository(database);
     app.use(
