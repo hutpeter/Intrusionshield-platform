@@ -45,9 +45,9 @@ export async function loadPlan(role, root = repoRoot) {
 
 function parseArgs(args) {
   const flags = new Set(args);
-  if (args.some(a => !['--role','ATHENA','BAS_EMS','TELEMETRY_ISOLATED','BAS_EMS_ISOLATED','--apply','--plan'].includes(a))) throw new Error('Usage: node database-isolation/migrate.mjs --role ATHENA [--plan|--apply]');
+  if (args.some(a => !['--role','ATHENA','BAS_EMS','TELEMETRY_ISOLATED','BAS_EMS_ISOLATED','PLATFORM_ISOLATED','--apply','--plan'].includes(a))) throw new Error('Usage: node database-isolation/migrate.mjs --role ATHENA [--plan|--apply]');
   const idx = args.indexOf('--role');
-  if (idx < 0 || !args[idx+1] || (flags.has('--apply') && flags.has('--plan'))) throw new Error('Specify --role ATHENA, BAS_EMS, TELEMETRY_ISOLATED, or BAS_EMS_ISOLATED and optionally --apply.');
+  if (idx < 0 || !args[idx+1] || (flags.has('--apply') && flags.has('--plan'))) throw new Error('Specify --role ATHENA, BAS_EMS, TELEMETRY_ISOLATED, BAS_EMS_ISOLATED, or PLATFORM_ISOLATED and optionally --apply.');
   return { role: args[idx+1], apply: flags.has('--apply') };
 }
 
