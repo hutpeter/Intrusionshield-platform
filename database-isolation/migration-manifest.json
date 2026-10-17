@@ -59,10 +59,24 @@
         "005_energy_alerts_performance.sql",
         "006_performance_metric_source.sql",
         "007_trade_resources.sql",
+        "008_regional_configuration.sql",
+        "009_region_service_area_configuration.sql",
         "010_bas_equipment_commands.sql",
         "011_bas_equipment_command_verification.sql"
       ],
-      "note": "REVIEW ONLY: Energy-owned migrations excluding mixed regional configuration (008/009); cross-database reference validation and complete schema testing remain outstanding. Do not apply."
+      "note": "REVIEW ONLY: Energy-owned migrations. External Telemetry and Platform relationships require tenant-aware service validation; region backfill is deferred. Do not apply."
+    },
+    "PLATFORM_ISOLATED": {
+      "migrationRoot": "database-isolation/sql/platform",
+      "orderedMigrations": [
+        "001_regional_configuration.sql",
+        "002_region_service_area_configuration.sql"
+      ],
+      "excluded": [
+        "dev/001_dev_tenant_regional_seed.sql",
+        "dev/002_dev_tenant_service_area_seed.sql"
+      ],
+      "note": "Review-only regional reference-data foundation; NOT the complete Platform schema. Development-tenant seed scripts are excluded."
     }
   },
   "warnings": [
@@ -70,6 +84,7 @@
     "Never run existing schema migrations against a populated target without backup and review.",
     "Telemetry.Readings and Telemetry.StoragePolicies depend on Telemetry.Devices/Sites/MeasurementDefinitions; BAS equipment commands and Energy contracts depend on Telemetry tables.",
     "Regional configuration needs explicit product/platform ownership before relocation.",
-    "TELEMETRY_ISOLATED and BAS_EMS_ISOLATED are incomplete review-only foundation plans. No isolated apply is permitted."
+    "TELEMETRY_ISOLATED and BAS_EMS_ISOLATED are incomplete review-only foundation plans. No isolated apply is permitted.",
+    "PLATFORM_ISOLATED is only a regional-reference foundation, not the full Platform schema. Development tenant seeds must not run automatically."
   ]
 }
