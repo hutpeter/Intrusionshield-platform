@@ -1,5 +1,5 @@
 -- External site/asset/device identifiers must be checked against Telemetry with tenant and site scope.
-﻿/*
+/*
     Ruby BAS Equipment Command persistence.
 
     Provides a durable, tenant-aware command lifecycle for BAS equipment
