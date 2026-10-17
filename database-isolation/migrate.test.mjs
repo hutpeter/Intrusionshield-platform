@@ -43,3 +43,13 @@ test('development tenant seeds are excluded from isolated Platform migration pla
   assert.ok(items.every(item => !item.name.toLowerCase().includes('dev')));
   assert.ok(items.every(item => item.batches.every(batch => !batch.includes('11111111-1111-4111-8111-111111111111'))));
 });
+
+test('isolated migration batches do not contain embedded Unicode byte-order marks', async () => {
+  for (const role of ['PLATFORM_ISOLATED', 'TELEMETRY_ISOLATED', 'BAS_EMS_ISOLATED']) {
+    for (const item of await loadPlan(role)) {
+      for (const batch of item.batches) {
+        assert.ok(!batch.includes('\uFEFF'), role + '/' + item.name + ' contains a BOM');
+      }
+    }
+  }
+});
