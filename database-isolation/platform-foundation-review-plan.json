@@ -1,0 +1,69 @@
+{
+  "schemaVersion": 1,
+  "status": "REVIEW_ONLY_NO_EXECUTION",
+  "targetRole": "PLATFORM_ISOLATED",
+  "targetDatabase": "Ruby_Isolation_Smoke_Platform",
+  "legacyDatabase": "intrusionshield",
+  "existingIsolatedTables": 8,
+  "proposedStages": [
+    {
+      "stage": 1,
+      "name": "Identity foundation",
+      "source": "packages/identity-persistence/sql/001_identity_foundation.sql",
+      "requires": [],
+      "notes": "Creates Identity.Identities, Identity.Users, Identity.ServiceIdentities. Compare against legacy and confirm existing user/account data handling before any apply."
+    },
+    {
+      "stage": 2,
+      "name": "Authentication foundation",
+      "source": "services/authentication/sql/001_authentication_foundation.sql",
+      "requires": [
+        1
+      ],
+      "notes": "Adds Identity.Users.PreferredLanguage and Authentication.Credentials; contains FK to Identity.Identities."
+    },
+    {
+      "stage": 3,
+      "name": "Authorization foundation",
+      "source": "packages/identity-persistence/sql/002_authorization_foundation.sql",
+      "requires": [
+        1
+      ],
+      "notes": "Defines newer Identity permission, role and assignment tables; legacy dbo access-control tables remain untouched."
+    },
+    {
+      "stage": 4,
+      "name": "Tenant configuration",
+      "source": "packages/tenant-configuration/sql/001_tenant_configuration.sql",
+      "requires": [],
+      "notes": "EIS.TenantConfigurations. Confirm country/language defaults and tenant ownership."
+    }
+  ],
+  "deferred": [
+    {
+      "name": "Legacy dbo schema (14 tables)",
+      "reason": "No dbo-qualified references in current source scan, but unqualified/dynamic/external consumers and data migration remain unverified. No copy/drop."
+    },
+    {
+      "name": "Core entitlements and AI usage",
+      "reason": "core.* SQL definitions exist but core schema absent from legacy inventory; independent design/deployment review required."
+    },
+    {
+      "name": "Energy.TradeResources Platform references",
+      "reason": "Three cross-schema FKs need service-level validation across separate databases."
+    }
+  ],
+  "gates": [
+    "Read-only inspect isolated and legacy data counts; determine safe treatment of existing users and credentials",
+    "Review all source SQL migrations for preconditions, ordering, idempotency and conflicts",
+    "Validate isolated service connection routing and tenancy before cutover",
+    "Perform isolated disposable-only schema validation with explicit authorization",
+    "Do not alter intrusionshield or run PLATFORM_ISOLATED --apply; migration runner currently forbids it"
+  ],
+  "evidence": [
+    "Foundation 5B 64 legacy user tables, 8 isolated Platform tables, 20 cross-schema FKs",
+    "Foundation 5C 14 dbo tables and 12 dbo-internal FKs",
+    "Foundation 5D 473 source files scanned, zero explicitly dbo-qualified references",
+    "Repository SqlAuthenticationRepository, SqlAuthorizationRepository, SqlIdentityRepository query newer Identity/Authentication schemas"
+  ]
+}
