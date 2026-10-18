@@ -1270,6 +1270,9 @@ export function createApp(
                 const body = getBody(request);
                 const tenantId = requireTenantId(request);
                 const siteId = getRequiredString(body, "siteId");
+                if (!await sites.findById(siteId, tenantId)) {
+                    throw new Error("siteId does not identify a site for this tenant.");
+                }
                 const sourceAssetId =
                     getOptionalString(body, "sourceAssetId");
                 const destinationAssetId =
@@ -1395,6 +1398,10 @@ export function createApp(
         async (request: TenantRequest, response: Response) => {
             try {
                 const body = getBody(request);
+                const alarmSiteId = getOptionalString(body, "siteId");
+                if (alarmSiteId && !await sites.findById(alarmSiteId, requireTenantId(request))) {
+                    throw new Error("siteId does not identify a site for this tenant.");
+                }
                 const rule = await alarmRules.create({
                     tenantId: requireTenantId(request),
                     siteId: getOptionalString(body, "siteId"),
@@ -1491,6 +1498,17 @@ export function createApp(
         async (request: TenantRequest, response: Response) => {
             try {
                 const body = getBody(request);
+                const tenantId = requireTenantId(request);
+                const metricSiteId = getRequiredString(body, "siteId");
+                if (!await sites.findById(metricSiteId, tenantId)) {
+                    throw new Error("siteId does not identify a site for this tenant.");
+                }
+                const metricAssetId = getOptionalString(body, "assetId");
+                if (metricAssetId) {
+                    const metricAsset = await assets.findById(metricAssetId, tenantId);
+                    if (!metricAsset) throw new Error("assetId does not identify an asset for this tenant.");
+                    if (metricAsset.siteId !== metricSiteId) throw new Error("assetId does not belong to siteId.");
+                }
                 const metric = await performanceMetrics.create({
                     tenantId: requireTenantId(request),
                     siteId: getRequiredString(body, "siteId"),
@@ -1576,6 +1594,10 @@ export function createApp(
             const tenantId=requireTenantId(request); const contractId=String(request.params.id ?? "");
             if (!await energyContracts.findById(contractId,tenantId)){sendNotFound(response,"Energy contract");return;}
             const body=getBody(request);
+            const maintenanceAssetId=getOptionalString(body,"assetId");
+            if (maintenanceAssetId && !await assets.findById(maintenanceAssetId,tenantId)) {
+                throw new Error("assetId does not identify an asset for this tenant.");
+            }
             const item=await energyContracts.createMaintenance({tenantId,contractId,assetId:getOptionalString(body,"assetId"),
                 activity:getRequiredString(body,"activity"),frequency:getOptionalString(body,"frequency"),
                 nextDueDate:getOptionalDate(body,"nextDueDate"),responsibleParty:getOptionalString(body,"responsibleParty"),
