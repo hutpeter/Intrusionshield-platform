@@ -101,6 +101,53 @@ async function main() {
       .query('SELECT COUNT(*) AS n FROM Energy.Contracts WHERE id=@id AND contract_number=@number');
     assert(contractSql.recordset[0].n === 1, 'Contract missing from isolated BAS/EMS database.');
     console.log('PASS: BAS/EMS create/read/tenant isolation/physical persistence');
+
+    // Foundation 4: rejected references must never create Energy records.
+    const missingSite = randomUUID();
+    const missingAsset = randomUUID();
+    const missingDevice = randomUUID();
+    const commandBody = (site, extra = {}) => ({
+      siteId: site, commandType: 'SET_TEMPERATURE',
+      commandPayload: { setpoint: 72 }, ...extra
+    });
+    const contractBody = (site, number) => ({
+      contractNumber: number, name: 'Rejected Reference Test',
+      vendorName: 'Ruby Test Vendor', contractType: 'MAINTENANCE',
+      startDate: '2026-10-18', endDate: '2027-10-18',
+      status: 'ACTIVE', siteId: site
+    });
+    const rejected = async (label, route, tenant, body) => {
+      const result = await request(base, 'POST', route, tenant, body);
+      assert(result.status === 400,
+        label + ' should return HTTP 400, got ' + result.status + ': ' + JSON.stringify(result.data));
+      console.log('PASS: rejected ' + label);
+    };
+    await rejected('nonexistent BAS command site',
+      '/api/v1/energy/bas/commands', tenantA, commandBody(missingSite));
+    await rejected('cross-tenant BAS command site',
+      '/api/v1/energy/bas/commands', tenantB, commandBody(siteId));
+    await rejected('nonexistent BAS command asset',
+      '/api/v1/energy/bas/commands', tenantA, commandBody(siteId, { assetId: missingAsset }));
+    await rejected('nonexistent BAS command device',
+      '/api/v1/energy/bas/commands', tenantA, commandBody(siteId, { deviceId: missingDevice }));
+    await rejected('nonexistent Energy contract site',
+      '/api/v1/energy/contracts', tenantA, contractBody(missingSite, 'RUBY-REJECT-' + randomUUID().slice(0, 8)));
+    await rejected('cross-tenant Energy contract site',
+      '/api/v1/energy/contracts', tenantB, contractBody(siteId, 'RUBY-REJECT-' + randomUUID().slice(0, 8)));
+    await rejected('nonexistent contract coverage site',
+      '/api/v1/energy/contracts/' + contractId + '/coverage', tenantA, { siteId: missingSite });
+    await rejected('nonexistent contract coverage asset',
+      '/api/v1/energy/contracts/' + contractId + '/coverage', tenantA, { assetId: missingAsset });
+    const commandCount = await energy.request()
+      .input('site', sql.UniqueIdentifier, siteId)
+      .input('tenant', sql.UniqueIdentifier, tenantA)
+      .query('SELECT COUNT(*) AS n FROM Energy.BasEquipmentCommands WHERE site_id=@site AND tenant_id=@tenant');
+    assert(commandCount.recordset[0].n === 0, 'Rejected BAS commands created records.');
+    const coverageCount = await energy.request()
+      .input('contract', sql.UniqueIdentifier, contractId)
+      .query('SELECT COUNT(*) AS n FROM Energy.ContractCoverage WHERE contract_id=@contract');
+    assert(coverageCount.recordset[0].n === 0, 'Rejected contract coverage created records.');
+    console.log('PASS: rejected cross-database references left no BAS commands or contract coverage');
     completed = true;
   } finally {
     // Only records created by this run, in explicitly checked disposable databases.
