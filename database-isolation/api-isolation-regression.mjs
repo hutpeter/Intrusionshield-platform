@@ -54,9 +54,12 @@ async function main() {
   assert(/^http:\/\/localhost:4411\/?$/.test(base),
     'For safety, API target must be http://localhost:4411.');
   const pools = [];
-  let siteId = null, contractId = null;
+  let siteId = null, siteBId = null, assetId = null, deviceId = null, contractId = null;
   const siteCode = 'RUBY-ISOLATION-' + randomUUID().slice(0, 8);
   const contractNumber = 'RUBY-ISO-' + randomUUID().slice(0, 8);
+  const siteBCode = 'RUBY-ISOLATION-' + randomUUID().slice(0, 8);
+  const assetCode = 'RUBY-ISO-ASSET-' + randomUUID().slice(0, 8);
+  const deviceCode = 'RUBY-ISO-DEVICE-' + randomUUID().slice(0, 8);
   let completed = false;
   try {
     for (const database of [telemetryDb, energyDb]) {
@@ -138,6 +141,34 @@ async function main() {
       '/api/v1/energy/contracts/' + contractId + '/coverage', tenantA, { siteId: missingSite });
     await rejected('nonexistent contract coverage asset',
       '/api/v1/energy/contracts/' + contractId + '/coverage', tenantA, { assetId: missingAsset });
+    // Two real sites plus an asset and device allow wrong-site and cross-tenant checks.
+    const secondSite = await request(base, 'POST', '/api/v1/telemetry/sites', tenantA,
+      { code: siteBCode, name: 'Ruby Isolation Second Site', timezone: 'America/Toronto', status: 'ACTIVE' });
+    assert(secondSite.status === 201 || secondSite.status === 200, 'Second site POST failed: ' + JSON.stringify(secondSite));
+    siteBId = secondSite.data?.id;
+    assert(siteIdPattern.test(siteBId ?? ''), 'Second site POST did not return a valid id.');
+    const asset = await request(base, 'POST', '/api/v1/telemetry/assets', tenantA,
+      { siteId, code: assetCode, name: 'Ruby Isolation Asset', assetType: 'HVAC', status: 'ACTIVE' });
+    assert(asset.status === 201 || asset.status === 200, 'Asset POST failed: ' + JSON.stringify(asset));
+    assetId = asset.data?.id;
+    assert(siteIdPattern.test(assetId ?? ''), 'Asset POST did not return a valid id.');
+    const device = await request(base, 'POST', '/api/v1/telemetry/devices', tenantA,
+      { siteId, code: deviceCode, name: 'Ruby Isolation Device', deviceType: 'SENSOR', status: 'ACTIVE' });
+    assert(device.status === 201 || device.status === 200, 'Device POST failed: ' + JSON.stringify(device));
+    deviceId = device.data?.id;
+    assert(siteIdPattern.test(deviceId ?? ''), 'Device POST did not return a valid id.');
+    await rejected('wrong-site BAS command asset',
+      '/api/v1/energy/bas/commands', tenantA, commandBody(siteBId, { assetId }));
+    await rejected('wrong-site BAS command device',
+      '/api/v1/energy/bas/commands', tenantA, commandBody(siteBId, { deviceId }));
+    await rejected('cross-tenant BAS command asset',
+      '/api/v1/energy/bas/commands', tenantB, commandBody(siteId, { assetId }));
+    await rejected('cross-tenant BAS command device',
+      '/api/v1/energy/bas/commands', tenantB, commandBody(siteId, { deviceId }));
+    await rejected('wrong-site contract coverage asset',
+      '/api/v1/energy/contracts/' + contractId + '/coverage', tenantA,
+      { siteId: siteBId, assetId });
+    console.log('PASS: wrong-site and cross-tenant asset/device references rejected');
     const commandCount = await energy.request()
       .input('site', sql.UniqueIdentifier, siteId)
       .input('tenant', sql.UniqueIdentifier, tenantA)
@@ -163,6 +194,33 @@ async function main() {
         assert(r.rowsAffected[0] === 1, 'Contract cleanup did not delete exactly one record.');
         console.log('PASS: BAS/EMS test contract cleanup');
       } catch (e) { cleanupFailed = true; console.error('CLEANUP FAILED (contract): ' + e.message); }
+    }
+    // Delete children before their sites; never delete by tenant alone.
+    for (const [id, code, table, label] of [
+      [deviceId, deviceCode, 'Devices', 'device'],
+      [assetId, assetCode, 'Assets', 'asset']
+    ]) {
+      if (!id || !pools[0]) continue;
+      try {
+        const r = await pools[0].request()
+          .input('id', sql.UniqueIdentifier, id)
+          .input('tenant', sql.UniqueIdentifier, tenantA)
+          .input('code', sql.NVarChar(128), code)
+          .query('DELETE FROM Telemetry.' + table + ' WHERE id=@id AND tenant_id=@tenant AND code=@code');
+        assert(r.rowsAffected[0] === 1, label + ' cleanup did not delete exactly one record.');
+        console.log('PASS: Telemetry test ' + label + ' cleanup');
+      } catch (e) { cleanupFailed = true; console.error('CLEANUP FAILED (' + label + '): ' + e.message); }
+    }
+    if (siteBId && pools[0]) {
+      try {
+        const r = await pools[0].request()
+          .input('id', sql.UniqueIdentifier, siteBId)
+          .input('tenant', sql.UniqueIdentifier, tenantA)
+          .input('code', sql.NVarChar(128), siteBCode)
+          .query('DELETE FROM Telemetry.Sites WHERE id=@id AND tenant_id=@tenant AND code=@code');
+        assert(r.rowsAffected[0] === 1, 'Second site cleanup did not delete exactly one record.');
+        console.log('PASS: Telemetry second site cleanup');
+      } catch (e) { cleanupFailed = true; console.error('CLEANUP FAILED (second site): ' + e.message); }
     }
     if (siteId && pools[0]) {
       try {
