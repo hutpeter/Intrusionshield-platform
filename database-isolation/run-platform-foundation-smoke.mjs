@@ -13,6 +13,7 @@ const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
 const sql=createRequire(path.join(root,'packages/database/package.json'))('mssql');
 const TARGET='Ruby_Isolation_Smoke_Platform';
 const BASELINE=new Set(['AdministrativeRegions','Countries','Currencies','ServiceAreas','TenantAdministrativeRegions','TenantCountries','TenantCurrencies','TenantRegionalSettings']);
+const EXPECTED_COUNTS=new Map([['AdministrativeRegions',3],['Countries',21],['Currencies',18],['ServiceAreas',0],['TenantAdministrativeRegions',0],['TenantCountries',0],['TenantCurrencies',0],['TenantRegionalSettings',0]]);
 const NEW=['Identity.Identities','Identity.Users','Identity.ServiceIdentities','Authentication.Credentials','Identity.Permissions','Identity.Roles','Identity.RolePermissions','Identity.IdentityRoles','Identity.PlatformRoleAssignments','Identity.AuthorizationAudit','EIS.TenantConfigurations'];
 function ensure(ok,message){if(!ok)throw Error(message);}
 async function main(){
@@ -47,13 +48,24 @@ async function main(){
     FROM sys.tables t JOIN sys.schemas s ON s.schema_id=t.schema_id WHERE t.is_ms_shipped=0`);
   ensure(tables.recordset.length===8,'Expected exactly eight baseline user tables; refusing to rerun on modified database');
   ensure(tables.recordset.every(x=>x.schemaName==='Platform'&&BASELINE.has(x.tableName)),'Unexpected baseline table; refusing');
-  const rows=await pool.request().query(`
-    SELECT SUM(p.rows) AS [BaselineRows] FROM sys.partitions p
-    JOIN sys.tables t ON t.object_id=p.object_id
-    JOIN sys.schemas s ON s.schema_id=t.schema_id
-    WHERE s.name='Platform' AND p.index_id IN (0,1)`);
-  ensure(Number(rows.recordset[0].BaselineRows??0)===0,'Baseline Platform tables contain data; refusing execution');
-  console.log('PASS: disposable target, exact eight-table baseline, zero baseline rows.');
+  const baselineCounts=async()=>{
+    const result=await pool.request().query(`SELECT t.name AS tableName, SUM(p.rows) AS [BaselineRows]
+      FROM sys.tables t JOIN sys.schemas s ON s.schema_id=t.schema_id
+      JOIN sys.partitions p ON p.object_id=t.object_id
+      WHERE s.name=N'Platform' AND p.index_id IN (0,1)
+      GROUP BY t.name`);
+    return new Map(result.recordset.map(x=>[x.tableName,Number(x.BaselineRows)]));
+  };
+  const beforeCounts=await baselineCounts();
+  for(const [name,count] of EXPECTED_COUNTS){
+    ensure(beforeCounts.get(name)===count,'Baseline row count differs for Platform.'+name+'; expected '+count+', got '+beforeCounts.get(name));
+  }
+  for(const stage of scripts){
+    const source=stage.batches.join('\\n').replace(/\\/\\*[\\s\\S]*?\\*\\//g,'').replace(/--[^\\n]*/g,'');
+    ensure(!/\\b(?:INSERT|UPDATE|DELETE|MERGE|TRUNCATE|DROP)\\b/i.test(source),'Potential data modification/destructive SQL in stage '+stage.stage);
+    ensure(!/\\b(?:ALTER\\s+TABLE|CREATE\\s+TABLE)\\s+(?:\\[?Platform\\]?)\\s*\\./i.test(source),'Platform baseline table DDL in stage '+stage.stage);
+  }
+  console.log('PASS: disposable target, exact eight-table baseline, expected 42 reference rows, no baseline-targeting DDL.');
   console.log('WARNING: source migrations are not globally atomic; partial schema changes may remain if a stage fails.');
   for(const stage of scripts){
    console.log('APPLY stage '+stage.stage+' '+stage.name);
@@ -71,6 +83,9 @@ async function main(){
   const constraints=await pool.request().query(`SELECT COUNT(*) AS total FROM sys.foreign_keys fk
     JOIN sys.tables t ON t.object_id=fk.parent_object_id JOIN sys.schemas s ON s.schema_id=t.schema_id
     WHERE s.name IN ('Identity','Authentication') AND fk.is_disabled=0 AND fk.is_not_trusted=0`);
+  const afterCounts=await baselineCounts();
+  for(const [name,count] of beforeCounts)ensure(afterCounts.get(name)===count,'Platform baseline count changed: '+name);
+  console.log('PASS: baseline Platform row counts unchanged (42 reference rows).');
   console.log('Trusted active Identity/Authentication FKs: '+constraints.recordset[0].total);
   console.log('PASS: 19 expected tables exist; four stages executed against disposable Platform database only.');
   console.log('NOTE: further schema parity, tenant integrity and service routing tests remain required.');
