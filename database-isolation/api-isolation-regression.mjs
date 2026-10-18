@@ -169,6 +169,43 @@ async function main() {
       '/api/v1/energy/contracts/' + contractId + '/coverage', tenantA,
       { siteId: siteBId, assetId });
     console.log('PASS: wrong-site and cross-tenant asset/device references rejected');
+    // Foundation 4: validate remaining Energy-to-Telemetry write references.
+    const flowBody = (site, extra = {}) => ({
+      siteId: site, direction: 'IMPORT', powerKw: 1.5,
+      observedAt: '2026-10-18T12:00:00.000Z', source: 'ISOLATION_TEST', ...extra
+    });
+    const metricBody = (site, extra = {}) => ({
+      siteId: site, metricCode: 'RUBY_ISOLATION_METRIC', value: 1,
+      periodStart: '2026-10-18T00:00:00.000Z',
+      periodEnd: '2026-10-18T01:00:00.000Z', source: 'ISOLATION_TEST', ...extra
+    });
+    const alarmBody = (site) => ({
+      siteId: site, measurementCode: 'RUBY_ISOLATION_POINT',
+      name: 'Ruby Rejected Alarm Rule', operator: 'GT',
+      threshold: 100, severity: 'WARNING', enabled: true
+    });
+    await rejected('nonexistent Energy Flow site',
+      '/api/v1/energy/flows', tenantA, flowBody(missingSite));
+    await rejected('cross-tenant Energy Flow site',
+      '/api/v1/energy/flows', tenantB, flowBody(siteId));
+    await rejected('nonexistent Alarm Rule site',
+      '/api/v1/energy/alarm-rules', tenantA, alarmBody(missingSite));
+    await rejected('cross-tenant Alarm Rule site',
+      '/api/v1/energy/alarm-rules', tenantB, alarmBody(siteId));
+    await rejected('nonexistent Performance Metric site',
+      '/api/v1/energy/performance-metrics', tenantA, metricBody(missingSite));
+    await rejected('cross-tenant Performance Metric site',
+      '/api/v1/energy/performance-metrics', tenantB, metricBody(siteId));
+    await rejected('nonexistent Performance Metric asset',
+      '/api/v1/energy/performance-metrics', tenantA, metricBody(siteId, { assetId: missingAsset }));
+    await rejected('wrong-site Performance Metric asset',
+      '/api/v1/energy/performance-metrics', tenantA, metricBody(siteBId, { assetId }));
+    await rejected('cross-tenant Performance Metric asset',
+      '/api/v1/energy/performance-metrics', tenantB, metricBody(siteId, { assetId }));
+    await rejected('nonexistent Contract Maintenance asset',
+      '/api/v1/energy/contracts/' + contractId + '/maintenance', tenantA,
+      { assetId: missingAsset, activity: 'Rejected maintenance test', status: 'PLANNED' });
+    console.log('PASS: Energy Flow, Alarm Rule, Performance Metric and Maintenance invalid references rejected');
     const commandCount = await energy.request()
       .input('site', sql.UniqueIdentifier, siteId)
       .input('tenant', sql.UniqueIdentifier, tenantA)
