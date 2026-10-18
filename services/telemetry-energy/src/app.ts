@@ -1529,6 +1529,10 @@ export function createApp(
     app.post("/api/v1/energy/contracts", async (request: TenantRequest, response: Response) => {
         try {
             const body=getBody(request);
+            const contractSiteId=getOptionalString(body,"siteId");
+            if (contractSiteId && !await sites.findById(contractSiteId,requireTenantId(request))) {
+                throw new Error("siteId does not identify a site for this tenant.");
+            }
             const contract=await energyContracts.create({
                 tenantId:requireTenantId(request), contractNumber:getRequiredString(body,"contractNumber"),
                 name:getRequiredString(body,"name"), vendorName:getRequiredString(body,"vendorName"),
@@ -1554,7 +1558,10 @@ export function createApp(
             const body=getBody(request);
             const assetId=getOptionalString(body,"assetId"); const siteId=getOptionalString(body,"siteId");
             if (!assetId && !siteId) throw new Error("assetId or siteId is required.");
-            if (assetId && !await assets.findById(assetId,tenantId)) throw new Error("assetId does not identify an asset for this tenant.");
+            const coveredAsset=assetId ? await assets.findById(assetId,tenantId) : null;
+            if (assetId && !coveredAsset) throw new Error("assetId does not identify an asset for this tenant.");
+            if (siteId && !await sites.findById(siteId,tenantId)) throw new Error("siteId does not identify a site for this tenant.");
+            if (siteId && coveredAsset && coveredAsset.siteId !== siteId) throw new Error("assetId does not belong to siteId.");
             const item=await energyContracts.addCoverage({tenantId,contractId,assetId,siteId});
             response.status(201).json(item);
         } catch(error){sendBadRequest(response,error);}
@@ -2311,16 +2318,20 @@ export function createApp(
                     );
                 }
 
-                if (assetId && !await assets.findById(assetId, tenantId)) {
-                    throw new Error(
-                        "assetId does not identify an asset for this tenant."
-                    );
+                const commandAsset = assetId ? await assets.findById(assetId, tenantId) : null;
+                if (assetId && !commandAsset) {
+                    throw new Error("assetId does not identify an asset for this tenant.");
+                }
+                if (commandAsset && commandAsset.siteId !== siteId) {
+                    throw new Error("assetId does not belong to siteId.");
                 }
 
-                if (deviceId && !await devices.findById(deviceId, tenantId)) {
-                    throw new Error(
-                        "deviceId does not identify a device for this tenant."
-                    );
+                const commandDevice = deviceId ? await devices.findById(deviceId, tenantId) : null;
+                if (deviceId && !commandDevice) {
+                    throw new Error("deviceId does not identify a device for this tenant.");
+                }
+                if (commandDevice && commandDevice.siteId !== siteId) {
+                    throw new Error("deviceId does not belong to siteId.");
                 }
 
                 const command = await basCommands.create({
