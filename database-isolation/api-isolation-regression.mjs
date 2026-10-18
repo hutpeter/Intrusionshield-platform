@@ -153,7 +153,7 @@ async function main() {
     assetId = asset.data?.id;
     assert(siteIdPattern.test(assetId ?? ''), 'Asset POST did not return a valid id.');
     const device = await request(base, 'POST', '/api/v1/telemetry/devices', tenantA,
-      { siteId, code: deviceCode, name: 'Ruby Isolation Device', deviceType: 'SENSOR', status: 'ACTIVE' });
+      { siteId, code: deviceCode, name: 'Ruby Isolation Device', deviceType: 'SENSOR', status: 'ONLINE' });
     assert(device.status === 201 || device.status === 200, 'Device POST failed: ' + JSON.stringify(device));
     deviceId = device.data?.id;
     assert(siteIdPattern.test(deviceId ?? ''), 'Device POST did not return a valid id.');
