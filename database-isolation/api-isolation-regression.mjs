@@ -36,6 +36,21 @@ async function request(base, method, route, tenant, body) {
   return { status: response.status, data };
 }
 
+// Read-only inventory of every Energy table; compare before and after targeted cleanup.
+// This is intended for the dedicated, otherwise idle disposable smoke database.
+async function energyTableCounts(pool) {
+  const tables = await pool.request().query(
+    "SELECT t.name FROM sys.tables t JOIN sys.schemas s ON s.schema_id=t.schema_id WHERE s.name='Energy' ORDER BY t.name"
+  );
+  const counts = new Map();
+  for (const { name } of tables.recordset) {
+    const escaped = name.replaceAll(']', ']]');
+    const result = await pool.request().query('SELECT COUNT_BIG(*) AS n FROM Energy.[' + escaped + ']');
+    counts.set(name, String(result.recordset[0].n));
+  }
+  return counts;
+}
+
 async function main() {
   assert(process.argv.slice(2).join(' ') === '--run', 'Usage: node database-isolation/api-isolation-regression.mjs --run');
   assert(process.env.RUBY_ISOLATION_API_TEST_CONFIRM === 'DISPOSABLE_ONLY',
@@ -61,6 +76,7 @@ async function main() {
   const assetCode = 'RUBY-ISO-ASSET-' + randomUUID().slice(0, 8);
   const deviceCode = 'RUBY-ISO-DEVICE-' + randomUUID().slice(0, 8);
   let completed = false;
+  let energyCountsBefore = null;
   try {
     for (const database of [telemetryDb, energyDb]) {
       const pool = new sql.ConnectionPool({
@@ -73,6 +89,8 @@ async function main() {
       assert(result.recordset[0]?.name === database, 'Unexpected SQL database connection.');
     }
     const [telemetry, energy] = pools;
+    energyCountsBefore = await energyTableCounts(energy);
+    assert(energyCountsBefore.size > 0, 'No Energy tables found for residual-write verification.');
     const site = await request(base, 'POST', '/api/v1/telemetry/sites', tenantA,
       { code: siteCode, name: 'Ruby Automated Isolation Test', timezone: 'America/Toronto', status: 'ACTIVE' });
     assert(site.status === 201 || site.status === 200, 'Site POST failed: ' + JSON.stringify(site));
@@ -269,6 +287,24 @@ async function main() {
         assert(r.rowsAffected[0] === 1, 'Site cleanup did not delete exactly one record.');
         console.log('PASS: Telemetry test site cleanup');
       } catch (e) { cleanupFailed = true; console.error('CLEANUP FAILED (site): ' + e.message); }
+    }
+    if (energyCountsBefore && pools[1]) {
+      try {
+        const after = await energyTableCounts(pools[1]);
+        const differences = [];
+        for (const [name, count] of energyCountsBefore) {
+          if (after.get(name) !== count) differences.push(name + ': ' + count + ' -> ' + (after.get(name) ?? 'missing'));
+        }
+        for (const name of after.keys()) {
+          if (!energyCountsBefore.has(name)) differences.push(name + ': unexpected new table');
+        }
+        assert(differences.length === 0,
+          'Energy table counts changed after regression and cleanup: ' + differences.join('; '));
+        console.log('PASS: all ' + energyCountsBefore.size + ' Energy table counts unchanged after rejected writes and cleanup');
+      } catch (e) {
+        cleanupFailed = true;
+        console.error('VERIFY FAILED (Energy residual records): ' + e.message);
+      }
     }
     for (const pool of pools) await pool.close().catch(() => {});
     if (cleanupFailed) process.exitCode = 1;
