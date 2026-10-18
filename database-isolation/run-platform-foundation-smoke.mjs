@@ -61,9 +61,9 @@ async function main(){
     ensure(beforeCounts.get(name)===count,'Baseline row count differs for Platform.'+name+'; expected '+count+', got '+beforeCounts.get(name));
   }
   for(const stage of scripts){
-    const source=stage.batches.join('\\n').replace(/\\/\\*[\\s\\S]*?\\*\\//g,'').replace(/--[^\\n]*/g,'');
-    ensure(!/\\b(?:INSERT|UPDATE|DELETE|MERGE|TRUNCATE|DROP)\\b/i.test(source),'Potential data modification/destructive SQL in stage '+stage.stage);
-    ensure(!/\\b(?:ALTER\\s+TABLE|CREATE\\s+TABLE)\\s+(?:\\[?Platform\\]?)\\s*\\./i.test(source),'Platform baseline table DDL in stage '+stage.stage);
+    const source=stage.batches.join('\n').replace(/\/\*[\s\S]*?\*\//g,'').replace(/--[^\n]*/g,'');
+    ensure(!/\b(?:INSERT|UPDATE|DELETE|MERGE|TRUNCATE|DROP)\b/i.test(source),'Potential data modification/destructive SQL in stage '+stage.stage);
+    ensure(!/\b(?:ALTER\s+TABLE|CREATE\s+TABLE)\s+(?:\[?Platform\]?)\s*\./i.test(source),'Platform baseline table DDL in stage '+stage.stage);
   }
   console.log('PASS: disposable target, exact eight-table baseline, expected 42 reference rows, no baseline-targeting DDL.');
   console.log('WARNING: source migrations are not globally atomic; partial schema changes may remain if a stage fails.');
