@@ -48,11 +48,11 @@ async function main(){
   ensure(tables.recordset.length===8,'Expected exactly eight baseline user tables; refusing to rerun on modified database');
   ensure(tables.recordset.every(x=>x.schemaName==='Platform'&&BASELINE.has(x.tableName)),'Unexpected baseline table; refusing');
   const rows=await pool.request().query(`
-    SELECT SUM(p.rows) AS rowCount FROM sys.partitions p
+    SELECT SUM(p.rows) AS [BaselineRows] FROM sys.partitions p
     JOIN sys.tables t ON t.object_id=p.object_id
     JOIN sys.schemas s ON s.schema_id=t.schema_id
     WHERE s.name='Platform' AND p.index_id IN (0,1)`);
-  ensure(Number(rows.recordset[0].rowCount??0)===0,'Baseline Platform tables contain data; refusing execution');
+  ensure(Number(rows.recordset[0].BaselineRows??0)===0,'Baseline Platform tables contain data; refusing execution');
   console.log('PASS: disposable target, exact eight-table baseline, zero baseline rows.');
   console.log('WARNING: source migrations are not globally atomic; partial schema changes may remain if a stage fails.');
   for(const stage of scripts){
