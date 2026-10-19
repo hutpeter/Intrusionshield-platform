@@ -31,6 +31,12 @@ if (isolated && telemetry.options.database.toLowerCase() === energy.options.data
     && telemetry.options.port === energy.options.port) {
     throw new Error("Split mode requires distinct Telemetry and BAS/EMS databases.");
 }
+const platform = isolated
+    ? resolveDatabaseRoleConfiguration("PLATFORM", defaults)
+    : energy;
+if (isolated && !process.env.RUBY_PLATFORM_DB_DATABASE) {
+    throw new Error("Split mode requires RUBY_PLATFORM_DB_DATABASE for TradeResource regional validation.");
+}
 const energyProvider = new SqlServerProvider(energy.options);
 await energyProvider.connect();
 let telemetryProvider = energyProvider;
@@ -39,8 +45,13 @@ try {
         telemetryProvider = new SqlServerProvider(telemetry.options);
         await telemetryProvider.connect();
     }
+    let platformProvider = energyProvider;
+    if (isolated) {
+        platformProvider = new SqlServerProvider(platform.options);
+        await platformProvider.connect();
+    }
     const port = Number(process.env.TELEMETRY_ENERGY_PORT ?? 4401);
-    createApp(telemetryProvider, energyProvider).listen(port, () =>
+    createApp(telemetryProvider, energyProvider, platformProvider).listen(port, () =>
         console.log(`Ruby Telemetry & Energy service listening on http://localhost:${port} (split databases: ${isolated})`)
     );
 } catch (error) {
