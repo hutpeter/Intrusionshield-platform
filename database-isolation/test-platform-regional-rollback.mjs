@@ -50,7 +50,7 @@ async function main(){
    const targetCount=Number((await query(target,'SELECT COUNT_BIG(*) AS n FROM [Platform].['+table+']'))[0].n);
    assert(targetCount===0,'Target not empty '+table);
    for(const row of rows)tenants.add(String(row.tenant_id).toLowerCase());
-   snapshots.set(table,{rows,columns:sourceColumns.map(c=>c.col),hash:digest(rows,sourceColumns.map(c=>c.col))});
+   snapshots.set(table,{rows,columns:sourceColumns.map(c=>c.col),metadata:sourceColumns,hash:digest(rows,sourceColumns.map(c=>c.col))});
    total+=rows.length;
   }
   assert(total===46,'Expected 46 records; got '+total);
@@ -59,13 +59,22 @@ async function main(){
   tx=new sql.Transaction(target);await tx.begin();started=true;
   try{
    for(const table of TABLES){
-    const {rows,columns,hash}=snapshots.get(table);
+    const {rows,columns,metadata,hash}=snapshots.get(table);
     const quoted=columns.map(c=>'['+c.replaceAll(']',']]')+']');
     const placeholders=columns.map((_,i)=>'@p'+i);
     const statement='INSERT INTO [Platform].['+table+'] ('+quoted.join(',')+') VALUES ('+placeholders.join(',')+')';
     for(const row of rows){
-     const params=Object.fromEntries(columns.map((c,i)=>['p'+i,row[c]]));
-     await query(tx,statement,params);
+     const request=tx.request();
+     for(let i=0;i<columns.length;i++){
+      const column=metadata[i],value=row[columns[i]];
+      if(column.typeName==='datetime2'){
+       assert(value===null||value instanceof Date,'Unexpected datetime2 representation '+table+'.'+columns[i]);
+       request.input('p'+i,sql.DateTime2(3),value);
+      }else{
+       request.input('p'+i,value);
+      }
+     }
+     await request.query(statement);
     }
     const written=await query(tx,'SELECT * FROM [Platform].['+table+']');
     assert(written.length===rows.length,'Row count mismatch '+table);
