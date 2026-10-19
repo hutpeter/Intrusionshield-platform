@@ -39,6 +39,19 @@
         loading: "Loading..."
     },
 
+    administrationWorkspace: {
+        eyebrow: "Ruby Platform Administration",
+        title: "Administration",
+        description: "Manage Ruby clients, users, products, platform services and operational policies.",
+        tabs: { overview: "Overview", clients: "Clients & Tenants", users: "Users", products: "Products & Licensing", services: "Services", telemetryPolicies: "Telemetry Policies", audit: "Audit" },
+        overview: { title: "Ruby Platform Overview", description: "Platform administration and operational information will be available here." },
+        clients: { description: "Client onboarding and tenant management will be available here." },
+        users: { description: "Tenant and platform user administration will be available here." },
+        products: { description: "Product assignments, licensing and entitlements will be available here." },
+        telemetryPolicies: { description: "Telemetry persistence and lifecycle policy administration will be available here." },
+        audit: { description: "Ruby platform administrative and operational audit history will be available here." },
+        service: { title: "Ruby Services", description: "Live health and availability of Ruby platform and product services.", checking: "Checking...", refresh: "Refresh", total: "Total", healthy: "Healthy", degraded: "Degraded", down: "Down", lastChecked: "Last checked:", loading: "Checking Ruby services...", platform: "Platform", product: "Product", port: "Port", starting: "STARTING", startingAction: "Starting...", start: "Start", confirmStart: "Start {name}?", loadError: "Unable to load Ruby service health.", requestError: "Service health request failed with HTTP {status}.", startError: "Unable to start {name}.", statusHealthy: "HEALTHY", statusDegraded: "DEGRADED", statusDown: "DOWN" }
+    },
     shell: {
         enterpriseIntelligenceSystem: "Enterprise Intelligence System",
         workspace: "Workspace",
