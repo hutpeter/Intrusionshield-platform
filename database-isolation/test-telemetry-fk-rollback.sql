@@ -78,12 +78,13 @@ BEGIN TRY
   IF ERROR_NUMBER()=547 BEGIN SET @passed+=1; PRINT 'PASS: cross-tenant parent asset rejected'; END
   ELSE BEGIN SET @unexpected+=1; PRINT CONCAT('ERROR parent tenant: ',ERROR_MESSAGE()); END
  END CATCH;
- -- Discovery case: expected to succeed with current tenant-only parent FK.
+ -- Regression: the strengthened parent FK must reject a different-site parent.
  BEGIN TRY
   UPDATE Telemetry.Assets SET parent_asset_id=@assetA2 WHERE id=@assetA;
-  SET @passed+=1; PRINT 'OBSERVED: same-tenant different-site parent asset ACCEPTED (potential site-integrity gap)';
+  SET @failed+=1; PRINT 'FAIL: same-tenant different-site parent asset accepted';
  END TRY BEGIN CATCH
-  SET @unexpected+=1; PRINT CONCAT('OBSERVED: different-site parent rejected: ',ERROR_MESSAGE());
+  IF ERROR_NUMBER()=547 BEGIN SET @passed+=1; PRINT 'PASS: same-tenant different-site parent asset rejected'; END
+  ELSE BEGIN SET @unexpected+=1; PRINT CONCAT('ERROR parent site: ',ERROR_MESSAGE()); END
  END CATCH;
  IF XACT_STATE()<>1 THROW 51601,'Transaction not committable; cannot finish normal validation.',1;
  ROLLBACK TRANSACTION;
