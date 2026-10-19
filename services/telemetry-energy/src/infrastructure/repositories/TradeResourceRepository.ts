@@ -131,7 +131,6 @@ export interface CreateTradeResourceInput {
     
     readonly tenantId: string;
 
-    readonly resourceNumber: string;
 
     readonly firstName: string;
     readonly lastName: string;
