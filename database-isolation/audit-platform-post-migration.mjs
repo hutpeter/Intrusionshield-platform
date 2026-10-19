@@ -15,7 +15,7 @@ const sql=createRequire(path.join(root,'packages/database/package.json'))('mssql
 const source='intrusionshield',destination='Ruby_Isolation_Smoke_Platform';
 const tenantTables={TenantCountries:21,TenantCurrencies:18,TenantAdministrativeRegions:3,TenantRegionalSettings:1,ServiceAreas:3};
 const referenceTables={AdministrativeRegions:3,Countries:21,Currencies:18};
-const foundation=[['Identity','Identities'],['Identity','Users'],['Identity','ServiceIdentities'],['Authentication','Credentials'],['Identity','Roles'],['Identity','Permissions'],['Identity','RolePermissions'],['Identity','UserRoles'],['Identity','PlatformRoleAssignments'],['Identity','ServiceIdentityRoles'],['EIS','TenantConfigurations']];
+const foundation=[['Identity','Identities'],['Identity','Users'],['Identity','ServiceIdentities'],['Authentication','Credentials'],['Identity','Roles'],['Identity','Permissions'],['Identity','RolePermissions'],['Identity','IdentityRoles'],['Identity','PlatformRoleAssignments'],['Identity','AuthorizationAudit'],['EIS','TenantConfigurations']];
 const assert=(condition,message)=>{if(!condition)throw Error(message);};
 const normalize=value=>value===null?null:value instanceof Date?value.toISOString():Buffer.isBuffer(value)?value.toString('base64'):typeof value==='bigint'?value.toString():value;
 const signature=(row,cols)=>createHash('sha256').update(JSON.stringify(cols.map(c=>normalize(row[c])))).digest('hex');
