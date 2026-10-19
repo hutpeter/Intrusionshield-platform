@@ -78,4 +78,30 @@ async function main(){
   await pool.close().catch(()=>{});
  }
 }
+main().catch(e=>{console.error('FAIL: '+e.message);process.exitCode=1});   }finally{
+    for(const entry of calendarIds){
+     const result=await pool.request().input('id',sql.UniqueIdentifier,entry.id).input('tenant',sql.UniqueIdentifier,entry.tenant).query('DELETE FROM Energy.TradeResourceCalendar WHERE id=@id AND tenant_id=@tenant; SELECT @@ROWCOUNT AS n;');
+     check(result.recordset[0].n===1,'Targeted calendar cleanup failed');
+    }
+    if(resourceId){
+     const count=(await pool.request().input('resourceId',sql.UniqueIdentifier,resourceId).input('tenantId',sql.UniqueIdentifier,tenant).query('SELECT COUNT(*) AS n FROM Energy.TradeResourceCalendar WHERE resource_id=@resourceId AND tenant_id=@tenantId')).recordset[0].n;
+     check(count===0,'Synthetic resource has calendar children; refusing resource cleanup');
+     const deleted=await pool.request().input('id',sql.UniqueIdentifier,resourceId).input('tenant',sql.UniqueIdentifier,tenant).query('DELETE FROM Energy.TradeResources WHERE id=@id AND tenant_id=@tenant; SELECT @@ROWCOUNT AS n;');
+     check(deleted.recordset[0].n===1,'Targeted resource cleanup failed');
+    }
+    for(const entry of activityIds){
+     const deleted=await pool.request().input('id',sql.UniqueIdentifier,entry.id).input('tenant',sql.UniqueIdentifier,entry.tenant).query('DELETE FROM Energy.ContractMaintenanceActivities WHERE id=@id AND tenant_id=@tenant; SELECT @@ROWCOUNT AS n;');
+     check(deleted.recordset[0].n===1,'Targeted maintenance cleanup failed');
+    }
+    for(const entry of contractIds){
+     const deleted=await pool.request().input('id',sql.UniqueIdentifier,entry.id).input('tenant',sql.UniqueIdentifier,entry.tenant).query('DELETE FROM Energy.Contracts WHERE id=@id AND tenant_id=@tenant; SELECT @@ROWCOUNT AS n;');
+     check(deleted.recordset[0].n===1,'Targeted contract cleanup failed');
+    }
+    check((await countCalendar())===baseline,'Calendar count not restored');
+    console.log('PASS: targeted calendar, resource, maintenance and contract cleanup; calendar count restored');
+   }
+  }finally{
+   await pool.close().catch(()=>{});
+  }
+}
 main().catch(e=>{console.error('FAIL: '+e.message);process.exitCode=1});
