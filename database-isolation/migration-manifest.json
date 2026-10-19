@@ -46,9 +46,10 @@
         "001_telemetry_foundation.sql",
         "002_telemetry_reading_source.sql",
         "003_telemetry_asset_hierarchy.sql",
-        "004_telemetry_storage_policies.sql"
+        "004_telemetry_storage_policies.sql",
+        "005_telemetry_parent_asset_site_integrity.sql"
       ],
-      "note": "Telemetry-owned foundation, reading source, asset hierarchy and storage policies. PLAN ONLY; deployment and data migration not approved."
+      "note": "Telemetry-owned isolated foundation with site-aware parent asset integrity. PLAN ONLY; deployment and data migration not approved."
     },
     "BAS_EMS_ISOLATED": {
       "migrationRoot": "database-isolation/sql/bas-ems",
