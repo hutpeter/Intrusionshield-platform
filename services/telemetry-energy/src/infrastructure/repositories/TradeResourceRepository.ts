@@ -1156,6 +1156,24 @@ public async update(
             );
         }
 
+        if (input.maintenanceActivityId) {
+            const maintenance = await this.database.query<{ id: string }>(
+                `SELECT id
+                 FROM Energy.ContractMaintenanceActivities
+                 WHERE id = @maintenanceActivityId
+                   AND tenant_id = @tenantId`,
+                [
+                    { name: "maintenanceActivityId", value: input.maintenanceActivityId },
+                    { name: "tenantId", value: input.tenantId }
+                ]
+            );
+            if (!maintenance.rows[0]) {
+                throw new Error(
+                    "Maintenance activity was not found for this tenant."
+                );
+            }
+        }
+
         if (
             (input.status ?? "CONFIRMED") !==
             "CANCELLED"
