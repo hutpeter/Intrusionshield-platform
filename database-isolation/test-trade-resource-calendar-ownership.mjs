@@ -74,11 +74,7 @@ async function main(){
    const row=(await pool.request().input('id',sql.UniqueIdentifier,valid.data.id).input('tenant',sql.UniqueIdentifier,tenant).input('activity',sql.UniqueIdentifier,activityIds[0].id).query('SELECT COUNT(*) AS n FROM Energy.TradeResourceCalendar WHERE id=@id AND tenant_id=@tenant AND maintenance_activity_id=@activity')).recordset[0].n;
    check(row===1,'Valid same-tenant calendar not physically persisted');
    console.log('PASS: valid same-tenant maintenance activity linked and persisted');
-  }finally{
-  await pool.close().catch(()=>{});
- }
-}
-main().catch(e=>{console.error('FAIL: '+e.message);process.exitCode=1});   }finally{
+   }finally{
     for(const entry of calendarIds){
      const result=await pool.request().input('id',sql.UniqueIdentifier,entry.id).input('tenant',sql.UniqueIdentifier,entry.tenant).query('DELETE FROM Energy.TradeResourceCalendar WHERE id=@id AND tenant_id=@tenant; SELECT @@ROWCOUNT AS n;');
      check(result.recordset[0].n===1,'Targeted calendar cleanup failed');
