@@ -1,13 +1,13 @@
-/* Foundation 6H — disposable-only, transactional site-aware parent FK migration.
-   SSMS: execute ONLY on Ruby_Isolation_Smoke_Telemetry. Not for legacy/production.
-   This is a NEW forward migration; original 003 remains unchanged.
+/* Foundation 6H/6J — transactional site-aware parent FK forward migration.
+   This file is portable and deliberately has no USE statement.
+   Execution is NOT authorized by this file: the isolated migration runner remains
+   plan-only. Execute only through a separately reviewed, target-guarded process
+   with verified backups and preflight. Original 003 remains unchanged.
 */
-USE [Ruby_Isolation_Smoke_Telemetry];
-GO
 SET NOCOUNT ON;
 SET XACT_ABORT ON;
-IF DB_NAME() <> N'Ruby_Isolation_Smoke_Telemetry'
-    THROW 51620, 'Refusing to alter a non-disposable database.', 1;
+IF DB_NAME() IS NULL OR DB_NAME() IN (N'master',N'model',N'msdb',N'tempdb',N'intrusionshield')
+    THROW 51620, 'Refusing to alter a system or legacy shared database.', 1;
 IF OBJECT_ID(N'Telemetry.Assets',N'U') IS NULL
     THROW 51621, 'Telemetry.Assets missing.', 1;
 IF NOT EXISTS (
