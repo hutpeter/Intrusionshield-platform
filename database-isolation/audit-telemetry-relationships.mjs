@@ -1,4 +1,8 @@
-import sql from "mssql";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const sql = createRequire(path.join(root, "packages/database/package.json"))("mssql");
 const db="Ruby_Isolation_Smoke_Telemetry";
 function assert(v,m){if(!v)throw Error(m);}
 async function main(){
