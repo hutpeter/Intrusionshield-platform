@@ -1766,12 +1766,6 @@ export function createApp(
                     await tradeResources.create({
                         tenantId,
 
-                                    resourceNumber:
-                            getRequiredString(
-                                body,
-                                "resourceNumber"
-                            ),
-
                         firstName:
                             getRequiredString(
                                 body,
