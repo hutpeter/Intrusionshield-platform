@@ -43,6 +43,19 @@ export const es: TranslationCatalog = {
         loading: "Cargando..."
     },
 
+    administrationWorkspace: {
+        eyebrow: "Administración de la plataforma Ruby",
+        title: "Administración",
+        description: "Gestione los clientes, usuarios, productos, servicios y políticas operativas de Ruby.",
+        tabs: { overview: "Resumen", clients: "Clientes e inquilinos", users: "Usuarios", products: "Productos y licencias", services: "Servicios", telemetryPolicies: "Políticas de telemetría", audit: "Auditoría" },
+        overview: { title: "Resumen de la plataforma Ruby", description: "Aquí estará disponible la información administrativa y operativa de la plataforma." },
+        clients: { description: "Aquí estarán disponibles el alta de clientes y la gestión de inquilinos." },
+        users: { description: "Aquí estará disponible la administración de usuarios de la plataforma y de los inquilinos." },
+        products: { description: "Aquí estarán disponibles las asignaciones de productos, licencias y derechos de uso." },
+        telemetryPolicies: { description: "Aquí estará disponible la administración de las políticas de persistencia y ciclo de vida de la telemetría." },
+        audit: { description: "Aquí estará disponible el historial de auditoría administrativa y operativa de Ruby." },
+        service: { title: "Servicios de Ruby", description: "Estado y disponibilidad en tiempo real de los servicios de la plataforma y sus productos.", checking: "Comprobando...", refresh: "Actualizar", total: "Total", healthy: "Saludables", degraded: "Degradados", down: "Inactivos", lastChecked: "Última comprobación:", loading: "Comprobando los servicios de Ruby...", platform: "Plataforma", product: "Producto", port: "Puerto", starting: "INICIANDO", startingAction: "Iniciando...", start: "Iniciar", confirmStart: "¿Iniciar {name}?", loadError: "No se pudo cargar el estado de los servicios de Ruby.", requestError: "La consulta del estado de los servicios falló con HTTP {status}.", startError: "No se pudo iniciar {name}.", statusHealthy: "SALUDABLE", statusDegraded: "DEGRADADO", statusDown: "INACTIVO" }
+    },
     shell: {
         enterpriseIntelligenceSystem: "Sistema de Inteligencia Empresarial",
         workspace: "Espacio de trabajo",
