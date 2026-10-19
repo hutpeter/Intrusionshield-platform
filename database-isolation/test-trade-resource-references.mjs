@@ -50,7 +50,7 @@ async function main(){
   };
   await rejected('unknown country',tenant,{countryCode:'ZZ'});
   await rejected('region without country',tenant,{administrativeRegionCode:area.regionCode});
-  await rejected('region not in selected country',tenant,{countryCode:'US',administrativeRegionCode:area.regionCode});
+  await rejected('unknown region for selected country',tenant,{countryCode:area.countryCode,administrativeRegionCode:'RUBY-INVALID-REGION'});
   await rejected('unknown service area',tenant,{serviceAreaId:randomUUID()});
   await rejected('other-tenant service area',otherTenant,{serviceAreaId:area.id});
   await rejected('service area country mismatch',tenant,{countryCode:'US',serviceAreaId:area.id});
