@@ -1,3 +1,4 @@
+import { validateTradeResourceRegionalReferences } from "./application/validateTradeResourceRegionalReferences.js";
 import express, {
     type Express,
     type Response
@@ -81,7 +82,8 @@ import {
 } from "./middleware/tenantContext.js";
 export function createApp(
     database: IDatabaseProvider,
-    energyDatabase: IDatabaseProvider = database
+    energyDatabase: IDatabaseProvider = database,
+    platformDatabase: IDatabaseProvider = energyDatabase
 ): Express {
     const app = express();
     const sites =
@@ -1691,6 +1693,12 @@ export function createApp(
 
                 const body = getBody(request);
 
+                const countryCode = getOptionalString(body, "countryCode");
+                const administrativeRegionCode = getOptionalString(body, "administrativeRegionCode");
+                const serviceAreaId = getOptionalString(body, "serviceAreaId");
+                await validateTradeResourceRegionalReferences(platformDatabase, {
+                    tenantId, countryCode, administrativeRegionCode, serviceAreaId
+                });
                 const resource =
                     await tradeResources.update({
                         tenantId,
@@ -1713,6 +1721,9 @@ export function createApp(
                             getOptionalString(body, "phone"),
                         serviceRegion:
                             getOptionalString(body, "serviceRegion"),
+                        countryCode,
+                        administrativeRegionCode,
+                        serviceAreaId,
                         hourlyRate:
                             getOptionalNumber(body, "hourlyRate"),
                         currency:
@@ -1744,10 +1755,16 @@ export function createApp(
             try {
                 const body = getBody(request);
 
+                const tenantId = requireTenantId(request);
+                const countryCode = getOptionalString(body, "countryCode");
+                const administrativeRegionCode = getOptionalString(body, "administrativeRegionCode");
+                const serviceAreaId = getOptionalString(body, "serviceAreaId");
+                await validateTradeResourceRegionalReferences(platformDatabase, {
+                    tenantId, countryCode, administrativeRegionCode, serviceAreaId
+                });
                 const resource =
                     await tradeResources.create({
-                        tenantId:
-                            requireTenantId(request),
+                        tenantId,
 
                                     resourceNumber:
                             getRequiredString(
@@ -1801,6 +1818,9 @@ export function createApp(
                                 body,
                                 "serviceRegion"
                             ),
+                        countryCode,
+                        administrativeRegionCode,
+                        serviceAreaId,
 
                         hourlyRate:
                             getOptionalNumber(
