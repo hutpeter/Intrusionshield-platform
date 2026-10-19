@@ -51,7 +51,7 @@ async function main(){
    const request=transaction.request();
    request.input('code',sql.NVarChar(3),code);
    request.input('symbol',sql.NVarChar(12),symbol);
-   const result=await request.query('UPDATE [Platform].[Currencies] SET [symbol]=@symbol WHERE [code]=@code AND [symbol]=N\\'?\\'');
+   const result=await request.query("UPDATE [Platform].[Currencies] SET [symbol]=@symbol WHERE [code]=@code AND [symbol]=N'?'");
    check(result.rowsAffected.length===1&&result.rowsAffected[0]===1,'Expected one corrected row for '+code);
   }
   const changed=await select(transaction);
