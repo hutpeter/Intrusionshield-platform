@@ -3,6 +3,7 @@ import {
     useEffect,
     useState
 } from "react";
+import { useI18n } from "./i18n/I18nProvider.js";
 
 
 export type AdministrationTab =
@@ -56,39 +57,19 @@ type ServiceHealthResponse = {
 };
 
 
-const tabs: AdministrationTabDefinition[] = [
-    {
-        key: "overview",
-        label: "Overview"
-    },
-    {
-        key: "clients",
-        label: "Clients & Tenants"
-    },
-    {
-        key: "users",
-        label: "Users"
-    },
-    {
-        key: "products",
-        label: "Products & Licensing"
-    },
-    {
-        key: "services",
-        label: "Services"
-    },
-    {
-        key: "telemetry-policies",
-        label: "Telemetry Policies"
-    },
-    {
-        key: "audit",
-        label: "Audit"
-    }
-];
 
 
 export function AdministrationWorkspace() {
+    const { t } = useI18n();
+    const tabs: AdministrationTabDefinition[] = [
+        { key: "overview", label: t("administrationWorkspace.tabs.overview") },
+        { key: "clients", label: t("administrationWorkspace.tabs.clients") },
+        { key: "users", label: t("administrationWorkspace.tabs.users") },
+        { key: "products", label: t("administrationWorkspace.tabs.products") },
+        { key: "services", label: t("administrationWorkspace.tabs.services") },
+        { key: "telemetry-policies", label: t("administrationWorkspace.tabs.telemetryPolicies") },
+        { key: "audit", label: t("administrationWorkspace.tabs.audit") }
+    ];
     const [activeTab, setActiveTab] =
         useState<AdministrationTab>(
             "overview"
@@ -99,14 +80,13 @@ export function AdministrationWorkspace() {
             <div className="page-header">
                 <div>
                     <div className="page-eyebrow">
-                        Ruby Platform Administration
+                        {t("administrationWorkspace.eyebrow")}
                     </div>
 
-                    <h1>Administration</h1>
+                    <h1>{t("administrationWorkspace.title")}</h1>
 
                     <p>
-                        Manage Ruby clients, users, products,
-                        platform services and operational policies.
+                        {t("administrationWorkspace.description")}
                     </p>
                 </div>
             </div>
@@ -114,7 +94,7 @@ export function AdministrationWorkspace() {
             <div
                 className="administration-tabs"
                 role="tablist"
-                aria-label="Ruby administration"
+                aria-label={t("administrationWorkspace.title")}
             >
                 {tabs.map(
                     (tab) => (
@@ -164,17 +144,17 @@ function AdministrationTabContent({
 }: {
     activeTab: AdministrationTab;
 }) {
+    const { t } = useI18n();
     switch (activeTab) {
         case "overview":
             return (
                 <>
                     <h2>
-                        Ruby Platform Overview
+                        {t("administrationWorkspace.overview.title")}
                     </h2>
 
                     <p>
-                        Platform administration and operational
-                        information will be available here.
+                        {t("administrationWorkspace.overview.description")}
                     </p>
                 </>
             );
@@ -183,12 +163,11 @@ function AdministrationTabContent({
             return (
                 <>
                     <h2>
-                        Clients &amp; Tenants
+                        {t("administrationWorkspace.tabs.clients")}
                     </h2>
 
                     <p>
-                        Client onboarding and tenant management
-                        will be available here.
+                        {t("administrationWorkspace.clients.description")}
                     </p>
                 </>
             );
@@ -196,11 +175,10 @@ function AdministrationTabContent({
         case "users":
             return (
                 <>
-                    <h2>Users</h2>
+                    <h2>{t("administrationWorkspace.tabs.users")}</h2>
 
                     <p>
-                        Tenant and platform user administration
-                        will be available here.
+                        {t("administrationWorkspace.users.description")}
                     </p>
                 </>
             );
@@ -209,12 +187,11 @@ function AdministrationTabContent({
             return (
                 <>
                     <h2>
-                        Products &amp; Licensing
+                        {t("administrationWorkspace.tabs.products")}
                     </h2>
 
                     <p>
-                        Product assignments, licensing and
-                        entitlements will be available here.
+                        {t("administrationWorkspace.products.description")}
                     </p>
                 </>
             );
@@ -226,12 +203,11 @@ function AdministrationTabContent({
             return (
                 <>
                     <h2>
-                        Telemetry Policies
+                        {t("administrationWorkspace.tabs.telemetryPolicies")}
                     </h2>
 
                     <p>
-                        Telemetry persistence and lifecycle policy
-                        administration will be available here.
+                        {t("administrationWorkspace.telemetryPolicies.description")}
                     </p>
                 </>
             );
@@ -239,17 +215,17 @@ function AdministrationTabContent({
         case "audit":
             return (
                 <>
-                    <h2>Audit</h2>
+                    <h2>{t("administrationWorkspace.tabs.audit")}</h2>
 
                     <p>
-                        Ruby platform administrative and operational
-                        audit history will be available here.
+                        {t("administrationWorkspace.audit.description")}
                     </p>
                 </>
             );
     }
 }
 function ServicesPanel() {
+    const { t, locale } = useI18n();
     const [data, setData] =
         useState<ServiceHealthResponse | null>(null);
 
@@ -275,7 +251,7 @@ function ServicesPanel() {
 
                 if (!response.ok) {
                     throw new Error(
-                        `Service health request failed with HTTP ${response.status}.`
+                        t("administrationWorkspace.service.requestError", { status: response.status })
                     );
                 }
 
@@ -289,7 +265,7 @@ function ServicesPanel() {
                 setError(
                     loadError instanceof Error
                         ? loadError.message
-                        : "Unable to load Ruby service health."
+                        : t("administrationWorkspace.service.loadError")
                 );
 
             } finally {
@@ -304,7 +280,7 @@ function ServicesPanel() {
             ) => {
                 const confirmed =
                     window.confirm(
-                        `Start ${service.name}?`
+                        t("administrationWorkspace.service.confirmStart", { name: service.name })
                     );
 
                 if (!confirmed) {
@@ -339,7 +315,7 @@ function ServicesPanel() {
 
                         throw new Error(
                             body?.message ??
-                            `Unable to start ${service.name}.`
+                            t("administrationWorkspace.service.startError", { name: service.name })
                         );
                     }
 
@@ -394,11 +370,10 @@ function ServicesPanel() {
         <div className="ruby-services-panel">
             <div className="ruby-services-heading">
                 <div>
-                    <h2>Ruby Services</h2>
+                    <h2>{t("administrationWorkspace.service.title")}</h2>
 
                     <p>
-                        Live health and availability of Ruby
-                        platform and product services.
+                        {t("administrationWorkspace.service.description")}
                     </p>
                 </div>
 
@@ -414,8 +389,8 @@ function ServicesPanel() {
                     }
                 >
                     {loading
-                        ? "Checking..."
-                        : "Refresh"}
+                        ? t("administrationWorkspace.service.checking")
+                        : t("administrationWorkspace.service.refresh")}
                 </button>
             </div>
 
@@ -429,22 +404,22 @@ function ServicesPanel() {
                 <>
                     <div className="ruby-services-summary">
                         <ServiceSummary
-                            label="Total"
+                            label={t("administrationWorkspace.service.total")}
                             value={data.summary.total}
                         />
 
                         <ServiceSummary
-                            label="Healthy"
+                            label={t("administrationWorkspace.service.healthy")}
                             value={data.summary.healthy}
                         />
 
                         <ServiceSummary
-                            label="Degraded"
+                            label={t("administrationWorkspace.service.degraded")}
                             value={data.summary.degraded}
                         />
 
                         <ServiceSummary
-                            label="Down"
+                            label={t("administrationWorkspace.service.down")}
                             value={data.summary.down}
                         />
                     </div>
@@ -476,15 +451,15 @@ function ServicesPanel() {
                     </div>
 
                     <div className="ruby-services-checked">
-                        Last checked:{" "}
+                        {t("administrationWorkspace.service.lastChecked")}{" "}
                         {new Date(
                             data.checkedAt
-                        ).toLocaleString()}
+                        ).toLocaleString(locale)}
                     </div>
                 </>
             ) : loading ? (
                 <div className="ruby-services-loading">
-                    Checking Ruby services...
+                    {t("administrationWorkspace.service.loading")}
                 </div>
             ) : null}
         </div>
@@ -519,6 +494,7 @@ function ServiceRow({
     actionsDisabled: boolean;
     onStart: () => void;
 }) {
+    const { t } = useI18n();
     return (
         <div className="ruby-service-row">
             <div
@@ -534,8 +510,8 @@ function ServiceRow({
 
                 <span>
                     {service.category === "platform"
-                        ? "Platform"
-                        : "Product"}
+                        ? t("administrationWorkspace.service.platform")
+                        : t("administrationWorkspace.service.product")}
                 </span>
             </div>
 
@@ -547,13 +523,13 @@ function ServiceRow({
                     }
                 >
                     {starting
-                        ? "STARTING"
-                        : service.status.toUpperCase()}
+                        ? t("administrationWorkspace.service.starting")
+                        : t(`administrationWorkspace.service.status${service.status.charAt(0).toUpperCase() + service.status.slice(1)}` as "administrationWorkspace.service.statusHealthy" | "administrationWorkspace.service.statusDegraded" | "administrationWorkspace.service.statusDown")}
                 </span>
             </div>
 
             <div className="ruby-service-port">
-                Port {service.port}
+                {t("administrationWorkspace.service.port")} {service.port}
             </div>
 
             <div className="ruby-service-response">
@@ -574,8 +550,8 @@ function ServiceRow({
                         onClick={onStart}
                     >
                         {starting
-                            ? "Starting..."
-                            : "Start"}
+                            ? t("administrationWorkspace.service.startingAction")
+                            : t("administrationWorkspace.service.start")}
                     </button>
                 ) : null}
             </div>
