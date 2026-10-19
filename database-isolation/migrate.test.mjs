@@ -15,7 +15,7 @@ test('Athena migration manifest has expected ordered SQL files', async () => {
 });
 
 test('isolated migration plans are ordered and contain no duplicate names', async () => {
-  for (const [role, expected] of [['PLATFORM_ISOLATED', 2], ['TELEMETRY_ISOLATED', 4], ['BAS_EMS_ISOLATED', 10]]) {
+  for (const [role, expected] of [['PLATFORM_ISOLATED', 2], ['TELEMETRY_ISOLATED', 5], ['BAS_EMS_ISOLATED', 10]]) {
     const items = await loadPlan(role);
     assert.equal(items.length, expected, role);
     assert.equal(new Set(items.map(item => item.name)).size, expected, role);
