@@ -69,7 +69,16 @@ async function main(){
     }
     const written=await query(tx,'SELECT * FROM [Platform].['+table+']');
     assert(written.length===rows.length,'Row count mismatch '+table);
-    assert(digest(written,columns)===hash,'Full row-content mismatch '+table);
+    if(digest(written,columns)!==hash){
+     console.error('DIAGNOSTIC: full-row mismatch in Platform.'+table+'; comparing column multisets (no values printed).');
+     for(const column of columns){
+      const sourceValues=rows.map(r=>JSON.stringify(normalize(r[column]))).sort();
+      const targetValues=written.map(r=>JSON.stringify(normalize(r[column]))).sort();
+      const equal=JSON.stringify(sourceValues)===JSON.stringify(targetValues);
+      console.error('  '+column+': '+(equal?'MATCH':'DIFF'));
+     }
+     throw Error('Full row-content mismatch '+table+'; transaction must roll back');
+    }
     console.log('PASS: transactional insert and full-row verification Platform.'+table+' ('+rows.length+' rows).');
    }
    const invalid=await query(tx,"SELECT fk.name AS fkName FROM sys.foreign_keys fk JOIN sys.tables t ON t.object_id=fk.parent_object_id JOIN sys.schemas s ON s.schema_id=t.schema_id WHERE s.name=N'Platform' AND fk.is_disabled=1");
