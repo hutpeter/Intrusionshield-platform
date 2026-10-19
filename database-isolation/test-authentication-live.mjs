@@ -34,9 +34,9 @@ async function main(){
   try{
    const insert=async(sql,params)=>{const r=tx.request();for(const [k,v] of Object.entries(params))r.input(k,v);await r.query(sql);};
    for(const [tenant,id] of [[tenantA,idA],[tenantB,idB]]){
-    await insert("INSERT INTO Identity.Identities(TenantId,Id,IdentityType,Status,DisplayName) VALUES (@tenant,@id,N'USER',N'ACTIVE',N'Isolation Test')",{tenant,id});
-    await insert("INSERT INTO Identity.Users(TenantId,IdentityId,Username,NormalizedUsername,Email,NormalizedEmail) VALUES (@tenant,@id,@name,@normalized,N'smoke@example.invalid',N'SMOKE@EXAMPLE.INVALID')",{tenant,id,name,normalized:name.toUpperCase()});
-    await insert("INSERT INTO Authentication.Credentials(TenantId,IdentityId,PasswordHash) VALUES (@tenant,@id,@hash)",{tenant,id,hash:encoded});
+    await insert("INSERT INTO [Identity].[Identities](TenantId,Id,IdentityType,Status,DisplayName) VALUES (@tenant,@id,N'USER',N'ACTIVE',N'Isolation Test')",{tenant,id});
+    await insert("INSERT INTO [Identity].[Users](TenantId,IdentityId,Username,NormalizedUsername,Email,NormalizedEmail) VALUES (@tenant,@id,@name,@normalized,N'smoke@example.invalid',N'SMOKE@EXAMPLE.INVALID')",{tenant,id,name,normalized:name.toUpperCase()});
+    await insert("INSERT INTO [Authentication].[Credentials](TenantId,IdentityId,PasswordHash) VALUES (@tenant,@id,@hash)",{tenant,id,hash:encoded});
    }
    await tx.commit();inserted=true;
   }catch(e){await tx.rollback().catch(()=>{});throw e;}
@@ -51,9 +51,9 @@ async function main(){
    try{
     const tx=pool.transaction();await tx.begin();
     try{
-     for(const table of ['Authentication.Credentials','Identity.Users','Identity.Identities']){
+     for(const table of ['[Authentication].[Credentials]','[Identity].[Users]','[Identity].[Identities]']){
       const req=tx.request();req.input('a',tenantA);req.input('b',tenantB);req.input('idA',idA);req.input('idB',idB);
-      const r=await req.query('DELETE FROM '+table+' WHERE (TenantId=@a AND '+(table==='Identity.Identities'?'Id':'IdentityId')+'=@idA) OR (TenantId=@b AND '+(table==='Identity.Identities'?'Id':'IdentityId')+'=@idB)');
+      const r=await req.query('DELETE FROM '+table+' WHERE (TenantId=@a AND '+(table==='[Identity].[Identities]'?'Id':'IdentityId')+'=@idA) OR (TenantId=@b AND '+(table==='[Identity].[Identities]'?'Id':'IdentityId')+'=@idB)');
       assert(r.rowsAffected[0]===2,'Cleanup count mismatch in '+table);
      }
      await tx.commit();console.log('PASS: six synthetic records deleted.');
