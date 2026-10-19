@@ -53,7 +53,7 @@ async function main(){
   await rejected('unknown region for selected country',tenant,{countryCode:area.countryCode,administrativeRegionCode:'RUBY-INVALID-REGION'});
   await rejected('unknown service area',tenant,{serviceAreaId:randomUUID()});
   await rejected('other-tenant service area',otherTenant,{serviceAreaId:area.id});
-  await rejected('service area country mismatch',tenant,{countryCode:'US',serviceAreaId:area.id});
+  await rejected('service area country mismatch',tenant,{countryCode:area.countryCode==='US'?'CA':'US',serviceAreaId:area.id});
   await rejected('malformed service area ID',tenant,{serviceAreaId:'not-a-uuid'});
   const valid=await post(tenant,{countryCode:area.countryCode,administrativeRegionCode:area.regionCode,serviceAreaId:area.id});
   check(valid.status===201,'Valid TradeResource POST failed: '+valid.status+' '+JSON.stringify(valid.data));
