@@ -31,37 +31,50 @@ async function main(){
  try{
   await pool.connect();
   check((await pool.request().query('SELECT DB_NAME() AS name')).recordset[0].name===BAS,'Unexpected database');
-  const activities=(await pool.request().query('SELECT TOP (2) CONVERT(varchar(36),tenant_id) AS tenantId, CONVERT(varchar(36),id) AS id FROM Energy.ContractMaintenanceActivities ORDER BY id')).recordset;
-  const known=(await pool.request().query('SELECT TOP (1) CONVERT(varchar(36),tenant_id) AS tenantId FROM Energy.TradeResources ORDER BY id')).recordset;
-  tenant=activities[0]?.tenantId??known[0]?.tenantId??'11111111-1111-4111-8111-111111111111';
+  const tenants=[randomUUID(),randomUUID()];
+  tenant=tenants[0];
   const before=await pool.request().query('SELECT COUNT_BIG(*) AS n FROM Energy.TradeResourceCalendar');
   baseline=String(before.recordset[0].n);
-  const created=await api('POST','/api/v1/energy/trade-resources',tenant,{firstName:'Ruby',lastName:'CalendarOwnershipTest',trade:'ELECTRICAL',resourceType:'CONTRACTOR',status:'ACTIVE'});
-  check(created.status===201,'Synthetic resource creation failed: '+created.status+' '+JSON.stringify(created.data));
-  resourceId=created.data?.id;
-  check(/^[0-9a-f-]{36}$/i.test(resourceId??''),'Missing resource UUID');
+  const contractIds=[],activityIds=[],calendarIds=[];
   const startAt='2035-03-10T12:00:00.000Z',endAt='2035-03-10T13:00:00.000Z';
   const payload={entryType:'MAINTENANCE',title:'Ruby ownership regression',startAt,endAt,status:'CONFIRMED'};
-  async function reject(label,reference){
-   const result=await api('POST','/api/v1/energy/trade-resources/'+resourceId+'/calendar',tenant,{...payload,maintenanceActivityId:reference});
-   check(result.status===400,label+' expected 400, received '+result.status+' '+JSON.stringify(result.data));
-   const count=(await pool.request().query('SELECT COUNT_BIG(*) AS n FROM Energy.TradeResourceCalendar')).recordset[0].n;
-   check(String(count)===baseline,label+' changed calendar row count');
-   console.log('PASS: '+label+' rejected; calendar count unchanged');
+  async function countCalendar(){
+   return String((await pool.request().query('SELECT COUNT_BIG(*) AS n FROM Energy.TradeResourceCalendar')).recordset[0].n);
   }
-  await reject('nonexistent maintenance activity',randomUUID());
-  const other=activities.find(a=>a.tenantId.toLowerCase()!==tenant.toLowerCase());
-  if(other)await reject('cross-tenant maintenance activity',other.id);
-  else console.log('SKIP: cross-tenant activity case: no maintenance activity belonging to another tenant exists in disposable BAS/EMS');
-  console.log('PASS: maintenance ownership rejection checks complete');
- }finally{
-  if(resourceId&&pool.connected){
-   const count=(await pool.request().input('resourceId',sql.UniqueIdentifier,resourceId).input('tenantId',sql.UniqueIdentifier,tenant).query('SELECT COUNT(*) AS n FROM Energy.TradeResourceCalendar WHERE resource_id=@resourceId AND tenant_id=@tenantId')).recordset[0].n;
-   check(count===0,'Synthetic resource has calendar children; refusing automatic cleanup');
-   const deleted=await pool.request().input('id',sql.UniqueIdentifier,resourceId).input('tenant',sql.UniqueIdentifier,tenant).query('DELETE FROM Energy.TradeResources WHERE id=@id AND tenant_id=@tenant; SELECT @@ROWCOUNT AS n;');
-   check(deleted.recordset[0].n===1,'Targeted resource cleanup did not delete exactly one row');
-   console.log('PASS: targeted synthetic Trade Resource cleanup');
-  }
+  try{
+   for(const t of tenants){
+    const contract=await api('POST','/api/v1/energy/contracts',t,{
+     contractNumber:'RUBY-6D-'+randomUUID(),name:'Ruby 6D synthetic',vendorName:'Ruby Test',
+     contractType:'SERVICE',startDate:'2035-01-01T00:00:00.000Z',endDate:'2036-01-01T00:00:00.000Z',status:'ACTIVE'
+    });
+    check(contract.status===201,'Synthetic contract failed: '+contract.status+' '+JSON.stringify(contract.data));
+    contractIds.push({id:contract.data.id,tenant:t});
+    const activity=await api('POST','/api/v1/energy/contracts/'+contract.data.id+'/maintenance',t,{
+     activity:'Ruby 6D synthetic maintenance',status:'UPCOMING'
+    });
+    check(activity.status===201,'Synthetic maintenance failed: '+activity.status+' '+JSON.stringify(activity.data));
+    activityIds.push({id:activity.data.id,tenant:t});
+   }
+   const created=await api('POST','/api/v1/energy/trade-resources',tenant,{firstName:'Ruby',lastName:'CalendarOwnershipTest',trade:'ELECTRICAL',resourceType:'CONTRACTOR',status:'ACTIVE'});
+   check(created.status===201,'Synthetic resource creation failed: '+created.status+' '+JSON.stringify(created.data));
+   resourceId=created.data?.id;
+   check(/^[0-9a-f-]{36}$/i.test(resourceId??''),'Missing resource UUID');
+   async function reject(label,reference){
+    const result=await api('POST','/api/v1/energy/trade-resources/'+resourceId+'/calendar',tenant,{...payload,maintenanceActivityId:reference});
+    check(result.status===400,label+' expected 400, received '+result.status+' '+JSON.stringify(result.data));
+    check((await countCalendar())===baseline,label+' changed calendar row count');
+    console.log('PASS: '+label+' rejected; calendar count unchanged');
+   }
+   await reject('nonexistent maintenance activity',randomUUID());
+   await reject('cross-tenant maintenance activity',activityIds[1].id);
+   const valid=await api('POST','/api/v1/energy/trade-resources/'+resourceId+'/calendar',tenant,{...payload,maintenanceActivityId:activityIds[0].id});
+   check(valid.status===201,'Same-tenant calendar creation failed: '+valid.status+' '+JSON.stringify(valid.data));
+   check(valid.data?.maintenanceActivityId?.toLowerCase()===activityIds[0].id.toLowerCase(),'Calendar response missing correct maintenance ID');
+   calendarIds.push({id:valid.data.id,tenant});
+   const row=(await pool.request().input('id',sql.UniqueIdentifier,valid.data.id).input('tenant',sql.UniqueIdentifier,tenant).input('activity',sql.UniqueIdentifier,activityIds[0].id).query('SELECT COUNT(*) AS n FROM Energy.TradeResourceCalendar WHERE id=@id AND tenant_id=@tenant AND maintenance_activity_id=@activity')).recordset[0].n;
+   check(row===1,'Valid same-tenant calendar not physically persisted');
+   console.log('PASS: valid same-tenant maintenance activity linked and persisted');
+  }finally{
   await pool.close().catch(()=>{});
  }
 }
