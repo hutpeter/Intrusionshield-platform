@@ -70,3 +70,16 @@ test("provisioning rolls back if initial configuration fails", async () => {
     }));
     assert.deepEqual(steps, ["begin", "tenant", "config", "rollback"]);
 });
+
+test("authorization audit safely stores malformed UUID claims as NULL", async () => {
+    const calls = [];
+    const database = { execute: async (...args) => { calls.push(args); return 1; } };
+    const audit = new TenantAuthorizationAudit(database);
+    await audit.record("invalid-identity", tenant, "READ", false);
+    await audit.record(identity, "invalid-tenant", "CREATE", false);
+    assert.equal(calls[0][1].find(p => p.name === "identityId").value, null);
+    assert.equal(calls[0][1].find(p => p.name === "tenantId").value, tenant);
+    assert.equal(calls[1][1].find(p => p.name === "identityId").value, identity);
+    assert.equal(calls[1][1].find(p => p.name === "tenantId").value, null);
+    assert.ok(calls.every(call => call[1].find(p => p.name === "allowed").value === false));
+});
