@@ -2,7 +2,7 @@
  * Explicit opt-in SQL Server integration test.
  * Run ONLY against Ruby_Isolation_Rehearsal_Platform.
  * All writes use one provider transaction and are rolled back.
- * This intentionally does not call TenantProvisioningService.create(),
+ * Duplicate constraint violations are tested separately, outside this transaction,\n * because SQL Server may abort a transaction on a constraint error.\n * This intentionally does not call TenantProvisioningService.create(),
  * which commits its own transaction; committed provisioning requires a
  * separately approved disposable database test plan.
  */
@@ -59,8 +59,6 @@ if (process.env.RUBY_TENANT_SQL_TEST !== "I_ACKNOWLEDGE_ROLLBACK_ONLY") {
             const now = new Date();
             await config.create({ tenantId: testId, countryCode: "CA", createdAt: now, updatedAt: now, version: 1 });
             await audit.record(testId, testId, "CREATE", false);
-            const listed = await repo.list(100, 0);
-            // Pagination may exclude the new record if more than 100 tenants exist.
             const direct = await provider.query(
                 "SELECT Id AS id FROM [Platform].[Tenants] WHERE Id = @id",
                 [{ name: "id", value: testId }]
@@ -73,9 +71,7 @@ if (process.env.RUBY_TENANT_SQL_TEST !== "I_ACKNOWLEDGE_ROLLBACK_ONLY") {
                 [{ name: "id", value: testId }]
             );
             assert.equal(auditRows.rows[0]?.count, 1);
-            // SQL Server must enforce normalized uniqueness regardless of casing.
-            await assert.rejects(repo.create({ code: code.toLowerCase(), displayName: "Duplicate", countryCode: "CA" }));
-            console.log("PASS: TypeScript repository insert/read, configuration, audit and duplicate rejection");
+            console.log("PASS: TypeScript repository insert/read, configuration and audit");
         } catch (error) {
             console.error("FAIL:", error);
             process.exitCode = 1;
