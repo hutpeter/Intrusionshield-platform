@@ -1,4 +1,5 @@
 import express from "express";
+import { createTenantAdminRouter, type TenantAdminApi } from "./routes/tenantAdmin.js";
 
 import type {
     Express
@@ -10,7 +11,8 @@ import {
 } from "./routes/index.js";
 
 export function createApp(
-    services?: AuthenticationApiServices
+    services?: AuthenticationApiServices,
+    tenantAdmin?: TenantAdminApi
 ): Express {
     const app = express();
 
@@ -39,6 +41,10 @@ export function createApp(
                 services
             )
         );
+    }
+
+    if (tenantAdmin) {
+        app.use("/api/v1/admin", createTenantAdminRouter(tenantAdmin));
     }
 
     app.use(
