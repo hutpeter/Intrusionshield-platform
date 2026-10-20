@@ -2,7 +2,9 @@
  * Explicit opt-in SQL Server integration test.
  * Run ONLY against Ruby_Isolation_Rehearsal_Platform.
  * All writes use one provider transaction and are rolled back.
- * Duplicate constraint violations are tested separately, outside this transaction,\n * because SQL Server may abort a transaction on a constraint error.\n * This intentionally does not call TenantProvisioningService.create(),
+ * Duplicate constraint violations are tested separately, outside this transaction,
+ * because SQL Server may abort a transaction on a constraint error.
+ * This intentionally does not call TenantProvisioningService.create(),
  * which commits its own transaction; committed provisioning requires a
  * separately approved disposable database test plan.
  */
@@ -38,7 +40,8 @@ if (process.env.RUBY_TENANT_SQL_TEST !== "I_ACKNOWLEDGE_ROLLBACK_ONLY") {
             trustServerCertificate: process.env.RUBY_SQL_TRUST_CERT === "true"
         });
         let transactionOpen = false;
-        let testId;\n        let failedProvisioningId;
+        let testId;
+        let failedProvisioningId;
         try {
             await provider.connect();
             const actual = await provider.query("SELECT DB_NAME() AS databaseName");
@@ -98,7 +101,41 @@ if (process.env.RUBY_TENANT_SQL_TEST !== "I_ACKNOWLEDGE_ROLLBACK_ONLY") {
                 console.error("Cleanup verification failed:", error);
                 process.exitCode = 1;
             }
-            // Exercise real service rollback after BOTH actual inserts succeed.\n            // The injected failure occurs before the service can commit.\n            if (process.exitCode !== 1) {\n                try {\n                    const repo = new SqlPlatformTenantRepository(provider);\n                    const config = new SqlTenantConfigurationRepository(provider);\n                    const failingConfig = {\n                        create: async (input) => {\n                            failedProvisioningId = input.tenantId;\n                            await config.create(input);\n                            throw new Error("INTENTIONAL_TEST_FAILURE_AFTER_CONFIGURATION_INSERT");\n                        }\n                    };\n                    const provisioning = new TenantProvisioningService(provider, repo, failingConfig);\n                    await assert.rejects(\n                        provisioning.create({\n                            code: "ROLLBACK_" + randomUUID().replaceAll("-", ""),\n                            displayName: "Ruby Provisioning Rollback Smoke",\n                            countryCode: "CA"\n                        }),\n                        /INTENTIONAL_TEST_FAILURE_AFTER_CONFIGURATION_INSERT/\n                    );\n                    assert.ok(failedProvisioningId);\n                    const absent = await provider.query(\n                        "SELECT (SELECT COUNT(*) FROM [Platform].[Tenants] WHERE Id = @id) AS tenants, (SELECT COUNT(*) FROM [EIS].[TenantConfigurations] WHERE tenant_id = @id) AS configs",\n                        [{ name: "id", value: failedProvisioningId }]\n                    );\n                    assert.deepEqual(absent.rows[0], { tenants: 0, configs: 0 });\n                    console.log("PASS: real provisioning service rolled back tenant and configuration on failure");\n                } catch (error) {\n                    console.error("Provisioning rollback test failed:", error);\n                    process.exitCode = 1;\n                }\n            }\n            await provider.disconnect();
+            // Exercise real service rollback after BOTH actual inserts succeed.
+            // The injected failure occurs before the service can commit.
+            if (process.exitCode !== 1) {
+                try {
+                    const repo = new SqlPlatformTenantRepository(provider);
+                    const config = new SqlTenantConfigurationRepository(provider);
+                    const failingConfig = {
+                        create: async (input) => {
+                            failedProvisioningId = input.tenantId;
+                            await config.create(input);
+                            throw new Error("INTENTIONAL_TEST_FAILURE_AFTER_CONFIGURATION_INSERT");
+                        }
+                    };
+                    const provisioning = new TenantProvisioningService(provider, repo, failingConfig);
+                    await assert.rejects(
+                        provisioning.create({
+                            code: "ROLLBACK_" + randomUUID().replaceAll("-", ""),
+                            displayName: "Ruby Provisioning Rollback Smoke",
+                            countryCode: "CA"
+                        }),
+                        /INTENTIONAL_TEST_FAILURE_AFTER_CONFIGURATION_INSERT/
+                    );
+                    assert.ok(failedProvisioningId);
+                    const absent = await provider.query(
+                        "SELECT (SELECT COUNT(*) FROM [Platform].[Tenants] WHERE Id = @id) AS tenants, (SELECT COUNT(*) FROM [EIS].[TenantConfigurations] WHERE tenant_id = @id) AS configs",
+                        [{ name: "id", value: failedProvisioningId }]
+                    );
+                    assert.deepEqual(absent.rows[0], { tenants: 0, configs: 0 });
+                    console.log("PASS: real provisioning service rolled back tenant and configuration on failure");
+                } catch (error) {
+                    console.error("Provisioning rollback test failed:", error);
+                    process.exitCode = 1;
+                }
+            }
+            await provider.disconnect();
         }
     }
 }
