@@ -20,6 +20,11 @@ export default defineConfig({
                 changeOrigin: true
             },
 
+            "/api/v1/admin": {
+                target: "http://localhost:4400",
+                changeOrigin: true
+            },
+
             "/api/v1/auth": {
                 target:
                     "http://localhost:4400",
