@@ -1,6 +1,7 @@
 import { SqlServerProvider, type DatabaseOptions } from "@intrusionshield/database";
 import { SqlTenantConfigurationRepository } from "@intrusionshield/tenant-configuration";
 import { PlatformTenantAuthorization } from "./PlatformTenantAuthorization.js";
+import { TenantAuthorizationAudit } from "./TenantAuthorizationAudit.js";
 import { SqlPlatformTenantRepository } from "./SqlPlatformTenantRepository.js";
 import { TenantProvisioningService } from "./TenantProvisioningService.js";
 import type { TenantAdminApi } from "../routes/tenantAdmin.js";
@@ -17,11 +18,15 @@ export function createTenantAdminDependencies(
     accessTokenService: AccessTokenService
 ): TenantAdminApi {
     const authorization = new PlatformTenantAuthorization(readDatabase);
+    const audit = new TenantAuthorizationAudit(readDatabase);
     const tenants = new SqlPlatformTenantRepository(readDatabase);
     return {
         accessTokenService,
-        authorize: (identityId, tenantId, action) =>
-            authorization.allowed(identityId, tenantId, action),
+        authorize: async (identityId, tenantId, action) => {
+            const allowed = await authorization.allowed(identityId, tenantId, action);
+            await audit.record(identityId, tenantId, action, allowed);
+            return allowed;
+        },
         list: (limit, offset) => tenants.list(limit, offset),
         create: async (input) => {
             if (true) {
