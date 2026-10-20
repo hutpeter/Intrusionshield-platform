@@ -15,6 +15,7 @@ import {
 import {
     createApp
 } from "./app.js";
+import { createTenantAdminDependencies } from "./application/createTenantAdminDependencies.js";
 
 import {
     AuthenticationService
@@ -167,7 +168,9 @@ async function start(): Promise<void> {
         createApp({
             authenticationService,
             accessTokenService
-        });
+        }, process.env.RUBY_TENANT_ADMIN_API === "enabled"
+            ? createTenantAdminDependencies(resolved.options, database, accessTokenService)
+            : undefined);
 
     const port =
         positiveIntegerEnvironment(
