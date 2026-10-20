@@ -4,6 +4,7 @@ import {
     useState
 } from "react";
 import { useI18n } from "./i18n/I18nProvider.js";
+import { ClientsPanel } from "./ClientsPanel.js";
 
 
 export type AdministrationTab =
@@ -160,17 +161,7 @@ function AdministrationTabContent({
             );
 
         case "clients":
-            return (
-                <>
-                    <h2>
-                        {t("administrationWorkspace.tabs.clients")}
-                    </h2>
-
-                    <p>
-                        {t("administrationWorkspace.clients.description")}
-                    </p>
-                </>
-            );
+            return <ClientsPanel />;
 
         case "users":
             return (
