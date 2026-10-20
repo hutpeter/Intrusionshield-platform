@@ -11,7 +11,8 @@ import { randomUUID } from "node:crypto";
 import { SqlServerProvider } from "@intrusionshield/database";
 import { SqlTenantConfigurationRepository } from "@intrusionshield/tenant-configuration";
 import { SqlPlatformTenantRepository } from "../dist/application/SqlPlatformTenantRepository.js";
-import { TenantAuthorizationAudit } from "../dist/application/TenantAuthorizationAudit.js";\nimport { TenantProvisioningService } from "../dist/application/TenantProvisioningService.js";
+import { TenantAuthorizationAudit } from "../dist/application/TenantAuthorizationAudit.js";
+import { TenantProvisioningService } from "../dist/application/TenantProvisioningService.js";
 
 const expected = "Ruby_Isolation_Rehearsal_Platform";
 if (process.env.RUBY_TENANT_SQL_TEST !== "I_ACKNOWLEDGE_ROLLBACK_ONLY") {
