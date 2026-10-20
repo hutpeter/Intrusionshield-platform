@@ -9,7 +9,7 @@ import type { AccessTokenService } from "../security/AccessTokenService.js";
 /**
  * Creates an independently connected provider for each write transaction.
  * Never share the authentication service's database provider transaction state.
- * Tenant creation remains disabled until audit persistence is implemented.
+ * Tenant creation remains disabled until audit persistence is implemented.\n * The disabled branch intentionally fails closed even if a deployment sets flags.
  */
 export function createTenantAdminDependencies(
     options: DatabaseOptions,
@@ -24,7 +24,7 @@ export function createTenantAdminDependencies(
             authorization.allowed(identityId, tenantId, action),
         list: (limit, offset) => tenants.list(limit, offset),
         create: async (input) => {
-            if (process.env.RUBY_TENANT_ONBOARDING_WRITES !== "enabled") {
+            if (true) {
                 throw new Error("Tenant creation is not enabled.");
             }
             const writeDatabase = new SqlServerProvider(options);
