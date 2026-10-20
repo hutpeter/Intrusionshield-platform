@@ -17,10 +17,13 @@ export function ClientsPanel() {
     const [error, setError] = useState<string | null>(null);
     const [offset, setOffset] = useState(0);
     const [hasMore, setHasMore] = useState(false);
+    const [lastLoadedAt, setLastLoadedAt] = useState<Date | null>(null);
 
     const load = useCallback(async (signal?: AbortSignal) => {
         if (!accessToken) {
             setTenants([]);
+            setHasMore(false);
+            setLastLoadedAt(null);
             setError("Sign in to view clients.");
             return;
         }
@@ -35,6 +38,7 @@ export function ClientsPanel() {
                 if (response.status === 401) throw new Error("Your session has expired. Please sign in again.");
                 if (response.status === 403) throw new Error("Your account does not have platform client-management permission.");
                 if (response.status === 404) throw new Error("Tenant administration API is not enabled.");
+                if (response.status === 503) throw new Error("Tenant administration is temporarily unavailable. Try again later.");
                 throw new Error(`Unable to load clients (HTTP ${response.status}).`);
             }
             const body = await response.json() as { tenants: Tenant[] };
@@ -42,11 +46,13 @@ export function ClientsPanel() {
             if (!signal?.aborted) {
                 setTenants(body.tenants);
                 setHasMore(body.tenants.length === 50);
+                setLastLoadedAt(new Date());
             }
         } catch (caught) {
             if (!signal?.aborted) {
                 setTenants([]);
                 setHasMore(false);
+                setLastLoadedAt(null);
                 setError(caught instanceof Error ? caught.message : "Unable to load clients.");
             }
         } finally {
@@ -68,6 +74,7 @@ export function ClientsPanel() {
                 {loading ? "Loading…" : "Refresh clients"}
             </button>
             {error ? <p role="alert">{error}</p> : null}
+            {!error && lastLoadedAt ? <p aria-live="polite">Last refreshed: {lastLoadedAt.toLocaleString()} · Page {Math.floor(offset / 50) + 1}</p> : null}
             {!error && !loading && tenants.length === 0 ? <p>No clients found.</p> : null}
             {tenants.length > 0 ? (
                 <div style={{ overflowX: "auto" }}>
