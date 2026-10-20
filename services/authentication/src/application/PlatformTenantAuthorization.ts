@@ -4,6 +4,8 @@ export class PlatformTenantAuthorization {
     constructor(private readonly database: IDatabaseProvider) {}
 
     async allowed(identityId: string, tenantId: string, action: "READ" | "CREATE"): Promise<boolean> {
+        const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        if (!uuid.test(identityId) || !uuid.test(tenantId)) return false;
         const result = await this.database.query<{ allowed: number }>(
             `SELECT CASE WHEN EXISTS (
                 SELECT 1 FROM [Identity].[Identities] i
