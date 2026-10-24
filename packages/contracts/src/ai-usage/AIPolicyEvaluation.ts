@@ -9,7 +9,6 @@ export type AIPolicyDecision =
     | "require-review";
 
 export interface AIPolicyEvaluation {
-
     readonly id: string;
 
     readonly usageRecordId: string;
@@ -28,4 +27,3 @@ export interface AIPolicyEvaluation {
 
     readonly evaluationLatencyMs?: number;
 }
- Set-Content .\packages\contracts\src\ai-usage\AIPolicyEvaluation.ts
