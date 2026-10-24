@@ -41,8 +41,21 @@ export class SqlServerProvider implements IDatabaseProvider {
                     this.options.trustServerCertificate
             }
         });
+try {
         await pool.connect();
         this.pool = pool;
+    } catch (connectionError) {
+        try {
+            await pool.close();
+        } catch (cleanupError) {
+            throw new AggregateError(
+                [connectionError, cleanupError],
+                "SQL Server connection failed and pool cleanup also failed."
+            );
+        }
+
+    throw connectionError;
+}
     }
 
     /** Closes the SQL Server connection. */

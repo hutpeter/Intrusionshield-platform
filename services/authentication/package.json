@@ -1,3 +1,4 @@
+
 {
   "name": "@intrusionshield/authentication-service",
   "version": "1.0.0",
@@ -16,6 +17,8 @@
   "dependencies": {
     "@intrusionshield/config": "workspace:*",
     "@intrusionshield/database": "workspace:*",
+    "@intrusionshield/event-persistence": "workspace:*",
+    "@intrusionshield/events": "workspace:*",
     "@intrusionshield/identity": "workspace:*",
     "@intrusionshield/internationalization": "workspace:*",
     "@intrusionshield/tenant-configuration": "workspace:*",

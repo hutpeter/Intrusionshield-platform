@@ -1,0 +1,30 @@
+
+{
+  "name": "@intrusionshield/event-persistence",
+  "version": "1.0.0",
+  "description": "Durable event persistence and transactional outbox for the Ruby platform.",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rimraf dist",
+    "test": "pnpm run build && node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "@intrusionshield/database": "workspace:*",
+    "@intrusionshield/events": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "rimraf": "^6.0.1",
+    "typescript": "^5.9.3"
+  }
+}

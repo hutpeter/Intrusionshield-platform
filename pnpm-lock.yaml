@@ -249,6 +249,25 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
+  packages/event-persistence:
+    dependencies:
+      '@intrusionshield/database':
+        specifier: workspace:*
+        version: link:../database
+      '@intrusionshield/events':
+        specifier: workspace:*
+        version: link:../events
+    devDependencies:
+      '@types/node':
+        specifier: ^24.13.3
+        version: 24.13.3
+      rimraf:
+        specifier: ^6.0.1
+        version: 6.1.3
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
   packages/events:
     devDependencies:
       '@types/jest':
@@ -485,6 +504,12 @@ importers:
       '@intrusionshield/database':
         specifier: workspace:*
         version: link:../../packages/database
+      '@intrusionshield/event-persistence':
+        specifier: workspace:*
+        version: link:../../packages/event-persistence
+      '@intrusionshield/events':
+        specifier: workspace:*
+        version: link:../../packages/events
       '@intrusionshield/identity':
         specifier: workspace:*
         version: link:../../packages/identity
