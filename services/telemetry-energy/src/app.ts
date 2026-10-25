@@ -80,6 +80,9 @@ import {
     tenantContext,
     type TenantRequest
 } from "./middleware/tenantContext.js";
+import {
+    SqlTelemetryHistoryRepository
+} from "./infrastructure/repositories/TelemetryHistoryRepository.js";
 export function createApp(
     database: IDatabaseProvider,
     energyDatabase: IDatabaseProvider = database,
@@ -97,7 +100,9 @@ export function createApp(
             database
         );
     const readings =
-        new SqlTelemetryRepository(database);
+            new SqlTelemetryRepository(database);
+    const history =
+            new SqlTelemetryHistoryRepository(database);
     const energyFlows =
         new SqlEnergyFlowRepository(energyDatabase);
     const alarmRules =
@@ -1233,33 +1238,61 @@ export function createApp(
     );
     app.get(
         "/api/v1/telemetry/sites/:siteId/readings",
-        async (
-            request: TenantRequest,
-            response: Response
-        ) => {
-            response.json(
-                await readings.bySite(
-                    String(
-                        request.params.siteId ??
-                        ""
-                    ),
-                    requireTenantId(request)
-                )
-            );
+        async (request: TenantRequest, response: Response) => {
+            try {
+                const tenantId = requireTenantId(request);
+                const siteId = String(request.params.siteId ?? "");
+
+                if (Object.keys(request.query).length === 0) {
+                    response.json(await readings.bySite(siteId, tenantId));
+                    return;
+                }
+
+                const filters = parseTelemetryHistoryQuery(request.query);
+                response.json(await history.queryHistory({
+                    tenantId,
+                    siteId,
+                    ...filters
+                }));
+            } catch (error) {
+                sendBadRequest(response, error);
+            }
         }
     );
     app.get(
         "/api/v1/telemetry/sites/:siteId/devices/:deviceId/readings",
         async (request: TenantRequest, response: Response) => {
-            const tenantId = requireTenantId(request);
-            const siteId = String(request.params.siteId ?? "");
-            const deviceId = String(request.params.deviceId ?? "");
-            const device = await devices.findById(deviceId, tenantId);
-            if (!device || device.siteId.toLowerCase() !== siteId.toLowerCase()) {
-                sendNotFound(response, "Device");
-                return;
+            try {
+                const tenantId = requireTenantId(request);
+                const siteId = String(request.params.siteId ?? "");
+                const deviceId = String(request.params.deviceId ?? "");
+
+                const device = await devices.findById(deviceId, tenantId);
+                if (
+                    !device ||
+                    device.siteId.toLowerCase() !== siteId.toLowerCase()
+                ) {
+                    sendNotFound(response, "Device");
+                    return;
+                }
+
+                if (Object.keys(request.query).length === 0) {
+                    response.json(
+                        await readings.byDevice(siteId, deviceId, tenantId)
+                    );
+                    return;
+                }
+
+                const filters = parseTelemetryHistoryQuery(request.query);
+                response.json(await history.queryHistory({
+                    tenantId,
+                    siteId,
+                    deviceId,
+                    ...filters
+                }));
+            } catch (error) {
+                sendBadRequest(response, error);
             }
-            response.json(await readings.byDevice(siteId, deviceId, tenantId));
         }
     );
     app.post(
@@ -2469,6 +2502,144 @@ export function createApp(
 
     return app;
 }
+
+function parseTelemetryHistoryQuery(
+    query: Record<string, unknown>
+): {
+    from?: Date;
+    to?: Date;
+    measurementDefinitionId?: string;
+    page?: number;
+    pageSize?: number;
+} {
+    const allowed = new Set([
+        "from",
+        "to",
+        "measurementDefinitionId",
+        "page",
+        "pageSize"
+    ]);
+
+    for (const key of Object.keys(query)) {
+        if (!allowed.has(key)) {
+            throw new Error(
+                `Unsupported history parameter: ${key}`
+            );
+        }
+    }
+
+    function optionalString(
+        key: string
+    ): string | undefined {
+        const value = query[key];
+
+        if (value === undefined) {
+            return undefined;
+        }
+
+        if (
+            typeof value !== "string" ||
+            value.trim().length === 0
+        ) {
+            throw new Error(
+                `${key} must be a non-empty string.`
+            );
+        }
+
+        return value;
+    }
+
+    function optionalDate(
+        key: string
+    ): Date | undefined {
+        const value = optionalString(key);
+
+        if (value === undefined) {
+            return undefined;
+        }
+
+        if (
+            !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?Z$/.test(value)
+        ) {
+            throw new Error(
+                `${key} must be an ISO 8601 UTC timestamp.`
+            );
+        }
+
+        const parsed = new Date(value);
+
+        if (
+            !Number.isFinite(parsed.getTime()) ||
+            parsed.toISOString().slice(0, 19) !==
+                value.slice(0, 19)
+        ) {
+            throw new Error(
+                `${key} is not a valid date.`
+            );
+        }
+
+        return parsed;
+    }
+
+    function optionalPositiveInteger(
+        key: string,
+        maximum: number
+    ): number | undefined {
+        const value = optionalString(key);
+
+        if (value === undefined) {
+            return undefined;
+        }
+
+        if (!/^[1-9]\d*$/.test(value)) {
+            throw new Error(
+                `${key} must be a positive integer.`
+            );
+        }
+
+        const parsed = Number(value);
+
+        if (
+            !Number.isSafeInteger(parsed) ||
+            parsed > maximum
+        ) {
+            throw new Error(
+                `${key} must be between 1 and ${maximum}.`
+            );
+        }
+
+        return parsed;
+    }
+
+    const from = optionalDate("from");
+    const to = optionalDate("to");
+
+    if (
+        from &&
+        to &&
+        from.getTime() > to.getTime()
+    ) {
+        throw new Error(
+            "from cannot be later than to."
+        );
+    }
+
+    return {
+        from,
+        to,
+        measurementDefinitionId:
+            optionalString("measurementDefinitionId"),
+        page: optionalPositiveInteger(
+            "page",
+            1000000
+        ),
+        pageSize: optionalPositiveInteger(
+            "pageSize",
+            100
+        )
+    };
+}
+
 function parseTelemetryStoragePolicyScope(
     value: unknown
 ): TelemetryStoragePolicyScope {
