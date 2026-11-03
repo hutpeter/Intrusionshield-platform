@@ -152,3 +152,39 @@ test("tray lists reject cross-facility definitions and preserve snapshot revisio
   await api.definition(session, "definition", signal(), 1);
   assert.ok(paths.at(-1).endsWith("/revisions/1"));
 });
+test("processing API preserves versions, confirmation, evidence and scoped response checks", async (t) => {
+  const calls = [];
+  let foreign = false;
+  fake(t, async (path, options) => {
+    calls.push({ path, options });
+    return response({
+      ...session,
+      tenantId: foreign ? "other" : session.tenantId,
+      id: "episode",
+      code: "REC",
+      state: "received",
+    });
+  });
+  const body = {
+    requestId: "request",
+    version: 2,
+    outcome: "failed",
+    evidence: "TEST-EVIDENCE",
+    note: "Test residue",
+    confirmed: true,
+  };
+  await api.finishCleaning(session, "episode", body, signal());
+  assert.equal(
+    calls[0].path,
+    "/api/v1/sterile/facilities/facility/processing/episode/finish",
+  );
+  assert.deepEqual(JSON.parse(calls[0].options.body), body);
+  assert.equal(calls[0].options.headers["x-sterile-csrf"], session.csrf);
+  await api.episode(session, "episode", signal(), 1);
+  assert.ok(calls[1].path.endsWith("/versions/1"));
+  foreign = true;
+  await assert.rejects(
+    api.episode(session, "episode", signal()),
+    (e) => e.code === "SERVICE_UNAVAILABLE",
+  );
+});

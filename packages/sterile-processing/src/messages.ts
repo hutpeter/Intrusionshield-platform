@@ -1,4 +1,6 @@
 const es = {
+  PROCESSING_HOLD:
+    "El instrumento está retenido en recepción, limpieza o inspección pendiente.",
   title: "Procesamiento estéril y gestión de instrumental",
   instrumentTypes: "Tipos de instrumental",
   instruments: "Instrumentos",
@@ -26,6 +28,8 @@ const es = {
 };
 type Messages = Record<keyof typeof es, string>;
 const en: Messages = {
+  PROCESSING_HOLD:
+    "The instrument is held for receiving, cleaning or pending inspection.",
   title: "Sterile Processing & Instrument Management",
   instrumentTypes: "Instrument types",
   instruments: "Instruments",
@@ -53,6 +57,8 @@ const en: Messages = {
     "Service unavailable. The change has not been confirmed.",
 };
 const fr: Messages = {
+  PROCESSING_HOLD:
+    "L’instrument est retenu en réception, nettoyage ou attente d’inspection.",
   title: "Stérilisation et gestion des instruments",
   instrumentTypes: "Types d’instruments",
   instruments: "Instruments",

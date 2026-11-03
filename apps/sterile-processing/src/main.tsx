@@ -1,3 +1,5 @@
+import { ProcessingWorkspace } from "./Processing";
+import { processingLabels } from "./processing-text";
 import { TrayWorkspace } from "./Trays";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
@@ -233,9 +235,9 @@ function Workspace({
   onLogout: () => Promise<void>;
   onExpired: () => void;
 }) {
-  const [tab, setTab] = useState<"instruments" | "types" | "trays">(
-      "instruments",
-    ),
+  const [tab, setTab] = useState<
+      "instruments" | "types" | "trays" | "processing"
+    >("instruments"),
     [page, setPage] = useState(1),
     [historyPage, setHistoryPage] = useState(1),
     [selected, setSelected] = useState<string | null>(null),
@@ -282,7 +284,7 @@ function Workspace({
     setError(null);
     void (async () => {
       try {
-        if (tab === "trays") {
+        if (tab === "trays" || tab === "processing") {
           setLoading(false);
           return;
         }
@@ -363,7 +365,7 @@ function Workspace({
       setNotice(null);
     });
   }
-  function navigate(target: "instruments" | "types" | "trays") {
+  function navigate(target: "instruments" | "types" | "trays" | "processing") {
     guard(() => {
       setSelected(null);
       setTab(target);
@@ -528,6 +530,14 @@ function Workspace({
             <span aria-hidden="true">▣</span>
             {t.trays}
           </button>
+          <button
+            aria-current={tab === "processing" ? "page" : undefined}
+            disabled={busy}
+            onClick={() => navigate("processing")}
+          >
+            <span aria-hidden="true">↻</span>
+            {processingLabels(language).title}
+          </button>
         </nav>
         <div className="sidebar-bottom">
           <p>{t.facility}</p>
@@ -544,7 +554,7 @@ function Workspace({
         </div>
       </aside>
       <main className="content">
-        {tab !== "trays" && (
+        {tab !== "trays" && tab !== "processing" && (
           <div className="page-heading">
             <div>
               <p className="eyebrow">{t.facility}</p>
@@ -786,6 +796,17 @@ function Workspace({
             </div>
           </form>
         )}
+        {tab === "processing" && (
+          <ProcessingWorkspace
+            key={trayReset}
+            session={session}
+            language={language}
+            blocked={blocked}
+            onExpired={onExpired}
+            onDirty={setTrayDirty}
+            onBusy={setTrayBusy}
+          />
+        )}
         {tab === "trays" && (
           <TrayWorkspace
             key={trayReset}
@@ -819,7 +840,12 @@ function Workspace({
                 </div>
                 {session.canWrite && detail.state === "registered" && (
                   <button
-                    disabled={busy || !!form || !!detail.activeAssembly}
+                    disabled={
+                      busy ||
+                      !!form ||
+                      !!detail.activeAssembly ||
+                      !!detail.processingHold
+                    }
                     onClick={() => begin("retire")}
                   >
                     {t.retire}
@@ -843,6 +869,12 @@ function Workspace({
                   <dt>{t.updatedOn}</dt>
                   <dd>{date(detail.updatedAt)}</dd>
                 </div>
+                {detail.processingHold && (
+                  <div>
+                    <dt>{processingLabels(language).held}</dt>
+                    <dd>{detail.processingHold.episodeCode}</dd>
+                  </div>
+                )}
                 {detail.activeAssembly && (
                   <div>
                     <dt>{t.assignment}</dt>

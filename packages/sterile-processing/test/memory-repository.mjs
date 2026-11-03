@@ -1,6 +1,9 @@
 /** SQL-free test adapter only. Never loaded by the service composition root. */
 export class MemoryRepository {
   state = {
+    processing: [],
+    processingVersions: [],
+    processingHolds: [],
     types: [],
     instruments: [],
     audit: [],
@@ -26,6 +29,65 @@ export class MemoryRepository {
       x.tenantId === scope.tenantId && x.facilityId === scope.facilityId;
     const read = (x) => (x ? structuredClone(x) : null);
     const tx = {
+      findProcessing: async (id) =>
+        read(s.processing.find((x) => own(x) && x.id === id)),
+      findProcessingByCode: async (code) =>
+        read(s.processing.find((x) => own(x) && x.code === code)),
+      listProcessing: async (page) =>
+        structuredClone(
+          s.processing.filter(own).slice((page - 1) * 50, (page - 1) * 50 + 51),
+        ),
+      insertProcessing: async (x) => {
+        if (
+          !own(x) ||
+          s.processing.some(
+            (i) => own(i) && (i.id === x.id || i.code === x.code),
+          )
+        )
+          throw Error("constraint");
+        s.processing.push(structuredClone(x));
+      },
+      updateProcessing: async (x, v) => {
+        const n = s.processing.findIndex(
+          (i) => own(i) && i.id === x.id && i.version === v,
+        );
+        if (n < 0) throw Error("conflict");
+        s.processing[n] = structuredClone(x);
+      },
+      insertProcessingVersion: async (x) => {
+        if (
+          !own(x) ||
+          s.processingVersions.some(
+            (i) => own(i) && i.id === x.id && i.version === x.version,
+          )
+        )
+          throw Error("constraint");
+        s.processingVersions.push(structuredClone(x));
+      },
+      findProcessingVersion: async (id, v) =>
+        read(
+          s.processingVersions.find(
+            (x) => own(x) && x.id === id && x.version === v,
+          ),
+        ),
+      findProcessingHold: async (id) => {
+        const h = s.processingHolds.find(
+          (x) => own(x) && x.instrumentId === id,
+        );
+        const e = h && s.processing.find((x) => own(x) && x.id === h.episodeId);
+        return e ? { episodeId: e.id, episodeCode: e.code } : null;
+      },
+      reserveProcessing: async (e) => {
+        for (const i of e.instruments) {
+          if (s.processingHolds.some((x) => own(x) && x.instrumentId === i.id))
+            throw Error("constraint");
+          s.processingHolds.push({
+            ...scope,
+            instrumentId: i.id,
+            episodeId: e.id,
+          });
+        }
+      },
       findType: async (id) => read(s.types.find((x) => own(x) && x.id === id)),
       findTypeByCode: async (code) =>
         read(s.types.find((x) => own(x) && x.code === code)),

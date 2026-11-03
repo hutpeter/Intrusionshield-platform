@@ -9,8 +9,12 @@ Tray definitions, composition checks, assignment reservations and assembly histo
 are now available. See the [tray walkthrough](TRAYS.md) for the next steps using
 your existing demonstration instrument.
 
+See [receiving and cleaning](RECEIVING-CLEANING.md) for the next workflow, using a
+new dummy instrument while keeping the completed demonstration tray intact.
+
 ## What works
 
+- Receiving episodes, attributed cleaning attempts, failure/retry evidence and holds pending inspection.
 - Spanish, English and French screens and validation messages; Spanish is default.
 - Tray definitions with immutable revisions, assembly contents and explicit completion/disassembly.
 - Instrument-type catalogue with code, name, manufacturer and model.

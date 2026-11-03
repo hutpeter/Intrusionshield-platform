@@ -207,7 +207,8 @@ export function createSterilePreview({
         (scope.actorId === actors.operator ||
           (scope.actorId === actors.viewer &&
             (permission === "instruments:read" ||
-              permission === "trays:read"))),
+              permission === "trays:read" ||
+              permission === "processing:read"))),
     }),
   );
   app.use(

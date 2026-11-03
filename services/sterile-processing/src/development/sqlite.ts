@@ -19,6 +19,7 @@ import {
   type CommandReceipt,
   type TrayDefinition,
   type TrayAssembly,
+  type ProcessingEpisode,
 } from "@intrusionshield/sterile-processing";
 import { assertSterilePreviewEnvironment } from "./guard.js";
 
@@ -57,7 +58,7 @@ export class PreviewSqliteRepository implements SterileRepository {
     this.db = new DatabaseSync(path);
     try {
       this.db
-        .exec(`PRAGMA foreign_keys=ON; PRAGMA busy_timeout=3000; PRAGMA journal_mode=WAL;
+        .exec(`PRAGMA foreign_keys=ON; PRAGMA busy_timeout=0; PRAGMA journal_mode=WAL;
 CREATE TABLE IF NOT EXISTS sp_types(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,code TEXT NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,code));
 CREATE TABLE IF NOT EXISTS sp_instruments(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,type_id TEXT NOT NULL,code TEXT NOT NULL,version INTEGER NOT NULL CHECK(version>0),payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,code),FOREIGN KEY(tenant_id,facility_id,type_id) REFERENCES sp_types(tenant_id,facility_id,id));
 CREATE TABLE IF NOT EXISTS sp_audit(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,entity_id TEXT NOT NULL,request_id TEXT NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,request_id));
@@ -68,6 +69,9 @@ CREATE TABLE IF NOT EXISTS sp_definition_versions(tenant_id TEXT NOT NULL,facili
 CREATE TABLE IF NOT EXISTS sp_assemblies(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,code TEXT NOT NULL,definition_id TEXT NOT NULL,definition_revision INTEGER NOT NULL,version INTEGER NOT NULL,state TEXT NOT NULL CHECK(state IN ('draft','complete','disassembled')),payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,code),FOREIGN KEY(tenant_id,facility_id,definition_id,definition_revision) REFERENCES sp_definition_versions(tenant_id,facility_id,id,revision));
 CREATE TABLE IF NOT EXISTS sp_assembly_versions(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id,version),FOREIGN KEY(tenant_id,facility_id,id) REFERENCES sp_assemblies(tenant_id,facility_id,id));
 CREATE TABLE IF NOT EXISTS sp_assignments(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,instrument_id TEXT NOT NULL,assembly_id TEXT NOT NULL,PRIMARY KEY(tenant_id,facility_id,instrument_id),FOREIGN KEY(tenant_id,facility_id,instrument_id) REFERENCES sp_instruments(tenant_id,facility_id,id),FOREIGN KEY(tenant_id,facility_id,assembly_id) REFERENCES sp_assemblies(tenant_id,facility_id,id));
+CREATE TABLE IF NOT EXISTS sp_processing(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,code TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,code));
+CREATE TABLE IF NOT EXISTS sp_processing_versions(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id,version),FOREIGN KEY(tenant_id,facility_id,id) REFERENCES sp_processing(tenant_id,facility_id,id));
+CREATE TABLE IF NOT EXISTS sp_processing_holds(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,instrument_id TEXT NOT NULL,episode_id TEXT NOT NULL,PRIMARY KEY(tenant_id,facility_id,instrument_id),FOREIGN KEY(tenant_id,facility_id,instrument_id) REFERENCES sp_instruments(tenant_id,facility_id,id),FOREIGN KEY(tenant_id,facility_id,episode_id) REFERENCES sp_processing(tenant_id,facility_id,id));
 CREATE INDEX IF NOT EXISTS sp_assignment_assembly ON sp_assignments(tenant_id,facility_id,assembly_id);`);
     } catch (error) {
       this.db.close();
@@ -92,7 +96,23 @@ CREATE INDEX IF NOT EXISTS sp_assignment_assembly ON sp_assignments(tenant_id,fa
     let started = false;
     try {
       if (this.closed) throw new Error("Preview storage is closed.");
-      this.db.exec("BEGIN IMMEDIATE");
+      // Yield while another connection owns the write lock so its async work
+      // can commit; a synchronous busy timeout would block that same event loop.
+      const deadline = Date.now() + 3000;
+      for (;;) {
+        try {
+          this.db.exec("BEGIN IMMEDIATE");
+          break;
+        } catch (error) {
+          if (
+            (error as { errcode?: number }).errcode !== 5 ||
+            Date.now() >= deadline
+          )
+            throw error;
+          await new Promise((resolve) => setTimeout(resolve, 15));
+          if (this.closed) throw new Error("Preview storage is closed.");
+        }
+      }
       started = true;
       const args = [scope.tenantId, scope.facilityId];
       const own = (item: { tenantId: string; facilityId: string }) => {
@@ -117,6 +137,78 @@ CREATE INDEX IF NOT EXISTS sp_assignment_assembly ON sp_assignments(tenant_id,fa
         return rows.map((row) => JSON.parse(row.payload) as V);
       };
       const tx: SterileTransaction = {
+        findProcessing: async (id) =>
+          read<ProcessingEpisode>(
+            "SELECT payload FROM sp_processing WHERE tenant_id=? AND facility_id=? AND id=?",
+            id,
+          ),
+        findProcessingByCode: async (code) =>
+          read<ProcessingEpisode>(
+            "SELECT payload FROM sp_processing WHERE tenant_id=? AND facility_id=? AND code=?",
+            code,
+          ),
+        listProcessing: async (page) =>
+          list<ProcessingEpisode>(
+            "SELECT payload FROM sp_processing WHERE tenant_id=? AND facility_id=? ORDER BY json_extract(payload,'$.createdAt') DESC,id LIMIT 51 OFFSET ?",
+            page,
+          ),
+        insertProcessing: async (item) => {
+          own(item);
+          this.db
+            .prepare("INSERT INTO sp_processing VALUES(?,?,?,?,?,?)")
+            .run(
+              ...args,
+              item.id,
+              item.code,
+              item.version,
+              JSON.stringify(item),
+            );
+        },
+        updateProcessing: async (item, expected) => {
+          own(item);
+          if (item.version !== expected + 1)
+            throw new SterileError("INVALID_REQUEST");
+          const r = this.db
+            .prepare(
+              "UPDATE sp_processing SET version=?,payload=? WHERE tenant_id=? AND facility_id=? AND id=? AND version=?",
+            )
+            .run(
+              item.version,
+              JSON.stringify(item),
+              ...args,
+              item.id,
+              expected,
+            );
+          if (r.changes !== 1) throw new SterileError("CONFLICT");
+        },
+        insertProcessingVersion: async (item) => {
+          own(item);
+          this.db
+            .prepare("INSERT INTO sp_processing_versions VALUES(?,?,?,?,?)")
+            .run(...args, item.id, item.version, JSON.stringify(item));
+        },
+        findProcessingVersion: async (id, version) =>
+          read<ProcessingEpisode>(
+            "SELECT payload FROM sp_processing_versions WHERE tenant_id=? AND facility_id=? AND id=? AND version=?",
+            id,
+            version,
+          ),
+        findProcessingHold: async (id) => {
+          const row = this.db
+            .prepare(
+              "SELECT e.id AS episodeId,e.code AS episodeCode FROM sp_processing_holds h JOIN sp_processing e ON e.tenant_id=h.tenant_id AND e.facility_id=h.facility_id AND e.id=h.episode_id WHERE h.tenant_id=? AND h.facility_id=? AND h.instrument_id=?",
+            )
+            .get(...args, id) as
+            { episodeId: string; episodeCode: string } | undefined;
+          return row ?? null;
+        },
+        reserveProcessing: async (item) => {
+          own(item);
+          for (const i of item.instruments)
+            this.db
+              .prepare("INSERT INTO sp_processing_holds VALUES(?,?,?,?)")
+              .run(...args, i.id, item.id);
+        },
         findType: async (id) =>
           read<InstrumentType>(
             "SELECT payload FROM sp_types WHERE tenant_id=? AND facility_id=? AND id=?",

@@ -1,4 +1,8 @@
 import type {
+  ProcessingEpisode,
+  ReceiveInput,
+  StartCleaningInput,
+  FinishCleaningInput,
   Instrument,
   InstrumentType,
   SterileAuditEvent,
@@ -142,6 +146,61 @@ async function scopedPage<T extends { tenantId: string; facilityId: string }>(
   return value;
 }
 export const api = {
+  processing: (s: Session, n: number, signal: AbortSignal) =>
+    scopedPage<ProcessingEpisode>(s, base(s) + "/processing", n, signal),
+  episode: (s: Session, id: string, signal: AbortSignal, version?: number) =>
+    scoped(
+      s,
+      call<ProcessingEpisode>(
+        base(s) +
+          "/processing/" +
+          encodeURIComponent(id) +
+          (version === undefined ? "" : "/versions/" + version),
+        signal,
+      ),
+    ),
+  receive: (s: Session, body: ReceiveInput, signal: AbortSignal) =>
+    scoped(
+      s,
+      call<ProcessingEpisode>(base(s) + "/processing", signal, body, s.csrf),
+    ),
+  startCleaning: (
+    s: Session,
+    id: string,
+    body: StartCleaningInput,
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<ProcessingEpisode>(
+        base(s) + "/processing/" + encodeURIComponent(id) + "/start",
+        signal,
+        body,
+        s.csrf,
+      ),
+    ),
+  finishCleaning: (
+    s: Session,
+    id: string,
+    body: FinishCleaningInput,
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<ProcessingEpisode>(
+        base(s) + "/processing/" + encodeURIComponent(id) + "/finish",
+        signal,
+        body,
+        s.csrf,
+      ),
+    ),
+  processingHistory: (s: Session, id: string, n: number, signal: AbortSignal) =>
+    scopedPage<SterileAuditEvent>(
+      s,
+      base(s) + "/processing/" + encodeURIComponent(id) + "/history",
+      n,
+      signal,
+    ),
   session: (signal: AbortSignal) => checkedSession("/preview/session", signal),
   login: (role: "operator" | "viewer", s: Session, signal: AbortSignal) =>
     checkedSession("/preview/login", signal, { role }, s.csrf),

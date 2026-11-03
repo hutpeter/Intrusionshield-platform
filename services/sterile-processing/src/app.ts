@@ -2,6 +2,7 @@ import express from "express";
 import {
   InstrumentRegistry,
   TrayRegistry,
+  ProcessingRegistry,
   SterileError,
   sterileUuid,
   type SterileRepository,
@@ -21,7 +22,12 @@ export interface SterileDependencies {
     scope: SterileScope,
     capability: "sterile.core",
     permission:
-      "instruments:read" | "instruments:write" | "trays:read" | "trays:write",
+      | "instruments:read"
+      | "instruments:write"
+      | "trays:read"
+      | "trays:write"
+      | "processing:read"
+      | "processing:write",
   ) => Promise<boolean>;
 }
 function body(value: unknown, keys: string[]): Record<string, unknown> {
@@ -110,13 +116,17 @@ export function createSterileApp(
         facilityId,
       };
       const readOnly = req.method === "GET" || req.method === "HEAD";
-      const permission = req.path.startsWith("/tray-")
+      const permission = req.path.startsWith("/processing")
         ? readOnly
-          ? "trays:read"
-          : "trays:write"
-        : readOnly
-          ? "instruments:read"
-          : "instruments:write";
+          ? "processing:read"
+          : "processing:write"
+        : req.path.startsWith("/tray-")
+          ? readOnly
+            ? "trays:read"
+            : "trays:write"
+          : readOnly
+            ? "instruments:read"
+            : "instruments:write";
       if (
         (await dependencies.authorize!(scope, "sterile.core", permission)) !==
         true
@@ -352,6 +362,93 @@ export function createSterileApp(
       ),
     );
   });
+  const processing = () => new ProcessingRegistry(dependencies.repository!);
+  app.get(prefix + "/processing", async (req, res) =>
+    res.json(await processing().list(res.locals.scope, page(req))),
+  );
+  app.get(prefix + "/processing/:id", async (req, res) => {
+    noQuery(req);
+    res.json(
+      await processing().get(res.locals.scope, sterileUuid(req.params.id)),
+    );
+  });
+  app.get(prefix + "/processing/:id/versions/:version", async (req, res) => {
+    noQuery(req);
+    res.json(
+      await processing().get(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        Number(req.params.version),
+      ),
+    );
+  });
+  app.get(prefix + "/processing/:id/history", async (req, res) =>
+    res.json(
+      await processing().history(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        page(req),
+      ),
+    ),
+  );
+  app.post(prefix + "/processing", async (req, res) => {
+    noQuery(req);
+    const v = body(req.body, [
+      "requestId",
+      "code",
+      "source",
+      "custodian",
+      "condition",
+      "discrepancies",
+      "instrumentIds",
+      "confirmed",
+    ]);
+    res
+      .status(201)
+      .json(
+        await processing().receive(
+          res.locals.scope,
+          v as unknown as Parameters<ProcessingRegistry["receive"]>[1],
+        ),
+      );
+  });
+  app.post(prefix + "/processing/:id/start", async (req, res) => {
+    noQuery(req);
+    const v = body(req.body, [
+      "requestId",
+      "version",
+      "method",
+      "procedure",
+      "procedureVersion",
+      "equipment",
+      "confirmed",
+    ]);
+    res.json(
+      await processing().start(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        v as unknown as Parameters<ProcessingRegistry["start"]>[2],
+      ),
+    );
+  });
+  app.post(prefix + "/processing/:id/finish", async (req, res) => {
+    noQuery(req);
+    const v = body(req.body, [
+      "requestId",
+      "version",
+      "outcome",
+      "evidence",
+      "note",
+      "confirmed",
+    ]);
+    res.json(
+      await processing().finish(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        v as unknown as Parameters<ProcessingRegistry["finish"]>[2],
+      ),
+    );
+  });
   app.use((_req, res) => {
     res.status(404).json({ error: "NOT_FOUND" });
   });
@@ -373,6 +470,7 @@ export function createSterileApp(
               CONFLICT: 409,
               ASSEMBLY_INCOMPLETE: 409,
               INSTRUMENT_ASSIGNED: 409,
+              PROCESSING_HOLD: 409,
             }[code as SterileError["code"]]
           : parser.type === "entity.too.large"
             ? 413

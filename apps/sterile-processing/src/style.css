@@ -966,3 +966,29 @@ td {
     font-size: 12px;
   }
 }
+
+.details-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.2rem;
+}
+.details-grid dt {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.details-grid dd {
+  margin: 0.35rem 0 0;
+  overflow-wrap: anywhere;
+}
+.cleaning-attempt {
+  padding: 1rem 0;
+  border-bottom: 1px solid #dbe5df;
+}
+.processing-workspace .form-grid {
+  margin-bottom: 1.5rem;
+}
+@media (max-width: 600px) {
+  .details-grid {
+    grid-template-columns: 1fr;
+  }
+}

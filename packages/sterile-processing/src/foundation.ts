@@ -1,3 +1,4 @@
+import type { ProcessingEpisode } from "./processing-types.js";
 import type { TrayDefinition, TrayAssembly } from "./tray-types.js";
 import { createHash } from "node:crypto";
 
@@ -19,6 +20,7 @@ export interface InstrumentType {
   version: number;
 }
 export interface Instrument {
+  processingHold?: { episodeId: string; episodeCode: string };
   activeAssembly?: { assemblyId: string; assemblyCode: string };
   id: string;
   tenantId: string;
@@ -41,6 +43,9 @@ export interface SterileAuditEvent {
   actorId: string;
   at: string;
   action:
+    | "processing-received"
+    | "cleaning-started"
+    | "cleaning-recorded"
     | "type-created"
     | "instrument-registered"
     | "instrument-retired"
@@ -56,13 +61,31 @@ export interface SterileAuditEvent {
   reason: string;
 }
 export type SterileRecord =
-  InstrumentType | Instrument | TrayDefinition | TrayAssembly;
+  | InstrumentType
+  | Instrument
+  | TrayDefinition
+  | TrayAssembly
+  | ProcessingEpisode;
 export interface CommandReceipt {
   hash: string;
   result: SterileRecord;
 }
 /** All methods are scoped to the transaction's tenant/facility. Writes and audit commit together. */
 export interface SterileTransaction {
+  findProcessing(id: string): Promise<ProcessingEpisode | null>;
+  findProcessingByCode(code: string): Promise<ProcessingEpisode | null>;
+  listProcessing(page: number): Promise<ProcessingEpisode[]>;
+  insertProcessing(item: ProcessingEpisode): Promise<void>;
+  updateProcessing(item: ProcessingEpisode, expected: number): Promise<void>;
+  insertProcessingVersion(item: ProcessingEpisode): Promise<void>;
+  findProcessingVersion(
+    id: string,
+    version: number,
+  ): Promise<ProcessingEpisode | null>;
+  findProcessingHold(
+    id: string,
+  ): Promise<{ episodeId: string; episodeCode: string } | null>;
+  reserveProcessing(item: ProcessingEpisode): Promise<void>;
   findType(id: string): Promise<InstrumentType | null>;
   findTypeByCode(code: string): Promise<InstrumentType | null>;
   listTypes(page: number): Promise<InstrumentType[]>;
@@ -114,7 +137,8 @@ export class SterileError extends Error {
       | "NOT_FOUND"
       | "CONFLICT"
       | "ASSEMBLY_INCOMPLETE"
-      | "INSTRUMENT_ASSIGNED",
+      | "INSTRUMENT_ASSIGNED"
+      | "PROCESSING_HOLD",
   ) {
     super(code);
   }

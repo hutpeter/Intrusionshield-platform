@@ -738,6 +738,7 @@ export function TrayWorkspace({
                           value={i.id}
                           disabled={
                             i.state === "retired" ||
+                            !!i.processingHold ||
                             fields.instrumentIds.includes(i.id) ||
                             !!(
                               i.activeAssembly &&
@@ -751,6 +752,9 @@ export function TrayWorkspace({
                           {i.activeAssembly &&
                           i.activeAssembly.assemblyId !== form.assembly.id
                             ? " · " + t.reservedElsewhere
+                            : ""}
+                          {i.processingHold
+                            ? " · " + i.processingHold.episodeCode
                             : ""}
                           {i.state === "retired" ? " · " + t.retired : ""}
                         </option>
