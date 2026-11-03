@@ -41,3 +41,6 @@ temp/
 *.tsbuildinfo
 # Local Ruby configuration
 .env.local
+
+# Isolated sterile-processing dummy-data preview
+/work/sterile-processing-preview/

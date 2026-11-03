@@ -2,6 +2,9 @@ name: Sterile Processing Foundation
 on:
   pull_request:
     paths:
+      - "apps/sterile-processing/**"
+      - "scripts/sterile-preview.mjs"
+      - "package.json"
       - "packages/sterile-processing/**"
       - "services/sterile-processing/**"
       - "pnpm-lock.yaml"
@@ -12,7 +15,7 @@ on:
 permissions:
   contents: read
 jobs:
-  sql-free-foundation:
+  isolated-foundation:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -26,8 +29,12 @@ jobs:
           node-version: 24
           cache: pnpm
       - name: Install scoped dependencies without lifecycle scripts
-        run: pnpm install --frozen-lockfile --ignore-scripts --filter @intrusionshield/sterile-processing --filter @intrusionshield/sterile-processing-service
+        run: pnpm install --frozen-lockfile --ignore-scripts --filter @intrusionshield/sterile-processing --filter @intrusionshield/sterile-processing-service --filter @intrusionshield/sterile-processing-web
       - name: Domain build and SQL-free tests
         run: pnpm --filter @intrusionshield/sterile-processing test
       - name: Service build and loopback HTTP tests
         run: pnpm --filter @intrusionshield/sterile-processing-service test
+      - name: Web build and API/localization tests
+        run: |
+          pnpm --filter @intrusionshield/sterile-processing-web build
+          pnpm --filter @intrusionshield/sterile-processing-web test

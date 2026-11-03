@@ -182,6 +182,15 @@ export function createSterileApp(
         ),
       );
   });
+  app.get(prefix + "/instruments/:id/history", async (req, res) => {
+    res.json(
+      await registry().history(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        page(req),
+      ),
+    );
+  });
   app.post(prefix + "/instruments/:id/retire", async (req, res) => {
     noQuery(req);
     const value = body(req.body, ["requestId", "version", "reason"]);
@@ -216,11 +225,9 @@ export function createSterileApp(
             : parser.type === "entity.parse.failed"
               ? 400
               : 503;
-      res
-        .status(status)
-        .json({
-          error: status === 400 || status === 413 ? "INVALID_REQUEST" : code,
-        });
+      res.status(status).json({
+        error: status === 400 || status === 413 ? "INVALID_REQUEST" : code,
+      });
     },
   );
   return app;

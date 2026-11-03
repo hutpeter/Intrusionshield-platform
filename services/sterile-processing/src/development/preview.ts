@@ -1,0 +1,230 @@
+import express from "express";
+import { randomBytes } from "node:crypto";
+import type { SterileRepository } from "@intrusionshield/sterile-processing";
+import { createSterileApp } from "../app.js";
+import { assertSterilePreviewEnvironment } from "./guard.js";
+
+const tenantId = "a7f4b902-0101-4be1-8001-000000000001",
+  facilityId = "a7f4b902-0101-4be1-8001-000000000002";
+const actors = {
+  operator: "a7f4b902-0101-4be1-8001-000000000003",
+  viewer: "a7f4b902-0101-4be1-8001-000000000004",
+};
+export type PreviewRole = keyof typeof actors;
+type Session = { csrf: string; expiresAt: number; role: PreviewRole | null };
+const cookieName = "ruby_sterile_preview";
+const ttl = 30 * 60 * 1000;
+const secret = () => randomBytes(32).toString("hex");
+/** Explicit local fixture BFF. Never imported by app.ts or the production composition root. */
+export function createSterilePreview({
+  repository,
+  origin,
+  webRoot,
+  now = Date.now,
+}: {
+  repository: SterileRepository;
+  origin: string;
+  webRoot?: string;
+  now?: () => number;
+}): { app: express.Express; dispose: () => void } {
+  assertSterilePreviewEnvironment();
+  const url = new URL(origin);
+  if (
+    url.protocol !== "http:" ||
+    url.hostname !== "127.0.0.1" ||
+    origin !== url.origin
+  )
+    throw new Error("Preview requires an exact loopback HTTP origin.");
+  const sessions = new Map<string, Session>();
+  const tokens = { operator: secret(), viewer: secret() };
+  const app = express();
+  app.disable("x-powered-by");
+  app.use((req, res, next) => {
+    res.setHeader("Cache-Control", "no-store");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Referrer-Policy", "no-referrer");
+    res.setHeader("Cross-Origin-Resource-Policy", "same-origin");
+    res.setHeader(
+      "Content-Security-Policy",
+      "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
+    );
+    if (
+      req.headers.host !== url.host ||
+      (req.headers.origin && req.headers.origin !== origin) ||
+      req.headers["sec-fetch-site"] === "cross-site"
+    ) {
+      res.status(403).json({ error: "FORBIDDEN" });
+      return;
+    }
+    for (const [id, s] of sessions)
+      if (s.expiresAt <= now()) sessions.delete(id);
+    const matches = (req.headers.cookie ?? "")
+      .split(";")
+      .map((v) => v.trim())
+      .filter((v) => v.startsWith(cookieName + "="));
+    const id =
+      matches.length === 1 ? matches[0]!.slice(cookieName.length + 1) : "";
+    res.locals.sessionId = id;
+    res.locals.session = sessions.get(id) ?? null;
+    next();
+  });
+  function create(res: express.Response, role: PreviewRole | null) {
+    if (sessions.size >= 128) sessions.delete(sessions.keys().next().value!);
+    const id = secret(),
+      session: Session = { csrf: secret(), expiresAt: now() + ttl, role };
+    sessions.set(id, session);
+    res.locals.sessionId = id;
+    res.locals.session = session;
+    res.setHeader(
+      "Set-Cookie",
+      `${cookieName}=${id}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${ttl / 1000}`,
+    );
+    return session;
+  }
+  function projection(session: Session) {
+    return {
+      mode: "local-dummy-preview",
+      authenticated: !!session.role,
+      csrf: session.csrf,
+      expiresAt: session.expiresAt,
+      ...(session.role
+        ? {
+            role: session.role,
+            tenantId,
+            actorId: actors[session.role],
+            facilityId,
+            facilityName: "Centro de demostración",
+            timeZone: "America/Lima",
+            actors: Object.fromEntries(
+              Object.entries(actors).map(([role, id]) => [id, role]),
+            ),
+            canWrite: session.role === "operator",
+          }
+        : {}),
+    };
+  }
+  app.get("/preview/session", (_req, res) => {
+    res.json(projection(res.locals.session ?? create(res, null)));
+  });
+  app.use(["/preview", "/api/v1/sterile"], (req, res, next) => {
+    if (req.headers.authorization) {
+      res.status(401).json({ error: "UNAUTHENTICATED" });
+      return;
+    }
+    const s = res.locals.session as Session | null;
+    if (!s) {
+      res.status(401).json({ error: "UNAUTHENTICATED" });
+      return;
+    }
+    if (
+      !["GET", "HEAD"].includes(req.method) &&
+      (req.headers.origin !== origin ||
+        typeof req.headers["x-sterile-csrf"] !== "string" ||
+        req.headers["x-sterile-csrf"] !== s.csrf)
+    ) {
+      res.status(403).json({ error: "FORBIDDEN" });
+      return;
+    }
+    next();
+  });
+  // Do not consume core API JSON here; the production factory applies its own strict parser.
+  app.use("/preview", express.json({ limit: "8kb", strict: true }));
+  app.post("/preview/login", (req, res) => {
+    if (
+      Object.keys(req.query).length ||
+      !req.body ||
+      Array.isArray(req.body) ||
+      Object.keys(req.body).length !== 1 ||
+      !["operator", "viewer"].includes(req.body.role)
+    ) {
+      res.status(400).json({ error: "INVALID_REQUEST" });
+      return;
+    }
+    sessions.delete(res.locals.sessionId);
+    res.json(projection(create(res, req.body.role as PreviewRole)));
+  });
+  app.post("/preview/logout", (req, res) => {
+    if (
+      Object.keys(req.query).length ||
+      !req.body ||
+      Array.isArray(req.body) ||
+      Object.keys(req.body).length
+    ) {
+      res.status(400).json({ error: "INVALID_REQUEST" });
+      return;
+    }
+    sessions.delete(res.locals.sessionId);
+    res.json(projection(create(res, null)));
+  });
+  app.use("/api/v1/sterile", (req, res, next) => {
+    const s = res.locals.session as Session;
+    if (!s.role) {
+      res.status(401).json({ error: "UNAUTHENTICATED" });
+      return;
+    }
+    // The random bridge credential is never returned to browser code or stored there.
+    delete req.headers.cookie;
+    req.headers.authorization = "Bearer " + tokens[s.role];
+    next();
+  });
+  const fixtureGrants = new Set([
+    "sterile.core",
+    "core.authentication",
+    "core.authorization",
+  ]);
+  if (webRoot)
+    app.use(
+      express.static(webRoot, {
+        index: "index.html",
+        dotfiles: "deny",
+        redirect: false,
+      }),
+    );
+  app.use(
+    createSterileApp({
+      repository,
+      authenticate: async (bearer) => {
+        const role = (Object.keys(tokens) as PreviewRole[]).find(
+          (r) => tokens[r] === bearer,
+        );
+        return role
+          ? { tenantId, actorId: actors[role], facilityIds: [facilityId] }
+          : null;
+      },
+      authorize: async (scope, capability, permission) =>
+        scope.tenantId === tenantId &&
+        scope.facilityId === facilityId &&
+        fixtureGrants.has(capability) &&
+        fixtureGrants.has("core.authentication") &&
+        fixtureGrants.has("core.authorization") &&
+        (scope.actorId === actors.operator ||
+          (scope.actorId === actors.viewer &&
+            permission === "instruments:read")),
+    }),
+  );
+  app.use(
+    (
+      error: unknown,
+      _req: express.Request,
+      res: express.Response,
+      _next: express.NextFunction,
+    ) => {
+      const type = (error as { type?: string }).type;
+      res
+        .status(
+          type === "entity.too.large"
+            ? 413
+            : type === "entity.parse.failed"
+              ? 400
+              : 503,
+        )
+        .json({
+          error:
+            type === "entity.too.large" || type === "entity.parse.failed"
+              ? "INVALID_REQUEST"
+              : "SERVICE_UNAVAILABLE",
+        });
+    },
+  );
+  return { app, dispose: () => sessions.clear() };
+}

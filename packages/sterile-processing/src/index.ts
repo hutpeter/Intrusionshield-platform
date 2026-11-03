@@ -61,6 +61,7 @@ export interface SterileTransaction {
   insertInstrument(value: Instrument): Promise<void>;
   updateInstrument(value: Instrument, expectedVersion: number): Promise<void>;
   appendAudit(event: SterileAuditEvent): Promise<void>;
+  listAudit(entityId: string, page: number): Promise<SterileAuditEvent[]>;
   findReceipt(requestId: string): Promise<CommandReceipt | null>;
   saveReceipt(requestId: string, receipt: CommandReceipt): Promise<void>;
 }
@@ -312,6 +313,20 @@ export class InstrumentRegistry {
       p = pageOf(page);
     return this.repository.transaction(s, async (tx) => {
       const rows = await tx.listInstruments(p);
+      return { items: rows.slice(0, 50), page: p, hasMore: rows.length > 50 };
+    });
+  }
+  async history(
+    scope: SterileScope,
+    id: string,
+    page = 1,
+  ): Promise<{ items: SterileAuditEvent[]; page: number; hasMore: boolean }> {
+    const s = scopeOf(scope),
+      key = sterileUuid(id),
+      p = pageOf(page);
+    return this.repository.transaction(s, async (tx) => {
+      if (!(await tx.findInstrument(key))) throw new SterileError("NOT_FOUND");
+      const rows = await tx.listAudit(key, p);
       return { items: rows.slice(0, 50), page: p, hasMore: rows.length > 50 };
     });
   }

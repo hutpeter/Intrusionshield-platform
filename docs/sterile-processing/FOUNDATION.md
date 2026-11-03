@@ -6,6 +6,9 @@ November 3, 2026. Based on `feature/database-isolation-foundation` at
 untracked entries remain untouched. No merge, deployment, real database access,
 migration execution or external publication is part of this foundation.
 
+The next increment is documented in [Standalone local preview](LOCAL-PREVIEW.md).
+The sections below describe the original foundation checkpoint.
+
 ## Independent product
 
 `@intrusionshield/sterile-processing` supplies domain types, catalogue/instance

@@ -10,6 +10,7 @@
     "build": "pnpm -r --if-present run build",
     "test": "pnpm -r --if-present run test",
     "clean": "pnpm -r --if-present run clean",
-    "lint": "pnpm -r --if-present run lint"
+    "lint": "pnpm -r --if-present run lint",
+    "sterile:preview": "node scripts/sterile-preview.mjs"
   }
 }

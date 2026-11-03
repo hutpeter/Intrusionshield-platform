@@ -63,6 +63,13 @@ export class MemoryRepository {
         if (n < 0) throw Error("conflict");
         s.instruments[n] = structuredClone(x);
       },
+      listAudit: async (id, page) =>
+        structuredClone(
+          s.audit
+            .filter((x) => own(x) && x.entityId === id)
+            .reverse()
+            .slice((page - 1) * 50, (page - 1) * 50 + 51),
+        ),
       appendAudit: async (e) => {
         if (this.failAudit) throw Error("synthetic audit failure");
         if (!own(e) || e.actorId !== scope.actorId) throw Error("scope");
