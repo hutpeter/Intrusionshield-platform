@@ -158,3 +158,18 @@ This is initial implementation evidence for instrument management, audit,
 localization and a development-only storage/session boundary. It does not complete
 the entire SRS or establish formal clinical/tender acceptance. Physical Windows
 startup has not been independently run in this Linux environment.
+
+## Windows native pnpm launcher correction
+
+The owner's Windows installation supplies `npm_execpath` as a native `pnpm.exe`,
+not a JavaScript pnpm CLI. The original launcher incorrectly passed that path to
+Node and failed with `ERR_UNKNOWN_FILE_EXTENSION: .exe`. The launcher now spawns
+native `.exe` paths directly, while JavaScript pnpm paths remain under Node.
+Arguments are passed as arrays without enabling a command shell. The application
+server itself still launches through Node.
+
+Four focused regression checks cover native Windows paths (including spaces),
+JavaScript launchers, actual direct execution of a `.exe`-named test executable on
+Unix, and argument preservation. Existing application dependencies are unchanged.
+The corrected complete startup was checked on Linux; physical Windows execution
+requires the owner's retry. The scoped CI workflow includes the launcher checks.

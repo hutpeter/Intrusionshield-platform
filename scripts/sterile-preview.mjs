@@ -1,4 +1,5 @@
 import { spawn } from "node:child_process";
+import { packageManagerCommand } from "./sterile-preview-command.mjs";
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { join } from "node:path";
@@ -95,9 +96,9 @@ if (process.platform === "linux") {
   }, 500);
   parentWatch.unref();
 }
-function run(args, env = process.env) {
+function run(file, args, env = process.env) {
   return new Promise((resolve, reject) => {
-    const owned = spawn(process.execPath, args, {
+    const owned = spawn(file, args, {
       cwd: root,
       env,
       stdio: "inherit",
@@ -122,10 +123,16 @@ try {
     "@intrusionshield/sterile-processing-web",
   ]) {
     if (interrupted) break;
-    await run([pnpm, "--filter", name, "build"]);
+    const command = packageManagerCommand(pnpm, process.execPath, [
+      "--filter",
+      name,
+      "build",
+    ]);
+    await run(command.file, command.args);
   }
   if (!interrupted)
     await run(
+      process.execPath,
       [join(root, "services/sterile-processing/dist/development/server.js")],
       { ...process.env, NODE_ENV: "development", RUBY_STERILE_PREVIEW: "true" },
     );

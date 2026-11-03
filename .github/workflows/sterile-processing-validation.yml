@@ -3,7 +3,7 @@ on:
   pull_request:
     paths:
       - "apps/sterile-processing/**"
-      - "scripts/sterile-preview.mjs"
+      - "scripts/sterile-preview*.mjs"
       - "package.json"
       - "packages/sterile-processing/**"
       - "services/sterile-processing/**"
@@ -38,3 +38,5 @@ jobs:
         run: |
           pnpm --filter @intrusionshield/sterile-processing-web build
           pnpm --filter @intrusionshield/sterile-processing-web test
+      - name: Native and JavaScript package-manager launch regression checks
+        run: node --test scripts/sterile-preview-command.test.mjs
