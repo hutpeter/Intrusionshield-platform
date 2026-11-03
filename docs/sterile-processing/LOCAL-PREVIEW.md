@@ -173,3 +173,19 @@ JavaScript launchers, actual direct execution of a `.exe`-named test executable 
 Unix, and argument preservation. Existing application dependencies are unchanged.
 The corrected complete startup was checked on Linux; physical Windows execution
 requires the owner's retry. The scoped CI workflow includes the launcher checks.
+
+## Opening a link from chat
+
+The original preview rejected a browser's `Sec-Fetch-Site: cross-site` header even
+for the initial public HTML page. That could show `FORBIDDEN` immediately when
+following the correct `http://127.0.0.1:9553/` link from chat. The guard now accepts
+only GET/HEAD top-level document navigation to `/` on the exact configured host.
+It does not exempt session endpoints, API reads, writes, embedded iframes, forged
+hosts/origins or ordinary cross-site fetches. No authorization/CSRF rule for data
+access was relaxed. Typing/pasting the address into the address bar also avoids
+the original navigation problem.
+
+The service suite now has 16 passing checks, including positive entry-page
+navigation and negative API/iframe/host/origin/write regressions. A real Chromium
+click from a different local site confirmed a cross-site document request returns
+HTTP 200, loads the welcome screen and can enter the operator demonstration.

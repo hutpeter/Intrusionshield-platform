@@ -48,10 +48,17 @@ export function createSterilePreview({
       "Content-Security-Policy",
       "default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; frame-ancestors 'none'; base-uri 'none'; form-action 'self'",
     );
+    // A link from chat/bookmarks may be a cross-site top-level navigation.
+    // Only the public entry document is exempt; sessions, API reads and writes are not.
+    const publicNavigation =
+      ["GET", "HEAD"].includes(req.method) &&
+      req.path === "/" &&
+      req.headers["sec-fetch-mode"] === "navigate" &&
+      req.headers["sec-fetch-dest"] === "document";
     if (
       req.headers.host !== url.host ||
       (req.headers.origin && req.headers.origin !== origin) ||
-      req.headers["sec-fetch-site"] === "cross-site"
+      (req.headers["sec-fetch-site"] === "cross-site" && !publicNavigation)
     ) {
       res.status(403).json({ error: "FORBIDDEN" });
       return;

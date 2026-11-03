@@ -3,6 +3,9 @@ import assert from "node:assert/strict";
 import { createServer, request as httpRequest } from "node:http";
 import { once } from "node:events";
 import { randomUUID } from "node:crypto";
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { createSterilePreview } from "../dist/development/preview.js";
 import { MemoryRepository } from "../../../packages/sterile-processing/test/memory-repository.mjs";
 process.env.NODE_ENV = "development";
@@ -13,14 +16,27 @@ async function fixture(t) {
   await once(server, "listening");
   const origin = "http://127.0.0.1:" + server.address().port;
   let clock = Date.now();
+  const webRoot = mkdtempSync(join(tmpdir(), "sterile-public-entry-"));
+  writeFileSync(
+    join(webRoot, "index.html"),
+    "<!doctype html><title>Public preview entry</title><h1>Preview welcome</h1>",
+  );
   const repository = new MemoryRepository(),
-    preview = createSterilePreview({ origin, repository, now: () => clock });
+    preview = createSterilePreview({
+      origin,
+      repository,
+      webRoot,
+      now: () => clock,
+    });
   server.on("request", preview.app);
   t.after(
     () =>
       new Promise((resolve) => {
         preview.dispose();
-        server.close(resolve);
+        server.close(() => {
+          rmSync(webRoot, { recursive: true, force: true });
+          resolve();
+        });
       }),
   );
   let cookie = "",
@@ -247,4 +263,62 @@ test("cannot be created in production or for a remote origin", () => {
         createSterilePreview({ origin, repository: new MemoryRepository() }),
       /exact loopback/,
     );
+});
+
+function rawRequest(origin, path, headers, method = "GET") {
+  return new Promise((resolve, reject) => {
+    const req = httpRequest(origin + path, { headers, method }, (res) => {
+      const chunks = [];
+      res.on("data", (chunk) => chunks.push(chunk));
+      res.on("end", () =>
+        resolve({
+          status: res.statusCode,
+          headers: res.headers,
+          text: Buffer.concat(chunks).toString("utf8"),
+        }),
+      );
+    });
+    req.on("error", reject);
+    req.end();
+  });
+}
+test("accepts a cross-site link to the public entry document without creating a session or exposing API data", async (t) => {
+  const f = await fixture(t),
+    navigation = {
+      "sec-fetch-site": "cross-site",
+      "sec-fetch-mode": "navigate",
+      "sec-fetch-dest": "document",
+    };
+  const page = await rawRequest(f.origin, "/", navigation);
+  assert.equal(page.status, 200);
+  assert.ok(page.text.includes("Preview welcome"));
+  assert.equal(page.headers["set-cookie"], undefined);
+  const head = await rawRequest(f.origin, "/", navigation, "HEAD");
+  assert.equal(head.status, 200);
+  assert.equal(head.text, "");
+  for (const path of [
+    "/preview/session",
+    "/api/v1/sterile/facilities/00000000-0000-4000-8000-000000000001/instruments",
+  ])
+    assert.equal((await rawRequest(f.origin, path, navigation)).status, 403);
+  assert.equal(f.repository.state.audit.length, 0);
+});
+test("continues rejecting cross-site fetches, iframes, forged hosts/origins and writes to the public root", async (t) => {
+  const f = await fixture(t),
+    navigation = {
+      "sec-fetch-site": "cross-site",
+      "sec-fetch-mode": "navigate",
+      "sec-fetch-dest": "document",
+    };
+  for (const headers of [
+    { ...navigation, "sec-fetch-mode": "cors", "sec-fetch-dest": "empty" },
+    { ...navigation, "sec-fetch-dest": "iframe" },
+    { ...navigation, origin: "https://evil.example" },
+    { ...navigation, host: "evil.example" },
+  ])
+    assert.equal((await rawRequest(f.origin, "/", headers)).status, 403);
+  assert.equal(
+    (await rawRequest(f.origin, "/", navigation, "POST")).status,
+    403,
+  );
 });
