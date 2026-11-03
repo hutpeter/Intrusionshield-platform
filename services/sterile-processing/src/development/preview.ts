@@ -206,7 +206,8 @@ export function createSterilePreview({
         fixtureGrants.has("core.authorization") &&
         (scope.actorId === actors.operator ||
           (scope.actorId === actors.viewer &&
-            permission === "instruments:read")),
+            (permission === "instruments:read" ||
+              permission === "trays:read"))),
     }),
   );
   app.use(

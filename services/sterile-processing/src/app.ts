@@ -1,6 +1,7 @@
 import express from "express";
 import {
   InstrumentRegistry,
+  TrayRegistry,
   SterileError,
   sterileUuid,
   type SterileRepository,
@@ -19,7 +20,8 @@ export interface SterileDependencies {
   authorize?: (
     scope: SterileScope,
     capability: "sterile.core",
-    permission: "instruments:read" | "instruments:write",
+    permission:
+      "instruments:read" | "instruments:write" | "trays:read" | "trays:write",
   ) => Promise<boolean>;
 }
 function body(value: unknown, keys: string[]): Record<string, unknown> {
@@ -88,6 +90,10 @@ export function createSterileApp(
       res.status(503).json({ error: "SERVICE_UNAVAILABLE" });
     }
   });
+  app.use(
+    "/api/v1/sterile/facilities/:facilityId/tray-assemblies",
+    express.json({ limit: "64kb", strict: true }),
+  );
   app.use(express.json({ limit: "8kb", strict: true }));
   const prefix = "/api/v1/sterile/facilities/:facilityId";
   app.use(prefix, async (req, res, next) => {
@@ -103,8 +109,12 @@ export function createSterileApp(
         actorId: principal.actorId,
         facilityId,
       };
-      const permission =
-        req.method === "GET" || req.method === "HEAD"
+      const readOnly = req.method === "GET" || req.method === "HEAD";
+      const permission = req.path.startsWith("/tray-")
+        ? readOnly
+          ? "trays:read"
+          : "trays:write"
+        : readOnly
           ? "instruments:read"
           : "instruments:write";
       if (
@@ -121,6 +131,7 @@ export function createSterileApp(
     }
   });
   const registry = () => new InstrumentRegistry(dependencies.repository!);
+  const trays = () => new TrayRegistry(dependencies.repository!);
   const page = (req: express.Request) => {
     if (
       Object.keys(req.query).some((k) => k !== "page") ||
@@ -202,6 +213,145 @@ export function createSterileApp(
       ),
     );
   });
+  app.get(prefix + "/tray-definitions", async (req, res) =>
+    res.json(await trays().definitions(res.locals.scope, page(req))),
+  );
+  app.get(prefix + "/tray-definitions/:id", async (req, res) => {
+    noQuery(req);
+    res.json(
+      await trays().definition(res.locals.scope, sterileUuid(req.params.id)),
+    );
+  });
+  app.get(
+    prefix + "/tray-definitions/:id/revisions/:revision",
+    async (req, res) => {
+      noQuery(req);
+      const n = Number(req.params.revision);
+      res.json(
+        await trays().definition(
+          res.locals.scope,
+          sterileUuid(req.params.id),
+          n,
+        ),
+      );
+    },
+  );
+  app.get(prefix + "/tray-definitions/:id/history", async (req, res) =>
+    res.json(
+      await trays().history(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        "definition",
+        page(req),
+      ),
+    ),
+  );
+  app.post(prefix + "/tray-definitions", async (req, res) => {
+    noQuery(req);
+    const v = body(req.body, ["requestId", "code", "name", "requirements"]);
+    res
+      .status(201)
+      .json(
+        await trays().createDefinition(
+          res.locals.scope,
+          v as unknown as Parameters<TrayRegistry["createDefinition"]>[1],
+        ),
+      );
+  });
+  app.post(prefix + "/tray-definitions/:id/revise", async (req, res) => {
+    noQuery(req);
+    const v = body(req.body, [
+      "requestId",
+      "version",
+      "name",
+      "requirements",
+      "reason",
+    ]);
+    res.json(
+      await trays().reviseDefinition(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        v as unknown as Parameters<TrayRegistry["reviseDefinition"]>[2],
+      ),
+    );
+  });
+  app.get(prefix + "/tray-assemblies", async (req, res) =>
+    res.json(await trays().assemblies(res.locals.scope, page(req))),
+  );
+  app.get(prefix + "/tray-assemblies/:id", async (req, res) => {
+    noQuery(req);
+    res.json(
+      await trays().assembly(res.locals.scope, sterileUuid(req.params.id)),
+    );
+  });
+  app.get(
+    prefix + "/tray-assemblies/:id/versions/:version",
+    async (req, res) => {
+      noQuery(req);
+      res.json(
+        await trays().assembly(
+          res.locals.scope,
+          sterileUuid(req.params.id),
+          Number(req.params.version),
+        ),
+      );
+    },
+  );
+  app.get(prefix + "/tray-assemblies/:id/history", async (req, res) =>
+    res.json(
+      await trays().history(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        "assembly",
+        page(req),
+      ),
+    ),
+  );
+  app.post(prefix + "/tray-assemblies", async (req, res) => {
+    noQuery(req);
+    const v = body(req.body, [
+      "requestId",
+      "code",
+      "definitionId",
+      "definitionVersion",
+    ]);
+    res
+      .status(201)
+      .json(
+        await trays().createAssembly(
+          res.locals.scope,
+          v as unknown as Parameters<TrayRegistry["createAssembly"]>[1],
+        ),
+      );
+  });
+  app.post(prefix + "/tray-assemblies/:id/contents", async (req, res) => {
+    noQuery(req);
+    const v = body(req.body, ["requestId", "version", "instrumentIds"]);
+    res.json(
+      await trays().updateContents(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        v as unknown as Parameters<TrayRegistry["updateContents"]>[2],
+      ),
+    );
+  });
+  app.post(prefix + "/tray-assemblies/:id/action", async (req, res) => {
+    noQuery(req);
+    const v = body(req.body, [
+      "requestId",
+      "version",
+      "action",
+      "confirmed",
+      "reason",
+    ]);
+    res.json(
+      await trays().transition(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        v as unknown as Parameters<TrayRegistry["transition"]>[2],
+      ),
+    );
+  });
   app.use((_req, res) => {
     res.status(404).json({ error: "NOT_FOUND" });
   });
@@ -217,9 +367,13 @@ export function createSterileApp(
       const parser = error as { type?: string };
       const status =
         error instanceof SterileError
-          ? { INVALID_REQUEST: 400, NOT_FOUND: 404, CONFLICT: 409 }[
-              code as SterileError["code"]
-            ]
+          ? {
+              INVALID_REQUEST: 400,
+              NOT_FOUND: 404,
+              CONFLICT: 409,
+              ASSEMBLY_INCOMPLETE: 409,
+              INSTRUMENT_ASSIGNED: 409,
+            }[code as SterileError["code"]]
           : parser.type === "entity.too.large"
             ? 413
             : parser.type === "entity.parse.failed"

@@ -1,6 +1,16 @@
 /** SQL-free test adapter only. Never loaded by the service composition root. */
 export class MemoryRepository {
-  state = { types: [], instruments: [], audit: [], receipts: [] };
+  state = {
+    types: [],
+    instruments: [],
+    audit: [],
+    receipts: [],
+    definitions: [],
+    definitionVersions: [],
+    assemblies: [],
+    assemblyVersions: [],
+    assignments: [],
+  };
   failAudit = false;
   pending = Promise.resolve();
   async transaction(scope, work) {
@@ -74,6 +84,116 @@ export class MemoryRepository {
         if (this.failAudit) throw Error("synthetic audit failure");
         if (!own(e) || e.actorId !== scope.actorId) throw Error("scope");
         s.audit.push(structuredClone(e));
+      },
+      findDefinition: async (id) =>
+        read(s.definitions.find((x) => own(x) && x.id === id)),
+      findDefinitionByCode: async (code) =>
+        read(s.definitions.find((x) => own(x) && x.code === code)),
+      listDefinitions: async (page) =>
+        structuredClone(
+          s.definitions
+            .filter(own)
+            .sort((a, b) => a.id.localeCompare(b.id))
+            .slice((page - 1) * 50, (page - 1) * 50 + 51),
+        ),
+      insertDefinition: async (x) => {
+        if (
+          !own(x) ||
+          s.definitions.some(
+            (d) => own(d) && (d.id === x.id || d.code === x.code),
+          )
+        )
+          throw Error("constraint");
+        s.definitions.push(structuredClone(x));
+      },
+      updateDefinition: async (x, v) => {
+        const n = s.definitions.findIndex(
+          (d) => own(d) && d.id === x.id && d.version === v,
+        );
+        if (n < 0) throw Error("conflict");
+        s.definitions[n] = structuredClone(x);
+      },
+      insertDefinitionRevision: async (x) => {
+        if (
+          !own(x) ||
+          s.definitionVersions.some(
+            (d) => own(d) && d.id === x.id && d.revision === x.revision,
+          )
+        )
+          throw Error("constraint");
+        s.definitionVersions.push(structuredClone(x));
+      },
+      findDefinitionRevision: async (id, revision) =>
+        read(
+          s.definitionVersions.find(
+            (d) => own(d) && d.id === id && d.revision === revision,
+          ),
+        ),
+      findAssembly: async (id) =>
+        read(s.assemblies.find((x) => own(x) && x.id === id)),
+      findAssemblyByCode: async (code) =>
+        read(s.assemblies.find((x) => own(x) && x.code === code)),
+      listAssemblies: async (page) =>
+        structuredClone(
+          s.assemblies
+            .filter(own)
+            .sort((a, b) => a.id.localeCompare(b.id))
+            .slice((page - 1) * 50, (page - 1) * 50 + 51),
+        ),
+      insertAssembly: async (x) => {
+        if (
+          !own(x) ||
+          s.assemblies.some(
+            (a) => own(a) && (a.id === x.id || a.code === x.code),
+          )
+        )
+          throw Error("constraint");
+        s.assemblies.push(structuredClone(x));
+      },
+      updateAssembly: async (x, v) => {
+        const n = s.assemblies.findIndex(
+          (a) => own(a) && a.id === x.id && a.version === v,
+        );
+        if (n < 0) throw Error("conflict");
+        s.assemblies[n] = structuredClone(x);
+      },
+      insertAssemblyVersion: async (x) => {
+        if (
+          !own(x) ||
+          s.assemblyVersions.some(
+            (a) => own(a) && a.id === x.id && a.version === x.version,
+          )
+        )
+          throw Error("constraint");
+        s.assemblyVersions.push(structuredClone(x));
+      },
+      findAssemblyVersion: async (id, version) =>
+        read(
+          s.assemblyVersions.find(
+            (a) => own(a) && a.id === id && a.version === version,
+          ),
+        ),
+      findActiveAssignment: async (id) => {
+        const p = s.assignments.find((x) => own(x) && x.instrumentId === id);
+        const a =
+          p && s.assemblies.find((x) => own(x) && x.id === p.assemblyId);
+        return a ? { assemblyId: a.id, assemblyCode: a.code } : null;
+      },
+      replaceAssignments: async (a) => {
+        if (!own(a)) throw Error("scope");
+        s.assignments = s.assignments.filter(
+          (x) => !(own(x) && x.assemblyId === a.id),
+        );
+        if (a.state !== "disassembled")
+          for (const i of a.instruments) {
+            if (s.assignments.some((x) => own(x) && x.instrumentId === i.id))
+              throw Error("duplicate assignment");
+            s.assignments.push({
+              ...scope,
+              instrumentId: i.id,
+              assemblyId: a.id,
+            });
+          }
       },
       findReceipt: async (key) =>
         read(s.receipts.find((x) => own(x) && x.requestId === key)?.value),

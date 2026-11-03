@@ -2,6 +2,11 @@ import type {
   Instrument,
   InstrumentType,
   SterileAuditEvent,
+  TrayDefinition,
+  TrayAssembly,
+  AssemblyView,
+  TrayDefinitionInput,
+  TrayDefinitionRevisionInput,
 } from "@intrusionshield/sterile-processing";
 export interface Session {
   mode: "local-dummy-preview";
@@ -202,6 +207,157 @@ export const api = {
         s.csrf,
       ),
     ),
+  definitions: (s: Session, n: number, signal: AbortSignal) =>
+    scopedPage<TrayDefinition>(s, base(s) + "/tray-definitions", n, signal),
+  definition: (
+    s: Session,
+    id: string,
+    signal: AbortSignal,
+    revision?: number,
+  ) =>
+    scoped(
+      s,
+      call<TrayDefinition>(
+        base(s) +
+          "/tray-definitions/" +
+          encodeURIComponent(id) +
+          (revision ? "/revisions/" + revision : ""),
+        signal,
+      ),
+    ),
+  createDefinition: (
+    s: Session,
+    body: TrayDefinitionInput,
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<TrayDefinition>(base(s) + "/tray-definitions", signal, body, s.csrf),
+    ),
+  reviseDefinition: (
+    s: Session,
+    id: string,
+    body: TrayDefinitionRevisionInput,
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<TrayDefinition>(
+        base(s) + "/tray-definitions/" + encodeURIComponent(id) + "/revise",
+        signal,
+        body,
+        s.csrf,
+      ),
+    ),
+  assemblies: (s: Session, n: number, signal: AbortSignal) =>
+    scopedPage<TrayAssembly>(s, base(s) + "/tray-assemblies", n, signal),
+  async assembly(
+    s: Session,
+    id: string,
+    signal: AbortSignal,
+    version?: number,
+  ) {
+    const v = await call<AssemblyView>(
+      base(s) +
+        "/tray-assemblies/" +
+        encodeURIComponent(id) +
+        (version ? "/versions/" + version : ""),
+      signal,
+    );
+    if (
+      !v?.assembly ||
+      v.assembly.tenantId !== s.tenantId ||
+      v.assembly.facilityId !== s.facilityId ||
+      !v.assessment ||
+      !Array.isArray(v.assessment.rows)
+    )
+      throw new ApiError(503, "SERVICE_UNAVAILABLE");
+    return v;
+  },
+  createAssembly: (
+    s: Session,
+    body: {
+      requestId: string;
+      code: string;
+      definitionId: string;
+      definitionVersion: number;
+    },
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<TrayAssembly>(base(s) + "/tray-assemblies", signal, body, s.csrf),
+    ),
+  saveContents: (
+    s: Session,
+    id: string,
+    body: { requestId: string; version: number; instrumentIds: string[] },
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<TrayAssembly>(
+        base(s) + "/tray-assemblies/" + encodeURIComponent(id) + "/contents",
+        signal,
+        body,
+        s.csrf,
+      ),
+    ),
+  assemblyAction: (
+    s: Session,
+    id: string,
+    body: {
+      requestId: string;
+      version: number;
+      action: "complete" | "disassemble";
+      confirmed: true;
+      reason: string;
+    },
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<TrayAssembly>(
+        base(s) + "/tray-assemblies/" + encodeURIComponent(id) + "/action",
+        signal,
+        body,
+        s.csrf,
+      ),
+    ),
+  trayHistory: (
+    s: Session,
+    id: string,
+    kind: "definition" | "assembly",
+    n: number,
+    signal: AbortSignal,
+  ) =>
+    scopedPage<SterileAuditEvent>(
+      s,
+      base(s) +
+        (kind === "definition" ? "/tray-definitions/" : "/tray-assemblies/") +
+        encodeURIComponent(id) +
+        "/history",
+      n,
+      signal,
+    ),
+  async allDefinitions(s: Session, signal: AbortSignal) {
+    const all: TrayDefinition[] = [];
+    for (let n = 1; n <= 20; n++) {
+      const p = await api.definitions(s, n, signal);
+      all.push(...p.items);
+      if (!p.hasMore) return all;
+    }
+    throw new ApiError(503, "SERVICE_UNAVAILABLE");
+  },
+  async allInstruments(s: Session, signal: AbortSignal) {
+    const all: Instrument[] = [];
+    for (let n = 1; n <= 20; n++) {
+      const p = await api.instruments(s, n, signal);
+      all.push(...p.items);
+      if (!p.hasMore) return all;
+    }
+    throw new ApiError(503, "SERVICE_UNAVAILABLE");
+  },
   async allTypes(s: Session, signal: AbortSignal) {
     const items: InstrumentType[] = [];
     for (let n = 1; n <= 20; n++) {

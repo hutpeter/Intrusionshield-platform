@@ -17,6 +17,8 @@ import {
   type InstrumentType,
   type SterileAuditEvent,
   type CommandReceipt,
+  type TrayDefinition,
+  type TrayAssembly,
 } from "@intrusionshield/sterile-processing";
 import { assertSterilePreviewEnvironment } from "./guard.js";
 
@@ -60,7 +62,13 @@ CREATE TABLE IF NOT EXISTS sp_types(tenant_id TEXT NOT NULL,facility_id TEXT NOT
 CREATE TABLE IF NOT EXISTS sp_instruments(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,type_id TEXT NOT NULL,code TEXT NOT NULL,version INTEGER NOT NULL CHECK(version>0),payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,code),FOREIGN KEY(tenant_id,facility_id,type_id) REFERENCES sp_types(tenant_id,facility_id,id));
 CREATE TABLE IF NOT EXISTS sp_audit(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,entity_id TEXT NOT NULL,request_id TEXT NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,request_id));
 CREATE INDEX IF NOT EXISTS sp_audit_entity ON sp_audit(tenant_id,facility_id,entity_id);
-CREATE TABLE IF NOT EXISTS sp_receipts(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,request_id TEXT NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,request_id));`);
+CREATE TABLE IF NOT EXISTS sp_receipts(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,request_id TEXT NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,request_id));
+CREATE TABLE IF NOT EXISTS sp_definitions(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,code TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,code));
+CREATE TABLE IF NOT EXISTS sp_definition_versions(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,revision INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id,revision),FOREIGN KEY(tenant_id,facility_id,id) REFERENCES sp_definitions(tenant_id,facility_id,id));
+CREATE TABLE IF NOT EXISTS sp_assemblies(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,code TEXT NOT NULL,definition_id TEXT NOT NULL,definition_revision INTEGER NOT NULL,version INTEGER NOT NULL,state TEXT NOT NULL CHECK(state IN ('draft','complete','disassembled')),payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,code),FOREIGN KEY(tenant_id,facility_id,definition_id,definition_revision) REFERENCES sp_definition_versions(tenant_id,facility_id,id,revision));
+CREATE TABLE IF NOT EXISTS sp_assembly_versions(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id,version),FOREIGN KEY(tenant_id,facility_id,id) REFERENCES sp_assemblies(tenant_id,facility_id,id));
+CREATE TABLE IF NOT EXISTS sp_assignments(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,instrument_id TEXT NOT NULL,assembly_id TEXT NOT NULL,PRIMARY KEY(tenant_id,facility_id,instrument_id),FOREIGN KEY(tenant_id,facility_id,instrument_id) REFERENCES sp_instruments(tenant_id,facility_id,id),FOREIGN KEY(tenant_id,facility_id,assembly_id) REFERENCES sp_assemblies(tenant_id,facility_id,id));
+CREATE INDEX IF NOT EXISTS sp_assignment_assembly ON sp_assignments(tenant_id,facility_id,assembly_id);`);
     } catch (error) {
       this.db.close();
       throw error;
@@ -198,6 +206,140 @@ CREATE TABLE IF NOT EXISTS sp_receipts(tenant_id TEXT NOT NULL,facility_id TEXT 
           return rows.map(
             (row) => JSON.parse(row.payload) as SterileAuditEvent,
           );
+        },
+        findDefinition: async (id) =>
+          read<TrayDefinition>(
+            "SELECT payload FROM sp_definitions WHERE tenant_id=? AND facility_id=? AND id=?",
+            id,
+          ),
+        findDefinitionByCode: async (code) =>
+          read<TrayDefinition>(
+            "SELECT payload FROM sp_definitions WHERE tenant_id=? AND facility_id=? AND code=?",
+            code,
+          ),
+        listDefinitions: async (page) =>
+          list<TrayDefinition>(
+            "SELECT payload FROM sp_definitions WHERE tenant_id=? AND facility_id=? ORDER BY json_extract(payload,'$.createdAt') DESC,id LIMIT 51 OFFSET ?",
+            page,
+          ),
+        insertDefinition: async (item) => {
+          own(item);
+          this.db
+            .prepare("INSERT INTO sp_definitions VALUES(?,?,?,?,?,?)")
+            .run(
+              ...args,
+              item.id,
+              item.code,
+              item.version,
+              JSON.stringify(item),
+            );
+        },
+        updateDefinition: async (item, expected) => {
+          own(item);
+          const result = this.db
+            .prepare(
+              "UPDATE sp_definitions SET version=?,payload=? WHERE tenant_id=? AND facility_id=? AND id=? AND version=?",
+            )
+            .run(
+              item.version,
+              JSON.stringify(item),
+              ...args,
+              item.id,
+              expected,
+            );
+          if (result.changes !== 1) throw new SterileError("CONFLICT");
+        },
+        insertDefinitionRevision: async (item) => {
+          own(item);
+          this.db
+            .prepare("INSERT INTO sp_definition_versions VALUES(?,?,?,?,?)")
+            .run(...args, item.id, item.revision, JSON.stringify(item));
+        },
+        findDefinitionRevision: async (id, revision) =>
+          read<TrayDefinition>(
+            "SELECT payload FROM sp_definition_versions WHERE tenant_id=? AND facility_id=? AND id=? AND revision=?",
+            id,
+            revision,
+          ),
+        findAssembly: async (id) =>
+          read<TrayAssembly>(
+            "SELECT payload FROM sp_assemblies WHERE tenant_id=? AND facility_id=? AND id=?",
+            id,
+          ),
+        findAssemblyByCode: async (code) =>
+          read<TrayAssembly>(
+            "SELECT payload FROM sp_assemblies WHERE tenant_id=? AND facility_id=? AND code=?",
+            code,
+          ),
+        listAssemblies: async (page) =>
+          list<TrayAssembly>(
+            "SELECT payload FROM sp_assemblies WHERE tenant_id=? AND facility_id=? ORDER BY json_extract(payload,'$.createdAt') DESC,id LIMIT 51 OFFSET ?",
+            page,
+          ),
+        insertAssembly: async (item) => {
+          own(item);
+          this.db
+            .prepare("INSERT INTO sp_assemblies VALUES(?,?,?,?,?,?,?,?,?)")
+            .run(
+              ...args,
+              item.id,
+              item.code,
+              item.definitionId,
+              item.definitionRevision,
+              item.version,
+              item.state,
+              JSON.stringify(item),
+            );
+        },
+        updateAssembly: async (item, expected) => {
+          own(item);
+          const result = this.db
+            .prepare(
+              "UPDATE sp_assemblies SET version=?,state=?,payload=? WHERE tenant_id=? AND facility_id=? AND id=? AND version=?",
+            )
+            .run(
+              item.version,
+              item.state,
+              JSON.stringify(item),
+              ...args,
+              item.id,
+              expected,
+            );
+          if (result.changes !== 1) throw new SterileError("CONFLICT");
+        },
+        insertAssemblyVersion: async (item) => {
+          own(item);
+          this.db
+            .prepare("INSERT INTO sp_assembly_versions VALUES(?,?,?,?,?)")
+            .run(...args, item.id, item.version, JSON.stringify(item));
+        },
+        findAssemblyVersion: async (id, version) =>
+          read<TrayAssembly>(
+            "SELECT payload FROM sp_assembly_versions WHERE tenant_id=? AND facility_id=? AND id=? AND version=?",
+            id,
+            version,
+          ),
+        findActiveAssignment: async (id) => {
+          const row = this.db
+            .prepare(
+              "SELECT a.id AS assemblyId,a.code AS assemblyCode FROM sp_assignments p JOIN sp_assemblies a ON a.tenant_id=p.tenant_id AND a.facility_id=p.facility_id AND a.id=p.assembly_id WHERE p.tenant_id=? AND p.facility_id=? AND p.instrument_id=?",
+            )
+            .get(...args, id) as
+            { assemblyId: string; assemblyCode: string } | undefined;
+          return row ?? null;
+        },
+        replaceAssignments: async (item) => {
+          own(item);
+          this.db
+            .prepare(
+              "DELETE FROM sp_assignments WHERE tenant_id=? AND facility_id=? AND assembly_id=?",
+            )
+            .run(...args, item.id);
+          if (item.state !== "disassembled")
+            for (const i of item.instruments)
+              this.db
+                .prepare("INSERT INTO sp_assignments VALUES(?,?,?,?)")
+                .run(...args, i.id, item.id);
         },
         findReceipt: async (key) =>
           read<CommandReceipt>(

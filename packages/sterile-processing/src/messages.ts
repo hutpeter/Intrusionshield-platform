@@ -13,6 +13,10 @@ const es = {
   page: "Página",
   registered: "Registrado — no liberado para uso clínico",
   retired: "Retirado del servicio",
+  ASSEMBLY_INCOMPLETE:
+    "La composición no coincide: revise los instrumentos faltantes o sobrantes.",
+  INSTRUMENT_ASSIGNED:
+    "El instrumento no está disponible o está asignado a un armado activo. Revise el armado antes de continuar.",
   INVALID_REQUEST: "Revise los datos ingresados.",
   NOT_FOUND: "Registro no encontrado.",
   CONFLICT: "El registro cambió o el código ya existe. Recargue y verifique.",
@@ -36,6 +40,10 @@ const en: Messages = {
   page: "Page",
   registered: "Registered — not released for clinical use",
   retired: "Retired",
+  ASSEMBLY_INCOMPLETE:
+    "The contents do not match: review missing or excess instruments.",
+  INSTRUMENT_ASSIGNED:
+    "The instrument is unavailable or assigned to an active assembly. Review its assembly before continuing.",
   INVALID_REQUEST: "Check the entered details.",
   NOT_FOUND: "Record not found.",
   CONFLICT: "The record changed or the code already exists. Reload and verify.",
@@ -59,6 +67,10 @@ const fr: Messages = {
   page: "Page",
   registered: "Enregistré — non libéré pour un usage clinique",
   retired: "Retiré du service",
+  ASSEMBLY_INCOMPLETE:
+    "La composition ne correspond pas : vérifiez les instruments manquants ou en trop.",
+  INSTRUMENT_ASSIGNED:
+    "L’instrument est indisponible ou affecté à un assemblage actif. Vérifiez cet assemblage avant de continuer.",
   INVALID_REQUEST: "Vérifiez les données saisies.",
   NOT_FOUND: "Enregistrement introuvable.",
   CONFLICT:

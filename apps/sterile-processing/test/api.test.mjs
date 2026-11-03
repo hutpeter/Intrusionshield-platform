@@ -100,3 +100,55 @@ test("validates session metadata and provides complete Spanish, English and Fren
     );
   }
 });
+test("tray API checks assembly scope and preserves explicit versions and confirmations", async (t) => {
+  const calls = [];
+  let value = {
+    assembly: { id: "assembly", tenantId: "tenant", facilityId: "facility" },
+    assessment: { rows: [], complete: false },
+  };
+  fake(t, async (path, options) => {
+    calls.push({ path, options });
+    return response(value);
+  });
+  assert.equal(
+    (await api.assembly(session, "assembly", signal())).assembly.id,
+    "assembly",
+  );
+  value = { ...value, assembly: { ...value.assembly, tenantId: "foreign" } };
+  await assert.rejects(api.assembly(session, "assembly", signal()), {
+    status: 503,
+  });
+  value = { id: "assembly", tenantId: "tenant", facilityId: "facility" };
+  const command = {
+    requestId: "stable-operation",
+    version: 3,
+    action: "disassemble",
+    confirmed: true,
+    reason: "Test",
+  };
+  await api.assemblyAction(session, "assembly", command, signal());
+  const sent = JSON.parse(calls.at(-1).options.body);
+  assert.deepEqual(sent, command);
+  assert.equal(calls.at(-1).options.headers["x-sterile-csrf"], session.csrf);
+});
+test("tray lists reject cross-facility definitions and preserve snapshot revision queries", async (t) => {
+  let value = {
+    items: [{ id: "definition", tenantId: "tenant", facilityId: "foreign" }],
+    page: 1,
+    hasMore: false,
+  };
+  const paths = [];
+  fake(t, async (path) => {
+    paths.push(path);
+    return response(value);
+  });
+  await assert.rejects(api.definitions(session, 1, signal()), { status: 503 });
+  value = {
+    id: "definition",
+    tenantId: "tenant",
+    facilityId: "facility",
+    revision: 1,
+  };
+  await api.definition(session, "definition", signal(), 1);
+  assert.ok(paths.at(-1).endsWith("/revisions/1"));
+});

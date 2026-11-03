@@ -1,3 +1,4 @@
+import { TrayWorkspace } from "./Trays";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import type {
@@ -232,7 +233,9 @@ function Workspace({
   onLogout: () => Promise<void>;
   onExpired: () => void;
 }) {
-  const [tab, setTab] = useState<"instruments" | "types">("instruments"),
+  const [tab, setTab] = useState<"instruments" | "types" | "trays">(
+      "instruments",
+    ),
     [page, setPage] = useState(1),
     [historyPage, setHistoryPage] = useState(1),
     [selected, setSelected] = useState<string | null>(null),
@@ -255,7 +258,10 @@ function Workspace({
     } | null>(null),
     [fields, setFields] = useState(emptyFields),
     [discard, setDiscard] = useState<(() => void) | null>(null);
-  const busy = saving || blocked;
+  const [trayDirty, setTrayDirty] = useState(false),
+    [trayBusy, setTrayBusy] = useState(false),
+    [trayReset, setTrayReset] = useState(0);
+  const busy = saving || blocked || trayBusy;
   const pending = useRef<AbortController | null>(null),
     read = useRef<AbortController | null>(null);
   useEffect(
@@ -276,6 +282,10 @@ function Workspace({
     setError(null);
     void (async () => {
       try {
+        if (tab === "trays") {
+          setLoading(false);
+          return;
+        }
         const all = await api.allTypes(session, c.signal);
         if (c.signal.aborted) return;
         setOptions(all);
@@ -307,11 +317,12 @@ function Workspace({
     return () => c.abort();
   }, [session, tab, page, selected, historyPage, nonce, onExpired]);
   const dirty =
-    !!form &&
-    (Object.entries(fields).some(
-      ([key, value]) => key !== "confirmed" && !!value,
-    ) ||
-      fields.confirmed);
+    trayDirty ||
+    (!!form &&
+      (Object.entries(fields).some(
+        ([key, value]) => key !== "confirmed" && !!value,
+      ) ||
+        fields.confirmed));
   useEffect(() => {
     if (!dirty) return;
     const protect = (event: BeforeUnloadEvent) => {
@@ -326,6 +337,8 @@ function Workspace({
   }, [discard]);
 
   function clear() {
+    setTrayDirty(false);
+    setTrayReset((n) => n + 1);
     setForm(null);
     setFields(emptyFields());
     setDiscard(null);
@@ -350,7 +363,7 @@ function Workspace({
       setNotice(null);
     });
   }
-  function navigate(target: "instruments" | "types") {
+  function navigate(target: "instruments" | "types" | "trays") {
     guard(() => {
       setSelected(null);
       setTab(target);
@@ -507,6 +520,14 @@ function Workspace({
             <span aria-hidden="true">▦</span>
             {t.types}
           </button>
+          <button
+            aria-current={tab === "trays" ? "page" : undefined}
+            disabled={busy}
+            onClick={() => navigate("trays")}
+          >
+            <span aria-hidden="true">▣</span>
+            {t.trays}
+          </button>
         </nav>
         <div className="sidebar-bottom">
           <p>{t.facility}</p>
@@ -523,58 +544,60 @@ function Workspace({
         </div>
       </aside>
       <main className="content">
-        <div className="page-heading">
-          <div>
-            <p className="eyebrow">{t.facility}</p>
-            <h1>
-              {selected
-                ? (detail?.code ?? t.instruments)
-                : tab === "types"
-                  ? t.types
-                  : t.instruments}
-            </h1>
-            <p>
-              {selected
-                ? t.notReleased
-                : tab === "types"
-                  ? t.typeHelp
-                  : t.instrumentHelp}
-            </p>
+        {tab !== "trays" && (
+          <div className="page-heading">
+            <div>
+              <p className="eyebrow">{t.facility}</p>
+              <h1>
+                {selected
+                  ? (detail?.code ?? t.instruments)
+                  : tab === "types"
+                    ? t.types
+                    : t.instruments}
+              </h1>
+              <p>
+                {selected
+                  ? t.notReleased
+                  : tab === "types"
+                    ? t.typeHelp
+                    : t.instrumentHelp}
+              </p>
+            </div>
+            <div className="page-actions">
+              {selected ? (
+                <button
+                  aria-label={t.back}
+                  disabled={busy}
+                  onClick={() =>
+                    guard(() => {
+                      setSelected(null);
+                      setNotice(null);
+                    })
+                  }
+                >
+                  ← {t.back}
+                </button>
+              ) : (
+                <button
+                  disabled={busy || loading}
+                  onClick={() => guard(() => setNonce((n) => n + 1))}
+                >
+                  {t.reload}
+                </button>
+              )}
+              {session.canWrite && !selected && (
+                <button
+                  aria-label={tab === "types" ? t.newType : t.newInstrument}
+                  className="primary"
+                  disabled={busy || loading || !!form}
+                  onClick={() => begin(tab === "types" ? "type" : "instrument")}
+                >
+                  ＋ {tab === "types" ? t.newType : t.newInstrument}
+                </button>
+              )}
+            </div>
           </div>
-          <div className="page-actions">
-            {selected ? (
-              <button
-                aria-label={t.back}
-                disabled={busy}
-                onClick={() =>
-                  guard(() => {
-                    setSelected(null);
-                    setNotice(null);
-                  })
-                }
-              >
-                ← {t.back}
-              </button>
-            ) : (
-              <button
-                disabled={busy || loading}
-                onClick={() => guard(() => setNonce((n) => n + 1))}
-              >
-                {t.reload}
-              </button>
-            )}
-            {session.canWrite && !selected && (
-              <button
-                aria-label={tab === "types" ? t.newType : t.newInstrument}
-                className="primary"
-                disabled={busy || loading || !!form}
-                onClick={() => begin(tab === "types" ? "type" : "instrument")}
-              >
-                ＋ {tab === "types" ? t.newType : t.newInstrument}
-              </button>
-            )}
-          </div>
-        </div>
+        )}
         {!session.canWrite && <p className="readonly-note">{t.viewerNotice}</p>}
         {notice && (
           <p className="success" role="status">
@@ -763,6 +786,18 @@ function Workspace({
             </div>
           </form>
         )}
+        {tab === "trays" && (
+          <TrayWorkspace
+            key={trayReset}
+            session={session}
+            language={language}
+            t={t}
+            blocked={blocked}
+            onExpired={onExpired}
+            onDirty={setTrayDirty}
+            onBusy={setTrayBusy}
+          />
+        )}
         {loading && (
           <p className="loading" role="status">
             {t.loading}
@@ -784,7 +819,7 @@ function Workspace({
                 </div>
                 {session.canWrite && detail.state === "registered" && (
                   <button
-                    disabled={busy || !!form}
+                    disabled={busy || !!form || !!detail.activeAssembly}
                     onClick={() => begin("retire")}
                   >
                     {t.retire}
@@ -808,6 +843,12 @@ function Workspace({
                   <dt>{t.updatedOn}</dt>
                   <dd>{date(detail.updatedAt)}</dd>
                 </div>
+                {detail.activeAssembly && (
+                  <div>
+                    <dt>{t.assignment}</dt>
+                    <dd>{detail.activeAssembly.assemblyCode}</dd>
+                  </div>
+                )}
                 {detail.retiredAt && (
                   <>
                     <div>

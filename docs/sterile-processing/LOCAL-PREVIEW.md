@@ -5,9 +5,14 @@ on the published standalone foundation branch. This increment adds an actual
 Spanish-first web application and a durable **dummy-data development preview**.
 Athena, SQL Server, Docker and existing Ruby databases are not required or accessed.
 
+Tray definitions, composition checks, assignment reservations and assembly history
+are now available. See the [tray walkthrough](TRAYS.md) for the next steps using
+your existing demonstration instrument.
+
 ## What works
 
 - Spanish, English and French screens and validation messages; Spanish is default.
+- Tray definitions with immutable revisions, assembly contents and explicit completion/disassembly.
 - Instrument-type catalogue with code, name, manufacturer and model.
 - Individual instrument registration, type selection and optional serial number.
 - Instrument details, server-recorded dates and scoped audit history.
