@@ -262,3 +262,164 @@ test("scopes all reads, versions and history by tenant and facility", async () =
     await fails(f.pr.start(s, e.id, start(1)), "NOT_FOUND");
   }
 });
+const inspectionInput = (i, version, extra = {}) => ({
+  requestId: randomUUID(),
+  version,
+  procedure: "INSPECT-DEMO",
+  procedureVersion: "1",
+  evidence: "INSPECT-EVID-DEMO",
+  confirmed: true,
+  items: [
+    {
+      instrumentId: i,
+      clean: true,
+      dry: true,
+      intact: true,
+      functional: true,
+      note: "",
+    },
+  ],
+  ...extra,
+});
+async function cleaned(f) {
+  let e = await f.pr.receive(f.s, receipt(f.i.id));
+  await f.pr.start(f.s, e.id, start(1));
+  return f.pr.finish(f.s, e.id, finish(2));
+}
+test("inspection releases holds only after a complete pass and permits assembly without altering prior versions", async () => {
+  const f = await fixture(),
+    e = await cleaned(f),
+    body = inspectionInput(f.i.id, 3);
+  const passed = await f.pr.inspect(f.s, e.id, body);
+  assert.equal(passed.state, "ready_for_assembly");
+  assert.equal(passed.inspections[0].actorId, f.s.actorId);
+  assert.equal(passed.inspections[0].cleaningAttempt, 1);
+  assert.equal((await f.ir.get(f.s, f.i.id)).processingHold, undefined);
+  assert.equal((await f.pr.get(f.s, e.id, 3)).inspections.length, 0);
+  const a = await f.tr.createAssembly(f.s, {
+    requestId: randomUUID(),
+    code: "INSPECTED-TRAY",
+    definitionId: f.d.id,
+    definitionVersion: 1,
+  });
+  await f.tr.updateContents(f.s, a.id, {
+    requestId: randomUUID(),
+    version: 1,
+    instrumentIds: [f.i.id],
+  });
+  assert.deepEqual(await f.pr.inspect(f.s, e.id, body), passed);
+  await fails(f.pr.inspect(f.s, e.id, inspectionInput(f.i.id, 4)), "CONFLICT");
+});
+test("failed inspection retains hold; re-cleaning and reinspection preserve the original defect", async () => {
+  const f = await fixture(),
+    e = await cleaned(f);
+  const body = inspectionInput(f.i.id, 3);
+  body.items[0].dry = false;
+  body.items[0].note = "Demo moisture";
+  let x = await f.pr.inspect(f.s, e.id, body);
+  assert.equal(x.state, "inspection_failed");
+  assert.ok((await f.ir.get(f.s, f.i.id)).processingHold);
+  await fails(f.pr.inspect(f.s, e.id, inspectionInput(f.i.id, 4)), "CONFLICT");
+  await f.pr.start(f.s, e.id, start(4));
+  await f.pr.finish(f.s, e.id, finish(5));
+  x = await f.pr.inspect(f.s, e.id, inspectionInput(f.i.id, 6));
+  assert.equal(x.inspections.length, 2);
+  assert.equal(x.inspections[0].items[0].note, "Demo moisture");
+  assert.equal(x.inspections[1].cleaningAttempt, 2);
+  assert.equal((await f.pr.get(f.s, e.id, 4)).state, "inspection_failed");
+});
+test("inspection rejects incomplete, foreign, duplicated and non-boolean checks, missing evidence or failure reason", async () => {
+  const f = await fixture(),
+    e = await cleaned(f);
+  for (const patch of [
+    { items: [] },
+    {
+      items: [
+        { ...inspectionInput(f.i.id, 3).items[0], instrumentId: randomUUID() },
+      ],
+    },
+    {
+      items: [
+        ...inspectionInput(f.i.id, 3).items,
+        ...inspectionInput(f.i.id, 3).items,
+      ],
+    },
+    { items: [{ ...inspectionInput(f.i.id, 3).items[0], dry: "true" }] },
+    { items: [{ ...inspectionInput(f.i.id, 3).items[0], intact: false }] },
+    { evidence: "" },
+    { confirmed: false },
+  ])
+    await fails(
+      f.pr.inspect(f.s, e.id, inspectionInput(f.i.id, 3, patch)),
+      "INVALID_REQUEST",
+    );
+  assert.equal((await f.pr.get(f.s, e.id)).version, 3);
+  await fails(
+    f.pr.inspect(
+      { ...f.s, facilityId: randomUUID() },
+      e.id,
+      inspectionInput(f.i.id, 3),
+    ),
+    "NOT_FOUND",
+  );
+});
+test("inspection audit failure restores hold and version; stale and changed idempotent commands cannot pass", async () => {
+  const f = await fixture(),
+    e = await cleaned(f),
+    body = inspectionInput(f.i.id, 3);
+  f.repo.failAudit = true;
+  await assert.rejects(f.pr.inspect(f.s, e.id, body));
+  f.repo.failAudit = false;
+  assert.equal((await f.pr.get(f.s, e.id)).state, "awaiting_inspection");
+  assert.ok((await f.ir.get(f.s, f.i.id)).processingHold);
+  await fails(f.pr.get(f.s, e.id, 4), "NOT_FOUND");
+  await f.pr.inspect(f.s, e.id, body);
+  await fails(
+    f.pr.inspect(f.s, e.id, { ...body, evidence: "Different" }),
+    "CONFLICT",
+  );
+  await fails(f.pr.inspect(f.s, e.id, inspectionInput(f.i.id, 3)), "CONFLICT");
+});
+test("inspection of a whole group cannot release one item while another fails", async () => {
+  const f = await fixture();
+  const second = await f.ir.register(f.s, {
+    requestId: randomUUID(),
+    code: "INS-2",
+    instrumentTypeId: f.i.instrumentTypeId,
+    serialNumber: "",
+  });
+  const e = await f.pr.receive(
+    f.s,
+    receipt(f.i.id, { instrumentIds: [f.i.id, second.id] }),
+  );
+  await f.pr.start(f.s, e.id, start(1));
+  await f.pr.finish(f.s, e.id, finish(2));
+  const body = inspectionInput(f.i.id, 3);
+  body.items.push({
+    ...body.items[0],
+    instrumentId: second.id,
+    functional: false,
+    note: "Demo defect",
+  });
+  const x = await f.pr.inspect(f.s, e.id, body);
+  assert.equal(x.state, "inspection_failed");
+  for (const i of [f.i, second])
+    assert.equal((await f.ir.get(f.s, i.id)).processingHold.episodeId, e.id);
+});
+test("replayed inspection cannot release a hold belonging to a newer processing episode", async () => {
+  const f = await fixture(),
+    e = await cleaned(f),
+    body = inspectionInput(f.i.id, 3);
+  await f.pr.inspect(f.s, e.id, body);
+  const next = await f.pr.receive(f.s, receipt(f.i.id, { code: "REC-NEW" }));
+  await f.pr.inspect(f.s, e.id, body);
+  assert.equal((await f.ir.get(f.s, f.i.id)).processingHold.episodeId, next.id);
+});
+test("episodes saved before inspection arrays existed remain readable and inspectable", async () => {
+  const f = await fixture(),
+    e = await cleaned(f);
+  delete f.repo.state.processing.find((x) => x.id === e.id).inspections;
+  assert.equal((await f.pr.get(f.s, e.id)).state, "awaiting_inspection");
+  const x = await f.pr.inspect(f.s, e.id, inspectionInput(f.i.id, 3));
+  assert.equal(x.inspections.length, 1);
+});

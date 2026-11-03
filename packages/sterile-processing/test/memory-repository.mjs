@@ -77,6 +77,15 @@ export class MemoryRepository {
         const e = h && s.processing.find((x) => own(x) && x.id === h.episodeId);
         return e ? { episodeId: e.id, episodeCode: e.code } : null;
       },
+      releaseProcessing: async (e) => {
+        const rows = s.processingHolds.filter(
+          (x) => own(x) && x.episodeId === e.id,
+        );
+        if (rows.length !== e.instruments.length) throw Error("conflict");
+        s.processingHolds = s.processingHolds.filter(
+          (x) => !(own(x) && x.episodeId === e.id),
+        );
+      },
       reserveProcessing: async (e) => {
         for (const i of e.instruments) {
           if (s.processingHolds.some((x) => own(x) && x.instrumentId === i.id))

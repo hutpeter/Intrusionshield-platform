@@ -1,5 +1,9 @@
 # Receiving used instruments and recording cleaning
 
+**Workflow update:** inspection is now available; see [INSPECTION.md](INSPECTION.md).
+The long walkthrough below is retained for the deferred end-to-end review. Only
+the single check in [TESTING-REGISTER.md](TESTING-REGISTER.md) is currently requested.
+
 November 3, 2026. Development preview, Spanish first with English and French.
 This is a standalone Ruby workflow; Athena is not required.
 
@@ -81,13 +85,12 @@ Receipts are limited to 100 individually registered instruments. A maximum of 50
 attempts per episode keeps snapshots and response sizes bounded. A cleaning attempt
 applies to the entire received group; use separate episodes if instruments need
 different methods or outcomes. Records cannot currently be edited, cancelled or
-split after receipt. Corrections, inspection and authorized disposition workflows
-are later increments. Never use this preview to authorize clinical work.
+split after receipt. Inspection is now available in the next increment; corrections and authorized disposition remain later work. Never use this preview to authorize clinical work.
 
 Draft/complete tray membership prevents receipt; a tray must be explicitly
 and appropriately disassembled before its instruments can enter a new receipt.
 A processing hold prevents duplicate receipt, tray assignment and retirement.
-The hold deliberately remains after a passed result, pending the future inspection
+The hold deliberately remains after a passed result, pending the inspection
 workflow. New instrument registration still supports the existing composition-only
 tray demo; this increment does not enforce a validated end-to-end processing route
 for legacy or never-received records, nor create a sterile-availability state.
@@ -112,7 +115,7 @@ for legacy or never-received records, nor create a sterile-availability state.
   methods, attributed attempts and evidence. Procedure approval/version governance,
   device evidence and HLD are not implemented.
 - AT-006/007: partial development coverage. Holds and evidence gates are tested;
-  inspection, packaging, sterile-release and production validation remain future work.
+  inspection is now present in the next preview increment; packaging, sterile-release and production validation remain future work.
 
 No standard certification, tender acceptance, clinical validation, production
 identity integration or production licensing verification is claimed by this preview.

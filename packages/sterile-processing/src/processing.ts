@@ -16,6 +16,8 @@ import type {
   ReceiveInput,
   StartCleaningInput,
   FinishCleaningInput,
+  InspectInput,
+  InspectionItem,
 } from "./processing-types.js";
 const invalid = (): never => {
   throw new SterileError("INVALID_REQUEST");
@@ -84,6 +86,7 @@ export class ProcessingRegistry extends SterileRegistryBase {
           instruments,
           state: "received",
           attempts: [],
+          inspections: [],
           version: 1,
           createdAt: at,
           updatedAt: at,
@@ -126,7 +129,9 @@ export class ProcessingRegistry extends SterileRegistryBase {
         if (!old) throw new SterileError("NOT_FOUND");
         if (
           old.version !== version ||
-          !["received", "cleaning_failed"].includes(old.state) ||
+          !["received", "cleaning_failed", "inspection_failed"].includes(
+            old.state,
+          ) ||
           old.attempts.length >= 50
         )
           throw new SterileError("CONFLICT");
@@ -222,6 +227,122 @@ export class ProcessingRegistry extends SterileRegistryBase {
           input.requestId,
           at,
           note,
+        );
+        return item;
+      },
+    );
+  }
+  async inspect(scope: SterileScope, id: string, input: InspectInput) {
+    const s = scopeOf(scope),
+      key = sterileUuid(id),
+      version = expected(input.version);
+    if (
+      input.confirmed !== true ||
+      !Array.isArray(input.items) ||
+      !input.items.length ||
+      input.items.length > 100
+    )
+      invalid();
+    const procedure = field(input.procedure, 200),
+      procedureVersion = field(input.procedureVersion, 100),
+      evidence = field(input.evidence, 500);
+    const items: InspectionItem[] = input.items.map((row) => {
+      if (
+        !row ||
+        typeof row !== "object" ||
+        Object.keys(row).some(
+          (k) =>
+            ![
+              "instrumentId",
+              "clean",
+              "dry",
+              "intact",
+              "functional",
+              "note",
+            ].includes(k),
+        ) ||
+        ["clean", "dry", "intact", "functional"].some(
+          (k) => typeof row[k as keyof InspectionItem] !== "boolean",
+        )
+      )
+        invalid();
+      return {
+        instrumentId: sterileUuid(row.instrumentId),
+        clean: row.clean,
+        dry: row.dry,
+        intact: row.intact,
+        functional: row.functional,
+        note: field(
+          row.note,
+          500,
+          !(row.clean && row.dry && row.intact && row.functional),
+        ),
+      };
+    });
+    if (new Set(items.map((row) => row.instrumentId)).size !== items.length)
+      invalid();
+    return this.command(
+      s,
+      input.requestId,
+      "inspection-recorded",
+      { ...input, id: key },
+      async (tx, at) => {
+        const old = await tx.findProcessing(key);
+        if (!old) throw new SterileError("NOT_FOUND");
+        if (
+          old.version !== version ||
+          old.state !== "awaiting_inspection" ||
+          old.attempts.at(-1)?.outcome !== "passed" ||
+          (old.inspections?.length ?? 0) >= 50
+        )
+          throw new SterileError("CONFLICT");
+        if (
+          items.length !== old.instruments.length ||
+          items.some(
+            (row) => !old.instruments.some((i) => i.id === row.instrumentId),
+          )
+        )
+          invalid();
+        for (const i of old.instruments) {
+          const hold = await tx.findProcessingHold(i.id);
+          if (hold?.episodeId !== old.id) throw new SterileError("CONFLICT");
+        }
+        const outcome = items.every(
+          (row) => row.clean && row.dry && row.intact && row.functional,
+        )
+          ? "passed"
+          : "failed";
+        const item: ProcessingEpisode = {
+          ...old,
+          version: version + 1,
+          updatedAt: at,
+          state:
+            outcome === "passed" ? "ready_for_assembly" : "inspection_failed",
+          inspections: [
+            ...(old.inspections ?? []),
+            {
+              number: (old.inspections?.length ?? 0) + 1,
+              cleaningAttempt: old.attempts.length,
+              procedure,
+              procedureVersion,
+              evidence,
+              items,
+              outcome,
+              at,
+              actorId: s.actorId,
+            },
+          ],
+        };
+        await tx.updateProcessing(item, version);
+        if (outcome === "passed") await tx.releaseProcessing(item);
+        await this.record(
+          tx,
+          s,
+          item,
+          "inspection-recorded",
+          input.requestId,
+          at,
+          "",
         );
         return item;
       },

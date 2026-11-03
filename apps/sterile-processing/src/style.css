@@ -992,3 +992,21 @@ td {
     grid-template-columns: 1fr;
   }
 }
+.inspection-item {
+  margin: 1rem 0;
+  padding: 1rem;
+  border: 1px solid #dbe5df;
+  border-radius: 8px;
+}
+.inspection-item legend {
+  padding: 0 0.4rem;
+  font-weight: 600;
+}
+.demo-example {
+  margin: 1rem 0;
+}
+.demo-example small {
+  display: block;
+  margin-top: 0.5rem;
+  color: var(--muted);
+}

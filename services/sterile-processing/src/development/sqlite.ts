@@ -202,6 +202,16 @@ CREATE INDEX IF NOT EXISTS sp_assignment_assembly ON sp_assignments(tenant_id,fa
             { episodeId: string; episodeCode: string } | undefined;
           return row ?? null;
         },
+        releaseProcessing: async (item) => {
+          own(item);
+          const r = this.db
+            .prepare(
+              "DELETE FROM sp_processing_holds WHERE tenant_id=? AND facility_id=? AND episode_id=?",
+            )
+            .run(...args, item.id);
+          if (r.changes !== item.instruments.length)
+            throw new SterileError("CONFLICT");
+        },
         reserveProcessing: async (item) => {
           own(item);
           for (const i of item.instruments)

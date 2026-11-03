@@ -100,6 +100,10 @@ export function createSterileApp(
     "/api/v1/sterile/facilities/:facilityId/tray-assemblies",
     express.json({ limit: "64kb", strict: true }),
   );
+  app.use(
+    "/api/v1/sterile/facilities/:facilityId/processing/:id/inspect",
+    express.json({ limit: "256kb", strict: true }),
+  );
   app.use(express.json({ limit: "8kb", strict: true }));
   const prefix = "/api/v1/sterile/facilities/:facilityId";
   app.use(prefix, async (req, res, next) => {
@@ -446,6 +450,25 @@ export function createSterileApp(
         res.locals.scope,
         sterileUuid(req.params.id),
         v as unknown as Parameters<ProcessingRegistry["finish"]>[2],
+      ),
+    );
+  });
+  app.post(prefix + "/processing/:id/inspect", async (req, res) => {
+    noQuery(req);
+    const v = body(req.body, [
+      "requestId",
+      "version",
+      "procedure",
+      "procedureVersion",
+      "evidence",
+      "items",
+      "confirmed",
+    ]);
+    res.json(
+      await processing().inspect(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        v as unknown as Parameters<ProcessingRegistry["inspect"]>[2],
       ),
     );
   });

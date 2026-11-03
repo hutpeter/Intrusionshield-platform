@@ -43,6 +43,7 @@ export interface SterileAuditEvent {
   actorId: string;
   at: string;
   action:
+    | "inspection-recorded"
     | "processing-received"
     | "cleaning-started"
     | "cleaning-recorded"
@@ -85,6 +86,7 @@ export interface SterileTransaction {
   findProcessingHold(
     id: string,
   ): Promise<{ episodeId: string; episodeCode: string } | null>;
+  releaseProcessing(item: ProcessingEpisode): Promise<void>;
   reserveProcessing(item: ProcessingEpisode): Promise<void>;
   findType(id: string): Promise<InstrumentType | null>;
   findTypeByCode(code: string): Promise<InstrumentType | null>;

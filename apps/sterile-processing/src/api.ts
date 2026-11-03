@@ -1,5 +1,6 @@
 import type {
   ProcessingEpisode,
+  InspectInput,
   ReceiveInput,
   StartCleaningInput,
   FinishCleaningInput,
@@ -146,6 +147,31 @@ async function scopedPage<T extends { tenantId: string; facilityId: string }>(
   return value;
 }
 export const api = {
+  inspectionExample: (s: Session, requestId: string, signal: AbortSignal) =>
+    scoped(
+      s,
+      call<ProcessingEpisode>(
+        "/preview/inspection-example",
+        signal,
+        { requestId },
+        s.csrf,
+      ),
+    ),
+  inspectEpisode: (
+    s: Session,
+    id: string,
+    body: InspectInput,
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<ProcessingEpisode>(
+        base(s) + "/processing/" + encodeURIComponent(id) + "/inspect",
+        signal,
+        body,
+        s.csrf,
+      ),
+    ),
   processing: (s: Session, n: number, signal: AbortSignal) =>
     scopedPage<ProcessingEpisode>(s, base(s) + "/processing", n, signal),
   episode: (s: Session, id: string, signal: AbortSignal, version?: number) =>

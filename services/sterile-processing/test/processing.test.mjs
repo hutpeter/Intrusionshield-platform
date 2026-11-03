@@ -372,3 +372,150 @@ test("SQLite failed result audit cannot commit a pass or its historical snapshot
   assert.equal(saved.state, "awaiting_inspection");
   assert.equal((await p.history(f.s, e.id)).items.length, 3);
 });
+const inspectBody = (id, version = 3) => ({
+  requestId: randomUUID(),
+  version,
+  procedure: "INSPECT-DEMO",
+  procedureVersion: "1",
+  evidence: "INSPECT-EVID-DEMO",
+  confirmed: true,
+  items: [
+    {
+      instrumentId: id,
+      clean: true,
+      dry: true,
+      intact: true,
+      functional: true,
+      note: "",
+    },
+  ],
+});
+test("HTTP inspection enforces cleaning, confirmation, exact items, CSRF and viewer denial", async (t) => {
+  const f = await httpFixture(t);
+  const e = await (
+      await f.call(f.base + "/processing", receive(f.i.id))
+    ).json(),
+    path = f.base + "/processing/" + e.id + "/inspect";
+  assert.equal((await f.call(path, inspectBody(f.i.id, 1))).status, 409);
+  await f.call(f.base + "/processing/" + e.id + "/start", start(1));
+  await f.call(f.base + "/processing/" + e.id + "/finish", finish(2));
+  assert.equal(
+    (await f.call(path, { ...inspectBody(f.i.id), confirmed: false })).status,
+    400,
+  );
+  assert.equal(
+    (await f.call(path, { ...inspectBody(f.i.id), actorId: randomUUID() }))
+      .status,
+    400,
+  );
+  assert.equal(
+    (await f.call(path, inspectBody(f.i.id), { "x-sterile-csrf": "" })).status,
+    403,
+  );
+  await f.login("viewer");
+  assert.equal((await f.call(path, inspectBody(f.i.id))).status, 403);
+  await f.login();
+  const r = await f.call(path, inspectBody(f.i.id));
+  assert.equal(r.status, 200);
+  assert.equal((await r.json()).state, "ready_for_assembly");
+  const i = await (await f.call(f.base + "/instruments/" + f.i.id)).json();
+  assert.equal(i.processingHold, undefined);
+});
+test("SQLite inspection release and audit are atomic and survive reopening", async (t) => {
+  const f = await sqlFixture(t),
+    p = new ProcessingRegistry(f.repo);
+  const e = await p.receive(f.s, receive(f.i.id));
+  await p.start(f.s, e.id, start(1));
+  await p.finish(f.s, e.id, finish(2));
+  const body = inspectBody(f.i.id),
+    broken = {
+      transaction: (s, work) =>
+        f.repo.transaction(s, (tx) =>
+          work({
+            ...tx,
+            appendAudit: async () => {
+              throw Error("synthetic failure");
+            },
+          }),
+        ),
+    };
+  await assert.rejects(new ProcessingRegistry(broken).inspect(f.s, e.id, body));
+  assert.ok((await f.ir.get(f.s, f.i.id)).processingHold);
+  await p.inspect(f.s, e.id, body);
+  const r = new PreviewSqliteRepository(f.file);
+  try {
+    const x = await new ProcessingRegistry(r).get(f.s, e.id);
+    assert.equal(x.inspections[0].outcome, "passed");
+    assert.equal(
+      (await new InstrumentRegistry(r).get(f.s, f.i.id)).processingHold,
+      undefined,
+    );
+    assert.equal(
+      (await new ProcessingRegistry(r).get(f.s, e.id, 3)).state,
+      "awaiting_inspection",
+    );
+  } finally {
+    r.close();
+  }
+});
+test("fictional inspection setup is operator-only, CSRF-protected, idempotent and preserves existing records", async (t) => {
+  const f = await httpFixture(t),
+    key = randomUUID();
+  assert.equal(
+    (
+      await f.call(
+        "/preview/inspection-example",
+        { requestId: key },
+        { "x-sterile-csrf": "" },
+      )
+    ).status,
+    403,
+  );
+  await f.login("viewer");
+  assert.equal(
+    (await f.call("/preview/inspection-example", { requestId: key })).status,
+    403,
+  );
+  await f.login();
+  const a = await f.call("/preview/inspection-example", { requestId: key });
+  assert.equal(a.status, 201);
+  const e = await a.json();
+  assert.equal(e.state, "awaiting_inspection");
+  assert.equal(e.instruments.length, 1);
+  assert.match(e.attempts[0].evidence, /SIMULATED/);
+  assert.deepEqual(
+    await (
+      await f.call("/preview/inspection-example", { requestId: key })
+    ).json(),
+    e,
+  );
+  const original = await (
+    await f.call(f.base + "/instruments/" + f.i.id)
+  ).json();
+  assert.equal(original.code, f.i.code);
+  assert.equal(original.processingHold, undefined);
+});
+test("fictional setup rolls back its catalogue, instrument, episode and holds on audit failure", async (t) => {
+  const f = await sqlFixture(t);
+  const { prepareInspectionExample } =
+    await import("../dist/development/inspection-example.js");
+  const broken = {
+    transaction: (s, work) =>
+      f.repo.transaction(s, (tx) =>
+        work({
+          ...tx,
+          appendAudit: async () => {
+            throw Error("synthetic failure");
+          },
+        }),
+      ),
+  };
+  const before = await f.ir.listTypes(f.s);
+  await assert.rejects(prepareInspectionExample(broken, f.s, randomUUID()));
+  assert.deepEqual(await f.ir.listTypes(f.s), before);
+  assert.equal((await f.ir.list(f.s)).items.length, 1);
+  assert.equal(
+    (await new ProcessingRegistry(f.repo).list(f.s)).items.length,
+    0,
+  );
+});

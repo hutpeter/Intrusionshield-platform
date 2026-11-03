@@ -1,5 +1,28 @@
 import type { Language } from "./text";
 const es = {
+  example: "Preparar ejemplo ficticio de inspección",
+  exampleHelp:
+    "Crea registros nuevos y una limpieza simulada; conserva sus instrumentos y bandejas existentes.",
+  inspect: "Registrar inspección",
+  inspections: "Inspecciones",
+  inspection_failed: "Inspección fallida — retenido",
+  ready_for_assembly: "Inspección satisfactoria — disponible para armado",
+  confirmInspection:
+    "Confirmo los resultados individuales y la evidencia de inspección.",
+  clean: "Limpio",
+  dry: "Seco",
+  intact: "Íntegro",
+  functional: "Funcional",
+  notChecked: "Seleccione un resultado",
+  yes: "Conforme",
+  no: "No conforme",
+  inspectionNote: "Observación / defecto",
+  inspectionHelp:
+    "Registre cada resultado. Un defecto retiene todo el grupo para corrección y nueva limpieza; no cambie una inspección histórica.",
+  inspectionAction: "Inspección registrada",
+  assemblyReady:
+    "Composición e inspección no equivalen a esterilización ni liberación clínica.",
+
   title: "Recepción y limpieza",
   intro:
     "Registre instrumentos usados y conserve la evidencia de cada intento de limpieza.",
@@ -61,6 +84,29 @@ const es = {
 };
 type Text = Record<keyof typeof es, string>;
 const en: Text = {
+  example: "Prepare fictional inspection example",
+  exampleHelp:
+    "Creates new records with simulated cleaning; preserves your existing instruments and trays.",
+  inspect: "Record inspection",
+  inspections: "Inspections",
+  inspection_failed: "Inspection failed — held",
+  ready_for_assembly: "Inspection passed — available for assembly",
+  confirmInspection:
+    "I confirm the individual inspection results and evidence.",
+  clean: "Clean",
+  dry: "Dry",
+  intact: "Intact",
+  functional: "Functional",
+  notChecked: "Choose a result",
+  yes: "Conforming",
+  no: "Nonconforming",
+  inspectionNote: "Observation / defect",
+  inspectionHelp:
+    "Record each result. A defect holds the whole group for correction and renewed cleaning; historical inspections remain unchanged.",
+  inspectionAction: "Inspection recorded",
+  assemblyReady:
+    "Composition and inspection do not represent sterilization or clinical release.",
+
   title: "Receiving and cleaning",
   intro:
     "Record used instruments and preserve evidence for each cleaning attempt.",
@@ -120,6 +166,29 @@ const en: Text = {
   confirm: "Confirm",
 };
 const fr: Text = {
+  example: "Préparer un exemple fictif d’inspection",
+  exampleHelp:
+    "Crée de nouveaux enregistrements avec un nettoyage simulé ; conserve les instruments et plateaux existants.",
+  inspect: "Enregistrer l’inspection",
+  inspections: "Inspections",
+  inspection_failed: "Inspection échouée — retenu",
+  ready_for_assembly: "Inspection réussie — disponible pour assemblage",
+  confirmInspection:
+    "Je confirme les résultats individuels et les preuves de l’inspection.",
+  clean: "Propre",
+  dry: "Sec",
+  intact: "Intègre",
+  functional: "Fonctionnel",
+  notChecked: "Choisissez un résultat",
+  yes: "Conforme",
+  no: "Non conforme",
+  inspectionNote: "Observation / défaut",
+  inspectionHelp:
+    "Enregistrez chaque résultat. Un défaut retient le groupe pour correction et nouveau nettoyage ; les inspections antérieures restent inchangées.",
+  inspectionAction: "Inspection enregistrée",
+  assemblyReady:
+    "La composition et l’inspection ne valent ni stérilisation ni libération clinique.",
+
   title: "Réception et nettoyage",
   intro:
     "Enregistrez les instruments utilisés et conservez les preuves de chaque tentative de nettoyage.",

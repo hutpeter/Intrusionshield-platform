@@ -8,7 +8,7 @@ import { api, ApiError, type Session, type Page } from "./api";
 import { labels, type Language } from "./text";
 import { processingLabels } from "./processing-text";
 type Form = {
-  kind: "receive" | "start" | "finish";
+  kind: "receive" | "start" | "finish" | "inspect";
   requestId: string;
   version?: number;
 };
@@ -27,6 +27,14 @@ const empty = () => ({
   outcome: "" as "" | "passed" | "failed",
   evidence: "",
   note: "",
+  checks: [] as {
+    instrumentId: string;
+    clean: string;
+    dry: string;
+    intact: string;
+    functional: string;
+    note: string;
+  }[],
   confirmed: false,
 });
 export function ProcessingWorkspace({
@@ -62,6 +70,7 @@ export function ProcessingWorkspace({
     [form, setForm] = useState<Form | null>(null),
     [fields, setFields] = useState(empty),
     [discard, setDiscard] = useState<(() => void) | null>(null);
+  const exampleKey = useRef(crypto.randomUUID());
   const pending = useRef<AbortController | null>(null),
     inspection = useRef<AbortController | null>(null),
     busy = blocked || saving;
@@ -144,7 +153,20 @@ export function ProcessingWorkspace({
         requestId: crypto.randomUUID(),
         version: detail?.version,
       });
-      setFields(empty());
+      setFields({
+        ...empty(),
+        checks:
+          kind === "inspect" && detail
+            ? detail.instruments.map((i) => ({
+                instrumentId: i.id,
+                clean: "",
+                dry: "",
+                intact: "",
+                functional: "",
+                note: "",
+              }))
+            : [],
+      });
     });
   }
   const patch = (v: Partial<ReturnType<typeof empty>>) =>
@@ -188,7 +210,37 @@ export function ProcessingWorkspace({
           },
           c.signal,
         );
-      else {
+      else if (form.kind === "inspect") {
+        if (
+          fields.checks.some((row) =>
+            [row.clean, row.dry, row.intact, row.functional].some(
+              (v) => !["yes", "no"].includes(v),
+            ),
+          )
+        )
+          return;
+        item = await api.inspectEpisode(
+          session,
+          selected,
+          {
+            requestId: form.requestId,
+            version: form.version,
+            procedure: fields.procedure,
+            procedureVersion: fields.procedureVersion,
+            evidence: fields.evidence,
+            confirmed: true,
+            items: fields.checks.map((row) => ({
+              instrumentId: row.instrumentId,
+              clean: row.clean === "yes",
+              dry: row.dry === "yes",
+              intact: row.intact === "yes",
+              functional: row.functional === "yes",
+              note: row.note,
+            })),
+          },
+          c.signal,
+        );
+      } else {
         if (!fields.outcome) return;
         item = await api.finishCleaning(
           session,
@@ -207,6 +259,40 @@ export function ProcessingWorkspace({
       if (c.signal.aborted) return;
       clear();
       setSelected(item.id);
+      setHistoryPage(1);
+      setNotice(true);
+      setNonce((n) => n + 1);
+    } catch (e) {
+      if (!c.signal.aborted) {
+        if (e instanceof ApiError && e.status === 401) onExpired();
+        else setError(e);
+      }
+    } finally {
+      if (!c.signal.aborted) setSaving(false);
+      pending.current = null;
+    }
+  }
+  async function prepareExample() {
+    if (
+      busy ||
+      form ||
+      !session.canWrite ||
+      session.mode !== "local-dummy-preview"
+    )
+      return;
+    const c = new AbortController();
+    pending.current = c;
+    setSaving(true);
+    setError(null);
+    try {
+      const x = await api.inspectionExample(
+        session,
+        exampleKey.current,
+        c.signal,
+      );
+      if (c.signal.aborted) return;
+      exampleKey.current = crypto.randomUUID();
+      setSelected(x.id);
       setHistoryPage(1);
       setNotice(true);
       setNonce((n) => n + 1);
@@ -315,6 +401,65 @@ export function ProcessingWorkspace({
         <h2>{p.contents}</h2>
         {table(d)}
       </section>
+      {d.state === "ready_for_assembly" && (
+        <p className="readonly-note">{p.assemblyReady}</p>
+      )}
+      {!!d.inspections?.length && (
+        <section className="panel">
+          <h2>{p.inspections}</h2>
+          {d.inspections.map((record) => (
+            <article className="cleaning-attempt" key={record.number}>
+              <h3>
+                {record.number} ·{" "}
+                {record.outcome === "passed"
+                  ? p.ready_for_assembly
+                  : p.inspection_failed}
+              </h3>
+              <p>
+                {record.procedure} · {record.procedureVersion} ·{" "}
+                {date(record.at)} · {actor(record.actorId)}
+              </p>
+              <p>
+                {p.evidence}: {record.evidence} · {p.attempt}{" "}
+                {record.cleaningAttempt}
+              </p>
+              <div className="table-scroll">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>{t.code}</th>
+                      {(["clean", "dry", "intact", "functional"] as const).map(
+                        (key) => (
+                          <th key={key}>{p[key]}</th>
+                        ),
+                      )}
+                      <th>{p.inspectionNote}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {record.items.map((row) => (
+                      <tr key={row.instrumentId}>
+                        <td>
+                          {
+                            d.instruments.find((i) => i.id === row.instrumentId)
+                              ?.code
+                          }
+                        </td>
+                        {(
+                          ["clean", "dry", "intact", "functional"] as const
+                        ).map((key) => (
+                          <td key={key}>{row[key] ? p.yes : p.no}</td>
+                        ))}
+                        <td>{row.note || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </article>
+          ))}
+        </section>
+      )}
       <section className="panel">
         <h2>{p.attempts}</h2>
         {!d.attempts.length ? (
@@ -407,13 +552,24 @@ export function ProcessingWorkspace({
           )}
           {session.canWrite && detail && !past && (
             <>
-              {["received", "cleaning_failed"].includes(detail.state) && (
+              {["received", "cleaning_failed", "inspection_failed"].includes(
+                detail.state,
+              ) && (
                 <button
                   className="primary"
                   disabled={busy || loading || !!form}
                   onClick={() => begin("start")}
                 >
-                  {detail.state === "cleaning_failed" ? p.retry : p.start}
+                  {detail.state !== "received" ? p.retry : p.start}
+                </button>
+              )}
+              {detail.state === "awaiting_inspection" && (
+                <button
+                  className="primary"
+                  disabled={busy || loading || !!form}
+                  onClick={() => begin("inspect")}
+                >
+                  {p.inspect}
                 </button>
               )}
               {detail.state === "cleaning" && (
@@ -430,6 +586,20 @@ export function ProcessingWorkspace({
         </div>
       </div>
       <p className="readonly-note">{p.boundary}</p>
+      {session.canWrite &&
+        !selected &&
+        !form &&
+        session.mode === "local-dummy-preview" && (
+          <section className="demo-example">
+            <button
+              disabled={busy || loading}
+              onClick={() => void prepareExample()}
+            >
+              {p.example}
+            </button>
+            <small>{p.exampleHelp}</small>
+          </section>
+        )}
       {notice && (
         <p className="success" role="status">
           {p.notice}
@@ -466,7 +636,9 @@ export function ProcessingWorkspace({
                 ? p.newReceipt
                 : form.kind === "start"
                   ? p.start
-                  : p.finish}
+                  : form.kind === "inspect"
+                    ? p.inspect
+                    : p.finish}
             </h2>
             <button
               type="button"
@@ -647,6 +819,91 @@ export function ProcessingWorkspace({
                 ))}
               </div>
             )}
+            {form.kind === "inspect" && (
+              <>
+                <p>{p.inspectionHelp}</p>
+                <div className="form-grid">
+                  {(["procedure", "procedureVersion", "evidence"] as const).map(
+                    (key) => (
+                      <label key={key}>
+                        {p[key]}
+                        <input
+                          required
+                          maxLength={
+                            key === "procedureVersion"
+                              ? 100
+                              : key === "evidence"
+                                ? 500
+                                : 200
+                          }
+                          value={fields[key]}
+                          onChange={(e) => patch({ [key]: e.target.value })}
+                        />
+                      </label>
+                    ),
+                  )}
+                </div>
+                {fields.checks.map((row, n) => (
+                  <fieldset className="inspection-item" key={row.instrumentId}>
+                    <legend>
+                      {
+                        detail?.instruments.find(
+                          (i) => i.id === row.instrumentId,
+                        )?.code
+                      }
+                    </legend>
+                    <div className="form-grid">
+                      {(["clean", "dry", "intact", "functional"] as const).map(
+                        (key) => (
+                          <label key={key}>
+                            {p[key]}
+                            <select
+                              required
+                              aria-label={p[key] + " " + (n + 1)}
+                              value={row[key]}
+                              onChange={(e) =>
+                                patch({
+                                  checks: fields.checks.map((x, j) =>
+                                    j === n
+                                      ? { ...x, [key]: e.target.value }
+                                      : x,
+                                  ),
+                                })
+                              }
+                            >
+                              <option value="">{p.notChecked}</option>
+                              <option value="yes">{p.yes}</option>
+                              <option value="no">{p.no}</option>
+                            </select>
+                          </label>
+                        ),
+                      )}
+                      <label>
+                        {p.inspectionNote}
+                        <input
+                          aria-label={p.inspectionNote + " " + (n + 1)}
+                          required={[
+                            row.clean,
+                            row.dry,
+                            row.intact,
+                            row.functional,
+                          ].includes("no")}
+                          maxLength={500}
+                          value={row.note}
+                          onChange={(e) =>
+                            patch({
+                              checks: fields.checks.map((x, j) =>
+                                j === n ? { ...x, note: e.target.value } : x,
+                              ),
+                            })
+                          }
+                        />
+                      </label>
+                    </div>
+                  </fieldset>
+                ))}
+              </>
+            )}
             <label className="check">
               <input
                 type="checkbox"
@@ -657,7 +914,9 @@ export function ProcessingWorkspace({
                 ? p.confirmReceipt
                 : form.kind === "start"
                   ? p.confirmStart
-                  : p.confirmFinish}
+                  : form.kind === "inspect"
+                    ? p.confirmInspection
+                    : p.confirmFinish}
             </label>
           </fieldset>
           <div className="form-footer">
@@ -675,7 +934,9 @@ export function ProcessingWorkspace({
                   ? p.saveReceipt
                   : form.kind === "start"
                     ? p.start
-                    : p.saveResult}
+                    : form.kind === "inspect"
+                      ? p.inspect
+                      : p.saveResult}
             </button>
           </div>
         </form>
@@ -770,7 +1031,9 @@ export function ProcessingWorkspace({
                           ? p.receivedAction
                           : h.action === "cleaning-started"
                             ? p.startAction
-                            : p.finishAction}
+                            : h.action === "inspection-recorded"
+                              ? p.inspectionAction
+                              : p.finishAction}
                       </strong>
                       <time dateTime={h.at}>{date(h.at)}</time>
                       <small>

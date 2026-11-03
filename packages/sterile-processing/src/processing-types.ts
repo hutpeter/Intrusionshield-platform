@@ -13,6 +13,34 @@ export interface CleaningAttempt {
   evidence: string | null;
   note: string | null;
 }
+export interface InspectionItem {
+  instrumentId: string;
+  clean: boolean;
+  dry: boolean;
+  intact: boolean;
+  functional: boolean;
+  note: string;
+}
+export interface InspectionRecord {
+  number: number;
+  cleaningAttempt: number;
+  procedure: string;
+  procedureVersion: string;
+  evidence: string;
+  items: InspectionItem[];
+  outcome: "passed" | "failed";
+  at: string;
+  actorId: string;
+}
+export interface InspectInput {
+  requestId: string;
+  version: number;
+  procedure: string;
+  procedureVersion: string;
+  evidence: string;
+  items: InspectionItem[];
+  confirmed: boolean;
+}
 export interface ProcessingEpisode {
   id: string;
   tenantId: string;
@@ -23,7 +51,15 @@ export interface ProcessingEpisode {
   condition: string;
   discrepancies: string;
   instruments: AssemblyInstrument[];
-  state: "received" | "cleaning" | "cleaning_failed" | "awaiting_inspection";
+  state:
+    | "received"
+    | "cleaning"
+    | "cleaning_failed"
+    | "awaiting_inspection"
+    | "inspection_failed"
+    | "ready_for_assembly";
+  /** Optional for episodes saved before inspection was introduced. */
+  inspections?: InspectionRecord[];
   attempts: CleaningAttempt[];
   version: number;
   createdAt: string;

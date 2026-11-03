@@ -188,3 +188,32 @@ test("processing API preserves versions, confirmation, evidence and scoped respo
     (e) => e.code === "SERVICE_UNAVAILABLE",
   );
 });
+test("inspection API sends individual results, expected version, confirmation and CSRF", async (t) => {
+  const body = {
+    requestId: "request",
+    version: 3,
+    procedure: "DEMO",
+    procedureVersion: "1",
+    evidence: "DEMO",
+    items: [
+      {
+        instrumentId: "instrument",
+        clean: true,
+        dry: true,
+        intact: true,
+        functional: true,
+        note: "",
+      },
+    ],
+    confirmed: true,
+  };
+  const calls = [];
+  fake(t, async (path, options) => {
+    calls.push({ path, options });
+    return response({ ...session, id: "episode" });
+  });
+  await api.inspectEpisode(session, "episode", body, signal());
+  assert.ok(calls[0].path.endsWith("/processing/episode/inspect"));
+  assert.deepEqual(JSON.parse(calls[0].options.body), body);
+  assert.equal(calls[0].options.headers["x-sterile-csrf"], session.csrf);
+});
