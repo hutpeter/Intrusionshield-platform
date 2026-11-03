@@ -1,0 +1,33 @@
+name: Sterile Processing Foundation
+on:
+  pull_request:
+    paths:
+      - "packages/sterile-processing/**"
+      - "services/sterile-processing/**"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "tsconfig.json"
+      - ".github/workflows/sterile-processing-validation.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  sql-free-foundation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.20.0
+          run_install: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+      - name: Install scoped dependencies without lifecycle scripts
+        run: pnpm install --frozen-lockfile --ignore-scripts --filter @intrusionshield/sterile-processing --filter @intrusionshield/sterile-processing-service
+      - name: Domain build and SQL-free tests
+        run: pnpm --filter @intrusionshield/sterile-processing test
+      - name: Service build and loopback HTTP tests
+        run: pnpm --filter @intrusionshield/sterile-processing-service test

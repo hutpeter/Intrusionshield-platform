@@ -438,6 +438,15 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
+  packages/sterile-processing:
+    devDependencies:
+      '@types/node':
+        specifier: ^24.13.3
+        version: 24.13.3
+      typescript:
+        specifier: ^5.9.3
+        version: 5.9.3
+
   packages/telemetry:
     devDependencies:
       '@types/node':
@@ -672,6 +681,25 @@ importers:
         version: 6.1.3
       typescript:
         specifier: ^5.9.0
+        version: 5.9.3
+
+  services/sterile-processing:
+    dependencies:
+      '@intrusionshield/sterile-processing':
+        specifier: workspace:*
+        version: link:../../packages/sterile-processing
+      express:
+        specifier: ^5.1.0
+        version: 5.2.1(supports-color@8.1.1)
+    devDependencies:
+      '@types/express':
+        specifier: ^5.0.5
+        version: 5.0.6
+      '@types/node':
+        specifier: ^24.13.3
+        version: 24.13.3
+      typescript:
+        specifier: ^5.9.3
         version: 5.9.3
 
   services/telemetry-energy:

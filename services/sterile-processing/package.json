@@ -1,0 +1,21 @@
+{
+  "name": "@intrusionshield/sterile-processing-service",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/app.js",
+  "types": "./dist/app.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "pnpm --filter @intrusionshield/sterile-processing build && pnpm build && node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@intrusionshield/sterile-processing": "workspace:*",
+    "express": "^5.1.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.5",
+    "@types/node": "^24.13.3",
+    "typescript": "^5.9.3"
+  }
+}
