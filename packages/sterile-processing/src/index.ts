@@ -243,3 +243,6 @@ export { ReviewRegistry } from "./reviews.js";
 
 export * from "./distribution-types.js";
 export { DistributionRegistry } from "./distribution.js";
+
+export * from "./recall-types.js";
+export { RecallRegistry } from "./recalls.js";

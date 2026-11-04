@@ -1,3 +1,5 @@
+import { RecallWorkspace } from "./Recalls";
+import { recallLabels } from "./recall-text";
 import { DistributionWorkspace } from "./Distribution";
 import { distributionLabels } from "./distribution-text";
 import { ReviewWorkspace } from "./Reviews";
@@ -266,6 +268,7 @@ function Workspace({
       | "cycles"
       | "reviews"
       | "distribution"
+      | "recalls"
     >("instruments"),
     [page, setPage] = useState(1),
     [historyPage, setHistoryPage] = useState(1),
@@ -319,7 +322,8 @@ function Workspace({
           tab === "packaging" ||
           tab === "cycles" ||
           tab === "reviews" ||
-          tab === "distribution"
+          tab === "distribution" ||
+          tab === "recalls"
         ) {
           setLoading(false);
           return;
@@ -410,7 +414,8 @@ function Workspace({
       | "packaging"
       | "cycles"
       | "reviews"
-      | "distribution",
+      | "distribution"
+      | "recalls",
   ) {
     guard(() => {
       setSelected(null);
@@ -616,6 +621,14 @@ function Workspace({
             <span aria-hidden="true">↗</span>
             {distributionLabels(language).title}
           </button>
+          <button
+            aria-current={tab === "recalls" ? "page" : undefined}
+            disabled={busy}
+            onClick={() => navigate("recalls")}
+          >
+            <span aria-hidden="true">!</span>
+            {recallLabels(language).title}
+          </button>
         </nav>
         <div className="sidebar-bottom">
           <p>{t.facility}</p>
@@ -637,7 +650,8 @@ function Workspace({
           tab !== "packaging" &&
           tab !== "cycles" &&
           tab !== "reviews" &&
-          tab !== "distribution" && (
+          tab !== "distribution" &&
+          tab !== "recalls" && (
             <div className="page-heading">
               <div>
                 <p className="eyebrow">{t.facility}</p>
@@ -882,6 +896,17 @@ function Workspace({
               </button>
             </div>
           </form>
+        )}
+        {tab === "recalls" && (
+          <RecallWorkspace
+            key={trayReset}
+            session={session}
+            language={language}
+            blocked={blocked}
+            onExpired={onExpired}
+            onDirty={setTrayDirty}
+            onBusy={setTrayBusy}
+          />
         )}
         {tab === "distribution" && (
           <DistributionWorkspace

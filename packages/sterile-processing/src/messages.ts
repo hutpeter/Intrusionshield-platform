@@ -1,4 +1,6 @@
 const es = {
+  RECALL_BLOCKED:
+    "El paquete está bloqueado por una retirada. Revise el caso; no se permite esta operación.",
   DISTRIBUTION_BLOCKED:
     "El paquete no tiene una liberación vigente aplicable. Revise su carga y decisión antes de moverlo.",
   REVIEW_BLOCKED:
@@ -36,6 +38,8 @@ const es = {
 };
 type Messages = Record<keyof typeof es, string>;
 const en: Messages = {
+  RECALL_BLOCKED:
+    "The package is blocked by a recall. Review the case; this operation is not permitted.",
   DISTRIBUTION_BLOCKED:
     "The package has no applicable current release. Review its load and decision before moving it.",
   REVIEW_BLOCKED:
@@ -72,6 +76,8 @@ const en: Messages = {
     "Service unavailable. The change has not been confirmed.",
 };
 const fr: Messages = {
+  RECALL_BLOCKED:
+    "L’emballage est bloqué par un rappel. Consultez le dossier ; cette opération est interdite.",
   DISTRIBUTION_BLOCKED:
     "L’emballage n’a pas de libération actuelle applicable. Vérifiez la charge et la décision avant tout mouvement.",
   REVIEW_BLOCKED:

@@ -389,3 +389,36 @@ test("distribution API preserves handover version and confirmation, sends CSRF a
     (e) => e.code === "SERVICE_UNAVAILABLE",
   );
 });
+test("recall API preserves source scope/version and CSRF without allowing actor overrides", async (t) => {
+  let foreign = false;
+  const calls = [];
+  fake(t, async (path, options) => {
+    calls.push({ path, options });
+    return response({
+      ...session,
+      id: "recall",
+      tenantId: foreign ? "other" : session.tenantId,
+      items: [],
+    });
+  });
+  const body = {
+    requestId: "request",
+    code: "RECALL-DEMO",
+    sourceKind: "package",
+    sourceId: "package",
+    sourceVersion: 1,
+    reason: "DEMO",
+    reference: "DEMO",
+    confirmed: true,
+  };
+  await api.createRecall(session, body, signal());
+  assert.deepEqual(JSON.parse(calls[0].options.body), body);
+  assert.equal(calls[0].options.headers["x-sterile-csrf"], session.csrf);
+  await api.recall(session, "recall", signal(), 1);
+  assert.ok(calls[1].path.endsWith("/versions/1"));
+  foreign = true;
+  await assert.rejects(
+    api.recall(session, "recall", signal()),
+    (e) => e.code === "SERVICE_UNAVAILABLE",
+  );
+});

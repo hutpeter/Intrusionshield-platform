@@ -9,6 +9,9 @@ import type {
   ReviewSummary,
   ReviewQueueItem,
   ReviewInput,
+  RecallRecord,
+  RecallSummary,
+  RecallInput,
   DistributionRecord,
   DistributionSummary,
   StoreInput,
@@ -42,6 +45,8 @@ export interface Session {
   actors?: Record<string, "operator" | "viewer" | "reviewer">;
   canWrite?: boolean;
   canReview?: boolean;
+  canRecall?: boolean;
+  canRecover?: boolean;
 }
 export interface Page<T> {
   items: T[];
@@ -200,6 +205,93 @@ async function checkedMovement(
   return r;
 }
 export const api = {
+  recalls: (s: Session, n: number, signal: AbortSignal) =>
+    scopedPage<RecallSummary>(s, base(s) + "/recalls", n, signal),
+  recall: (s: Session, id: string, signal: AbortSignal, version?: number) =>
+    scoped(
+      s,
+      call<RecallRecord>(
+        base(s) +
+          "/recalls/" +
+          encodeURIComponent(id) +
+          (version === undefined ? "" : "/versions/" + version),
+        signal,
+      ),
+    ),
+  createRecall: (s: Session, body: RecallInput, signal: AbortSignal) =>
+    scoped(s, call<RecallRecord>(base(s) + "/recalls", signal, body, s.csrf)),
+  recoverRecall: (
+    s: Session,
+    id: string,
+    body: {
+      requestId: string;
+      version: number;
+      packageId: string;
+      location: string;
+      reference: string;
+      note: string;
+      confirmed: boolean;
+    },
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<RecallRecord>(
+        base(s) + "/recalls/" + encodeURIComponent(id) + "/recover",
+        signal,
+        body,
+        s.csrf,
+      ),
+    ),
+  disposeRecall: (
+    s: Session,
+    id: string,
+    body: {
+      requestId: string;
+      version: number;
+      packageId: string;
+      action: "quarantine" | "reprocess_required" | "discard_recorded";
+      reason: string;
+      reference: string;
+      confirmed: boolean;
+    },
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<RecallRecord>(
+        base(s) + "/recalls/" + encodeURIComponent(id) + "/dispose",
+        signal,
+        body,
+        s.csrf,
+      ),
+    ),
+  recallHistory: (s: Session, id: string, n: number, signal: AbortSignal) =>
+    scopedPage<SterileAuditEvent>(
+      s,
+      base(s) + "/recalls/" + encodeURIComponent(id) + "/history",
+      n,
+      signal,
+    ),
+  recallExample: (s: Session, requestId: string, signal: AbortSignal) =>
+    checkedMovement(
+      s,
+      call<DistributionRecord>(
+        "/preview/recall-example",
+        signal,
+        { requestId },
+        s.csrf,
+      ),
+    ),
+  async allLoads(s: Session, signal: AbortSignal) {
+    const rows: LoadSummary[] = [];
+    for (let n = 1; n <= 20; n++) {
+      const p = await api.loads(s, n, signal);
+      rows.push(...p.items);
+      if (!p.hasMore) return rows;
+    }
+    throw new ApiError(503, "SERVICE_UNAVAILABLE");
+  },
   distribution: (s: Session, n: number, signal: AbortSignal) =>
     scopedPage<DistributionSummary>(s, base(s) + "/distribution", n, signal),
   movement: (s: Session, id: string, signal: AbortSignal, version?: number) =>

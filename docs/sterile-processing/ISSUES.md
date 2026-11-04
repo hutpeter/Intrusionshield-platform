@@ -36,10 +36,13 @@ Keep test execution status in [TESTING-REGISTER.md](TESTING-REGISTER.md).
 
 ## RSP-ISS-002 — Withdrawal and amendment of final review decisions
 
-- **Status:** Planned/deferred after the initial manual review increment.
+- **Status:** Partially implemented by the withdrawal/recall increment.
 - **Current behavior:** Final recorded release/rejection decisions are immutable.
   Holds can receive later versioned decisions; original evidence is retained.
-- **Remaining scope:** Define authorized correction, withdrawal/recall and
+- **Delivered:** Separate versioned package/load recall cases preserve final decisions,
+  block downstream availability and normal label printing, and document recovery
+  and disposition. Case closure retains the block; no notifications are sent.
+- **Remaining scope:** Define authorized correction, rescission/reinstatement and
   failed-cycle disposition without rewriting historical decisions or allowing
   clerical cancellation to bypass package restrictions. Source evidence amendments
   need a new explicit review policy rather than silently reusing an old snapshot.

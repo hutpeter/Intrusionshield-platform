@@ -1,3 +1,4 @@
+import type { RecallBlock } from "./recall-types.js";
 import type { DistributionStatus } from "./distribution-types.js";
 import type { PackageLoad } from "./cycle-types.js";
 import type { TrayAssembly } from "./tray-types.js";
@@ -17,6 +18,7 @@ export interface InspectionProof {
   checks: InspectionItem;
 }
 export interface SterilePackage {
+  recall?: RecallBlock;
   distribution?: DistributionStatus;
   activeLoad?: PackageLoad;
   id: string;
@@ -56,6 +58,7 @@ export type PackageSummary = Pick<
   instrumentCount: number;
   activeLoad?: PackageLoad;
   distribution?: DistributionStatus;
+  recall?: RecallBlock;
 };
 export interface PackageInput {
   requestId: string;

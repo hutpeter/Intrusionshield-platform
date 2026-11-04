@@ -1,4 +1,9 @@
 import type {
+  RecallRecord,
+  RecallSummary,
+  RecallBlock,
+} from "./recall-types.js";
+import type {
   DistributionRecord,
   DistributionSummary,
 } from "./distribution-types.js";
@@ -58,6 +63,9 @@ export interface SterileAuditEvent {
   actorId: string;
   at: string;
   action:
+    | "recall-created"
+    | "recall-recovered"
+    | "recall-disposition"
     | "package-stored"
     | "package-transferred"
     | "package-issued"
@@ -96,13 +104,23 @@ export type SterileRecord =
   | SterilePackage
   | SterilizationLoad
   | LoadReview
-  | DistributionRecord;
+  | DistributionRecord
+  | RecallRecord;
 export interface CommandReceipt {
   hash: string;
   result: SterileRecord;
 }
 /** All methods are scoped to the transaction's tenant/facility. Writes and audit commit together. */
 export interface SterileTransaction {
+  findRecall(id: string): Promise<RecallRecord | null>;
+  findRecallByCode(code: string): Promise<RecallRecord | null>;
+  listRecalls(page: number): Promise<RecallSummary[]>;
+  insertRecall(item: RecallRecord): Promise<void>;
+  updateRecall(item: RecallRecord, expected: number): Promise<void>;
+  insertRecallVersion(item: RecallRecord): Promise<void>;
+  findRecallVersion(id: string, version: number): Promise<RecallRecord | null>;
+  insertRecallBlocks(item: RecallRecord): Promise<void>;
+  findRecallBlock(packageId: string): Promise<RecallBlock | null>;
   findDistribution(id: string): Promise<DistributionRecord | null>;
   findDistributionByPackage(
     packageId: string,
@@ -227,7 +245,8 @@ export class SterileError extends Error {
       | "PACKAGING_BLOCKED"
       | "LOAD_BLOCKED"
       | "REVIEW_BLOCKED"
-      | "DISTRIBUTION_BLOCKED",
+      | "DISTRIBUTION_BLOCKED"
+      | "RECALL_BLOCKED",
   ) {
     super(code);
   }

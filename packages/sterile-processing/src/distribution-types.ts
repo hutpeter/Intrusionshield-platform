@@ -1,3 +1,4 @@
+import type { RecallBlock } from "./recall-types.js";
 export interface PackageMovement {
   number: number;
   kind: "stored" | "transferred" | "issued";
@@ -13,6 +14,7 @@ export interface PackageMovement {
   requestId: string;
 }
 export interface DistributionRecord {
+  recall?: RecallBlock;
   id: string;
   tenantId: string;
   facilityId: string;

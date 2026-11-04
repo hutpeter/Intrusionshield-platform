@@ -35,6 +35,7 @@ async function members(
   if (new Set(keys).size !== keys.length) invalid();
   const rows: LoadPackage[] = [];
   for (const id of keys) {
+    if (await tx.findRecallBlock(id)) throw new SterileError("RECALL_BLOCKED");
     const p = await tx.findPackage(id);
     if (!p) throw new SterileError("NOT_FOUND");
     const active = await tx.findPackageLoad(id);
@@ -345,7 +346,17 @@ export class CycleRegistry extends SterileRegistryBase {
       const items = await Promise.all(
         rows.slice(0, 50).map(async (row) => {
           const r = await tx.findReviewByLoad(row.id);
-          return { ...row, ...(r ? { review: reviewStatus(r) } : {}) };
+          const load = await tx.findLoad(row.id),
+            blocks = load
+              ? await Promise.all(
+                  load.packages.map((p) => tx.findRecallBlock(p.id)),
+                )
+              : [];
+          return {
+            ...row,
+            ...(blocks.some(Boolean) ? { recallBlocked: true } : {}),
+            ...(r ? { review: reviewStatus(r) } : {}),
+          };
         }),
       );
       return { items, page: p, hasMore: rows.length > 50 };
@@ -363,7 +374,15 @@ export class CycleRegistry extends SterileRegistryBase {
       if (!row) throw new SterileError("NOT_FOUND");
       const review =
         version === undefined ? await tx.findReviewByLoad(key) : null;
-      return { ...row, ...(review ? { review: reviewStatus(review) } : {}) };
+      const blocks =
+        version === undefined
+          ? await Promise.all(row.packages.map((p) => tx.findRecallBlock(p.id)))
+          : [];
+      return {
+        ...row,
+        ...(blocks.some(Boolean) ? { recallBlocked: true } : {}),
+        ...(review ? { review: reviewStatus(review) } : {}),
+      };
     });
   }
   async history(scope: SterileScope, id: string, page = 1) {

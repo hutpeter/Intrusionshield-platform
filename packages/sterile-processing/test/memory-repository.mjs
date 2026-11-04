@@ -1,6 +1,9 @@
 /** SQL-free test adapter only. Never loaded by the service composition root. */
 export class MemoryRepository {
   state = {
+    recalls: [],
+    recallVersions: [],
+    recallBlocks: [],
     distribution: [],
     distributionVersions: [],
     reviews: [],
@@ -51,6 +54,73 @@ export class MemoryRepository {
       };
     };
     const tx = {
+      findRecall: async (id) =>
+        read(s.recalls.find((x) => own(x) && x.id === id)),
+      findRecallByCode: async (code) =>
+        read(s.recalls.find((x) => own(x) && x.code === code)),
+      listRecalls: async (page) =>
+        s.recalls
+          .filter(own)
+          .slice()
+          .reverse()
+          .slice((page - 1) * 50, (page - 1) * 50 + 51)
+          .map((x) => {
+            const { items, ...summary } = x;
+            return { ...structuredClone(summary), packageCount: items.length };
+          }),
+      insertRecall: async (x) => {
+        if (
+          !own(x) ||
+          s.recalls.some((r) => own(r) && (r.id === x.id || r.code === x.code))
+        )
+          throw Error("constraint");
+        s.recalls.push(structuredClone(x));
+      },
+      updateRecall: async (x, version) => {
+        const n = s.recalls.findIndex(
+          (r) => own(r) && r.id === x.id && r.version === version,
+        );
+        if (n < 0) throw Error("conflict");
+        s.recalls[n] = structuredClone(x);
+      },
+      insertRecallVersion: async (x) => {
+        if (
+          !own(x) ||
+          s.recallVersions.some(
+            (r) => own(r) && r.id === x.id && r.version === x.version,
+          )
+        )
+          throw Error("constraint");
+        s.recallVersions.push(structuredClone(x));
+      },
+      findRecallVersion: async (id, version) =>
+        read(
+          s.recallVersions.find(
+            (x) => own(x) && x.id === id && x.version === version,
+          ),
+        ),
+      insertRecallBlocks: async (r) => {
+        for (const p of r.items)
+          s.recallBlocks.push({
+            ...scope,
+            packageId: p.packageId,
+            recallId: r.id,
+          });
+      },
+      findRecallBlock: async (id) => {
+        const refs = s.recallBlocks.filter((x) => own(x) && x.packageId === id),
+          latest = refs.at(-1),
+          r =
+            latest && s.recalls.find((x) => own(x) && x.id === latest.recallId);
+        return r
+          ? {
+              caseId: r.id,
+              caseCode: r.code,
+              state: r.state,
+              count: refs.length,
+            }
+          : null;
+      },
       findDistribution: async (id) =>
         read(s.distribution.find((x) => own(x) && x.id === id)),
       findDistributionByPackage: async (id) =>

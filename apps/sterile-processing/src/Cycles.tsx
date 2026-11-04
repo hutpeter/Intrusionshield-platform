@@ -1,3 +1,4 @@
+import { recallLabels } from "./recall-text";
 import { reviewLabels } from "./review-text";
 import { useEffect, useRef, useState } from "react";
 import type {
@@ -325,6 +326,9 @@ export function CycleWorkspace({
   const record = (d: SterilizationLoad) => (
     <>
       <section className="panel">
+        {d.recallBlocked && (
+          <p className="alert">{recallLabels(language).blocked}</p>
+        )}
         <span
           className={
             "badge " +

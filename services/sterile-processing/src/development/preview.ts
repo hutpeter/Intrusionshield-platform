@@ -116,6 +116,8 @@ export function createSterilePreview({
             ),
             canWrite: session.role === "operator",
             canReview: session.role === "reviewer",
+            canRecall: session.role === "reviewer",
+            canRecover: session.role === "operator",
           }
         : {}),
     };
@@ -359,6 +361,44 @@ export function createSterilePreview({
         ),
       );
   });
+  app.post("/preview/recall-example", async (req, res) => {
+    const s = res.locals.session as Session;
+    if (!s.role) {
+      res.status(401).json({ error: "UNAUTHENTICATED" });
+      return;
+    }
+    if (s.role !== "reviewer") {
+      res.status(403).json({ error: "FORBIDDEN" });
+      return;
+    }
+    if (
+      Object.keys(req.query).length ||
+      !req.body ||
+      Array.isArray(req.body) ||
+      Object.keys(req.body).length !== 1 ||
+      typeof req.body.requestId !== "string"
+    ) {
+      res.status(400).json({ error: "INVALID_REQUEST" });
+      return;
+    }
+    let id: string;
+    try {
+      id = sterileUuid(req.body.requestId);
+    } catch {
+      res.status(400).json({ error: "INVALID_REQUEST" });
+      return;
+    }
+    res
+      .status(201)
+      .json(
+        await prepareDistributionExample(
+          repository,
+          { tenantId, facilityId, actorId: actors.operator },
+          { tenantId, facilityId, actorId: actors.reviewer },
+          id,
+        ),
+      );
+  });
   app.use("/api/v1/sterile", (req, res, next) => {
     const s = res.locals.session as Session;
     if (!s.role) {
@@ -401,10 +441,13 @@ export function createSterilePreview({
         fixtureGrants.has("core.authentication") &&
         fixtureGrants.has("core.authorization") &&
         ((scope.actorId === actors.operator &&
-          permission !== "release:write") ||
+          permission !== "release:write" &&
+          permission !== "recall:write") ||
           (scope.actorId === actors.viewer && permission.endsWith(":read")) ||
           (scope.actorId === actors.reviewer &&
-            (permission.endsWith(":read") || permission === "release:write"))),
+            (permission.endsWith(":read") ||
+              permission === "release:write" ||
+              permission === "recall:write"))),
     }),
   );
   app.use(

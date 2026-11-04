@@ -166,6 +166,8 @@ export class PackagingRegistry extends SterileRegistryBase {
         if (!old) throw new SterileError("NOT_FOUND");
         if (old.version !== version || old.state !== "packaged")
           throw new SterileError("CONFLICT");
+        if (await tx.findRecallBlock(key))
+          throw new SterileError("RECALL_BLOCKED");
         if (await tx.findPackageLoad(key))
           throw new SterileError("LOAD_BLOCKED");
         const item: SterilePackage = {
@@ -219,10 +221,12 @@ export class PackagingRegistry extends SterileRegistryBase {
       const rows = await tx.listPackages(p);
       const items = await Promise.all(
         rows.slice(0, 50).map(async (row) => {
+          const recall = await tx.findRecallBlock(row.id);
           const distribution = await tx.findDistributionByPackage(row.id);
           const activeLoad = await tx.findPackageLoad(row.id);
           return {
             ...row,
+            ...(recall ? { recall } : {}),
             ...(distribution
               ? { distribution: distributionStatus(distribution) }
               : {}),
@@ -245,10 +249,13 @@ export class PackagingRegistry extends SterileRegistryBase {
       if (!item) throw new SterileError("NOT_FOUND");
       const activeLoad =
         version === undefined ? await tx.findPackageLoad(key) : null;
+      const recall =
+        version === undefined ? await tx.findRecallBlock(key) : null;
       const distribution =
         version === undefined ? await tx.findDistributionByPackage(key) : null;
       return {
         ...item,
+        ...(recall ? { recall } : {}),
         ...(distribution
           ? { distribution: distributionStatus(distribution) }
           : {}),

@@ -28,6 +28,8 @@ async function release(
   reviewId: string,
   reviewVersion: number,
 ) {
+  if (await tx.findRecallBlock(packageId))
+    throw new SterileError("RECALL_BLOCKED");
   const p = await tx.findPackage(packageId);
   if (!p) throw new SterileError("NOT_FOUND");
   const active = await tx.findPackageLoad(packageId);
@@ -307,7 +309,13 @@ export class DistributionRegistry extends SterileRegistryBase {
       p = pageOf(page);
     return this.repository.transaction(s, async (tx) => {
       const rows = await tx.listDistribution(p);
-      return { items: rows.slice(0, 50), page: p, hasMore: rows.length > 50 };
+      const items = await Promise.all(
+        rows.slice(0, 50).map(async (row) => {
+          const recall = await tx.findRecallBlock(row.packageId);
+          return { ...row, ...(recall ? { recall } : {}) };
+        }),
+      );
+      return { items, page: p, hasMore: rows.length > 50 };
     });
   }
   async get(scope: SterileScope, id: string, version?: number) {
@@ -320,7 +328,9 @@ export class DistributionRegistry extends SterileRegistryBase {
           ? await tx.findDistribution(key)
           : await tx.findDistributionVersion(key, version);
       if (!item) throw new SterileError("NOT_FOUND");
-      return item;
+      const recall =
+        version === undefined ? await tx.findRecallBlock(item.packageId) : null;
+      return { ...item, ...(recall ? { recall } : {}) };
     });
   }
   async history(scope: SterileScope, id: string, page = 1) {

@@ -120,3 +120,9 @@ expiry/storage/distribution rules, withdrawals/recall and operational acceptance
 Those are pending/deferred in the register; the fictional release check does not
 validate them. The label avoids claiming that text references alone establish
 sterility.
+
+## Withdrawal/recall update
+
+See [RECALLS.md](RECALLS.md) for separate recall cases, recovery and disposition.
+Original release decisions remain immutable; current recall blocks override
+availability and normal label printing. Correction and reinstatement remain deferred.

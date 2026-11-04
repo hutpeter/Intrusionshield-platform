@@ -208,3 +208,9 @@ The service suite now has 16 passing checks, including positive entry-page
 navigation and negative API/iframe/host/origin/write regressions. A real Chromium
 click from a different local site confirmed a cross-site document request returns
 HTTP 200, loads the welcome screen and can enter the operator demonstration.
+
+## Withdrawal/recall update
+
+See [RECALLS.md](RECALLS.md) for separate recall cases, recovery and disposition.
+Original release decisions remain immutable; current recall blocks override
+availability and normal label printing. Correction and reinstatement remain deferred.

@@ -75,6 +75,11 @@ export class ReviewRegistry extends SterileRegistryBase {
         if (!load.packages.length || load.packages.length > 100)
           throw new SterileError("REVIEW_BLOCKED");
         for (const item of load.packages) {
+          if (
+            input.decision === "release" &&
+            (await tx.findRecallBlock(item.id))
+          )
+            throw new SterileError("RECALL_BLOCKED");
           const p = await tx.findPackage(item.id),
             held = await tx.findPackageLoad(item.id);
           if (
@@ -149,7 +154,21 @@ export class ReviewRegistry extends SterileRegistryBase {
       p = pageOf(page);
     return this.repository.transaction(s, async (tx) => {
       const rows = await tx.listReviews(p);
-      return { items: rows.slice(0, 50), page: p, hasMore: rows.length > 50 };
+      const items = await Promise.all(
+        rows.slice(0, 50).map(async (row) => {
+          const r = await tx.findReview(row.id);
+          const blocks = r
+            ? await Promise.all(
+                r.loadSnapshot.packages.map((p) => tx.findRecallBlock(p.id)),
+              )
+            : [];
+          return {
+            ...row,
+            ...(blocks.some(Boolean) ? { recallBlocked: true } : {}),
+          };
+        }),
+      );
+      return { items, page: p, hasMore: rows.length > 50 };
     });
   }
   async queue(scope: SterileScope, page = 1) {
@@ -170,7 +189,16 @@ export class ReviewRegistry extends SterileRegistryBase {
           ? await tx.findReview(key)
           : await tx.findReviewVersion(key, version);
       if (!record) throw new SterileError("NOT_FOUND");
-      return record;
+      const blocks =
+        version === undefined
+          ? await Promise.all(
+              record.loadSnapshot.packages.map((p) => tx.findRecallBlock(p.id)),
+            )
+          : [];
+      return {
+        ...record,
+        ...(blocks.some(Boolean) ? { recallBlocked: true } : {}),
+      };
     });
   }
   async history(scope: SterileScope, id: string, page = 1) {

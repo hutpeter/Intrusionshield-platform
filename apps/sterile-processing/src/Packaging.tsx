@@ -1,3 +1,4 @@
+import { recallLabels } from "./recall-text";
 import { distributionLabels } from "./distribution-text";
 import { reviewLabels } from "./review-text";
 import { cycleLabels } from "./cycle-text";
@@ -289,6 +290,7 @@ export function PackagingWorkspace({
       const current = await api.package(session, detail.id, c.signal);
       if (c.signal.aborted) return;
       if (
+        current.recall ||
         current.state !== "packaged" ||
         current.version !== detail.version ||
         current.activeLoad?.review?.state === "released"
@@ -340,6 +342,12 @@ export function PackagingWorkspace({
             {distributionLabels(language).title}:{" "}
             {distributionLabels(language)[d.distribution.state]} ·{" "}
             {d.distribution.location ?? d.distribution.destination}
+          </p>
+        )}
+        {d.recall && (
+          <p className="alert">
+            {recallLabels(language).blocked} · {d.recall.caseCode} ·{" "}
+            {d.recall.count}
           </p>
         )}
         <dl className="details-grid">
@@ -733,6 +741,7 @@ export function PackagingWorkspace({
               <div className="panel-heading">
                 <h2>{p.label}</h2>
                 {session.canWrite &&
+                  !detail.recall &&
                   detail.activeLoad?.review?.state !== "released" && (
                     <button disabled={busy} onClick={() => void print()}>
                       {p.print}

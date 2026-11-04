@@ -11,6 +11,7 @@ export interface LoadPackage {
 }
 export interface SterilizationLoad {
   review?: ReviewStatus;
+  recallBlocked?: boolean;
   id: string;
   tenantId: string;
   facilityId: string;
@@ -53,7 +54,7 @@ export type LoadSummary = Pick<
   | "state"
   | "version"
   | "createdAt"
-> & { packageCount: number; review?: ReviewStatus };
+> & { packageCount: number; review?: ReviewStatus; recallBlocked?: boolean };
 export interface LoadInput {
   requestId: string;
   code: string;

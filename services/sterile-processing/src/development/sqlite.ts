@@ -11,6 +11,9 @@ import { dirname, resolve } from "node:path";
 import {
   SterileError,
   reviewStatus,
+  type RecallRecord,
+  type RecallSummary,
+  type RecallBlock,
   type DistributionRecord,
   type DistributionSummary,
   type LoadReview,
@@ -94,6 +97,9 @@ CREATE TABLE IF NOT EXISTS sp_reviews(tenant_id TEXT NOT NULL,facility_id TEXT N
 CREATE TABLE IF NOT EXISTS sp_review_versions(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id,version),FOREIGN KEY(tenant_id,facility_id,id) REFERENCES sp_reviews(tenant_id,facility_id,id));
 CREATE TABLE IF NOT EXISTS sp_distribution(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,package_id TEXT NOT NULL,package_version INTEGER NOT NULL,review_id TEXT NOT NULL,review_version INTEGER NOT NULL,load_id TEXT NOT NULL,load_version INTEGER NOT NULL,version INTEGER NOT NULL CHECK(version>0),payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,package_id),FOREIGN KEY(tenant_id,facility_id,package_id,package_version) REFERENCES sp_package_versions(tenant_id,facility_id,id,version),FOREIGN KEY(tenant_id,facility_id,review_id,review_version) REFERENCES sp_review_versions(tenant_id,facility_id,id,version),FOREIGN KEY(tenant_id,facility_id,load_id,load_version) REFERENCES sp_load_versions(tenant_id,facility_id,id,version));
 CREATE TABLE IF NOT EXISTS sp_distribution_versions(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id,version),FOREIGN KEY(tenant_id,facility_id,id) REFERENCES sp_distribution(tenant_id,facility_id,id));
+CREATE TABLE IF NOT EXISTS sp_recalls(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,code TEXT NOT NULL,version INTEGER NOT NULL CHECK(version>0),payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,code));
+CREATE TABLE IF NOT EXISTS sp_recall_versions(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id,version),FOREIGN KEY(tenant_id,facility_id,id) REFERENCES sp_recalls(tenant_id,facility_id,id));
+CREATE TABLE IF NOT EXISTS sp_recall_blocks(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,package_id TEXT NOT NULL,package_version INTEGER NOT NULL,recall_id TEXT NOT NULL,PRIMARY KEY(tenant_id,facility_id,package_id,recall_id),FOREIGN KEY(tenant_id,facility_id,package_id,package_version) REFERENCES sp_package_versions(tenant_id,facility_id,id,version),FOREIGN KEY(tenant_id,facility_id,recall_id) REFERENCES sp_recalls(tenant_id,facility_id,id));
 CREATE INDEX IF NOT EXISTS sp_assignment_assembly ON sp_assignments(tenant_id,facility_id,assembly_id);`);
     } catch (error) {
       this.db.close();
@@ -159,6 +165,77 @@ CREATE INDEX IF NOT EXISTS sp_assignment_assembly ON sp_assignments(tenant_id,fa
         return rows.map((row) => JSON.parse(row.payload) as V);
       };
       const tx: SterileTransaction = {
+        findRecall: async (id) =>
+          read<RecallRecord>(
+            "SELECT payload FROM sp_recalls WHERE tenant_id=? AND facility_id=? AND id=?",
+            id,
+          ),
+        findRecallByCode: async (code) =>
+          read<RecallRecord>(
+            "SELECT payload FROM sp_recalls WHERE tenant_id=? AND facility_id=? AND code=?",
+            code,
+          ),
+        listRecalls: async (page) =>
+          list<RecallSummary>(
+            "SELECT json_set(json_remove(payload,'$.items'),'$.packageCount',json_array_length(payload,'$.items')) AS payload FROM sp_recalls WHERE tenant_id=? AND facility_id=? ORDER BY rowid DESC LIMIT 51 OFFSET ?",
+            page,
+          ),
+        insertRecall: async (item) => {
+          own(item);
+          this.db
+            .prepare("INSERT INTO sp_recalls VALUES(?,?,?,?,?,?)")
+            .run(
+              ...args,
+              item.id,
+              item.code,
+              item.version,
+              JSON.stringify(item),
+            );
+        },
+        updateRecall: async (item, expected) => {
+          own(item);
+          if (item.version !== expected + 1)
+            throw new SterileError("INVALID_REQUEST");
+          const r = this.db
+            .prepare(
+              "UPDATE sp_recalls SET version=?,payload=? WHERE tenant_id=? AND facility_id=? AND id=? AND version=?",
+            )
+            .run(
+              item.version,
+              JSON.stringify(item),
+              ...args,
+              item.id,
+              expected,
+            );
+          if (r.changes !== 1) throw new SterileError("CONFLICT");
+        },
+        insertRecallVersion: async (item) => {
+          own(item);
+          this.db
+            .prepare("INSERT INTO sp_recall_versions VALUES(?,?,?,?,?)")
+            .run(...args, item.id, item.version, JSON.stringify(item));
+        },
+        findRecallVersion: async (id, version) =>
+          read<RecallRecord>(
+            "SELECT payload FROM sp_recall_versions WHERE tenant_id=? AND facility_id=? AND id=? AND version=?",
+            id,
+            version,
+          ),
+        insertRecallBlocks: async (item) => {
+          own(item);
+          for (const p of item.items)
+            this.db
+              .prepare("INSERT INTO sp_recall_blocks VALUES(?,?,?,?,?)")
+              .run(...args, p.packageId, p.packageVersion, item.id);
+        },
+        findRecallBlock: async (id) => {
+          const row = this.db
+            .prepare(
+              "SELECT r.id AS caseId,r.code AS caseCode,json_extract(r.payload,'$.state') AS state,(SELECT count(*) FROM sp_recall_blocks b WHERE b.tenant_id=a.tenant_id AND b.facility_id=a.facility_id AND b.package_id=a.package_id) AS count FROM sp_recall_blocks a JOIN sp_recalls r ON r.tenant_id=a.tenant_id AND r.facility_id=a.facility_id AND r.id=a.recall_id WHERE a.tenant_id=? AND a.facility_id=? AND a.package_id=? ORDER BY r.rowid DESC LIMIT 1",
+            )
+            .get(...args, id) as RecallBlock | undefined;
+          return row ?? null;
+        },
         findDistribution: async (id) =>
           read<DistributionRecord>(
             "SELECT payload FROM sp_distribution WHERE tenant_id=? AND facility_id=? AND id=?",

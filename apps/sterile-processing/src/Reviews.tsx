@@ -1,3 +1,4 @@
+import { recallLabels } from "./recall-text";
 import { useEffect, useRef, useState } from "react";
 import type {
   LoadReview,
@@ -321,7 +322,11 @@ export function ReviewWorkspace({
     try {
       const current = await api.review(session, record.id, ac.signal);
       if (ac.signal.aborted) return;
-      if (current.state !== "released" || current.version !== record.version) {
+      if (
+        current.recallBlocked ||
+        current.state !== "released" ||
+        current.version !== record.version
+      ) {
         setRecord(current);
         setLabel(false);
         throw new ApiError(409, "REVIEW_BLOCKED");
@@ -355,6 +360,7 @@ export function ReviewWorkspace({
     source = shown?.loadSnapshot ?? load,
     canRelease =
       !!load &&
+      !load.recallBlocked &&
       load.outcome === "passed" &&
       load.state === "awaiting_review" &&
       session.actorId !== load.startedBy &&
@@ -394,7 +400,7 @@ export function ReviewWorkspace({
                 {p.review}
               </button>
             )}
-          {record?.state === "released" && !past && (
+          {record?.state === "released" && !record.recallBlocked && !past && (
             <button
               disabled={busy || !!form}
               onClick={() => setLabel((x) => !x)}
@@ -424,6 +430,9 @@ export function ReviewWorkspace({
         ))}
       </div>
       <p className="readonly-note">{p.boundary}</p>
+      {record?.recallBlocked && (
+        <p className="alert">{recallLabels(language).blocked}</p>
+      )}
       {!session.canReview && <p className="readonly-note">{p.onlyReviewer}</p>}
       {session.canReview &&
         !selected &&
@@ -590,7 +599,11 @@ export function ReviewWorkspace({
                       <tr key={row.id}>
                         <td>{row.loadCode}</td>
                         <td>{row.loadVersion}</td>
-                        <td>{p[row.state]}</td>
+                        <td>
+                          {row.recallBlocked
+                            ? recallLabels(language).blocked
+                            : p[row.state]}
+                        </td>
                         <td>
                           <button
                             disabled={busy}
@@ -820,6 +833,7 @@ export function ReviewWorkspace({
           )}
           {label &&
             record?.state === "released" &&
+            !record.recallBlocked &&
             !past &&
             pkg &&
             decision && (

@@ -1,3 +1,4 @@
+import { recallLabels } from "./recall-text";
 import { useEffect, useRef, useState } from "react";
 import type {
   DistributionRecord,
@@ -329,23 +330,34 @@ export function DistributionWorkspace({
               {p.store}
             </button>
           )}
-          {session.canWrite && detail?.state === "stored" && !past && (
-            <>
-              {(["transfer", "issue"] as const).map((kind) => (
-                <button
-                  key={kind}
-                  className={kind === "issue" ? "primary" : ""}
-                  disabled={busy || loading || !!form}
-                  onClick={() => begin(kind)}
-                >
-                  {p[kind]}
-                </button>
-              ))}
-            </>
-          )}
+          {session.canWrite &&
+            detail?.state === "stored" &&
+            !detail.recall &&
+            !past && (
+              <>
+                {(["transfer", "issue"] as const).map((kind) => (
+                  <button
+                    key={kind}
+                    className={kind === "issue" ? "primary" : ""}
+                    disabled={busy || loading || !!form}
+                    onClick={() => begin(kind)}
+                  >
+                    {p[kind]}
+                  </button>
+                ))}
+              </>
+            )}
         </div>
       </div>
       <p className="readonly-note">{p.boundary}</p>
+      {detail?.recall && (
+        <p className="alert">
+          {recallLabels(language).blocked} · {detail.recall.caseCode}
+          <span className="error-help">
+            {recallLabels(language).custodyHint}
+          </span>
+        </p>
+      )}
       <p className="muted">{p.unavailable}</p>
       {session.canWrite &&
         !selected &&
@@ -504,7 +516,11 @@ export function DistributionWorkspace({
                 {rows.items.map((row) => (
                   <tr key={row.id}>
                     <td>{row.packageCode}</td>
-                    <td>{p[row.state]}</td>
+                    <td>
+                      {row.recall
+                        ? recallLabels(language).blocked
+                        : p[row.state]}
+                    </td>
                     <td>{row.location ?? row.destination}</td>
                     <td>
                       <button
