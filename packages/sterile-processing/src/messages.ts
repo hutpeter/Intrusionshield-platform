@@ -1,4 +1,6 @@
 const es = {
+  DISTRIBUTION_BLOCKED:
+    "El paquete no tiene una liberación vigente aplicable. Revise su carga y decisión antes de moverlo.",
   REVIEW_BLOCKED:
     "Revise el ciclo, las evidencias, los paquetes y la identidad del revisor. No se permite esta liberación.",
   LOAD_BLOCKED:
@@ -34,6 +36,8 @@ const es = {
 };
 type Messages = Record<keyof typeof es, string>;
 const en: Messages = {
+  DISTRIBUTION_BLOCKED:
+    "The package has no applicable current release. Review its load and decision before moving it.",
   REVIEW_BLOCKED:
     "Review the cycle, evidence, packages and reviewer identity. This release is not permitted.",
   LOAD_BLOCKED: "Review the packages and any active load before continuing.",
@@ -68,6 +72,8 @@ const en: Messages = {
     "Service unavailable. The change has not been confirmed.",
 };
 const fr: Messages = {
+  DISTRIBUTION_BLOCKED:
+    "L’emballage n’a pas de libération actuelle applicable. Vérifiez la charge et la décision avant tout mouvement.",
   REVIEW_BLOCKED:
     "Vérifiez le cycle, les preuves, les emballages et l’identité du réviseur. Cette libération est interdite.",
   LOAD_BLOCKED:

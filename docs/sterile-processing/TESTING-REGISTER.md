@@ -21,17 +21,27 @@ A successful developer check never implies that the owner performed it.
 
 ## Build ledger
 
-| Build                       | Delivered change                                                                                         | Automated / developer verification                                                                                                          | Owner verification                                                                                                         | Outstanding                                                                                         |
-| --------------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| 427feeb / a85508a / 9287358 | Instrument catalogue, registration, history, preview startup fixes                                       | Scoped checks and browser flow recorded in LOCAL-PREVIEW.md; Windows pnpm launcher and cross-site entry fixes included                      | Confirmed registration of INS-DEMO-001, retained records after refresh/restart, and working preview                        | Formal retirement, auditor and language regression on Windows deferred                              |
-| 0ac4dab                     | Tray definitions, assembly, reservations and immutable versions                                          | 53 automated checks; browser composition/history/disassembly; restart persistence                                                           | Confirmed ARMADO-DEMO-001 completion with INS-DEMO-001, versions 1–3, and saved assembly after reopening following refresh | Manual duplicate-assignment, definition revision, disassembly/reuse and auditor regression deferred |
-| 58aaf13                     | Receipt, cleaning attempts, failure/retry and processing holds                                           | 69 automated checks; Spanish cleaning/retry browser workflow; EN/FR/mobile/auditor/session checks; full restart retained evidence and holds | Not yet reported. Minimal receipt smoke check offered; no result received                                                  | Receipt smoke check pending; longer manual failure/retry walkthrough deferred                       |
-| ad63b0b                     | Individual inspection checks, held failures/rework, passed inspection enables assembly; fictional setup  | Results recorded below after verification                                                                                                   | Passed November 4, 2026 — owner confirmed with screenshot                                                                  | Failure/rework, group handling and full workflow manual review deferred                             |
-| bee5f4d                     | Packaging with frozen tray/inspection proof, material lot, printable preparation label and explicit void | Current results recorded below                                                                                                              | Passed November 4, 2026 — owner screenshot confirms saved label                                                            | Manual void/repack, device labels and connected cycle/release review deferred                       |
-| e64c063                     | Draft load membership, manual start/outcome/evidence, package interlocks and held review state           | Current results recorded below                                                                                                              | Passed November 4, 2026 — owner screenshot confirms saved awaiting-review result                                           | Manual failure/abort/rework, equipment integration and release review deferred                      |
-| 1414949                     | Separate reviewer permission, release/hold/reject decisions, frozen evidence/history and decision label  | Results recorded below                                                                                                                      | Passed November 4, 2026 — owner screenshot confirms reviewer decision and history                                          | Manual hold/reject, identity/clinical policy, withdrawal and distribution validation deferred       |
+| Build                                            | Delivered change                                                                                         | Automated / developer verification                                                                                                          | Owner verification                                                                                                         | Outstanding                                                                                         |
+| ------------------------------------------------ | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| 427feeb / a85508a / 9287358                      | Instrument catalogue, registration, history, preview startup fixes                                       | Scoped checks and browser flow recorded in LOCAL-PREVIEW.md; Windows pnpm launcher and cross-site entry fixes included                      | Confirmed registration of INS-DEMO-001, retained records after refresh/restart, and working preview                        | Formal retirement, auditor and language regression on Windows deferred                              |
+| 0ac4dab                                          | Tray definitions, assembly, reservations and immutable versions                                          | 53 automated checks; browser composition/history/disassembly; restart persistence                                                           | Confirmed ARMADO-DEMO-001 completion with INS-DEMO-001, versions 1–3, and saved assembly after reopening following refresh | Manual duplicate-assignment, definition revision, disassembly/reuse and auditor regression deferred |
+| 58aaf13                                          | Receipt, cleaning attempts, failure/retry and processing holds                                           | 69 automated checks; Spanish cleaning/retry browser workflow; EN/FR/mobile/auditor/session checks; full restart retained evidence and holds | Not yet reported. Minimal receipt smoke check offered; no result received                                                  | Receipt smoke check pending; longer manual failure/retry walkthrough deferred                       |
+| ad63b0b                                          | Individual inspection checks, held failures/rework, passed inspection enables assembly; fictional setup  | Results recorded below after verification                                                                                                   | Passed November 4, 2026 — owner confirmed with screenshot                                                                  | Failure/rework, group handling and full workflow manual review deferred                             |
+| bee5f4d                                          | Packaging with frozen tray/inspection proof, material lot, printable preparation label and explicit void | Current results recorded below                                                                                                              | Passed November 4, 2026 — owner screenshot confirms saved label                                                            | Manual void/repack, device labels and connected cycle/release review deferred                       |
+| e64c063                                          | Draft load membership, manual start/outcome/evidence, package interlocks and held review state           | Current results recorded below                                                                                                              | Passed November 4, 2026 — owner screenshot confirms saved awaiting-review result                                           | Manual failure/abort/rework, equipment integration and release review deferred                      |
+| 1414949                                          | Separate reviewer permission, release/hold/reject decisions, frozen evidence/history and decision label  | Results recorded below                                                                                                                      | Passed November 4, 2026 — owner screenshot confirms reviewer decision and history                                          | Manual hold/reject, identity/clinical policy, withdrawal and distribution validation deferred       |
+| Storage/distribution increment (see Git history) | Released-package storage, transfers and issue with versioned custody history                             | Results recorded below                                                                                                                      | Pending — U-DIST-01 only                                                                                                   | Manual storage/transfer/exception paths, returns, recall and operational acceptance deferred        |
 
-## Owner's current single check — review/release
+## Owner's current single check — storage/distribution
+
+**U-DIST-01 — Pending.** Follow [STORAGE-DISTRIBUTION.md](STORAGE-DISTRIBUTION.md):
+sign in as **Demo operator / Operador demo**, prepare a new fictional stored and
+released package, confirm the prefilled handover and save the issue. Expected:
+**Issued / Entregado**, destination/recipient and a retained storage-to-issue chain.
+Initial storage is a simulated prerequisite; only the issue smoke check is
+requested from the owner. No physical dispatch or other manual test is required.
+
+## Owner's completed review/release check
 
 **U-REVIEW-01 — Passed November 4, 2026.** The owner supplied an English-language
 screenshot showing **Release recorded**, the saved decision attributed to
@@ -90,34 +100,37 @@ simulated cleaning; it does not perform cleaning or alter existing demo records.
 
 ## Deferred manual scenarios and their release gates
 
-| ID            | Scenario                                                                                                      | Status / prerequisite                                                                                   |
-| ------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| M-REG-01      | Retire instrument, reason/history retained; auditor cannot write                                              | Deferred; registration stage exists                                                                     |
-| M-TRAY-01     | Duplicate reservation denied; retirement denied while assigned                                                | Deferred; automated coverage exists                                                                     |
-| M-TRAY-02     | Definition revision preserves old composition; disassemble/reuse preserves history                            | Deferred; automated coverage exists                                                                     |
-| M-CLEAN-01    | Failed cleaning, evidence, mechanical retry and retained earlier versions                                     | Deferred; developer browser and automated coverage exist                                                |
-| M-INSP-01     | Missing result/evidence/confirmation blocks inspection                                                        | Deferred; automated coverage tracked below                                                              |
-| M-INSP-02     | One failed instrument holds group; renewed cleaning and inspection retain defect evidence                     | Deferred; automated coverage tracked below                                                              |
-| M-INSP-03     | Passed group can be assembled; earlier inspection versions remain immutable                                   | Deferred; automated coverage tracked below                                                              |
-| M-UI-01       | All module screens in Spanish/English/French, mobile, keyboard, unsaved navigation                            | Deferred full manual sweep; targeted developer checks exist                                             |
-| M-PERSIST-01  | Full Windows restart retains all connected workflow records and history                                       | Deferred combined regression; earlier instrument persistence owner-confirmed                            |
-| M-AUTH-01     | Real operator/inspector/release roles, tenant/facility isolation and session expiry                           | Pending production identity/authorization integration; fixture checks do not satisfy this               |
-| E2E-01        | Receipt → cleaning → inspection → assembly → packaging → cycle → review/release → distribution                | Blocked by distribution and production operational acceptance; manual review/release preview now exists |
-| E2E-02        | Failed/aborted cycle, quarantine, rework, recall and affected-item trace                                      | Blocked by later modules; must be reviewed before production acceptance                                 |
-| E2E-03        | Concurrent operators, corrected decisions and restart recovery throughout workflow                            | Deferred integrated review; targeted concurrency/rollback checks continue now                           |
-| OPS-01        | SQL Server migration/backup/restore, scale, equipment and label integrations                                  | Not implemented/validated for production; no live SQL or device connection used                         |
-| CLIN-01       | Approved procedures/checklists, competent roles, local rules and clinical acceptance                          | Pending client procedures and operational validation; no clinical acceptance claimed                    |
-| M-PACK-01     | Package proof review, failed prerequisites, duplicate package and disassembly lock                            | Deferred manual review; automated coverage continues                                                    |
-| M-PACK-02     | Void/repack, historical versions, stale-label prevention and physical-label removal                           | Deferred manual review; automated coverage continues                                                    |
-| M-LABEL-01    | Printer/media sizing, output quality, durability, actual delivery, reprints and barcode/QR scanning           | Deferred; current output is a human-readable internal preparation label                                 |
-| M-CYCLE-01    | Draft membership edits/cancellation, duplicate package and duplicate machine-cycle rejection                  | Deferred manual review; automated coverage recorded below                                               |
-| M-CYCLE-02    | Failed/aborted cycle evidence, retained holds, immutable history and package void denial                      | Deferred manual review; automated coverage recorded below                                               |
-| M-CYCLE-03    | Equipment/profile compatibility, real cycle parameters, indicator interpretation and actual device timestamps | Pending production configuration and equipment integration                                              |
-| M-RELEASE-01  | Independent authorized cycle review, release/reject/hold and failed-cycle disposition                         | Manual review/release preview now exists; production policy and failed-cycle disposition remain pending |
-| M-REVIEW-01   | Hold → release, reject and immutable decision history; failed/aborted cycle denial                            | Deferred manual review; automated checks recorded below                                                 |
-| M-REVIEW-02   | Reviewer/operator/auditor separation and same-cycle operator release denial with real identities              | Fixture checks implemented; production identity/competency validation pending                           |
-| M-REVIEW-03   | Decision-label/current-state checks, historical labels, EN/FR/mobile and full Windows restart                 | Deferred manual review; targeted developer checks recorded below                                        |
-| M-WITHDRAW-01 | Audited final-decision correction, withdrawal/recall and source amendments                                    | Deferred/unimplemented under RSP-ISS-002                                                                |
+| ID            | Scenario                                                                                                      | Status / prerequisite                                                                                           |
+| ------------- | ------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| M-REG-01      | Retire instrument, reason/history retained; auditor cannot write                                              | Deferred; registration stage exists                                                                             |
+| M-TRAY-01     | Duplicate reservation denied; retirement denied while assigned                                                | Deferred; automated coverage exists                                                                             |
+| M-TRAY-02     | Definition revision preserves old composition; disassemble/reuse preserves history                            | Deferred; automated coverage exists                                                                             |
+| M-CLEAN-01    | Failed cleaning, evidence, mechanical retry and retained earlier versions                                     | Deferred; developer browser and automated coverage exist                                                        |
+| M-INSP-01     | Missing result/evidence/confirmation blocks inspection                                                        | Deferred; automated coverage tracked below                                                                      |
+| M-INSP-02     | One failed instrument holds group; renewed cleaning and inspection retain defect evidence                     | Deferred; automated coverage tracked below                                                                      |
+| M-INSP-03     | Passed group can be assembled; earlier inspection versions remain immutable                                   | Deferred; automated coverage tracked below                                                                      |
+| M-UI-01       | All module screens in Spanish/English/French, mobile, keyboard, unsaved navigation                            | Deferred full manual sweep; targeted developer checks exist                                                     |
+| M-PERSIST-01  | Full Windows restart retains all connected workflow records and history                                       | Deferred combined regression; earlier instrument persistence owner-confirmed                                    |
+| M-AUTH-01     | Real operator/inspector/release roles, tenant/facility isolation and session expiry                           | Pending production identity/authorization integration; fixture checks do not satisfy this                       |
+| E2E-01        | Receipt → cleaning → inspection → assembly → packaging → cycle → review/release → distribution                | Main preview stages now exist; combined manual end-to-end and production operational acceptance remain deferred |
+| E2E-02        | Failed/aborted cycle, quarantine, rework, recall and affected-item trace                                      | Blocked by later modules; must be reviewed before production acceptance                                         |
+| E2E-03        | Concurrent operators, corrected decisions and restart recovery throughout workflow                            | Deferred integrated review; targeted concurrency/rollback checks continue now                                   |
+| OPS-01        | SQL Server migration/backup/restore, scale, equipment and label integrations                                  | Not implemented/validated for production; no live SQL or device connection used                                 |
+| CLIN-01       | Approved procedures/checklists, competent roles, local rules and clinical acceptance                          | Pending client procedures and operational validation; no clinical acceptance claimed                            |
+| M-PACK-01     | Package proof review, failed prerequisites, duplicate package and disassembly lock                            | Deferred manual review; automated coverage continues                                                            |
+| M-PACK-02     | Void/repack, historical versions, stale-label prevention and physical-label removal                           | Deferred manual review; automated coverage continues                                                            |
+| M-LABEL-01    | Printer/media sizing, output quality, durability, actual delivery, reprints and barcode/QR scanning           | Deferred; current output is a human-readable internal preparation label                                         |
+| M-CYCLE-01    | Draft membership edits/cancellation, duplicate package and duplicate machine-cycle rejection                  | Deferred manual review; automated coverage recorded below                                                       |
+| M-CYCLE-02    | Failed/aborted cycle evidence, retained holds, immutable history and package void denial                      | Deferred manual review; automated coverage recorded below                                                       |
+| M-CYCLE-03    | Equipment/profile compatibility, real cycle parameters, indicator interpretation and actual device timestamps | Pending production configuration and equipment integration                                                      |
+| M-RELEASE-01  | Independent authorized cycle review, release/reject/hold and failed-cycle disposition                         | Manual review/release preview now exists; production policy and failed-cycle disposition remain pending         |
+| M-REVIEW-01   | Hold → release, reject and immutable decision history; failed/aborted cycle denial                            | Deferred manual review; automated checks recorded below                                                         |
+| M-REVIEW-02   | Reviewer/operator/auditor separation and same-cycle operator release denial with real identities              | Fixture checks implemented; production identity/competency validation pending                                   |
+| M-REVIEW-03   | Decision-label/current-state checks, historical labels, EN/FR/mobile and full Windows restart                 | Deferred manual review; targeted developer checks recorded below                                                |
+| M-WITHDRAW-01 | Audited final-decision correction, withdrawal/recall and source amendments                                    | Deferred/unimplemented under RSP-ISS-002                                                                        |
+| M-DIST-01     | Initial storage, location transfers, release/source rechecks and immutable movement versions                  | Deferred manual review; automated coverage recorded below                                                       |
+| M-DIST-02     | Duplicate/concurrent issue denial, rollback, role/scope controls and real receipt acknowledgement             | Fixture/API controls tested; broader manual/operational review deferred                                         |
+| M-RETURN-01   | Unopened returns versus used/opened items, restocking, new processing episode and disposition                 | Deferred/unimplemented under RSP-ISS-003                                                                        |
 
 ## Known limitations to carry forward
 
@@ -248,6 +261,31 @@ real identity/competency policies, EN/FR/mobile, full restart UI, hardware/label
 withdrawal/recall and operational acceptance remain separately deferred.
 RSP-ISS-001 remains parked; RSP-ISS-002 records the unimplemented final-decision
 withdrawal/correction workflow.
+
+## Storage/distribution increment verification
+
+**Passed November 4, 2026:** 142 scoped automated tests (67 domain, 62
+service/SQLite/HTTP, thirteen web API), plus scoped TypeScript/web builds. Launcher
+source is unchanged; historical dispatch checks were not repeated.
+
+New coverage verifies storage/release linkage, transfer and issue history,
+unreleased/held/rejected denial, current source/release version rechecks, no double
+issue or silent restocking, stale/idempotent commands, scope/role/CSRF/strict bodies,
+concurrent storage/issues, SQLite reopen persistence, foreign-key version links
+and audit rollback. Source review and operator-movement attribution remain distinct.
+The staged fictional setup is tested for safe resume after a storage-audit failure
+without duplicate prerequisite records; earlier fictional stages may persist by design.
+
+**Developer targeted browser smoke passed:** fictional released/stored package,
+explicit integrity/handover confirmation, saved **Issued / Entregado**, destination,
+recipient and retained storage-to-issue chain. The duplicate-issue action was no
+longer available. No actual physical dispatch, countersigned receipt or patient
+operation was performed.
+
+**Owner result remains pending:** U-DIST-01. Initial storage/transfer and exception
+manual paths, real custody/receipt confirmation, EN/FR/mobile, full restart UI,
+returns/reprocessing, withdrawal/recall and production acceptance remain deferred.
+RSP-ISS-001, RSP-ISS-002 and RSP-ISS-003 remain separately deferred/unimplemented.
 
 ## Repeatable automated commands
 

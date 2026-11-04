@@ -28,6 +28,10 @@ Wait for **Ready: http://127.0.0.1:9553**, leave PowerShell running and refresh.
 That is the only requested owner check. No physical printing, failed-cycle review,
 hold/reject walkthrough or repeated earlier-module regression is requested now.
 
+**Workflow update:** released packages can now enter the manual storage/issue
+preview; see [STORAGE-DISTRIBUTION.md](STORAGE-DISTRIBUTION.md). The owner-confirmed
+review smoke check need not be repeated for this build.
+
 ## Decisions and evidence
 
 The pending queue includes completed successful, failed and aborted loads that
@@ -84,7 +88,7 @@ facility policies and cross-role separation still needs operational design.
 
 Load and package views project the latest review decision. Their original cycle,
 preparation and inspection records are not rewritten. A release decision is
-available for the future distribution workflow, but the package retains its
+now checked by the storage/distribution preview, but the package retains its
 load/assembly linkage and cannot be reloaded or voided through a clerical shortcut.
 Hold/reject do not make packages available.
 

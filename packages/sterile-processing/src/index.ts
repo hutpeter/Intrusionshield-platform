@@ -240,3 +240,6 @@ export { CycleRegistry } from "./cycles.js";
 
 export * from "./review-types.js";
 export { ReviewRegistry } from "./reviews.js";
+
+export * from "./distribution-types.js";
+export { DistributionRegistry } from "./distribution.js";

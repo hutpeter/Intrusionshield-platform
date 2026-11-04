@@ -1,3 +1,4 @@
+import type { DistributionStatus } from "./distribution-types.js";
 import type { PackageLoad } from "./cycle-types.js";
 import type { TrayAssembly } from "./tray-types.js";
 import type { InspectionItem } from "./processing-types.js";
@@ -16,6 +17,7 @@ export interface InspectionProof {
   checks: InspectionItem;
 }
 export interface SterilePackage {
+  distribution?: DistributionStatus;
   activeLoad?: PackageLoad;
   id: string;
   tenantId: string;
@@ -49,7 +51,12 @@ export type PackageSummary = Pick<
   | "state"
   | "version"
   | "createdAt"
-> & { trayName: string; instrumentCount: number; activeLoad?: PackageLoad };
+> & {
+  trayName: string;
+  instrumentCount: number;
+  activeLoad?: PackageLoad;
+  distribution?: DistributionStatus;
+};
 export interface PackageInput {
   requestId: string;
   code: string;

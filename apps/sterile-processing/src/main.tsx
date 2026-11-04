@@ -1,3 +1,5 @@
+import { DistributionWorkspace } from "./Distribution";
+import { distributionLabels } from "./distribution-text";
 import { ReviewWorkspace } from "./Reviews";
 import { reviewLabels } from "./review-text";
 import { CycleWorkspace } from "./Cycles";
@@ -263,6 +265,7 @@ function Workspace({
       | "packaging"
       | "cycles"
       | "reviews"
+      | "distribution"
     >("instruments"),
     [page, setPage] = useState(1),
     [historyPage, setHistoryPage] = useState(1),
@@ -315,7 +318,8 @@ function Workspace({
           tab === "processing" ||
           tab === "packaging" ||
           tab === "cycles" ||
-          tab === "reviews"
+          tab === "reviews" ||
+          tab === "distribution"
         ) {
           setLoading(false);
           return;
@@ -405,7 +409,8 @@ function Workspace({
       | "processing"
       | "packaging"
       | "cycles"
-      | "reviews",
+      | "reviews"
+      | "distribution",
   ) {
     guard(() => {
       setSelected(null);
@@ -603,6 +608,14 @@ function Workspace({
             <span aria-hidden="true">✓</span>
             {reviewLabels(language).title}
           </button>
+          <button
+            aria-current={tab === "distribution" ? "page" : undefined}
+            disabled={busy}
+            onClick={() => navigate("distribution")}
+          >
+            <span aria-hidden="true">↗</span>
+            {distributionLabels(language).title}
+          </button>
         </nav>
         <div className="sidebar-bottom">
           <p>{t.facility}</p>
@@ -623,7 +636,8 @@ function Workspace({
           tab !== "processing" &&
           tab !== "packaging" &&
           tab !== "cycles" &&
-          tab !== "reviews" && (
+          tab !== "reviews" &&
+          tab !== "distribution" && (
             <div className="page-heading">
               <div>
                 <p className="eyebrow">{t.facility}</p>
@@ -868,6 +882,17 @@ function Workspace({
               </button>
             </div>
           </form>
+        )}
+        {tab === "distribution" && (
+          <DistributionWorkspace
+            key={trayReset}
+            session={session}
+            language={language}
+            blocked={blocked}
+            onExpired={onExpired}
+            onDirty={setTrayDirty}
+            onBusy={setTrayBusy}
+          />
         )}
         {tab === "reviews" && (
           <ReviewWorkspace

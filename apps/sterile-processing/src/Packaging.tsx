@@ -1,3 +1,4 @@
+import { distributionLabels } from "./distribution-text";
 import { reviewLabels } from "./review-text";
 import { cycleLabels } from "./cycle-text";
 import { useEffect, useRef, useState } from "react";
@@ -332,6 +333,13 @@ export function PackagingWorkspace({
             {d.activeLoad.review
               ? reviewLabels(language)[d.activeLoad.review.state]
               : cycleLabels(language)[d.activeLoad.state]}
+          </p>
+        )}
+        {d.distribution && (
+          <p className="readonly-note">
+            {distributionLabels(language).title}:{" "}
+            {distributionLabels(language)[d.distribution.state]} ·{" "}
+            {d.distribution.location ?? d.distribution.destination}
           </p>
         )}
         <dl className="details-grid">

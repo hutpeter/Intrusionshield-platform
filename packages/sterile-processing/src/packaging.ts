@@ -1,3 +1,4 @@
+import { distributionStatus } from "./distribution-types.js";
 import { randomUUID } from "node:crypto";
 import {
   SterileRegistryBase,
@@ -218,8 +219,15 @@ export class PackagingRegistry extends SterileRegistryBase {
       const rows = await tx.listPackages(p);
       const items = await Promise.all(
         rows.slice(0, 50).map(async (row) => {
+          const distribution = await tx.findDistributionByPackage(row.id);
           const activeLoad = await tx.findPackageLoad(row.id);
-          return { ...row, ...(activeLoad ? { activeLoad } : {}) };
+          return {
+            ...row,
+            ...(distribution
+              ? { distribution: distributionStatus(distribution) }
+              : {}),
+            ...(activeLoad ? { activeLoad } : {}),
+          };
         }),
       );
       return { items, page: p, hasMore: rows.length > 50 };
@@ -237,7 +245,15 @@ export class PackagingRegistry extends SterileRegistryBase {
       if (!item) throw new SterileError("NOT_FOUND");
       const activeLoad =
         version === undefined ? await tx.findPackageLoad(key) : null;
-      return { ...item, ...(activeLoad ? { activeLoad } : {}) };
+      const distribution =
+        version === undefined ? await tx.findDistributionByPackage(key) : null;
+      return {
+        ...item,
+        ...(distribution
+          ? { distribution: distributionStatus(distribution) }
+          : {}),
+        ...(activeLoad ? { activeLoad } : {}),
+      };
     });
   }
   async history(scope: SterileScope, id: string, page = 1) {

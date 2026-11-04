@@ -6,6 +6,7 @@ import {
   PackagingRegistry,
   CycleRegistry,
   ReviewRegistry,
+  DistributionRegistry,
   SterileError,
   sterileUuid,
   type SterileRepository,
@@ -36,7 +37,9 @@ export interface SterileDependencies {
       | "cycles:read"
       | "cycles:write"
       | "release:read"
-      | "release:write",
+      | "release:write"
+      | "distribution:read"
+      | "distribution:write",
   ) => Promise<boolean>;
 }
 function body(value: unknown, keys: string[]): Record<string, unknown> {
@@ -129,29 +132,33 @@ export function createSterileApp(
         facilityId,
       };
       const readOnly = req.method === "GET" || req.method === "HEAD";
-      const permission = req.path.startsWith("/reviews")
+      const permission = req.path.startsWith("/distribution")
         ? readOnly
-          ? "release:read"
-          : "release:write"
-        : req.path.startsWith("/loads")
+          ? "distribution:read"
+          : "distribution:write"
+        : req.path.startsWith("/reviews")
           ? readOnly
-            ? "cycles:read"
-            : "cycles:write"
-          : req.path.startsWith("/packages")
+            ? "release:read"
+            : "release:write"
+          : req.path.startsWith("/loads")
             ? readOnly
-              ? "packaging:read"
-              : "packaging:write"
-            : req.path.startsWith("/processing")
+              ? "cycles:read"
+              : "cycles:write"
+            : req.path.startsWith("/packages")
               ? readOnly
-                ? "processing:read"
-                : "processing:write"
-              : req.path.startsWith("/tray-")
+                ? "packaging:read"
+                : "packaging:write"
+              : req.path.startsWith("/processing")
                 ? readOnly
-                  ? "trays:read"
-                  : "trays:write"
-                : readOnly
-                  ? "instruments:read"
-                  : "instruments:write";
+                  ? "processing:read"
+                  : "processing:write"
+                : req.path.startsWith("/tray-")
+                  ? readOnly
+                    ? "trays:read"
+                    : "trays:write"
+                  : readOnly
+                    ? "instruments:read"
+                    : "instruments:write";
       if (
         (await dependencies.authorize!(scope, "sterile.core", permission)) !==
         true
@@ -722,6 +729,95 @@ export function createSterileApp(
         ),
       );
   });
+  const distribution = () => new DistributionRegistry(dependencies.repository!);
+  app.get(prefix + "/distribution", async (req, res) =>
+    res.json(await distribution().list(res.locals.scope, page(req))),
+  );
+  app.get(prefix + "/distribution/:id", async (req, res) => {
+    noQuery(req);
+    res.json(
+      await distribution().get(res.locals.scope, sterileUuid(req.params.id)),
+    );
+  });
+  app.get(prefix + "/distribution/:id/versions/:version", async (req, res) => {
+    noQuery(req);
+    res.json(
+      await distribution().get(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        Number(req.params.version),
+      ),
+    );
+  });
+  app.get(prefix + "/distribution/:id/history", async (req, res) =>
+    res.json(
+      await distribution().history(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        page(req),
+      ),
+    ),
+  );
+  app.post(prefix + "/distribution", async (req, res) => {
+    noQuery(req);
+    const v = body(req.body, [
+      "requestId",
+      "packageId",
+      "packageVersion",
+      "reviewId",
+      "reviewVersion",
+      "location",
+      "reference",
+      "integrityChecked",
+      "confirmed",
+    ]);
+    res
+      .status(201)
+      .json(
+        await distribution().store(
+          res.locals.scope,
+          v as unknown as Parameters<DistributionRegistry["store"]>[1],
+        ),
+      );
+  });
+  app.post(prefix + "/distribution/:id/transfer", async (req, res) => {
+    noQuery(req);
+    const v = body(req.body, [
+      "requestId",
+      "version",
+      "location",
+      "reference",
+      "reason",
+      "integrityChecked",
+      "confirmed",
+    ]);
+    res.json(
+      await distribution().transfer(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        v as unknown as Parameters<DistributionRegistry["transfer"]>[2],
+      ),
+    );
+  });
+  app.post(prefix + "/distribution/:id/issue", async (req, res) => {
+    noQuery(req);
+    const v = body(req.body, [
+      "requestId",
+      "version",
+      "destination",
+      "recipient",
+      "reference",
+      "integrityChecked",
+      "confirmed",
+    ]);
+    res.json(
+      await distribution().issue(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        v as unknown as Parameters<DistributionRegistry["issue"]>[2],
+      ),
+    );
+  });
   app.use((_req, res) => {
     res.status(404).json({ error: "NOT_FOUND" });
   });
@@ -747,6 +843,7 @@ export function createSterileApp(
               PACKAGING_BLOCKED: 409,
               LOAD_BLOCKED: 409,
               REVIEW_BLOCKED: 409,
+              DISTRIBUTION_BLOCKED: 409,
             }[code as SterileError["code"]]
           : parser.type === "entity.too.large"
             ? 413

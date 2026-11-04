@@ -1,4 +1,8 @@
 import type {
+  DistributionRecord,
+  DistributionSummary,
+} from "./distribution-types.js";
+import type {
   LoadReview,
   ReviewSummary,
   ReviewQueueItem,
@@ -54,6 +58,9 @@ export interface SterileAuditEvent {
   actorId: string;
   at: string;
   action:
+    | "package-stored"
+    | "package-transferred"
+    | "package-issued"
     | "load-reviewed"
     | "load-created"
     | "load-contents-updated"
@@ -88,13 +95,26 @@ export type SterileRecord =
   | ProcessingEpisode
   | SterilePackage
   | SterilizationLoad
-  | LoadReview;
+  | LoadReview
+  | DistributionRecord;
 export interface CommandReceipt {
   hash: string;
   result: SterileRecord;
 }
 /** All methods are scoped to the transaction's tenant/facility. Writes and audit commit together. */
 export interface SterileTransaction {
+  findDistribution(id: string): Promise<DistributionRecord | null>;
+  findDistributionByPackage(
+    packageId: string,
+  ): Promise<DistributionRecord | null>;
+  listDistribution(page: number): Promise<DistributionSummary[]>;
+  insertDistribution(item: DistributionRecord): Promise<void>;
+  updateDistribution(item: DistributionRecord, expected: number): Promise<void>;
+  insertDistributionVersion(item: DistributionRecord): Promise<void>;
+  findDistributionVersion(
+    id: string,
+    version: number,
+  ): Promise<DistributionRecord | null>;
   findReview(id: string): Promise<LoadReview | null>;
   findReviewByLoad(loadId: string): Promise<LoadReview | null>;
   listReviews(page: number): Promise<ReviewSummary[]>;
@@ -206,7 +226,8 @@ export class SterileError extends Error {
       | "PROCESSING_HOLD"
       | "PACKAGING_BLOCKED"
       | "LOAD_BLOCKED"
-      | "REVIEW_BLOCKED",
+      | "REVIEW_BLOCKED"
+      | "DISTRIBUTION_BLOCKED",
   ) {
     super(code);
   }

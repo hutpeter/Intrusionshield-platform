@@ -356,3 +356,36 @@ test("review API preserves checked evidence and versions and rejects a foreign f
     (e) => e.code === "SERVICE_UNAVAILABLE",
   );
 });
+test("distribution API preserves handover version and confirmation, sends CSRF and validates scoped history", async (t) => {
+  let foreign = false;
+  const calls = [];
+  fake(t, async (path, options) => {
+    calls.push({ path, options });
+    return response({
+      ...session,
+      id: "movement",
+      facilityId: foreign ? "other" : session.facilityId,
+      events: [{ number: 1 }],
+    });
+  });
+  const body = {
+    requestId: "request",
+    version: 1,
+    destination: "DEMO",
+    recipient: "DEMO",
+    reference: "HANDOVER",
+    integrityChecked: true,
+    confirmed: true,
+  };
+  await api.issuePackage(session, "movement", body, signal());
+  assert.ok(calls[0].path.endsWith("/distribution/movement/issue"));
+  assert.deepEqual(JSON.parse(calls[0].options.body), body);
+  assert.equal(calls[0].options.headers["x-sterile-csrf"], session.csrf);
+  await api.movement(session, "movement", signal(), 1);
+  assert.ok(calls[1].path.endsWith("/versions/1"));
+  foreign = true;
+  await assert.rejects(
+    api.movement(session, "movement", signal()),
+    (e) => e.code === "SERVICE_UNAVAILABLE",
+  );
+});

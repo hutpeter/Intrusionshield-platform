@@ -9,6 +9,10 @@ import type {
   ReviewSummary,
   ReviewQueueItem,
   ReviewInput,
+  DistributionRecord,
+  DistributionSummary,
+  StoreInput,
+  IssueInput,
   LoadSummary,
   LoadInput,
   CycleResultInput,
@@ -186,7 +190,89 @@ async function checkedReview(s: Session, promise: Promise<LoadReview>) {
     throw new ApiError(503, "SERVICE_UNAVAILABLE");
   return r;
 }
+async function checkedMovement(
+  s: Session,
+  promise: Promise<DistributionRecord>,
+) {
+  const r = await scoped(s, promise);
+  if (!Array.isArray(r.events) || !r.events.length || r.events.length > 200)
+    throw new ApiError(503, "SERVICE_UNAVAILABLE");
+  return r;
+}
 export const api = {
+  distribution: (s: Session, n: number, signal: AbortSignal) =>
+    scopedPage<DistributionSummary>(s, base(s) + "/distribution", n, signal),
+  movement: (s: Session, id: string, signal: AbortSignal, version?: number) =>
+    checkedMovement(
+      s,
+      call<DistributionRecord>(
+        base(s) +
+          "/distribution/" +
+          encodeURIComponent(id) +
+          (version === undefined ? "" : "/versions/" + version),
+        signal,
+      ),
+    ),
+  storePackage: (s: Session, body: StoreInput, signal: AbortSignal) =>
+    checkedMovement(
+      s,
+      call<DistributionRecord>(base(s) + "/distribution", signal, body, s.csrf),
+    ),
+  transferPackage: (
+    s: Session,
+    id: string,
+    body: {
+      requestId: string;
+      version: number;
+      location: string;
+      reference: string;
+      reason: string;
+      integrityChecked: boolean;
+      confirmed: boolean;
+    },
+    signal: AbortSignal,
+  ) =>
+    checkedMovement(
+      s,
+      call<DistributionRecord>(
+        base(s) + "/distribution/" + encodeURIComponent(id) + "/transfer",
+        signal,
+        body,
+        s.csrf,
+      ),
+    ),
+  issuePackage: (
+    s: Session,
+    id: string,
+    body: IssueInput,
+    signal: AbortSignal,
+  ) =>
+    checkedMovement(
+      s,
+      call<DistributionRecord>(
+        base(s) + "/distribution/" + encodeURIComponent(id) + "/issue",
+        signal,
+        body,
+        s.csrf,
+      ),
+    ),
+  movementHistory: (s: Session, id: string, n: number, signal: AbortSignal) =>
+    scopedPage<SterileAuditEvent>(
+      s,
+      base(s) + "/distribution/" + encodeURIComponent(id) + "/history",
+      n,
+      signal,
+    ),
+  distributionExample: (s: Session, requestId: string, signal: AbortSignal) =>
+    checkedMovement(
+      s,
+      call<DistributionRecord>(
+        "/preview/distribution-example",
+        signal,
+        { requestId },
+        s.csrf,
+      ),
+    ),
   reviewQueue: (s: Session, n: number, signal: AbortSignal) =>
     scopedPage<ReviewQueueItem>(s, base(s) + "/reviews/queue", n, signal),
   reviews: (s: Session, n: number, signal: AbortSignal) =>

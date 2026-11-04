@@ -50,3 +50,19 @@ Keep test execution status in [TESTING-REGISTER.md](TESTING-REGISTER.md).
   distributed items once distribution exists.
 - **Gate:** Required before production operational acceptance. This does not
   unblock or implement the independently deferred cleaner/inspector issue above.
+
+## RSP-ISS-003 — Returns and used-package disposition
+
+- **Status:** Planned/deferred after initial storage/issue tracking.
+- **Current behavior:** An issued package cannot be issued twice or silently
+  reset to stored. Its existing package, load, review and custody history remain.
+- **Remaining scope:** Explicit return, use and disposition workflows, including
+  unopened returns versus opened/used items, integrity/expiry checks and authorized
+  reprocessing. Close/link prior custody and packaging episodes without deleting
+  evidence or bypassing the existing instrument/tray reservations.
+- **Acceptance checks:** Used/opened or damaged items never regain available stock
+  merely because they were returned; unauthorized restocking is denied; a new
+  processing episode remains linked to the old issue; withdrawal/recall affects
+  both stored and distributed packages; old labels/history stay attributable.
+- **Gate:** Required before production operational acceptance. Handling rules
+  need approved local procedures; the current fictional demo assumes none.

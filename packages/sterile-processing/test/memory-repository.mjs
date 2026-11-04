@@ -1,6 +1,8 @@
 /** SQL-free test adapter only. Never loaded by the service composition root. */
 export class MemoryRepository {
   state = {
+    distribution: [],
+    distributionVersions: [],
     reviews: [],
     reviewVersions: [],
     loads: [],
@@ -49,6 +51,53 @@ export class MemoryRepository {
       };
     };
     const tx = {
+      findDistribution: async (id) =>
+        read(s.distribution.find((x) => own(x) && x.id === id)),
+      findDistributionByPackage: async (id) =>
+        read(s.distribution.find((x) => own(x) && x.packageId === id)),
+      listDistribution: async (page) =>
+        s.distribution
+          .filter(own)
+          .slice()
+          .reverse()
+          .slice((page - 1) * 50, (page - 1) * 50 + 51)
+          .map((x) => {
+            const { events, ...summary } = x;
+            return structuredClone(summary);
+          }),
+      insertDistribution: async (x) => {
+        if (
+          !own(x) ||
+          s.distribution.some(
+            (i) => own(i) && (i.id === x.id || i.packageId === x.packageId),
+          )
+        )
+          throw Error("constraint");
+        s.distribution.push(structuredClone(x));
+      },
+      updateDistribution: async (x, version) => {
+        const n = s.distribution.findIndex(
+          (i) => own(i) && i.id === x.id && i.version === version,
+        );
+        if (n < 0) throw Error("conflict");
+        s.distribution[n] = structuredClone(x);
+      },
+      insertDistributionVersion: async (x) => {
+        if (
+          !own(x) ||
+          s.distributionVersions.some(
+            (i) => own(i) && i.id === x.id && i.version === x.version,
+          )
+        )
+          throw Error("constraint");
+        s.distributionVersions.push(structuredClone(x));
+      },
+      findDistributionVersion: async (id, version) =>
+        read(
+          s.distributionVersions.find(
+            (x) => own(x) && x.id === id && x.version === version,
+          ),
+        ),
       findReview: async (id) =>
         read(s.reviews.find((x) => own(x) && x.id === id)),
       findReviewByLoad: async (loadId) =>
