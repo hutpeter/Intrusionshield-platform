@@ -11,6 +11,9 @@ import { dirname, resolve } from "node:path";
 import {
   SterileError,
   reviewStatus,
+  type TraceKind,
+  type TraceMatch,
+  type TraceRow,
   type ReturnRecord,
   type ReturnSummary,
   type RecallRecord,
@@ -169,6 +172,119 @@ CREATE INDEX IF NOT EXISTS sp_assignment_assembly ON sp_assignments(tenant_id,fa
         return rows.map((row) => JSON.parse(row.payload) as V);
       };
       const tx: SterileTransaction = {
+        searchTraceCode: async (code) => {
+          const pairs = [
+            ["instrument", "sp_instruments"],
+            ["definition", "sp_definitions"],
+            ["assembly", "sp_assemblies"],
+            ["package", "sp_packages"],
+            ["load", "sp_loads"],
+          ] as const;
+          return pairs.flatMap(([kind, table]) => {
+            const row = read<{ id: string; code: string; version: number }>(
+              `SELECT payload FROM ${table} WHERE tenant_id=? AND facility_id=? AND code=?`,
+              code,
+            );
+            return row
+              ? [{ kind, id: row.id, code: row.code, version: row.version }]
+              : [];
+          });
+        },
+        traceRows: async (kind, filter) => {
+          const tables: Record<TraceKind, [string, string | null]> = {
+            instrument: ["sp_instruments", null],
+            definition: ["sp_definitions", "sp_definition_versions"],
+            assembly: ["sp_assemblies", "sp_assembly_versions"],
+            package: ["sp_packages", "sp_package_versions"],
+            load: ["sp_loads", "sp_load_versions"],
+            processing: ["sp_processing", "sp_processing_versions"],
+            review: ["sp_reviews", "sp_review_versions"],
+            distribution: ["sp_distribution", "sp_distribution_versions"],
+            return: ["sp_returns", "sp_return_versions"],
+            recall: ["sp_recalls", "sp_recall_versions"],
+          };
+          const pair = tables[kind];
+          if (!pair) throw new SterileError("INVALID_REQUEST");
+          const [table, versions] = pair,
+            parts: string[] = [],
+            params: string[] = [];
+          const scalar = (path: string, ids: string[] | undefined) => {
+            if (ids?.length) {
+              parts.push(
+                `json_extract(payload,'${path}') IN (SELECT value FROM json_each(?))`,
+              );
+              params.push(JSON.stringify(ids));
+            }
+          };
+          const members = (
+            path: string,
+            key: string,
+            ids: string[] | undefined,
+          ) => {
+            if (ids?.length) {
+              parts.push(
+                `EXISTS(SELECT 1 FROM json_each(payload,'${path}') m WHERE json_extract(m.value,'$.${key}') IN (SELECT value FROM json_each(?)))`,
+              );
+              params.push(JSON.stringify(ids));
+            }
+          };
+          scalar("$.id", filter.ids);
+          if (kind === "assembly")
+            scalar("$.definitionId", filter.definitionIds);
+          if (kind === "assembly" || kind === "processing")
+            members("$.instruments", "id", filter.instrumentIds);
+          if (kind === "package")
+            members(
+              "$.assemblySnapshot.instruments",
+              "id",
+              filter.instrumentIds,
+            );
+          if (kind === "load") members("$.packages", "id", filter.packageIds);
+          if (kind === "distribution" || kind === "return")
+            scalar("$.packageId", filter.packageIds);
+          if (kind === "recall")
+            members("$.items", "packageId", filter.packageIds);
+          if (kind === "review") scalar("$.loadId", filter.loadIds);
+          if (!parts.length) return [];
+          const source =
+              `SELECT payload FROM ${table} WHERE tenant_id=? AND facility_id=?` +
+              (versions
+                ? ` UNION ALL SELECT payload FROM ${versions} WHERE tenant_id=? AND facility_id=?`
+                : ""),
+            where = parts.join(" OR "),
+            selected = `WITH source AS (${source}),selected AS(SELECT DISTINCT json_extract(payload,'$.id') AS id FROM source WHERE ${where}) `;
+          const sql =
+            selected +
+            `SELECT c.payload,1 AS current FROM ${table} c JOIN selected s ON c.id=s.id WHERE c.tenant_id=? AND c.facility_id=?` +
+            (versions
+              ? ` UNION ALL SELECT v.payload,0 AS current FROM ${versions} v JOIN ${table} c ON c.tenant_id=v.tenant_id AND c.facility_id=v.facility_id AND c.id=v.id JOIN selected s ON s.id=v.id WHERE v.tenant_id=? AND v.facility_id=? AND json_extract(v.payload,'$.version')<>json_extract(c.payload,'$.version')`
+              : "") +
+            " LIMIT 1001";
+          const rows = this.db
+            .prepare(sql)
+            .all(
+              ...args,
+              ...(versions ? args : []),
+              ...params,
+              ...args,
+              ...(versions ? args : []),
+            ) as { payload: string; current: number }[];
+          return rows.map((row) => ({
+            kind,
+            current: row.current === 1,
+            record: JSON.parse(row.payload),
+          }));
+        },
+        traceAudit: async (ids) => {
+          if (!ids.length) return [];
+          return (
+            this.db
+              .prepare(
+                "SELECT payload FROM sp_audit WHERE tenant_id=? AND facility_id=? AND entity_id IN (SELECT value FROM json_each(?)) ORDER BY rowid LIMIT 2001",
+              )
+              .all(...args, JSON.stringify(ids)) as { payload: string }[]
+          ).map((r) => JSON.parse(r.payload));
+        },
         findReturn: async (id) =>
           read<ReturnRecord>(
             "SELECT payload FROM sp_returns WHERE tenant_id=? AND facility_id=? AND id=?",

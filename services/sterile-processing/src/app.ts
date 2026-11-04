@@ -7,6 +7,7 @@ import {
   CycleRegistry,
   ReviewRegistry,
   DistributionRegistry,
+  TraceabilityRegistry,
   ReturnRegistry,
   RecallRegistry,
   SterileError,
@@ -28,6 +29,7 @@ export interface SterileDependencies {
     scope: SterileScope,
     capability: "sterile.core",
     permission:
+      | "traceability:read"
       | "instruments:read"
       | "instruments:write"
       | "trays:read"
@@ -140,45 +142,47 @@ export function createSterileApp(
         facilityId,
       };
       const readOnly = req.method === "GET" || req.method === "HEAD";
-      const permission = req.path.startsWith("/returns")
-        ? readOnly
-          ? "returns:read"
-          : req.path.endsWith("/dispose")
-            ? "returns:dispose"
-            : "returns:write"
-        : req.path.startsWith("/recalls")
+      const permission = req.path.startsWith("/traceability")
+        ? "traceability:read"
+        : req.path.startsWith("/returns")
           ? readOnly
-            ? "recall:read"
-            : req.path.endsWith("/recover")
-              ? "recall:recover"
-              : "recall:write"
-          : req.path.startsWith("/distribution")
+            ? "returns:read"
+            : req.path.endsWith("/dispose")
+              ? "returns:dispose"
+              : "returns:write"
+          : req.path.startsWith("/recalls")
             ? readOnly
-              ? "distribution:read"
-              : "distribution:write"
-            : req.path.startsWith("/reviews")
+              ? "recall:read"
+              : req.path.endsWith("/recover")
+                ? "recall:recover"
+                : "recall:write"
+            : req.path.startsWith("/distribution")
               ? readOnly
-                ? "release:read"
-                : "release:write"
-              : req.path.startsWith("/loads")
+                ? "distribution:read"
+                : "distribution:write"
+              : req.path.startsWith("/reviews")
                 ? readOnly
-                  ? "cycles:read"
-                  : "cycles:write"
-                : req.path.startsWith("/packages")
+                  ? "release:read"
+                  : "release:write"
+                : req.path.startsWith("/loads")
                   ? readOnly
-                    ? "packaging:read"
-                    : "packaging:write"
-                  : req.path.startsWith("/processing")
+                    ? "cycles:read"
+                    : "cycles:write"
+                  : req.path.startsWith("/packages")
                     ? readOnly
-                      ? "processing:read"
-                      : "processing:write"
-                    : req.path.startsWith("/tray-")
+                      ? "packaging:read"
+                      : "packaging:write"
+                    : req.path.startsWith("/processing")
                       ? readOnly
-                        ? "trays:read"
-                        : "trays:write"
-                      : readOnly
-                        ? "instruments:read"
-                        : "instruments:write";
+                        ? "processing:read"
+                        : "processing:write"
+                      : req.path.startsWith("/tray-")
+                        ? readOnly
+                          ? "trays:read"
+                          : "trays:write"
+                        : readOnly
+                          ? "instruments:read"
+                          : "instruments:write";
       if (
         (await dependencies.authorize!(scope, "sterile.core", permission)) !==
         true
@@ -838,6 +842,29 @@ export function createSterileApp(
       ),
     );
   });
+  const trace = () => new TraceabilityRegistry(dependencies.repository!);
+  app.get(prefix + "/traceability", async (req, res) => {
+    if (
+      Object.keys(req.query).length !== 1 ||
+      typeof req.query.code !== "string"
+    )
+      throw new SterileError("INVALID_REQUEST");
+    res.json({
+      tenantId: res.locals.scope.tenantId,
+      facilityId: res.locals.scope.facilityId,
+      matches: await trace().search(res.locals.scope, req.query.code),
+    });
+  });
+  app.get(prefix + "/traceability/:kind/:id", async (req, res) => {
+    noQuery(req);
+    res.json(
+      await trace().report(
+        res.locals.scope,
+        req.params.kind as Parameters<TraceabilityRegistry["report"]>[1],
+        sterileUuid(req.params.id),
+      ),
+    );
+  });
   const returns = () => new ReturnRegistry(dependencies.repository!);
   app.get(prefix + "/returns", async (req, res) =>
     res.json(await returns().list(res.locals.scope, page(req))),
@@ -1022,6 +1049,7 @@ export function createSterileApp(
               DISTRIBUTION_BLOCKED: 409,
               RECALL_BLOCKED: 409,
               RETURN_BLOCKED: 409,
+              TRACE_LIMIT: 409,
             }[code as SterileError["code"]]
           : parser.type === "entity.too.large"
             ? 413

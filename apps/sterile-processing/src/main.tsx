@@ -1,3 +1,5 @@
+import { TraceabilityWorkspace } from "./Traceability";
+import { traceLabels } from "./trace-text";
 import { ReturnWorkspace } from "./Returns";
 import { returnLabels } from "./return-text";
 import { RecallWorkspace } from "./Recalls";
@@ -270,6 +272,7 @@ function Workspace({
       | "cycles"
       | "reviews"
       | "distribution"
+      | "traceability"
       | "returns"
       | "recalls"
     >("instruments"),
@@ -327,7 +330,8 @@ function Workspace({
           tab === "reviews" ||
           tab === "distribution" ||
           tab === "recalls" ||
-          tab === "returns"
+          tab === "returns" ||
+          tab === "traceability"
         ) {
           setLoading(false);
           return;
@@ -419,6 +423,7 @@ function Workspace({
       | "cycles"
       | "reviews"
       | "distribution"
+      | "traceability"
       | "returns"
       | "recalls",
   ) {
@@ -627,6 +632,13 @@ function Workspace({
             {distributionLabels(language).title}
           </button>
           <button
+            aria-current={tab === "traceability" ? "page" : undefined}
+            disabled={busy}
+            onClick={() => navigate("traceability")}
+          >
+            <span aria-hidden="true">⌕</span> {traceLabels(language).title}
+          </button>
+          <button
             aria-current={tab === "returns" ? "page" : undefined}
             disabled={busy}
             onClick={() => navigate("returns")}
@@ -664,7 +676,8 @@ function Workspace({
           tab !== "reviews" &&
           tab !== "distribution" &&
           tab !== "recalls" &&
-          tab !== "returns" && (
+          tab !== "returns" &&
+          tab !== "traceability" && (
             <div className="page-heading">
               <div>
                 <p className="eyebrow">{t.facility}</p>
@@ -909,6 +922,16 @@ function Workspace({
               </button>
             </div>
           </form>
+        )}
+        {tab === "traceability" && (
+          <TraceabilityWorkspace
+            key={trayReset}
+            session={session}
+            language={language}
+            blocked={blocked}
+            onExpired={onExpired}
+            onBusy={setTrayBusy}
+          />
         )}
         {tab === "returns" && (
           <ReturnWorkspace

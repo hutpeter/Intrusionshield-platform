@@ -220,3 +220,9 @@ availability and normal label printing. Correction and reinstatement remain defe
 See [RETURNS-REPROCESSING.md](RETURNS-REPROCESSING.md) for the operator's single
 return check and the separate reviewer disposition workflow. Original packages
 remain blocked; a new linked receiving episode is required for reprocessing.
+
+## Traceability/reporting update
+
+See [TRACEABILITY.md](TRACEABILITY.md) for exact-code search, current blocks alongside
+historical evidence, source versions and CSV export. The latest-return shortcut is
+read-only and uses the records already saved during the owner's return check.

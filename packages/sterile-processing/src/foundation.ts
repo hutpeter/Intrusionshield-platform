@@ -1,3 +1,10 @@
+import type {
+  TraceRootKind,
+  TraceKind,
+  TraceMatch,
+  TraceFilter,
+  TraceRow,
+} from "./trace-types.js";
 import type { ReturnRecord, ReturnSummary } from "./return-types.js";
 import type {
   RecallRecord,
@@ -118,6 +125,9 @@ export interface CommandReceipt {
 }
 /** All methods are scoped to the transaction's tenant/facility. Writes and audit commit together. */
 export interface SterileTransaction {
+  searchTraceCode(code: string): Promise<TraceMatch[]>;
+  traceRows(kind: TraceKind, filter: TraceFilter): Promise<TraceRow[]>;
+  traceAudit(ids: string[]): Promise<SterileAuditEvent[]>;
   findReturn(id: string): Promise<ReturnRecord | null>;
   findReturnByCode(code: string): Promise<ReturnRecord | null>;
   findReturnByPackage(id: string): Promise<ReturnRecord | null>;
@@ -261,6 +271,7 @@ export class SterileError extends Error {
       | "LOAD_BLOCKED"
       | "REVIEW_BLOCKED"
       | "DISTRIBUTION_BLOCKED"
+      | "TRACE_LIMIT"
       | "RETURN_BLOCKED"
       | "RECALL_BLOCKED",
   ) {

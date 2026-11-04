@@ -173,3 +173,16 @@ test("returns safe errors for malformed/oversized input and storage errors, and 
   assert.equal(f.repository.state.types.length, 0);
   assert.equal((await f.call(f.base + "/loads/release", {})).status, 404);
 });
+
+test("traceability uses its own centralized read permission before searching or reporting", async (t) => {
+  const f = await fixture(t, {
+    authorize: async (_scope, _capability, permission) =>
+      permission !== "traceability:read",
+  });
+  assert.equal((await f.call(f.base + "/instruments")).status, 200);
+  assert.equal((await f.call(f.base + "/traceability?code=DEMO")).status, 403);
+  assert.equal(
+    (await f.call(f.base + "/traceability/package/" + randomUUID())).status,
+    403,
+  );
+});

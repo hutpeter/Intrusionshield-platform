@@ -76,7 +76,8 @@ Keep test execution status in [TESTING-REGISTER.md](TESTING-REGISTER.md).
 
 - **Status:** Deferred; required before production recall acceptance.
 - **Current behavior:** Return records and receiving episodes retain bidirectional
-  source identifiers. A recall blocks its targeted package/load; a recalled package
+  source identifiers. Traceability search now exposes the recorded lineage and
+  current direct-target blocks without altering those blocks. A recall blocks its targeted package/load; a recalled package
   cannot enter the current reprocessing shortcut. A later recall against an older
   package does not automatically block descendant episodes/packages already created.
 - **Remaining scope:** Traverse instrument and package lineage across processing

@@ -1,4 +1,6 @@
 const es = {
+  TRACE_LIMIT:
+    "El historial supera el límite del informe. Busque un instrumento o paquete más específico.",
   RETURN_BLOCKED:
     "El paquete devuelto permanece bloqueado. Revise su disposición.",
   RECALL_BLOCKED:
@@ -40,6 +42,8 @@ const es = {
 };
 type Messages = Record<keyof typeof es, string>;
 const en: Messages = {
+  TRACE_LIMIT:
+    "The history exceeds the report limit. Search for a more specific instrument or package.",
   RETURN_BLOCKED:
     "The returned package remains blocked. Review its disposition.",
   RECALL_BLOCKED:
@@ -80,6 +84,8 @@ const en: Messages = {
     "Service unavailable. The change has not been confirmed.",
 };
 const fr: Messages = {
+  TRACE_LIMIT:
+    "L’historique dépasse la limite du rapport. Recherchez un instrument ou paquet plus précis.",
   RETURN_BLOCKED: "Le paquet retourné reste bloqué. Consultez sa disposition.",
   RECALL_BLOCKED:
     "L’emballage est bloqué par un rappel. Consultez le dossier ; cette opération est interdite.",

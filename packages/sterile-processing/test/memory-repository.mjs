@@ -56,6 +56,77 @@ export class MemoryRepository {
       };
     };
     const tx = {
+      searchTraceCode: async (code) =>
+        [
+          ["instrument", "instruments"],
+          ["definition", "definitions"],
+          ["assembly", "assemblies"],
+          ["package", "packages"],
+          ["load", "loads"],
+        ].flatMap(([kind, table]) =>
+          s[table]
+            .filter((x) => own(x) && x.code === code)
+            .map((x) => ({ kind, id: x.id, code: x.code, version: x.version })),
+        ),
+      traceRows: async (kind, filter) => {
+        const tables = {
+          instrument: ["instruments", null],
+          definition: ["definitions", "definitionVersions"],
+          assembly: ["assemblies", "assemblyVersions"],
+          package: ["packages", "packageVersions"],
+          load: ["loads", "loadVersions"],
+          processing: ["processing", "processingVersions"],
+          review: ["reviews", "reviewVersions"],
+          distribution: ["distribution", "distributionVersions"],
+          return: ["returns", "returnVersions"],
+          recall: ["recalls", "recallVersions"],
+        };
+        const [table, versions] = tables[kind],
+          current = s[table].filter(own),
+          past = versions ? s[versions].filter(own) : [],
+          matches = (x) =>
+            filter.ids?.includes(x.id) ||
+            (kind === "assembly" &&
+              filter.definitionIds?.includes(x.definitionId)) ||
+            (["assembly", "processing"].includes(kind) &&
+              x.instruments.some((i) =>
+                filter.instrumentIds?.includes(i.id),
+              )) ||
+            (kind === "package" &&
+              x.assemblySnapshot.instruments.some((i) =>
+                filter.instrumentIds?.includes(i.id),
+              )) ||
+            (kind === "load" &&
+              x.packages.some((p) => filter.packageIds?.includes(p.id))) ||
+            (["distribution", "return"].includes(kind) &&
+              filter.packageIds?.includes(x.packageId)) ||
+            (kind === "recall" &&
+              x.items.some((p) => filter.packageIds?.includes(p.packageId))) ||
+            (kind === "review" && filter.loadIds?.includes(x.loadId));
+        const ids = new Set(
+          [...current, ...past].filter(matches).map((x) => x.id),
+        );
+        return [
+          ...current
+            .filter((x) => ids.has(x.id))
+            .map((record) => ({ kind, current: true, record })),
+          ...past
+            .filter(
+              (x) =>
+                ids.has(x.id) &&
+                !current.some((c) => c.id === x.id && c.version === x.version),
+            )
+            .map((record) => ({ kind, current: false, record })),
+        ]
+          .slice(0, 1001)
+          .map((x) => structuredClone(x));
+      },
+      traceAudit: async (ids) =>
+        structuredClone(
+          s.audit
+            .filter((x) => own(x) && ids.includes(x.entityId))
+            .slice(0, 2001),
+        ),
       findReturn: async (id) =>
         read(s.returns.find((x) => own(x) && x.id === id)),
       findReturnByCode: async (code) =>

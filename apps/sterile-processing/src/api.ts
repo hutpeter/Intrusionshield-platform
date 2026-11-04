@@ -1,4 +1,7 @@
 import type {
+  TraceReport,
+  TraceMatch,
+  TraceRootKind,
   ProcessingEpisode,
   InspectInput,
   SterilePackage,
@@ -211,6 +214,32 @@ async function checkedMovement(
   return r;
 }
 export const api = {
+  traceSearch: (s: Session, code: string, signal: AbortSignal) =>
+    scoped(
+      s,
+      call<{ tenantId: string; facilityId: string; matches: TraceMatch[] }>(
+        base(s) + "/traceability?code=" + encodeURIComponent(code),
+        signal,
+      ),
+    ),
+  traceReport: (
+    s: Session,
+    kind: TraceRootKind,
+    id: string,
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<TraceReport>(
+        base(s) +
+          "/traceability/" +
+          encodeURIComponent(kind) +
+          "/" +
+          encodeURIComponent(id),
+        signal,
+      ),
+    ),
+
   returns: (s: Session, n: number, signal: AbortSignal) =>
     scopedPage<ReturnSummary>(s, base(s) + "/returns", n, signal),
   returned: (s: Session, id: string, signal: AbortSignal, version?: number) =>

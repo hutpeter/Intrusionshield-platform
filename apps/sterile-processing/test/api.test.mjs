@@ -473,3 +473,28 @@ test("returns preserve issue version, confirmations and disposition link with CS
     (e) => e.code === "SERVICE_UNAVAILABLE",
   );
 });
+
+test("traceability search escapes exact codes, uses read-only requests and rejects foreign scope", async (t) => {
+  const calls = [];
+  let foreign = false;
+  fake(t, async (path, options) => {
+    calls.push({ path, options });
+    return response({
+      tenantId: foreign ? "other" : session.tenantId,
+      facilityId: session.facilityId,
+      matches: [],
+      nodes: [],
+    });
+  });
+  await api.traceSearch(session, "PACK A&tenantId=x", signal());
+  assert.ok(calls[0].path.endsWith("?code=PACK%20A%26tenantId%3Dx"));
+  assert.equal(calls[0].options.method, "GET");
+  assert.equal(calls[0].options.body, undefined);
+  await api.traceReport(session, "package", "package", signal());
+  assert.ok(calls[1].path.endsWith("/traceability/package/package"));
+  foreign = true;
+  await assert.rejects(
+    api.traceReport(session, "package", "package", signal()),
+    (e) => e.code === "SERVICE_UNAVAILABLE",
+  );
+});

@@ -249,3 +249,6 @@ export { RecallRegistry } from "./recalls.js";
 
 export * from "./return-types.js";
 export * from "./returns.js";
+
+export * from "./trace-types.js";
+export * from "./traceability.js";
