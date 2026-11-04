@@ -1,3 +1,4 @@
+import { returnLabels } from "./return-text";
 import { recallLabels } from "./recall-text";
 import { reviewLabels } from "./review-text";
 import { useEffect, useRef, useState } from "react";
@@ -326,6 +327,9 @@ export function CycleWorkspace({
   const record = (d: SterilizationLoad) => (
     <>
       <section className="panel">
+        {d.returnBlocked && (
+          <p className="alert">{returnLabels(language).blocked}</p>
+        )}
         {d.recallBlocked && (
           <p className="alert">{recallLabels(language).blocked}</p>
         )}

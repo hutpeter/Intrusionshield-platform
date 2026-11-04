@@ -1,3 +1,4 @@
+import { returnStatus } from "./return-types.js";
 import { randomUUID } from "node:crypto";
 import {
   SterileRegistryBase,
@@ -28,6 +29,8 @@ async function release(
   reviewId: string,
   reviewVersion: number,
 ) {
+  if (await tx.findReturnByPackage(packageId))
+    throw new SterileError("RETURN_BLOCKED");
   if (await tx.findRecallBlock(packageId))
     throw new SterileError("RECALL_BLOCKED");
   const p = await tx.findPackage(packageId);
@@ -312,7 +315,12 @@ export class DistributionRegistry extends SterileRegistryBase {
       const items = await Promise.all(
         rows.slice(0, 50).map(async (row) => {
           const recall = await tx.findRecallBlock(row.packageId);
-          return { ...row, ...(recall ? { recall } : {}) };
+          const returned = await tx.findReturnByPackage(row.packageId);
+          return {
+            ...row,
+            ...(returned ? { returned: returnStatus(returned) } : {}),
+            ...(recall ? { recall } : {}),
+          };
         }),
       );
       return { items, page: p, hasMore: rows.length > 50 };
@@ -330,7 +338,15 @@ export class DistributionRegistry extends SterileRegistryBase {
       if (!item) throw new SterileError("NOT_FOUND");
       const recall =
         version === undefined ? await tx.findRecallBlock(item.packageId) : null;
-      return { ...item, ...(recall ? { recall } : {}) };
+      const returned =
+        version === undefined
+          ? await tx.findReturnByPackage(item.packageId)
+          : null;
+      return {
+        ...item,
+        ...(returned ? { returned: returnStatus(returned) } : {}),
+        ...(recall ? { recall } : {}),
+      };
     });
   }
   async history(scope: SterileScope, id: string, page = 1) {

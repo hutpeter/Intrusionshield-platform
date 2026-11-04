@@ -1,3 +1,4 @@
+import type { ReturnStatus } from "./return-types.js";
 import type { RecallBlock } from "./recall-types.js";
 import type { DistributionStatus } from "./distribution-types.js";
 import type { PackageLoad } from "./cycle-types.js";
@@ -19,6 +20,7 @@ export interface InspectionProof {
 }
 export interface SterilePackage {
   recall?: RecallBlock;
+  returned?: ReturnStatus;
   distribution?: DistributionStatus;
   activeLoad?: PackageLoad;
   id: string;
@@ -59,6 +61,7 @@ export type PackageSummary = Pick<
   activeLoad?: PackageLoad;
   distribution?: DistributionStatus;
   recall?: RecallBlock;
+  returned?: ReturnStatus;
 };
 export interface PackageInput {
   requestId: string;

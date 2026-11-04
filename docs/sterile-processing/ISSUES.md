@@ -56,16 +56,34 @@ Keep test execution status in [TESTING-REGISTER.md](TESTING-REGISTER.md).
 
 ## RSP-ISS-003 — Returns and used-package disposition
 
-- **Status:** Planned/deferred after initial storage/issue tracking.
-- **Current behavior:** An issued package cannot be issued twice or silently
-  reset to stored. Its existing package, load, review and custody history remain.
-- **Remaining scope:** Explicit return, use and disposition workflows, including
-  unopened returns versus opened/used items, integrity/expiry checks and authorized
-  reprocessing. Close/link prior custody and packaging episodes without deleting
-  evidence or bypassing the existing instrument/tray reservations.
+- **Status:** Partially implemented by the returns/reprocessing increment.
+- **Current behavior:** Complete issued-package returns preserve issue history and
+  block the old package. Reviewer disposition can retain quarantine or atomically
+  transfer unchanged, registered, non-damaged and non-recalled instruments to a new
+  receiving episode. Quarantine retains reservations. No automatic restock exists.
+- **Remaining scope:** Partial returns/missing instruments, explicit use/procedure
+  records, damage repair, quarantine clearance, corrections, approved unopened-return
+  handling and production policy. Recall blocks deny the current reprocessing shortcut;
+  cross-episode recall propagation is tracked separately in RSP-ISS-004.
 - **Acceptance checks:** Used/opened or damaged items never regain available stock
   merely because they were returned; unauthorized restocking is denied; a new
   processing episode remains linked to the old issue; withdrawal/recall affects
   both stored and distributed packages; old labels/history stay attributable.
 - **Gate:** Required before production operational acceptance. Handling rules
   need approved local procedures; the current fictional demo assumes none.
+
+## RSP-ISS-004 — Recall propagation across reprocessing lineage
+
+- **Status:** Deferred; required before production recall acceptance.
+- **Current behavior:** Return records and receiving episodes retain bidirectional
+  source identifiers. A recall blocks its targeted package/load; a recalled package
+  cannot enter the current reprocessing shortcut. A later recall against an older
+  package does not automatically block descendant episodes/packages already created.
+- **Remaining scope:** Traverse instrument and package lineage across processing
+  episodes, define affected descendants, preserve independent historical case scope,
+  invalidate downstream availability/labels and coordinate recovery without silently
+  releasing unrelated instruments or closing earlier cases.
+- **Acceptance checks:** Recall an ancestor after new cleaning/inspection, packaging,
+  release and issue; verify all affected descendants are identified and blocked,
+  tenant/facility boundaries hold and overlapping cases remain independent. Define
+  partial-return, shared-tray and physical recovery policies before clinical use.

@@ -42,6 +42,13 @@ export interface InspectInput {
   confirmed: boolean;
 }
 export interface ProcessingEpisode {
+  returnSource?: {
+    returnId: string;
+    returnCode: string;
+    packageId: string;
+    packageCode: string;
+    distributionId: string;
+  };
   id: string;
   tenantId: string;
   facilityId: string;

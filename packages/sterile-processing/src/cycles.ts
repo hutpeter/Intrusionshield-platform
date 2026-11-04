@@ -35,6 +35,8 @@ async function members(
   if (new Set(keys).size !== keys.length) invalid();
   const rows: LoadPackage[] = [];
   for (const id of keys) {
+    if (await tx.findReturnByPackage(id))
+      throw new SterileError("RETURN_BLOCKED");
     if (await tx.findRecallBlock(id)) throw new SterileError("RECALL_BLOCKED");
     const p = await tx.findPackage(id);
     if (!p) throw new SterileError("NOT_FOUND");
@@ -352,9 +354,15 @@ export class CycleRegistry extends SterileRegistryBase {
                   load.packages.map((p) => tx.findRecallBlock(p.id)),
                 )
               : [];
+          const returns = load
+            ? await Promise.all(
+                load.packages.map((p) => tx.findReturnByPackage(p.id)),
+              )
+            : [];
           return {
             ...row,
             ...(blocks.some(Boolean) ? { recallBlocked: true } : {}),
+            ...(returns.some(Boolean) ? { returnBlocked: true } : {}),
             ...(r ? { review: reviewStatus(r) } : {}),
           };
         }),
@@ -378,9 +386,16 @@ export class CycleRegistry extends SterileRegistryBase {
         version === undefined
           ? await Promise.all(row.packages.map((p) => tx.findRecallBlock(p.id)))
           : [];
+      const returns =
+        version === undefined
+          ? await Promise.all(
+              row.packages.map((p) => tx.findReturnByPackage(p.id)),
+            )
+          : [];
       return {
         ...row,
         ...(blocks.some(Boolean) ? { recallBlocked: true } : {}),
+        ...(returns.some(Boolean) ? { returnBlocked: true } : {}),
         ...(review ? { review: reviewStatus(review) } : {}),
       };
     });

@@ -1,3 +1,4 @@
+import { returnLabels } from "./return-text";
 import { recallLabels } from "./recall-text";
 import { distributionLabels } from "./distribution-text";
 import { reviewLabels } from "./review-text";
@@ -291,6 +292,7 @@ export function PackagingWorkspace({
       if (c.signal.aborted) return;
       if (
         current.recall ||
+        current.returned ||
         current.state !== "packaged" ||
         current.version !== detail.version ||
         current.activeLoad?.review?.state === "released"
@@ -342,6 +344,11 @@ export function PackagingWorkspace({
             {distributionLabels(language).title}:{" "}
             {distributionLabels(language)[d.distribution.state]} ·{" "}
             {d.distribution.location ?? d.distribution.destination}
+          </p>
+        )}
+        {d.returned && (
+          <p className="alert">
+            {returnLabels(language).blocked} · {d.returned.code}
           </p>
         )}
         {d.recall && (
@@ -742,6 +749,7 @@ export function PackagingWorkspace({
                 <h2>{p.label}</h2>
                 {session.canWrite &&
                   !detail.recall &&
+                  !detail.returned &&
                   detail.activeLoad?.review?.state !== "released" && (
                     <button disabled={busy} onClick={() => void print()}>
                       {p.print}

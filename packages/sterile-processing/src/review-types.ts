@@ -14,6 +14,7 @@ export interface ReviewDecision {
 }
 export interface LoadReview {
   recallBlocked?: boolean;
+  returnBlocked?: boolean;
   id: string;
   tenantId: string;
   facilityId: string;
@@ -59,7 +60,7 @@ export type ReviewSummary = Pick<
   | "version"
   | "createdAt"
   | "updatedAt"
-> & { loadCode: string; recallBlocked?: boolean };
+> & { loadCode: string; recallBlocked?: boolean; returnBlocked?: boolean };
 export interface ReviewQueueItem {
   id: string;
   tenantId: string;

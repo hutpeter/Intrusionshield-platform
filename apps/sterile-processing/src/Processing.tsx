@@ -1,3 +1,4 @@
+import { returnLabels } from "./return-text";
 import { useEffect, useRef, useState } from "react";
 import type {
   ProcessingEpisode,
@@ -357,6 +358,12 @@ export function ProcessingWorkspace({
   );
   const episode = (d: ProcessingEpisode) => (
     <>
+      {d.returnSource && (
+        <p className="readonly-note">
+          {returnLabels(language).origin}: {d.returnSource.returnCode} ·{" "}
+          {d.returnSource.packageCode}
+        </p>
+      )}
       <section className="panel">
         <span
           className={

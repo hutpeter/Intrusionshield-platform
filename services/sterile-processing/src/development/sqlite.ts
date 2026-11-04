@@ -11,6 +11,8 @@ import { dirname, resolve } from "node:path";
 import {
   SterileError,
   reviewStatus,
+  type ReturnRecord,
+  type ReturnSummary,
   type RecallRecord,
   type RecallSummary,
   type RecallBlock,
@@ -97,6 +99,8 @@ CREATE TABLE IF NOT EXISTS sp_reviews(tenant_id TEXT NOT NULL,facility_id TEXT N
 CREATE TABLE IF NOT EXISTS sp_review_versions(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id,version),FOREIGN KEY(tenant_id,facility_id,id) REFERENCES sp_reviews(tenant_id,facility_id,id));
 CREATE TABLE IF NOT EXISTS sp_distribution(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,package_id TEXT NOT NULL,package_version INTEGER NOT NULL,review_id TEXT NOT NULL,review_version INTEGER NOT NULL,load_id TEXT NOT NULL,load_version INTEGER NOT NULL,version INTEGER NOT NULL CHECK(version>0),payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,package_id),FOREIGN KEY(tenant_id,facility_id,package_id,package_version) REFERENCES sp_package_versions(tenant_id,facility_id,id,version),FOREIGN KEY(tenant_id,facility_id,review_id,review_version) REFERENCES sp_review_versions(tenant_id,facility_id,id,version),FOREIGN KEY(tenant_id,facility_id,load_id,load_version) REFERENCES sp_load_versions(tenant_id,facility_id,id,version));
 CREATE TABLE IF NOT EXISTS sp_distribution_versions(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id,version),FOREIGN KEY(tenant_id,facility_id,id) REFERENCES sp_distribution(tenant_id,facility_id,id));
+CREATE TABLE IF NOT EXISTS sp_returns(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,code TEXT NOT NULL,package_id TEXT NOT NULL,package_version INTEGER NOT NULL,distribution_id TEXT NOT NULL,distribution_version INTEGER NOT NULL,version INTEGER NOT NULL CHECK(version>0),payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,code),UNIQUE(tenant_id,facility_id,package_id),FOREIGN KEY(tenant_id,facility_id,package_id,package_version) REFERENCES sp_package_versions(tenant_id,facility_id,id,version),FOREIGN KEY(tenant_id,facility_id,distribution_id,distribution_version) REFERENCES sp_distribution_versions(tenant_id,facility_id,id,version));
+CREATE TABLE IF NOT EXISTS sp_return_versions(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id,version),FOREIGN KEY(tenant_id,facility_id,id) REFERENCES sp_returns(tenant_id,facility_id,id));
 CREATE TABLE IF NOT EXISTS sp_recalls(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,code TEXT NOT NULL,version INTEGER NOT NULL CHECK(version>0),payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,code));
 CREATE TABLE IF NOT EXISTS sp_recall_versions(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id,version),FOREIGN KEY(tenant_id,facility_id,id) REFERENCES sp_recalls(tenant_id,facility_id,id));
 CREATE TABLE IF NOT EXISTS sp_recall_blocks(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,package_id TEXT NOT NULL,package_version INTEGER NOT NULL,recall_id TEXT NOT NULL,PRIMARY KEY(tenant_id,facility_id,package_id,recall_id),FOREIGN KEY(tenant_id,facility_id,package_id,package_version) REFERENCES sp_package_versions(tenant_id,facility_id,id,version),FOREIGN KEY(tenant_id,facility_id,recall_id) REFERENCES sp_recalls(tenant_id,facility_id,id));
@@ -165,6 +169,71 @@ CREATE INDEX IF NOT EXISTS sp_assignment_assembly ON sp_assignments(tenant_id,fa
         return rows.map((row) => JSON.parse(row.payload) as V);
       };
       const tx: SterileTransaction = {
+        findReturn: async (id) =>
+          read<ReturnRecord>(
+            "SELECT payload FROM sp_returns WHERE tenant_id=? AND facility_id=? AND id=?",
+            id,
+          ),
+        findReturnByCode: async (code) =>
+          read<ReturnRecord>(
+            "SELECT payload FROM sp_returns WHERE tenant_id=? AND facility_id=? AND code=?",
+            code,
+          ),
+        listReturns: async (page) =>
+          list<ReturnSummary>(
+            "SELECT json_remove(payload,'$.issue') AS payload FROM sp_returns WHERE tenant_id=? AND facility_id=? ORDER BY rowid DESC LIMIT 51 OFFSET ?",
+            page,
+          ),
+        insertReturn: async (item) => {
+          own(item);
+          this.db
+            .prepare("INSERT INTO sp_returns VALUES(?,?,?,?,?,?,?,?,?,?)")
+            .run(
+              ...args,
+              item.id,
+              item.code,
+              item.packageId,
+              item.packageVersion,
+              item.issue.id,
+              item.issue.version,
+              item.version,
+              JSON.stringify(item),
+            );
+        },
+        updateReturn: async (item, expected) => {
+          own(item);
+          if (item.version !== expected + 1)
+            throw new SterileError("INVALID_REQUEST");
+          const r = this.db
+            .prepare(
+              "UPDATE sp_returns SET version=?,payload=? WHERE tenant_id=? AND facility_id=? AND id=? AND version=?",
+            )
+            .run(
+              item.version,
+              JSON.stringify(item),
+              ...args,
+              item.id,
+              expected,
+            );
+          if (r.changes !== 1) throw new SterileError("CONFLICT");
+        },
+        insertReturnVersion: async (item) => {
+          own(item);
+          this.db
+            .prepare("INSERT INTO sp_return_versions VALUES(?,?,?,?,?)")
+            .run(...args, item.id, item.version, JSON.stringify(item));
+        },
+        findReturnVersion: async (id, version) =>
+          read<ReturnRecord>(
+            "SELECT payload FROM sp_return_versions WHERE tenant_id=? AND facility_id=? AND id=? AND version=?",
+            id,
+            version,
+          ),
+        findReturnByPackage: async (id) =>
+          read<ReturnRecord>(
+            "SELECT payload FROM sp_returns WHERE tenant_id=? AND facility_id=? AND package_id=?",
+            id,
+          ),
         findRecall: async (id) =>
           read<RecallRecord>(
             "SELECT payload FROM sp_recalls WHERE tenant_id=? AND facility_id=? AND id=?",

@@ -1,3 +1,4 @@
+import type { ReturnRecord, ReturnSummary } from "./return-types.js";
 import type {
   RecallRecord,
   RecallSummary,
@@ -57,12 +58,16 @@ export interface Instrument {
   version: number;
 }
 export interface SterileAuditEvent {
+  /** Parent command for atomic multi-entity transitions; child audit IDs remain unique. */
+  correlationRequestId?: string;
   id: string;
   tenantId: string;
   facilityId: string;
   actorId: string;
   at: string;
   action:
+    | "package-returned"
+    | "return-disposition"
     | "recall-created"
     | "recall-recovered"
     | "recall-disposition"
@@ -105,13 +110,23 @@ export type SterileRecord =
   | SterilizationLoad
   | LoadReview
   | DistributionRecord
-  | RecallRecord;
+  | RecallRecord
+  | ReturnRecord;
 export interface CommandReceipt {
   hash: string;
   result: SterileRecord;
 }
 /** All methods are scoped to the transaction's tenant/facility. Writes and audit commit together. */
 export interface SterileTransaction {
+  findReturn(id: string): Promise<ReturnRecord | null>;
+  findReturnByCode(code: string): Promise<ReturnRecord | null>;
+  findReturnByPackage(id: string): Promise<ReturnRecord | null>;
+  listReturns(page: number): Promise<ReturnSummary[]>;
+  insertReturn(item: ReturnRecord): Promise<void>;
+  updateReturn(item: ReturnRecord, expected: number): Promise<void>;
+  insertReturnVersion(item: ReturnRecord): Promise<void>;
+  findReturnVersion(id: string, version: number): Promise<ReturnRecord | null>;
+
   findRecall(id: string): Promise<RecallRecord | null>;
   findRecallByCode(code: string): Promise<RecallRecord | null>;
   listRecalls(page: number): Promise<RecallSummary[]>;
@@ -246,6 +261,7 @@ export class SterileError extends Error {
       | "LOAD_BLOCKED"
       | "REVIEW_BLOCKED"
       | "DISTRIBUTION_BLOCKED"
+      | "RETURN_BLOCKED"
       | "RECALL_BLOCKED",
   ) {
     super(code);

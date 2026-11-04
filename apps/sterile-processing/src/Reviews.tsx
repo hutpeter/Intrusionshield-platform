@@ -1,3 +1,4 @@
+import { returnLabels } from "./return-text";
 import { recallLabels } from "./recall-text";
 import { useEffect, useRef, useState } from "react";
 import type {
@@ -324,6 +325,7 @@ export function ReviewWorkspace({
       if (ac.signal.aborted) return;
       if (
         current.recallBlocked ||
+        current.returnBlocked ||
         current.state !== "released" ||
         current.version !== record.version
       ) {
@@ -361,6 +363,7 @@ export function ReviewWorkspace({
     canRelease =
       !!load &&
       !load.recallBlocked &&
+      !load.returnBlocked &&
       load.outcome === "passed" &&
       load.state === "awaiting_review" &&
       session.actorId !== load.startedBy &&
@@ -400,14 +403,17 @@ export function ReviewWorkspace({
                 {p.review}
               </button>
             )}
-          {record?.state === "released" && !record.recallBlocked && !past && (
-            <button
-              disabled={busy || !!form}
-              onClick={() => setLabel((x) => !x)}
-            >
-              {label ? p.closeLabel : p.label}
-            </button>
-          )}
+          {record?.state === "released" &&
+            !record.recallBlocked &&
+            !record.returnBlocked &&
+            !past && (
+              <button
+                disabled={busy || !!form}
+                onClick={() => setLabel((x) => !x)}
+              >
+                {label ? p.closeLabel : p.label}
+              </button>
+            )}
         </div>
       </div>
       <div className="tray-tabs" role="group" aria-label={p.title}>
@@ -430,6 +436,9 @@ export function ReviewWorkspace({
         ))}
       </div>
       <p className="readonly-note">{p.boundary}</p>
+      {record?.returnBlocked && (
+        <p className="alert">{returnLabels(language).blocked}</p>
+      )}
       {record?.recallBlocked && (
         <p className="alert">{recallLabels(language).blocked}</p>
       )}
@@ -600,9 +609,11 @@ export function ReviewWorkspace({
                         <td>{row.loadCode}</td>
                         <td>{row.loadVersion}</td>
                         <td>
-                          {row.recallBlocked
-                            ? recallLabels(language).blocked
-                            : p[row.state]}
+                          {row.returnBlocked
+                            ? returnLabels(language).blocked
+                            : row.recallBlocked
+                              ? recallLabels(language).blocked
+                              : p[row.state]}
                         </td>
                         <td>
                           <button
@@ -834,6 +845,7 @@ export function ReviewWorkspace({
           {label &&
             record?.state === "released" &&
             !record.recallBlocked &&
+            !record.returnBlocked &&
             !past &&
             pkg &&
             decision && (

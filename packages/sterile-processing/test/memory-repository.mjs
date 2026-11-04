@@ -1,6 +1,8 @@
 /** SQL-free test adapter only. Never loaded by the service composition root. */
 export class MemoryRepository {
   state = {
+    returns: [],
+    returnVersions: [],
     recalls: [],
     recallVersions: [],
     recallBlocks: [],
@@ -54,6 +56,59 @@ export class MemoryRepository {
       };
     };
     const tx = {
+      findReturn: async (id) =>
+        read(s.returns.find((x) => own(x) && x.id === id)),
+      findReturnByCode: async (code) =>
+        read(s.returns.find((x) => own(x) && x.code === code)),
+      listReturns: async (page) =>
+        s.returns
+          .filter(own)
+          .slice()
+          .reverse()
+          .slice((page - 1) * 50, (page - 1) * 50 + 51)
+          .map((x) => {
+            const { issue, ...summary } = x;
+            return structuredClone(summary);
+          }),
+      insertReturn: async (x) => {
+        if (
+          !own(x) ||
+          s.returns.some(
+            (r) =>
+              own(r) &&
+              (r.id === x.id ||
+                r.code === x.code ||
+                r.packageId === x.packageId),
+          )
+        )
+          throw Error("constraint");
+        s.returns.push(structuredClone(x));
+      },
+      updateReturn: async (x, version) => {
+        const n = s.returns.findIndex(
+          (r) => own(r) && r.id === x.id && r.version === version,
+        );
+        if (n < 0) throw Error("conflict");
+        s.returns[n] = structuredClone(x);
+      },
+      insertReturnVersion: async (x) => {
+        if (
+          !own(x) ||
+          s.returnVersions.some(
+            (r) => own(r) && r.id === x.id && r.version === x.version,
+          )
+        )
+          throw Error("constraint");
+        s.returnVersions.push(structuredClone(x));
+      },
+      findReturnVersion: async (id, version) =>
+        read(
+          s.returnVersions.find(
+            (x) => own(x) && x.id === id && x.version === version,
+          ),
+        ),
+      findReturnByPackage: async (id) =>
+        read(s.returns.find((x) => own(x) && x.packageId === id)),
       findRecall: async (id) =>
         read(s.recalls.find((x) => own(x) && x.id === id)),
       findRecallByCode: async (code) =>
@@ -561,6 +616,8 @@ export class MemoryRepository {
       appendAudit: async (e) => {
         if (this.failAudit) throw Error("synthetic audit failure");
         if (!own(e) || e.actorId !== scope.actorId) throw Error("scope");
+        if (s.audit.some((x) => own(x) && x.requestId === e.requestId))
+          throw Error("audit request constraint");
         s.audit.push(structuredClone(e));
       },
       findDefinition: async (id) =>

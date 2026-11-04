@@ -422,3 +422,54 @@ test("recall API preserves source scope/version and CSRF without allowing actor 
     (e) => e.code === "SERVICE_UNAVAILABLE",
   );
 });
+
+test("returns preserve issue version, confirmations and disposition link with CSRF and scoped reads", async (t) => {
+  const calls = [];
+  let foreign = false;
+  fake(t, async (path, options) => {
+    calls.push({ path, options });
+    return response({
+      ...session,
+      id: "return",
+      tenantId: foreign ? "other" : session.tenantId,
+    });
+  });
+  const body = {
+    requestId: "request",
+    code: "RETURN",
+    distributionId: "issue",
+    distributionVersion: 2,
+    condition: "used",
+    location: "quarantine",
+    custodian: "demo",
+    reference: "demo",
+    note: "",
+    contentsChecked: true,
+    confirmed: true,
+  };
+  await api.createReturn(session, body, signal());
+  assert.deepEqual(JSON.parse(calls[0].options.body), body);
+  assert.equal(calls[0].options.headers["x-sterile-csrf"], session.csrf);
+  await api.disposeReturn(
+    session,
+    "return",
+    {
+      requestId: "dispose",
+      version: 1,
+      action: "reprocess",
+      reason: "demo",
+      reference: "demo",
+      episodeCode: "NEW",
+      confirmed: true,
+    },
+    signal(),
+  );
+  assert.ok(calls[1].path.endsWith("/returns/return/dispose"));
+  await api.returned(session, "return", signal(), 1);
+  assert.ok(calls[2].path.endsWith("/versions/1"));
+  foreign = true;
+  await assert.rejects(
+    api.returned(session, "return", signal()),
+    (e) => e.code === "SERVICE_UNAVAILABLE",
+  );
+});

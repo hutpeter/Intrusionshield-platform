@@ -21,19 +21,28 @@ A successful developer check never implies that the owner performed it.
 
 ## Build ledger
 
-| Build                       | Delivered change                                                                                         | Automated / developer verification                                                                                                          | Owner verification                                                                                                         | Outstanding                                                                                         |
-| --------------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| 427feeb / a85508a / 9287358 | Instrument catalogue, registration, history, preview startup fixes                                       | Scoped checks and browser flow recorded in LOCAL-PREVIEW.md; Windows pnpm launcher and cross-site entry fixes included                      | Confirmed registration of INS-DEMO-001, retained records after refresh/restart, and working preview                        | Formal retirement, auditor and language regression on Windows deferred                              |
-| 0ac4dab                     | Tray definitions, assembly, reservations and immutable versions                                          | 53 automated checks; browser composition/history/disassembly; restart persistence                                                           | Confirmed ARMADO-DEMO-001 completion with INS-DEMO-001, versions 1–3, and saved assembly after reopening following refresh | Manual duplicate-assignment, definition revision, disassembly/reuse and auditor regression deferred |
-| 58aaf13                     | Receipt, cleaning attempts, failure/retry and processing holds                                           | 69 automated checks; Spanish cleaning/retry browser workflow; EN/FR/mobile/auditor/session checks; full restart retained evidence and holds | Not yet reported. Minimal receipt smoke check offered; no result received                                                  | Receipt smoke check pending; longer manual failure/retry walkthrough deferred                       |
-| ad63b0b                     | Individual inspection checks, held failures/rework, passed inspection enables assembly; fictional setup  | Results recorded below after verification                                                                                                   | Passed November 4, 2026 — owner confirmed with screenshot                                                                  | Failure/rework, group handling and full workflow manual review deferred                             |
-| bee5f4d                     | Packaging with frozen tray/inspection proof, material lot, printable preparation label and explicit void | Current results recorded below                                                                                                              | Passed November 4, 2026 — owner screenshot confirms saved label                                                            | Manual void/repack, device labels and connected cycle/release review deferred                       |
-| e64c063                     | Draft load membership, manual start/outcome/evidence, package interlocks and held review state           | Current results recorded below                                                                                                              | Passed November 4, 2026 — owner screenshot confirms saved awaiting-review result                                           | Manual failure/abort/rework, equipment integration and release review deferred                      |
-| 1414949                     | Separate reviewer permission, release/hold/reject decisions, frozen evidence/history and decision label  | Results recorded below                                                                                                                      | Passed November 4, 2026 — owner screenshot confirms reviewer decision and history                                          | Manual hold/reject, identity/clinical policy, withdrawal and distribution validation deferred       |
-| c353ff4                     | Released-package storage, transfers and issue with versioned custody history                             | Results recorded below                                                                                                                      | Passed November 4, 2026 — owner screenshot confirms issued state and source traceability                                   | Manual storage/transfer/exception paths, returns, recall and operational acceptance deferred        |
-| 116b939                     | Package/load withdrawal, recovery and disposition with persistent blocks                                 | 158 automated tests and scoped builds; targeted browser create/confirmation/location flow                                                   | U-RECALL-01 passed November 4, 2026                                                                                        | Manual recovery/disposition, labels, communication and operational validation deferred              |
+| Build                           | Delivered change                                                                                         | Automated / developer verification                                                                                                          | Owner verification                                                                                                         | Outstanding                                                                                                       |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| 427feeb / a85508a / 9287358     | Instrument catalogue, registration, history, preview startup fixes                                       | Scoped checks and browser flow recorded in LOCAL-PREVIEW.md; Windows pnpm launcher and cross-site entry fixes included                      | Confirmed registration of INS-DEMO-001, retained records after refresh/restart, and working preview                        | Formal retirement, auditor and language regression on Windows deferred                                            |
+| 0ac4dab                         | Tray definitions, assembly, reservations and immutable versions                                          | 53 automated checks; browser composition/history/disassembly; restart persistence                                                           | Confirmed ARMADO-DEMO-001 completion with INS-DEMO-001, versions 1–3, and saved assembly after reopening following refresh | Manual duplicate-assignment, definition revision, disassembly/reuse and auditor regression deferred               |
+| 58aaf13                         | Receipt, cleaning attempts, failure/retry and processing holds                                           | 69 automated checks; Spanish cleaning/retry browser workflow; EN/FR/mobile/auditor/session checks; full restart retained evidence and holds | Not yet reported. Minimal receipt smoke check offered; no result received                                                  | Receipt smoke check pending; longer manual failure/retry walkthrough deferred                                     |
+| ad63b0b                         | Individual inspection checks, held failures/rework, passed inspection enables assembly; fictional setup  | Results recorded below after verification                                                                                                   | Passed November 4, 2026 — owner confirmed with screenshot                                                                  | Failure/rework, group handling and full workflow manual review deferred                                           |
+| bee5f4d                         | Packaging with frozen tray/inspection proof, material lot, printable preparation label and explicit void | Current results recorded below                                                                                                              | Passed November 4, 2026 — owner screenshot confirms saved label                                                            | Manual void/repack, device labels and connected cycle/release review deferred                                     |
+| e64c063                         | Draft load membership, manual start/outcome/evidence, package interlocks and held review state           | Current results recorded below                                                                                                              | Passed November 4, 2026 — owner screenshot confirms saved awaiting-review result                                           | Manual failure/abort/rework, equipment integration and release review deferred                                    |
+| 1414949                         | Separate reviewer permission, release/hold/reject decisions, frozen evidence/history and decision label  | Results recorded below                                                                                                                      | Passed November 4, 2026 — owner screenshot confirms reviewer decision and history                                          | Manual hold/reject, identity/clinical policy, withdrawal and distribution validation deferred                     |
+| c353ff4                         | Released-package storage, transfers and issue with versioned custody history                             | Results recorded below                                                                                                                      | Passed November 4, 2026 — owner screenshot confirms issued state and source traceability                                   | Manual storage/transfer/exception paths, returns, recall and operational acceptance deferred                      |
+| 116b939                         | Package/load withdrawal, recovery and disposition with persistent blocks                                 | 158 automated tests and scoped builds; targeted browser create/confirmation/location flow                                                   | U-RECALL-01 passed November 4, 2026                                                                                        | Manual recovery/disposition, labels, communication and operational validation deferred                            |
+| Returns increment (this commit) | Complete issued-package returns, reviewer quarantine/reprocessing and linked receiving episodes          | 172 scoped automated tests, scoped builds and targeted browser return/disposition checks                                                    | U-RETURN-01 pending                                                                                                        | Broader manual return/disposition, partial returns, repair, recall propagation and production acceptance deferred |
 
-## Owner's current single check — withdrawal and recall
+## Owner's current single check — returns and reprocessing
+
+**U-RETURN-01 — Pending owner result.** Follow
+[RETURNS-REPROCESSING.md](RETURNS-REPROCESSING.md): enter as **Demo operator**, prepare
+a fictional return, confirm complete contents and the return, then save. Expected:
+**Returned — awaiting disposition**, **DEMO-RETURN-QUARANTINE**, original issue
+snapshot and return history. Reviewer disposition is not requested for this check.
+
+## Owner's completed withdrawal/recall check
 
 **U-RECALL-01 — Passed November 4, 2026.** Owner screenshot confirms **Record saved**,
 **Recall open — issue blocked**, reviewer attribution, version 1, an affected
@@ -327,6 +336,35 @@ recovery and operational acceptance. Automated coverage does not mark these manu
 checks passed. U-RECALL-01 passed by owner screenshot; recovery and disposition remain deferred. Full connected workflow, returns and
 reprocessing remain deferred. RSP-ISS-002 is partially implemented; independent
 inspection RSP-ISS-001 remains parked.
+
+## Returns/reprocessing increment verification
+
+**Passed November 4, 2026:** 172 scoped automated tests (84 domain, 73 service/SQLite/
+HTTP, 15 web API), plus scoped TypeScript/web builds. New checks cover issued-source
+and version requirements, complete-content confirmation, unopened quarantine,
+damaged/recalled reprocessing denial, permanent old-package blocks, unchanged issue
+and release facts, atomic assembly closure and processing-hold transfer, linked
+receiving history, subsequent new cleaning/inspection/packaging, actor permissions,
+scope/CSRF/strict bodies, idempotent setup, SQLite reopen and competing connections.
+
+An initial SQLite check found that a multi-entity transition reused the unique
+audit request ID. Fixed using unique child audit IDs with parent command correlation;
+rechecked audit rollback at processing creation and the complete transfer. Final
+scoped automated checks passed; no known failing check is being marked deferred.
+
+**Developer browser smoke passed:** English operator return, explicit contents and
+return confirmations, retained original issue/destination, saved held return,
+reviewer disposition and linked new receiving episode. A second reviewer browser
+with an already-open decision label rechecked the return and refused printing
+(print invocation count zero). Browser evidence stays local
+and ignored; it does not constitute the owner's Windows check.
+
+**Deferred manual checks:** M-RETURN-01 unopened/opened/damaged and quarantine paths;
+M-RETURN-02 reviewer reprocessing through new packaging/issue; M-RETURN-03 stale
+labels, physical custody and multi-user conflicts on Windows; M-RETURN-04 full restart,
+ES/FR/mobile and operational acceptance. U-RETURN-01 remains pending. Partial returns,
+repair, quarantine clearance and later recall propagation are unimplemented, tracked
+in RSP-ISS-003/004. RSP-ISS-001 remains parked. No bulk owner testing is requested.
 
 ## Repeatable automated commands
 

@@ -77,6 +77,11 @@ export class ReviewRegistry extends SterileRegistryBase {
         for (const item of load.packages) {
           if (
             input.decision === "release" &&
+            (await tx.findReturnByPackage(item.id))
+          )
+            throw new SterileError("RETURN_BLOCKED");
+          if (
+            input.decision === "release" &&
             (await tx.findRecallBlock(item.id))
           )
             throw new SterileError("RECALL_BLOCKED");
@@ -162,9 +167,17 @@ export class ReviewRegistry extends SterileRegistryBase {
                 r.loadSnapshot.packages.map((p) => tx.findRecallBlock(p.id)),
               )
             : [];
+          const returns = r
+            ? await Promise.all(
+                r.loadSnapshot.packages.map((p) =>
+                  tx.findReturnByPackage(p.id),
+                ),
+              )
+            : [];
           return {
             ...row,
             ...(blocks.some(Boolean) ? { recallBlocked: true } : {}),
+            ...(returns.some(Boolean) ? { returnBlocked: true } : {}),
           };
         }),
       );
@@ -195,9 +208,18 @@ export class ReviewRegistry extends SterileRegistryBase {
               record.loadSnapshot.packages.map((p) => tx.findRecallBlock(p.id)),
             )
           : [];
+      const returns =
+        version === undefined
+          ? await Promise.all(
+              record.loadSnapshot.packages.map((p) =>
+                tx.findReturnByPackage(p.id),
+              ),
+            )
+          : [];
       return {
         ...record,
         ...(blocks.some(Boolean) ? { recallBlocked: true } : {}),
+        ...(returns.some(Boolean) ? { returnBlocked: true } : {}),
       };
     });
   }

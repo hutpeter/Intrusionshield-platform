@@ -214,3 +214,9 @@ HTTP 200, loads the welcome screen and can enter the operator demonstration.
 See [RECALLS.md](RECALLS.md) for separate recall cases, recovery and disposition.
 Original release decisions remain immutable; current recall blocks override
 availability and normal label printing. Correction and reinstatement remain deferred.
+
+## Returns/reprocessing update
+
+See [RETURNS-REPROCESSING.md](RETURNS-REPROCESSING.md) for the operator's single
+return check and the separate reviewer disposition workflow. Original packages
+remain blocked; a new linked receiving episode is required for reprocessing.

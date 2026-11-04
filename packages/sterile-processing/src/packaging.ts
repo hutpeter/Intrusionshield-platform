@@ -1,3 +1,4 @@
+import { returnStatus } from "./return-types.js";
 import { distributionStatus } from "./distribution-types.js";
 import { randomUUID } from "node:crypto";
 import {
@@ -166,6 +167,8 @@ export class PackagingRegistry extends SterileRegistryBase {
         if (!old) throw new SterileError("NOT_FOUND");
         if (old.version !== version || old.state !== "packaged")
           throw new SterileError("CONFLICT");
+        if (await tx.findReturnByPackage(key))
+          throw new SterileError("RETURN_BLOCKED");
         if (await tx.findRecallBlock(key))
           throw new SterileError("RECALL_BLOCKED");
         if (await tx.findPackageLoad(key))
@@ -221,11 +224,13 @@ export class PackagingRegistry extends SterileRegistryBase {
       const rows = await tx.listPackages(p);
       const items = await Promise.all(
         rows.slice(0, 50).map(async (row) => {
+          const returned = await tx.findReturnByPackage(row.id);
           const recall = await tx.findRecallBlock(row.id);
           const distribution = await tx.findDistributionByPackage(row.id);
           const activeLoad = await tx.findPackageLoad(row.id);
           return {
             ...row,
+            ...(returned ? { returned: returnStatus(returned) } : {}),
             ...(recall ? { recall } : {}),
             ...(distribution
               ? { distribution: distributionStatus(distribution) }
@@ -253,8 +258,11 @@ export class PackagingRegistry extends SterileRegistryBase {
         version === undefined ? await tx.findRecallBlock(key) : null;
       const distribution =
         version === undefined ? await tx.findDistributionByPackage(key) : null;
+      const returned =
+        version === undefined ? await tx.findReturnByPackage(key) : null;
       return {
         ...item,
+        ...(returned ? { returned: returnStatus(returned) } : {}),
         ...(recall ? { recall } : {}),
         ...(distribution
           ? { distribution: distributionStatus(distribution) }

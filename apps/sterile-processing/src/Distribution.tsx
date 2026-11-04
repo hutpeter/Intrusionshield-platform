@@ -1,3 +1,4 @@
+import { returnLabels } from "./return-text";
 import { recallLabels } from "./recall-text";
 import { useEffect, useRef, useState } from "react";
 import type {
@@ -333,6 +334,7 @@ export function DistributionWorkspace({
           {session.canWrite &&
             detail?.state === "stored" &&
             !detail.recall &&
+            !detail.returned &&
             !past && (
               <>
                 {(["transfer", "issue"] as const).map((kind) => (
@@ -350,6 +352,12 @@ export function DistributionWorkspace({
         </div>
       </div>
       <p className="readonly-note">{p.boundary}</p>
+      {detail?.returned && (
+        <p className="alert">
+          {returnLabels(language).blocked} · {detail.returned.code}
+          <span className="error-help">{returnLabels(language).origin}</span>
+        </p>
+      )}
       {detail?.recall && (
         <p className="alert">
           {recallLabels(language).blocked} · {detail.recall.caseCode}
@@ -517,9 +525,11 @@ export function DistributionWorkspace({
                   <tr key={row.id}>
                     <td>{row.packageCode}</td>
                     <td>
-                      {row.recall
-                        ? recallLabels(language).blocked
-                        : p[row.state]}
+                      {row.returned
+                        ? returnLabels(language).blocked
+                        : row.recall
+                          ? recallLabels(language).blocked
+                          : p[row.state]}
                     </td>
                     <td>{row.location ?? row.destination}</td>
                     <td>

@@ -9,6 +9,10 @@ import type {
   ReviewSummary,
   ReviewQueueItem,
   ReviewInput,
+  ReturnRecord,
+  ReturnSummary,
+  ReturnInput,
+  ReturnDispositionInput,
   RecallRecord,
   RecallSummary,
   RecallInput,
@@ -47,6 +51,8 @@ export interface Session {
   canReview?: boolean;
   canRecall?: boolean;
   canRecover?: boolean;
+  canReturn?: boolean;
+  canDisposeReturn?: boolean;
 }
 export interface Page<T> {
   items: T[];
@@ -205,6 +211,62 @@ async function checkedMovement(
   return r;
 }
 export const api = {
+  returns: (s: Session, n: number, signal: AbortSignal) =>
+    scopedPage<ReturnSummary>(s, base(s) + "/returns", n, signal),
+  returned: (s: Session, id: string, signal: AbortSignal, version?: number) =>
+    scoped(
+      s,
+      call<ReturnRecord>(
+        base(s) +
+          "/returns/" +
+          encodeURIComponent(id) +
+          (version === undefined ? "" : "/versions/" + version),
+        signal,
+      ),
+    ),
+  createReturn: (s: Session, body: ReturnInput, signal: AbortSignal) =>
+    scoped(s, call<ReturnRecord>(base(s) + "/returns", signal, body, s.csrf)),
+  disposeReturn: (
+    s: Session,
+    id: string,
+    body: ReturnDispositionInput,
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<ReturnRecord>(
+        base(s) + "/returns/" + encodeURIComponent(id) + "/dispose",
+        signal,
+        body,
+        s.csrf,
+      ),
+    ),
+  returnHistory: (s: Session, id: string, n: number, signal: AbortSignal) =>
+    scopedPage<SterileAuditEvent>(
+      s,
+      base(s) + "/returns/" + encodeURIComponent(id) + "/history",
+      n,
+      signal,
+    ),
+  returnExample: (s: Session, requestId: string, signal: AbortSignal) =>
+    checkedMovement(
+      s,
+      call<DistributionRecord>(
+        "/preview/return-example",
+        signal,
+        { requestId },
+        s.csrf,
+      ),
+    ),
+  async allDistribution(s: Session, signal: AbortSignal) {
+    const rows: DistributionSummary[] = [];
+    for (let n = 1; n <= 20; n++) {
+      const p = await api.distribution(s, n, signal);
+      rows.push(...p.items);
+      if (!p.hasMore) return rows;
+    }
+    throw new ApiError(503, "SERVICE_UNAVAILABLE");
+  },
   recalls: (s: Session, n: number, signal: AbortSignal) =>
     scopedPage<RecallSummary>(s, base(s) + "/recalls", n, signal),
   recall: (s: Session, id: string, signal: AbortSignal, version?: number) =>
