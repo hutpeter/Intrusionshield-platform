@@ -1,3 +1,4 @@
+import { reviewLabels } from "./review-text";
 import { useEffect, useRef, useState } from "react";
 import type {
   SterilizationLoad,
@@ -332,7 +333,7 @@ export function CycleWorkspace({
               : "")
           }
         >
-          {p[d.state]}
+          {d.review ? reviewLabels(language)[d.review.state] : p[d.state]}
         </span>
         <dl className="details-grid">
           <div>
@@ -398,9 +399,10 @@ export function CycleWorkspace({
             </div>
           )}
         </dl>
-        {["awaiting_review", "failed", "aborted"].includes(d.state) && (
-          <p className="readonly-note">{p.held}</p>
-        )}
+        {d.review?.state !== "released" &&
+          ["awaiting_review", "failed", "aborted"].includes(d.state) && (
+            <p className="readonly-note">{p.held}</p>
+          )}
       </section>
       <section className="panel">
         <h2>{p.packages}</h2>
@@ -780,7 +782,11 @@ export function CycleWorkspace({
                     <td>{d.code}</td>
                     <td>{d.sterilizer}</td>
                     <td>{d.packageCount}</td>
-                    <td>{p[d.state]}</td>
+                    <td>
+                      {d.review
+                        ? reviewLabels(language)[d.review.state]
+                        : p[d.state]}
+                    </td>
                     <td>
                       <button
                         disabled={busy}

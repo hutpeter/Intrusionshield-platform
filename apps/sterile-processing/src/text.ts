@@ -1,5 +1,8 @@
 import { sterileMessages } from "@intrusionshield/sterile-processing/messages";
 const es = {
+  reviewer: "Revisor demo",
+  reviewerHelp:
+    "Revisar ciclos y registrar decisiones, sin modificar el trabajo del operador.",
   trays: "Bandejas",
   backTrays: "Volver a bandejas",
   definitions: "Definiciones",
@@ -155,6 +158,9 @@ const es = {
 };
 type Text = Record<keyof typeof es, string>;
 const en: Text = {
+  reviewer: "Demo reviewer",
+  reviewerHelp:
+    "Review cycles and record decisions without changing operator work.",
   trays: "Trays",
   backTrays: "Back to trays",
   definitions: "Definitions",
@@ -308,6 +314,9 @@ const en: Text = {
   viewerNotice: "Read-only role: you can review records and history.",
 };
 const fr: Text = {
+  reviewer: "Réviseur démo",
+  reviewerHelp:
+    "Réviser les cycles et enregistrer les décisions sans modifier le travail de l’opérateur.",
   trays: "Plateaux",
   backTrays: "Retour aux plateaux",
   definitions: "Définitions",

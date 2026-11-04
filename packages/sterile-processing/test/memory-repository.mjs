@@ -1,6 +1,8 @@
 /** SQL-free test adapter only. Never loaded by the service composition root. */
 export class MemoryRepository {
   state = {
+    reviews: [],
+    reviewVersions: [],
     loads: [],
     loadVersions: [],
     loadAssignments: [],
@@ -35,7 +37,100 @@ export class MemoryRepository {
     const own = (x) =>
       x.tenantId === scope.tenantId && x.facilityId === scope.facilityId;
     const read = (x) => (x ? structuredClone(x) : null);
+    const status = (r) => {
+      const d = r.decisions.at(-1);
+      return {
+        id: r.id,
+        version: r.version,
+        state: r.state,
+        decision: d.decision,
+        actorId: d.actorId,
+        at: d.at,
+      };
+    };
     const tx = {
+      findReview: async (id) =>
+        read(s.reviews.find((x) => own(x) && x.id === id)),
+      findReviewByLoad: async (loadId) =>
+        read(s.reviews.find((x) => own(x) && x.loadId === loadId)),
+      listReviews: async (page) =>
+        s.reviews
+          .filter(own)
+          .slice()
+          .reverse()
+          .slice((page - 1) * 50, (page - 1) * 50 + 51)
+          .map((x) => ({
+            id: x.id,
+            tenantId: x.tenantId,
+            facilityId: x.facilityId,
+            loadId: x.loadId,
+            loadVersion: x.loadVersion,
+            state: x.state,
+            version: x.version,
+            createdAt: x.createdAt,
+            updatedAt: x.updatedAt,
+            loadCode: x.loadSnapshot.code,
+          })),
+      listReviewQueue: async (page) =>
+        s.loads
+          .filter(
+            (x) =>
+              own(x) &&
+              ["awaiting_review", "failed", "aborted"].includes(x.state),
+          )
+          .map((l) => ({
+            l,
+            r: s.reviews.find((r) => own(r) && r.loadId === l.id),
+          }))
+          .filter((x) => !x.r || x.r.state === "held")
+          .reverse()
+          .slice((page - 1) * 50, (page - 1) * 50 + 51)
+          .map(({ l, r }) => ({
+            id: l.id,
+            tenantId: l.tenantId,
+            facilityId: l.facilityId,
+            code: l.code,
+            version: l.version,
+            state: l.state,
+            outcome: l.outcome,
+            sterilizer: l.sterilizer,
+            packageCount: l.packages.length,
+            reviewId: r?.id ?? null,
+            reviewVersion: r?.version ?? 0,
+          })),
+      insertReview: async (x) => {
+        if (
+          !own(x) ||
+          s.reviews.some(
+            (r) => own(r) && (r.id === x.id || r.loadId === x.loadId),
+          )
+        )
+          throw Error("constraint");
+        s.reviews.push(structuredClone(x));
+      },
+      updateReview: async (x, version) => {
+        const n = s.reviews.findIndex(
+          (r) => own(r) && r.id === x.id && r.version === version,
+        );
+        if (n < 0) throw Error("conflict");
+        s.reviews[n] = structuredClone(x);
+      },
+      insertReviewVersion: async (x) => {
+        if (
+          !own(x) ||
+          s.reviewVersions.some(
+            (r) => own(r) && r.id === x.id && r.version === x.version,
+          )
+        )
+          throw Error("constraint");
+        s.reviewVersions.push(structuredClone(x));
+      },
+      findReviewVersion: async (id, version) =>
+        read(
+          s.reviewVersions.find(
+            (x) => own(x) && x.id === id && x.version === version,
+          ),
+        ),
       findLoad: async (id) => read(s.loads.find((x) => own(x) && x.id === id)),
       findLoadByCode: async (code) =>
         read(s.loads.find((x) => own(x) && x.code === code)),
@@ -90,7 +185,15 @@ export class MemoryRepository {
       findPackageLoad: async (id) => {
         const a = s.loadAssignments.find((x) => own(x) && x.packageId === id),
           l = a && s.loads.find((x) => own(x) && x.id === a.loadId);
-        return l ? { loadId: l.id, loadCode: l.code, state: l.state } : null;
+        const review = l && s.reviews.find((r) => own(r) && r.loadId === l.id);
+        return l
+          ? {
+              loadId: l.id,
+              loadCode: l.code,
+              state: l.state,
+              ...(review ? { review: status(review) } : {}),
+            }
+          : null;
       },
       replaceLoadAssignments: async (l) => {
         s.loadAssignments = s.loadAssignments.filter(

@@ -1,3 +1,5 @@
+import { ReviewWorkspace } from "./Reviews";
+import { reviewLabels } from "./review-text";
 import { CycleWorkspace } from "./Cycles";
 import { cycleLabels } from "./cycle-text";
 import { PackagingWorkspace } from "./Packaging";
@@ -46,7 +48,7 @@ function App() {
     [loading, setLoading] = useState(true),
     [error, setError] = useState<unknown>(null),
     [expired, setExpired] = useState(false),
-    [role, setRole] = useState<"operator" | "viewer">("operator");
+    [role, setRole] = useState<"operator" | "viewer" | "reviewer">("operator");
   const request = useRef<AbortController | null>(null);
   const boot = useCallback(async () => {
     request.current?.abort();
@@ -152,7 +154,11 @@ function App() {
             <span className="user">
               {t.signedIn}
               <strong>
-                {session.role === "operator" ? t.operator : t.viewer}
+                {session.role === "operator"
+                  ? t.operator
+                  : session.role === "reviewer"
+                    ? t.reviewer
+                    : t.viewer}
               </strong>
             </span>
           )}
@@ -195,7 +201,7 @@ function App() {
               </p>
             )}
             <div className="roles">
-              {(["operator", "viewer"] as const).map((r) => (
+              {(["operator", "viewer", "reviewer"] as const).map((r) => (
                 <button
                   className={"role-card " + (role === r ? "chosen" : "")}
                   key={r}
@@ -203,9 +209,19 @@ function App() {
                   disabled={loading}
                   onClick={() => setRole(r)}
                 >
-                  <strong>{r === "operator" ? t.operator : t.viewer}</strong>
+                  <strong>
+                    {r === "operator"
+                      ? t.operator
+                      : r === "reviewer"
+                        ? t.reviewer
+                        : t.viewer}
+                  </strong>
                   <span>
-                    {r === "operator" ? t.operatorHelp : t.viewerHelp}
+                    {r === "operator"
+                      ? t.operatorHelp
+                      : r === "reviewer"
+                        ? t.reviewerHelp
+                        : t.viewerHelp}
                   </span>
                 </button>
               ))}
@@ -240,7 +256,13 @@ function Workspace({
   onExpired: () => void;
 }) {
   const [tab, setTab] = useState<
-      "instruments" | "types" | "trays" | "processing" | "packaging" | "cycles"
+      | "instruments"
+      | "types"
+      | "trays"
+      | "processing"
+      | "packaging"
+      | "cycles"
+      | "reviews"
     >("instruments"),
     [page, setPage] = useState(1),
     [historyPage, setHistoryPage] = useState(1),
@@ -292,7 +314,8 @@ function Workspace({
           tab === "trays" ||
           tab === "processing" ||
           tab === "packaging" ||
-          tab === "cycles"
+          tab === "cycles" ||
+          tab === "reviews"
         ) {
           setLoading(false);
           return;
@@ -376,7 +399,13 @@ function Workspace({
   }
   function navigate(
     target:
-      "instruments" | "types" | "trays" | "processing" | "packaging" | "cycles",
+      | "instruments"
+      | "types"
+      | "trays"
+      | "processing"
+      | "packaging"
+      | "cycles"
+      | "reviews",
   ) {
     guard(() => {
       setSelected(null);
@@ -566,6 +595,14 @@ function Workspace({
             <span aria-hidden="true">◷</span>
             {cycleLabels(language).title}
           </button>
+          <button
+            aria-current={tab === "reviews" ? "page" : undefined}
+            disabled={busy}
+            onClick={() => navigate("reviews")}
+          >
+            <span aria-hidden="true">✓</span>
+            {reviewLabels(language).title}
+          </button>
         </nav>
         <div className="sidebar-bottom">
           <p>{t.facility}</p>
@@ -585,7 +622,8 @@ function Workspace({
         {tab !== "trays" &&
           tab !== "processing" &&
           tab !== "packaging" &&
-          tab !== "cycles" && (
+          tab !== "cycles" &&
+          tab !== "reviews" && (
             <div className="page-heading">
               <div>
                 <p className="eyebrow">{t.facility}</p>
@@ -641,7 +679,9 @@ function Workspace({
               </div>
             </div>
           )}
-        {!session.canWrite && <p className="readonly-note">{t.viewerNotice}</p>}
+        {session.role === "viewer" && (
+          <p className="readonly-note">{t.viewerNotice}</p>
+        )}
         {notice && (
           <p className="success" role="status">
             ✓ {t[notice]}
@@ -828,6 +868,17 @@ function Workspace({
               </button>
             </div>
           </form>
+        )}
+        {tab === "reviews" && (
+          <ReviewWorkspace
+            key={trayReset}
+            session={session}
+            language={language}
+            blocked={blocked}
+            onExpired={onExpired}
+            onDirty={setTrayDirty}
+            onBusy={setTrayBusy}
+          />
         )}
         {tab === "cycles" && (
           <CycleWorkspace

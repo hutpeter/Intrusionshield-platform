@@ -1,4 +1,9 @@
 import type {
+  LoadReview,
+  ReviewSummary,
+  ReviewQueueItem,
+} from "./review-types.js";
+import type {
   SterilizationLoad,
   LoadSummary,
   PackageLoad,
@@ -49,6 +54,7 @@ export interface SterileAuditEvent {
   actorId: string;
   at: string;
   action:
+    | "load-reviewed"
     | "load-created"
     | "load-contents-updated"
     | "cycle-started"
@@ -81,13 +87,22 @@ export type SterileRecord =
   | TrayAssembly
   | ProcessingEpisode
   | SterilePackage
-  | SterilizationLoad;
+  | SterilizationLoad
+  | LoadReview;
 export interface CommandReceipt {
   hash: string;
   result: SterileRecord;
 }
 /** All methods are scoped to the transaction's tenant/facility. Writes and audit commit together. */
 export interface SterileTransaction {
+  findReview(id: string): Promise<LoadReview | null>;
+  findReviewByLoad(loadId: string): Promise<LoadReview | null>;
+  listReviews(page: number): Promise<ReviewSummary[]>;
+  listReviewQueue(page: number): Promise<ReviewQueueItem[]>;
+  insertReview(item: LoadReview): Promise<void>;
+  updateReview(item: LoadReview, expected: number): Promise<void>;
+  insertReviewVersion(item: LoadReview): Promise<void>;
+  findReviewVersion(id: string, version: number): Promise<LoadReview | null>;
   findLoad(id: string): Promise<SterilizationLoad | null>;
   findLoadByCode(code: string): Promise<SterilizationLoad | null>;
   listLoads(page: number): Promise<LoadSummary[]>;
@@ -190,7 +205,8 @@ export class SterileError extends Error {
       | "INSTRUMENT_ASSIGNED"
       | "PROCESSING_HOLD"
       | "PACKAGING_BLOCKED"
-      | "LOAD_BLOCKED",
+      | "LOAD_BLOCKED"
+      | "REVIEW_BLOCKED",
   ) {
     super(code);
   }

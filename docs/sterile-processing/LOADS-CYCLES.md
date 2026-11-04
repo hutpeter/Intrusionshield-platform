@@ -28,6 +28,10 @@ This is the only requested manual check. No actual cycle, real equipment,
 physical printing, failure/rework or repeated earlier-module walkthrough is requested.
 See [TESTING-REGISTER.md](TESTING-REGISTER.md) for deferred review scenarios.
 
+**Workflow update:** a separate manual review/release module is now available;
+see [REVIEW-RELEASE.md](REVIEW-RELEASE.md). Original cycle outcomes remain fixed.
+The owner's cycle smoke check has passed and need not be repeated for this build.
+
 ## Implemented workflow
 
 `draft → running → awaiting_review | failed | aborted`
@@ -58,8 +62,9 @@ reports or device measurements. No physical/chemical/biological indicator result
 is automatically interpreted. Later review must apply approved operational rules.
 
 A satisfactory result becomes **awaiting review**, retaining all package holds.
-Failed/aborted results likewise retain holds. There is no release endpoint or
-sterile-availability flag in this increment. All three terminal outcomes are
+Failed/aborted results likewise retain holds. Cycle endpoints themselves do not authorize release. A separate reviewer decision
+is now recorded by the next increment; no sterile-availability flag is inferred
+from the operator result. All three terminal outcomes are
 immutable through the current UI; correction, rework and disposition need later
 attributed decisions, not silent edits. Started loads cannot be cancelled to
 bypass those holds.

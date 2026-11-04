@@ -33,3 +33,20 @@ Keep test execution status in [TESTING-REGISTER.md](TESTING-REGISTER.md).
   override implicitly. Any exception policy needs explicit product approval.
 - **Linked checks:** U-INSP-01 remains passed for the current preview;
   M-AUTH-01 and independent-inspection acceptance tests remain pending.
+
+## RSP-ISS-002 — Withdrawal and amendment of final review decisions
+
+- **Status:** Planned/deferred after the initial manual review increment.
+- **Current behavior:** Final recorded release/rejection decisions are immutable.
+  Holds can receive later versioned decisions; original evidence is retained.
+- **Remaining scope:** Define authorized correction, withdrawal/recall and
+  failed-cycle disposition without rewriting historical decisions or allowing
+  clerical cancellation to bypass package restrictions. Source evidence amendments
+  need a new explicit review policy rather than silently reusing an old snapshot.
+- **Acceptance checks:** Authorized withdrawal invalidates current release-label
+  authorization and downstream availability; unauthorized callers are denied;
+  prior decisions/labels remain historically attributable; subsequent disposition
+  is explicit and audited. Validate stale labels, concurrent decisions and
+  distributed items once distribution exists.
+- **Gate:** Required before production operational acceptance. This does not
+  unblock or implement the independently deferred cleaner/inspector issue above.

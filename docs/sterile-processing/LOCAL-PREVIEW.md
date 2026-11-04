@@ -19,6 +19,8 @@ See [packaging and labels](PACKAGING.md) for the latest one-check walkthrough.
 
 See [loads and cycles](LOADS-CYCLES.md) for the current single smoke check.
 
+See [review and release decisions](REVIEW-RELEASE.md) for the current single check.
+
 ## What works
 
 - Receiving episodes, attributed cleaning attempts, failure/retry evidence and holds pending inspection.

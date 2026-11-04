@@ -293,3 +293,66 @@ test("cycle API preserves evidence and expected version with CSRF and rejects fo
     (e) => e.code === "SERVICE_UNAVAILABLE",
   );
 });
+test("reviewer session remains separate from operator writes and requires its review capability", async (t) => {
+  let valid = true;
+  fake(t, async () =>
+    response({
+      ...session,
+      role: "reviewer",
+      canWrite: false,
+      canReview: valid,
+    }),
+  );
+  const r = await api.login("reviewer", session, signal());
+  assert.equal(r.canReview, true);
+  assert.equal(r.canWrite, false);
+  valid = false;
+  await assert.rejects(
+    api.session(signal()),
+    (e) => e.code === "SERVICE_UNAVAILABLE",
+  );
+});
+test("review API preserves checked evidence and versions and rejects a foreign frozen load snapshot", async (t) => {
+  let foreign = false;
+  const calls = [];
+  fake(t, async (path, options) => {
+    calls.push({ path, options });
+    return response({
+      ...session,
+      id: "review",
+      loadId: "load",
+      loadVersion: 3,
+      loadSnapshot: {
+        ...session,
+        id: "load",
+        version: 3,
+        tenantId: foreign ? "other" : session.tenantId,
+      },
+      decisions: [],
+    });
+  });
+  const body = {
+    requestId: "request",
+    loadId: "load",
+    loadVersion: 3,
+    reviewVersion: 0,
+    decision: "release",
+    reason: "DEMO",
+    reference: "DEMO",
+    cycleChecked: true,
+    indicatorsChecked: true,
+    packagesChecked: true,
+    profileChecked: true,
+    confirmed: true,
+  };
+  await api.decideReview(session, body, signal());
+  assert.deepEqual(JSON.parse(calls[0].options.body), body);
+  assert.equal(calls[0].options.headers["x-sterile-csrf"], session.csrf);
+  await api.review(session, "review", signal(), 1);
+  assert.ok(calls[1].path.endsWith("/versions/1"));
+  foreign = true;
+  await assert.rejects(
+    api.review(session, "review", signal()),
+    (e) => e.code === "SERVICE_UNAVAILABLE",
+  );
+});

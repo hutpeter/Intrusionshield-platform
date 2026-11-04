@@ -1,4 +1,6 @@
 const es = {
+  REVIEW_BLOCKED:
+    "Revise el ciclo, las evidencias, los paquetes y la identidad del revisor. No se permite esta liberación.",
   LOAD_BLOCKED:
     "Revise los paquetes y cualquier carga activa antes de continuar.",
   PACKAGING_BLOCKED:
@@ -32,6 +34,8 @@ const es = {
 };
 type Messages = Record<keyof typeof es, string>;
 const en: Messages = {
+  REVIEW_BLOCKED:
+    "Review the cycle, evidence, packages and reviewer identity. This release is not permitted.",
   LOAD_BLOCKED: "Review the packages and any active load before continuing.",
   PACKAGING_BLOCKED:
     "Review the completed assembly, prior inspections and any active package before continuing.",
@@ -64,6 +68,8 @@ const en: Messages = {
     "Service unavailable. The change has not been confirmed.",
 };
 const fr: Messages = {
+  REVIEW_BLOCKED:
+    "Vérifiez le cycle, les preuves, les emballages et l’identité du réviseur. Cette libération est interdite.",
   LOAD_BLOCKED:
     "Vérifiez les emballages et toute charge active avant de continuer.",
   PACKAGING_BLOCKED:

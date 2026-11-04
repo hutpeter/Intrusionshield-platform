@@ -10,6 +10,10 @@ import {
 import { dirname, resolve } from "node:path";
 import {
   SterileError,
+  reviewStatus,
+  type LoadReview,
+  type ReviewSummary,
+  type ReviewQueueItem,
   type SterileRepository,
   type SterileScope,
   type SterileTransaction,
@@ -84,6 +88,8 @@ CREATE TABLE IF NOT EXISTS sp_loads(tenant_id TEXT NOT NULL,facility_id TEXT NOT
 CREATE TABLE IF NOT EXISTS sp_load_versions(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id,version),FOREIGN KEY(tenant_id,facility_id,id) REFERENCES sp_loads(tenant_id,facility_id,id));
 CREATE TABLE IF NOT EXISTS sp_load_assignments(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,package_id TEXT NOT NULL,load_id TEXT NOT NULL,PRIMARY KEY(tenant_id,facility_id,package_id),FOREIGN KEY(tenant_id,facility_id,package_id) REFERENCES sp_packages(tenant_id,facility_id,id),FOREIGN KEY(tenant_id,facility_id,load_id) REFERENCES sp_loads(tenant_id,facility_id,id));
 CREATE TABLE IF NOT EXISTS sp_machine_cycles(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,sterilizer TEXT NOT NULL,cycle_reference TEXT NOT NULL,load_id TEXT NOT NULL,PRIMARY KEY(tenant_id,facility_id,sterilizer,cycle_reference),UNIQUE(tenant_id,facility_id,load_id),FOREIGN KEY(tenant_id,facility_id,load_id) REFERENCES sp_loads(tenant_id,facility_id,id));
+CREATE TABLE IF NOT EXISTS sp_reviews(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,load_id TEXT NOT NULL,version INTEGER NOT NULL CHECK(version>0),state TEXT NOT NULL CHECK(state IN ('released','held','rejected')),payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,load_id),FOREIGN KEY(tenant_id,facility_id,load_id) REFERENCES sp_loads(tenant_id,facility_id,id));
+CREATE TABLE IF NOT EXISTS sp_review_versions(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id,version),FOREIGN KEY(tenant_id,facility_id,id) REFERENCES sp_reviews(tenant_id,facility_id,id));
 CREATE INDEX IF NOT EXISTS sp_assignment_assembly ON sp_assignments(tenant_id,facility_id,assembly_id);`);
     } catch (error) {
       this.db.close();
@@ -149,6 +155,69 @@ CREATE INDEX IF NOT EXISTS sp_assignment_assembly ON sp_assignments(tenant_id,fa
         return rows.map((row) => JSON.parse(row.payload) as V);
       };
       const tx: SterileTransaction = {
+        findReview: async (id) =>
+          read<LoadReview>(
+            "SELECT payload FROM sp_reviews WHERE tenant_id=? AND facility_id=? AND id=?",
+            id,
+          ),
+        findReviewByLoad: async (id) =>
+          read<LoadReview>(
+            "SELECT payload FROM sp_reviews WHERE tenant_id=? AND facility_id=? AND load_id=?",
+            id,
+          ),
+        listReviews: async (page) =>
+          list<ReviewSummary>(
+            "SELECT json_object('id',id,'tenantId',tenant_id,'facilityId',facility_id,'loadId',load_id,'loadVersion',json_extract(payload,'$.loadVersion'),'loadCode',json_extract(payload,'$.loadSnapshot.code'),'state',state,'version',version,'createdAt',json_extract(payload,'$.createdAt'),'updatedAt',json_extract(payload,'$.updatedAt')) AS payload FROM sp_reviews WHERE tenant_id=? AND facility_id=? ORDER BY rowid DESC LIMIT 51 OFFSET ?",
+            page,
+          ),
+        listReviewQueue: async (page) =>
+          list<ReviewQueueItem>(
+            "SELECT json_object('id',l.id,'tenantId',l.tenant_id,'facilityId',l.facility_id,'code',l.code,'version',l.version,'state',l.state,'outcome',json_extract(l.payload,'$.outcome'),'sterilizer',json_extract(l.payload,'$.sterilizer'),'packageCount',json_array_length(l.payload,'$.packages'),'reviewId',r.id,'reviewVersion',coalesce(r.version,0)) AS payload FROM sp_loads l LEFT JOIN sp_reviews r ON r.tenant_id=l.tenant_id AND r.facility_id=l.facility_id AND r.load_id=l.id WHERE l.tenant_id=? AND l.facility_id=? AND l.state IN ('awaiting_review','failed','aborted') AND (r.state IS NULL OR r.state='held') ORDER BY l.rowid DESC LIMIT 51 OFFSET ?",
+            page,
+          ),
+        insertReview: async (item) => {
+          own(item);
+          this.db
+            .prepare("INSERT INTO sp_reviews VALUES(?,?,?,?,?,?,?)")
+            .run(
+              ...args,
+              item.id,
+              item.loadId,
+              item.version,
+              item.state,
+              JSON.stringify(item),
+            );
+        },
+        updateReview: async (item, expected) => {
+          own(item);
+          if (item.version !== expected + 1)
+            throw new SterileError("INVALID_REQUEST");
+          const r = this.db
+            .prepare(
+              "UPDATE sp_reviews SET version=?,state=?,payload=? WHERE tenant_id=? AND facility_id=? AND id=? AND version=?",
+            )
+            .run(
+              item.version,
+              item.state,
+              JSON.stringify(item),
+              ...args,
+              item.id,
+              expected,
+            );
+          if (r.changes !== 1) throw new SterileError("CONFLICT");
+        },
+        insertReviewVersion: async (item) => {
+          own(item);
+          this.db
+            .prepare("INSERT INTO sp_review_versions VALUES(?,?,?,?,?)")
+            .run(...args, item.id, item.version, JSON.stringify(item));
+        },
+        findReviewVersion: async (id, version) =>
+          read<LoadReview>(
+            "SELECT payload FROM sp_review_versions WHERE tenant_id=? AND facility_id=? AND id=? AND version=?",
+            id,
+            version,
+          ),
         findLoad: async (id) =>
           read<SterilizationLoad>(
             "SELECT payload FROM sp_loads WHERE tenant_id=? AND facility_id=? AND id=?",
@@ -213,7 +282,15 @@ CREATE INDEX IF NOT EXISTS sp_assignment_assembly ON sp_assignments(tenant_id,fa
               "SELECT l.id AS loadId,l.code AS loadCode,l.state FROM sp_load_assignments a JOIN sp_loads l ON l.tenant_id=a.tenant_id AND l.facility_id=a.facility_id AND l.id=a.load_id WHERE a.tenant_id=? AND a.facility_id=? AND a.package_id=?",
             )
             .get(...args, id) as PackageLoad | undefined;
-          return row ?? null;
+          if (!row) return null;
+          const review = read<LoadReview>(
+            "SELECT payload FROM sp_reviews WHERE tenant_id=? AND facility_id=? AND load_id=?",
+            row.loadId,
+          );
+          return {
+            ...row,
+            ...(review ? { review: reviewStatus(review) } : {}),
+          };
         },
         replaceLoadAssignments: async (item) => {
           own(item);

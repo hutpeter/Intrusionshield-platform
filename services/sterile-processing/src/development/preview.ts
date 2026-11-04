@@ -1,3 +1,4 @@
+import { prepareReviewExample } from "./review-example.js";
 import { prepareCycleExample } from "./cycle-example.js";
 import { preparePackagingExample } from "./packaging-example.js";
 import { prepareInspectionExample } from "./inspection-example.js";
@@ -15,6 +16,7 @@ const tenantId = "a7f4b902-0101-4be1-8001-000000000001",
 const actors = {
   operator: "a7f4b902-0101-4be1-8001-000000000003",
   viewer: "a7f4b902-0101-4be1-8001-000000000004",
+  reviewer: "a7f4b902-0101-4be1-8001-000000000005",
 };
 export type PreviewRole = keyof typeof actors;
 type Session = { csrf: string; expiresAt: number; role: PreviewRole | null };
@@ -42,7 +44,7 @@ export function createSterilePreview({
   )
     throw new Error("Preview requires an exact loopback HTTP origin.");
   const sessions = new Map<string, Session>();
-  const tokens = { operator: secret(), viewer: secret() };
+  const tokens = { operator: secret(), viewer: secret(), reviewer: secret() };
   const app = express();
   app.disable("x-powered-by");
   app.use((req, res, next) => {
@@ -112,6 +114,7 @@ export function createSterilePreview({
               Object.entries(actors).map(([role, id]) => [id, role]),
             ),
             canWrite: session.role === "operator",
+            canReview: session.role === "reviewer",
           }
         : {}),
     };
@@ -148,7 +151,7 @@ export function createSterilePreview({
       !req.body ||
       Array.isArray(req.body) ||
       Object.keys(req.body).length !== 1 ||
-      !["operator", "viewer"].includes(req.body.role)
+      !["operator", "viewer", "reviewer"].includes(req.body.role)
     ) {
       res.status(400).json({ error: "INVALID_REQUEST" });
       return;
@@ -280,6 +283,43 @@ export function createSterilePreview({
         ),
       );
   });
+  app.post("/preview/review-example", async (req, res) => {
+    const s = res.locals.session as Session;
+    if (!s.role) {
+      res.status(401).json({ error: "UNAUTHENTICATED" });
+      return;
+    }
+    if (s.role !== "reviewer") {
+      res.status(403).json({ error: "FORBIDDEN" });
+      return;
+    }
+    if (
+      Object.keys(req.query).length ||
+      !req.body ||
+      Array.isArray(req.body) ||
+      Object.keys(req.body).length !== 1 ||
+      typeof req.body.requestId !== "string"
+    ) {
+      res.status(400).json({ error: "INVALID_REQUEST" });
+      return;
+    }
+    let id: string;
+    try {
+      id = sterileUuid(req.body.requestId);
+    } catch {
+      res.status(400).json({ error: "INVALID_REQUEST" });
+      return;
+    }
+    res
+      .status(201)
+      .json(
+        await prepareReviewExample(
+          repository,
+          { tenantId, facilityId, actorId: actors.operator },
+          id,
+        ),
+      );
+  });
   app.use("/api/v1/sterile", (req, res, next) => {
     const s = res.locals.session as Session;
     if (!s.role) {
@@ -321,13 +361,11 @@ export function createSterilePreview({
         fixtureGrants.has(capability) &&
         fixtureGrants.has("core.authentication") &&
         fixtureGrants.has("core.authorization") &&
-        (scope.actorId === actors.operator ||
-          (scope.actorId === actors.viewer &&
-            (permission === "instruments:read" ||
-              permission === "trays:read" ||
-              permission === "processing:read" ||
-              permission === "packaging:read" ||
-              permission === "cycles:read"))),
+        ((scope.actorId === actors.operator &&
+          permission !== "release:write") ||
+          (scope.actorId === actors.viewer && permission.endsWith(":read")) ||
+          (scope.actorId === actors.reviewer &&
+            (permission.endsWith(":read") || permission === "release:write"))),
     }),
   );
   app.use(

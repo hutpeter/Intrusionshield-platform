@@ -1,3 +1,4 @@
+import { reviewStatus } from "./review-types.js";
 import { randomUUID } from "node:crypto";
 import {
   SterileRegistryBase,
@@ -341,7 +342,13 @@ export class CycleRegistry extends SterileRegistryBase {
       p = pageOf(page);
     return this.repository.transaction(s, async (tx) => {
       const rows = await tx.listLoads(p);
-      return { items: rows.slice(0, 50), page: p, hasMore: rows.length > 50 };
+      const items = await Promise.all(
+        rows.slice(0, 50).map(async (row) => {
+          const r = await tx.findReviewByLoad(row.id);
+          return { ...row, ...(r ? { review: reviewStatus(r) } : {}) };
+        }),
+      );
+      return { items, page: p, hasMore: rows.length > 50 };
     });
   }
   async get(scope: SterileScope, id: string, version?: number) {
@@ -354,7 +361,9 @@ export class CycleRegistry extends SterileRegistryBase {
           ? await tx.findLoad(key)
           : await tx.findLoadVersion(key, version);
       if (!row) throw new SterileError("NOT_FOUND");
-      return row;
+      const review =
+        version === undefined ? await tx.findReviewByLoad(key) : null;
+      return { ...row, ...(review ? { review: reviewStatus(review) } : {}) };
     });
   }
   async history(scope: SterileScope, id: string, page = 1) {

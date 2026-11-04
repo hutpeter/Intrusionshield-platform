@@ -1,3 +1,4 @@
+import type { ReviewStatus } from "./review-types.js";
 export interface LoadPackage {
   assemblyCode?: string;
   trayName?: string;
@@ -9,6 +10,7 @@ export interface LoadPackage {
   instrumentCount: number;
 }
 export interface SterilizationLoad {
+  review?: ReviewStatus;
   id: string;
   tenantId: string;
   facilityId: string;
@@ -51,7 +53,7 @@ export type LoadSummary = Pick<
   | "state"
   | "version"
   | "createdAt"
-> & { packageCount: number };
+> & { packageCount: number; review?: ReviewStatus };
 export interface LoadInput {
   requestId: string;
   code: string;
@@ -72,6 +74,7 @@ export interface CycleResultInput {
   confirmed: boolean;
 }
 export interface PackageLoad {
+  review?: ReviewStatus;
   loadId: string;
   loadCode: string;
   state: SterilizationLoad["state"];

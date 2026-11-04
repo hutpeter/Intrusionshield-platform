@@ -5,6 +5,10 @@ import type {
   PackageSummary,
   PackageInput,
   SterilizationLoad,
+  LoadReview,
+  ReviewSummary,
+  ReviewQueueItem,
+  ReviewInput,
   LoadSummary,
   LoadInput,
   CycleResultInput,
@@ -25,14 +29,15 @@ export interface Session {
   authenticated: boolean;
   csrf: string;
   expiresAt: number;
-  role?: "operator" | "viewer";
+  role?: "operator" | "viewer" | "reviewer";
   tenantId?: string;
   actorId?: string;
   facilityId?: string;
   facilityName?: string;
   timeZone?: string;
-  actors?: Record<string, "operator" | "viewer">;
+  actors?: Record<string, "operator" | "viewer" | "reviewer">;
   canWrite?: boolean;
+  canReview?: boolean;
 }
 export interface Page<T> {
   items: T[];
@@ -116,8 +121,10 @@ async function checkedSession(
       (!value.tenantId ||
         !value.facilityId ||
         !value.actorId ||
-        !["operator", "viewer"].includes(value.role ?? "") ||
-        typeof value.canWrite !== "boolean"))
+        !["operator", "viewer", "reviewer"].includes(value.role ?? "") ||
+        typeof value.canWrite !== "boolean" ||
+        (value.role === "reviewer" &&
+          (value.canReview !== true || value.canWrite !== false))))
   )
     throw new ApiError(503, "SERVICE_UNAVAILABLE");
   return value;
@@ -166,7 +173,57 @@ async function checkedPackage(s: Session, promise: Promise<SterilePackage>) {
     throw new ApiError(503, "SERVICE_UNAVAILABLE");
   return x;
 }
+async function checkedReview(s: Session, promise: Promise<LoadReview>) {
+  const r = await scoped(s, promise);
+  if (
+    !r.loadSnapshot ||
+    r.loadSnapshot.tenantId !== s.tenantId ||
+    r.loadSnapshot.facilityId !== s.facilityId ||
+    r.loadSnapshot.id !== r.loadId ||
+    r.loadSnapshot.version !== r.loadVersion ||
+    !Array.isArray(r.decisions)
+  )
+    throw new ApiError(503, "SERVICE_UNAVAILABLE");
+  return r;
+}
 export const api = {
+  reviewQueue: (s: Session, n: number, signal: AbortSignal) =>
+    scopedPage<ReviewQueueItem>(s, base(s) + "/reviews/queue", n, signal),
+  reviews: (s: Session, n: number, signal: AbortSignal) =>
+    scopedPage<ReviewSummary>(s, base(s) + "/reviews", n, signal),
+  review: (s: Session, id: string, signal: AbortSignal, version?: number) =>
+    checkedReview(
+      s,
+      call<LoadReview>(
+        base(s) +
+          "/reviews/" +
+          encodeURIComponent(id) +
+          (version === undefined ? "" : "/versions/" + version),
+        signal,
+      ),
+    ),
+  decideReview: (s: Session, body: ReviewInput, signal: AbortSignal) =>
+    checkedReview(
+      s,
+      call<LoadReview>(base(s) + "/reviews", signal, body, s.csrf),
+    ),
+  reviewHistory: (s: Session, id: string, n: number, signal: AbortSignal) =>
+    scopedPage<SterileAuditEvent>(
+      s,
+      base(s) + "/reviews/" + encodeURIComponent(id) + "/history",
+      n,
+      signal,
+    ),
+  reviewExample: (s: Session, requestId: string, signal: AbortSignal) =>
+    scoped(
+      s,
+      call<SterilizationLoad>(
+        "/preview/review-example",
+        signal,
+        { requestId },
+        s.csrf,
+      ),
+    ),
   loads: (s: Session, n: number, signal: AbortSignal) =>
     scopedPage<LoadSummary>(s, base(s) + "/loads", n, signal),
   load: (s: Session, id: string, signal: AbortSignal, version?: number) =>
@@ -431,8 +488,11 @@ export const api = {
       signal,
     ),
   session: (signal: AbortSignal) => checkedSession("/preview/session", signal),
-  login: (role: "operator" | "viewer", s: Session, signal: AbortSignal) =>
-    checkedSession("/preview/login", signal, { role }, s.csrf),
+  login: (
+    role: "operator" | "viewer" | "reviewer",
+    s: Session,
+    signal: AbortSignal,
+  ) => checkedSession("/preview/login", signal, { role }, s.csrf),
   logout: (s: Session, signal: AbortSignal) =>
     checkedSession("/preview/logout", signal, {}, s.csrf),
   types: (s: Session, n: number, signal: AbortSignal) =>

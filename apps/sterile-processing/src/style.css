@@ -1031,6 +1031,8 @@ td {
   body:has(.package-label)
     :is(
       .masthead,
+      .tray-tabs,
+      .demo-example,
       .demo-banner,
       .sidebar,
       .page-heading,

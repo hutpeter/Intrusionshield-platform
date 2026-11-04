@@ -1,3 +1,4 @@
+import { reviewLabels } from "./review-text";
 import { cycleLabels } from "./cycle-text";
 import { useEffect, useRef, useState } from "react";
 import type {
@@ -271,7 +272,14 @@ export function PackagingWorkspace({
     }
   }
   async function print() {
-    if (!detail || past || detail.state !== "packaged" || busy || !label)
+    if (
+      !detail ||
+      past ||
+      detail.state !== "packaged" ||
+      busy ||
+      !label ||
+      detail.activeLoad?.review?.state === "released"
+    )
       return;
     const c = new AbortController();
     pending.current = c;
@@ -279,7 +287,11 @@ export function PackagingWorkspace({
     try {
       const current = await api.package(session, detail.id, c.signal);
       if (c.signal.aborted) return;
-      if (current.state !== "packaged" || current.version !== detail.version) {
+      if (
+        current.state !== "packaged" ||
+        current.version !== detail.version ||
+        current.activeLoad?.review?.state === "released"
+      ) {
         setDetail(current);
         setLabel(false);
         throw new ApiError(409, "PACKAGING_BLOCKED");
@@ -317,7 +329,9 @@ export function PackagingWorkspace({
         {d.activeLoad && (
           <p className="readonly-note">
             {cycleLabels(language).title}: {d.activeLoad.loadCode} ·{" "}
-            {cycleLabels(language)[d.activeLoad.state]}
+            {d.activeLoad.review
+              ? reviewLabels(language)[d.activeLoad.review.state]
+              : cycleLabels(language)[d.activeLoad.state]}
           </p>
         )}
         <dl className="details-grid">
@@ -710,11 +724,12 @@ export function PackagingWorkspace({
             <section className="panel">
               <div className="panel-heading">
                 <h2>{p.label}</h2>
-                {session.canWrite && (
-                  <button disabled={busy} onClick={() => void print()}>
-                    {p.print}
-                  </button>
-                )}
+                {session.canWrite &&
+                  detail.activeLoad?.review?.state !== "released" && (
+                    <button disabled={busy} onClick={() => void print()}>
+                      {p.print}
+                    </button>
+                  )}
               </div>
               <p className="muted">{p.reconcile}</p>
               <section className="package-label" aria-label={p.internalLabel}>
