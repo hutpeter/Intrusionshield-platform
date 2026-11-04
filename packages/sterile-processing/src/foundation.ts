@@ -1,3 +1,4 @@
+import type { SterilePackage, PackageSummary } from "./packaging-types.js";
 import type { ProcessingEpisode } from "./processing-types.js";
 import type { TrayDefinition, TrayAssembly } from "./tray-types.js";
 import { createHash } from "node:crypto";
@@ -43,6 +44,8 @@ export interface SterileAuditEvent {
   actorId: string;
   at: string;
   action:
+    | "package-created"
+    | "package-voided"
     | "inspection-recorded"
     | "processing-received"
     | "cleaning-started"
@@ -66,13 +69,30 @@ export type SterileRecord =
   | Instrument
   | TrayDefinition
   | TrayAssembly
-  | ProcessingEpisode;
+  | ProcessingEpisode
+  | SterilePackage;
 export interface CommandReceipt {
   hash: string;
   result: SterileRecord;
 }
 /** All methods are scoped to the transaction's tenant/facility. Writes and audit commit together. */
 export interface SterileTransaction {
+  findPackage(id: string): Promise<SterilePackage | null>;
+  findPackageByCode(code: string): Promise<SterilePackage | null>;
+  listPackages(page: number): Promise<PackageSummary[]>;
+  insertPackage(item: SterilePackage): Promise<void>;
+  updatePackage(item: SterilePackage, expected: number): Promise<void>;
+  insertPackageVersion(item: SterilePackage): Promise<void>;
+  findPackageVersion(
+    id: string,
+    version: number,
+  ): Promise<SterilePackage | null>;
+  findActivePackage(
+    assemblyId: string,
+  ): Promise<{ packageId: string; packageCode: string } | null>;
+  reservePackage(item: SterilePackage): Promise<void>;
+  releasePackage(item: SterilePackage): Promise<void>;
+  findLatestProcessing(instrumentId: string): Promise<ProcessingEpisode | null>;
   findProcessing(id: string): Promise<ProcessingEpisode | null>;
   findProcessingByCode(code: string): Promise<ProcessingEpisode | null>;
   listProcessing(page: number): Promise<ProcessingEpisode[]>;
@@ -140,7 +160,8 @@ export class SterileError extends Error {
       | "CONFLICT"
       | "ASSEMBLY_INCOMPLETE"
       | "INSTRUMENT_ASSIGNED"
-      | "PROCESSING_HOLD",
+      | "PROCESSING_HOLD"
+      | "PACKAGING_BLOCKED",
   ) {
     super(code);
   }

@@ -1,6 +1,9 @@
 import type {
   ProcessingEpisode,
   InspectInput,
+  SterilePackage,
+  PackageSummary,
+  PackageInput,
   ReceiveInput,
   StartCleaningInput,
   FinishCleaningInput,
@@ -146,7 +149,84 @@ async function scopedPage<T extends { tenantId: string; facilityId: string }>(
     throw new ApiError(503, "SERVICE_UNAVAILABLE");
   return value;
 }
+async function checkedPackage(s: Session, promise: Promise<SterilePackage>) {
+  const x = await scoped(s, promise);
+  if (
+    !x.assemblySnapshot ||
+    x.assemblySnapshot.tenantId !== s.tenantId ||
+    x.assemblySnapshot.facilityId !== s.facilityId ||
+    x.assemblySnapshot.id !== x.assemblyId ||
+    x.assemblySnapshot.version !== x.assemblyVersion ||
+    !Array.isArray(x.inspectionProofs)
+  )
+    throw new ApiError(503, "SERVICE_UNAVAILABLE");
+  return x;
+}
 export const api = {
+  packages: (s: Session, n: number, signal: AbortSignal) =>
+    scopedPage<PackageSummary>(s, base(s) + "/packages", n, signal),
+  package: (s: Session, id: string, signal: AbortSignal, version?: number) =>
+    checkedPackage(
+      s,
+      call<SterilePackage>(
+        base(s) +
+          "/packages/" +
+          encodeURIComponent(id) +
+          (version === undefined ? "" : "/versions/" + version),
+        signal,
+      ),
+    ),
+  pack: (s: Session, body: PackageInput, signal: AbortSignal) =>
+    checkedPackage(
+      s,
+      call<SterilePackage>(base(s) + "/packages", signal, body, s.csrf),
+    ),
+  voidPackage: (
+    s: Session,
+    id: string,
+    body: {
+      requestId: string;
+      version: number;
+      reason: string;
+      confirmed: boolean;
+    },
+    signal: AbortSignal,
+  ) =>
+    checkedPackage(
+      s,
+      call<SterilePackage>(
+        base(s) + "/packages/" + encodeURIComponent(id) + "/void",
+        signal,
+        body,
+        s.csrf,
+      ),
+    ),
+  packageHistory: (s: Session, id: string, n: number, signal: AbortSignal) =>
+    scopedPage<SterileAuditEvent>(
+      s,
+      base(s) + "/packages/" + encodeURIComponent(id) + "/history",
+      n,
+      signal,
+    ),
+  packagingExample: (s: Session, requestId: string, signal: AbortSignal) =>
+    scoped(
+      s,
+      call<TrayAssembly>(
+        "/preview/packaging-example",
+        signal,
+        { requestId },
+        s.csrf,
+      ),
+    ),
+  async allAssemblies(s: Session, signal: AbortSignal) {
+    const all: TrayAssembly[] = [];
+    for (let n = 1; n <= 20; n++) {
+      const p = await api.assemblies(s, n, signal);
+      all.push(...p.items);
+      if (!p.hasMore) return all;
+    }
+    throw new ApiError(503, "SERVICE_UNAVAILABLE");
+  },
   inspectionExample: (s: Session, requestId: string, signal: AbortSignal) =>
     scoped(
       s,

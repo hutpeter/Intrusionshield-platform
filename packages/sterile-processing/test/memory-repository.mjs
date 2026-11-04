@@ -1,6 +1,9 @@
 /** SQL-free test adapter only. Never loaded by the service composition root. */
 export class MemoryRepository {
   state = {
+    packages: [],
+    packageVersions: [],
+    packageAssignments: [],
     processing: [],
     processingVersions: [],
     processingHolds: [],
@@ -29,6 +32,94 @@ export class MemoryRepository {
       x.tenantId === scope.tenantId && x.facilityId === scope.facilityId;
     const read = (x) => (x ? structuredClone(x) : null);
     const tx = {
+      findPackage: async (id) =>
+        read(s.packages.find((x) => own(x) && x.id === id)),
+      findPackageByCode: async (code) =>
+        read(s.packages.find((x) => own(x) && x.code === code)),
+      listPackages: async (page) =>
+        s.packages
+          .filter(own)
+          .slice()
+          .reverse()
+          .slice((page - 1) * 50, (page - 1) * 50 + 51)
+          .map((x) => ({
+            id: x.id,
+            tenantId: x.tenantId,
+            facilityId: x.facilityId,
+            code: x.code,
+            assemblyId: x.assemblyId,
+            state: x.state,
+            version: x.version,
+            createdAt: x.createdAt,
+            trayName: x.assemblySnapshot.definitionSnapshot.name,
+            instrumentCount: x.assemblySnapshot.instruments.length,
+          })),
+      insertPackage: async (x) => {
+        if (
+          !own(x) ||
+          s.packages.some((i) => own(i) && (i.id === x.id || i.code === x.code))
+        )
+          throw Error("constraint");
+        s.packages.push(structuredClone(x));
+      },
+      updatePackage: async (x, version) => {
+        const n = s.packages.findIndex(
+          (i) => own(i) && i.id === x.id && i.version === version,
+        );
+        if (n < 0) throw Error("conflict");
+        s.packages[n] = structuredClone(x);
+      },
+      insertPackageVersion: async (x) => {
+        if (
+          !own(x) ||
+          s.packageVersions.some(
+            (i) => own(i) && i.id === x.id && i.version === x.version,
+          )
+        )
+          throw Error("constraint");
+        s.packageVersions.push(structuredClone(x));
+      },
+      findPackageVersion: async (id, version) =>
+        read(
+          s.packageVersions.find(
+            (x) => own(x) && x.id === id && x.version === version,
+          ),
+        ),
+      findActivePackage: async (id) => {
+        const a = s.packageAssignments.find(
+            (x) => own(x) && x.assemblyId === id,
+          ),
+          p = a && s.packages.find((x) => own(x) && x.id === a.packageId);
+        return p ? { packageId: p.id, packageCode: p.code } : null;
+      },
+      reservePackage: async (x) => {
+        if (
+          !own(x) ||
+          s.packageAssignments.some(
+            (i) => own(i) && i.assemblyId === x.assemblyId,
+          )
+        )
+          throw Error("constraint");
+        s.packageAssignments.push({
+          ...scope,
+          assemblyId: x.assemblyId,
+          packageId: x.id,
+        });
+      },
+      releasePackage: async (x) => {
+        const n = s.packageAssignments.findIndex(
+          (i) =>
+            own(i) && i.assemblyId === x.assemblyId && i.packageId === x.id,
+        );
+        if (n < 0) throw Error("conflict");
+        s.packageAssignments.splice(n, 1);
+      },
+      findLatestProcessing: async (id) =>
+        read(
+          s.processing
+            .filter((x) => own(x) && x.instruments.some((i) => i.id === id))
+            .at(-1),
+        ),
       findProcessing: async (id) =>
         read(s.processing.find((x) => own(x) && x.id === id)),
       findProcessingByCode: async (code) =>

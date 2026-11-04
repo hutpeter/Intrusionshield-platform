@@ -3,6 +3,7 @@ import {
   InstrumentRegistry,
   TrayRegistry,
   ProcessingRegistry,
+  PackagingRegistry,
   SterileError,
   sterileUuid,
   type SterileRepository,
@@ -27,7 +28,9 @@ export interface SterileDependencies {
       | "trays:read"
       | "trays:write"
       | "processing:read"
-      | "processing:write",
+      | "processing:write"
+      | "packaging:read"
+      | "packaging:write",
   ) => Promise<boolean>;
 }
 function body(value: unknown, keys: string[]): Record<string, unknown> {
@@ -120,17 +123,21 @@ export function createSterileApp(
         facilityId,
       };
       const readOnly = req.method === "GET" || req.method === "HEAD";
-      const permission = req.path.startsWith("/processing")
+      const permission = req.path.startsWith("/packages")
         ? readOnly
-          ? "processing:read"
-          : "processing:write"
-        : req.path.startsWith("/tray-")
+          ? "packaging:read"
+          : "packaging:write"
+        : req.path.startsWith("/processing")
           ? readOnly
-            ? "trays:read"
-            : "trays:write"
-          : readOnly
-            ? "instruments:read"
-            : "instruments:write";
+            ? "processing:read"
+            : "processing:write"
+          : req.path.startsWith("/tray-")
+            ? readOnly
+              ? "trays:read"
+              : "trays:write"
+            : readOnly
+              ? "instruments:read"
+              : "instruments:write";
       if (
         (await dependencies.authorize!(scope, "sterile.core", permission)) !==
         true
@@ -472,6 +479,70 @@ export function createSterileApp(
       ),
     );
   });
+  const packaging = () => new PackagingRegistry(dependencies.repository!);
+  app.get(prefix + "/packages", async (req, res) =>
+    res.json(await packaging().list(res.locals.scope, page(req))),
+  );
+  app.get(prefix + "/packages/:id", async (req, res) => {
+    noQuery(req);
+    res.json(
+      await packaging().get(res.locals.scope, sterileUuid(req.params.id)),
+    );
+  });
+  app.get(prefix + "/packages/:id/versions/:version", async (req, res) => {
+    noQuery(req);
+    res.json(
+      await packaging().get(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        Number(req.params.version),
+      ),
+    );
+  });
+  app.get(prefix + "/packages/:id/history", async (req, res) =>
+    res.json(
+      await packaging().history(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        page(req),
+      ),
+    ),
+  );
+  app.post(prefix + "/packages", async (req, res) => {
+    noQuery(req);
+    const v = body(req.body, [
+      "requestId",
+      "code",
+      "assemblyId",
+      "assemblyVersion",
+      "material",
+      "materialLot",
+      "procedure",
+      "procedureVersion",
+      "sealChecked",
+      "contentsChecked",
+      "confirmed",
+    ]);
+    res
+      .status(201)
+      .json(
+        await packaging().pack(
+          res.locals.scope,
+          v as unknown as Parameters<PackagingRegistry["pack"]>[1],
+        ),
+      );
+  });
+  app.post(prefix + "/packages/:id/void", async (req, res) => {
+    noQuery(req);
+    const v = body(req.body, ["requestId", "version", "reason", "confirmed"]);
+    res.json(
+      await packaging().void(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        v as unknown as Parameters<PackagingRegistry["void"]>[2],
+      ),
+    );
+  });
   app.use((_req, res) => {
     res.status(404).json({ error: "NOT_FOUND" });
   });
@@ -494,6 +565,7 @@ export function createSterileApp(
               ASSEMBLY_INCOMPLETE: 409,
               INSTRUMENT_ASSIGNED: 409,
               PROCESSING_HOLD: 409,
+              PACKAGING_BLOCKED: 409,
             }[code as SterileError["code"]]
           : parser.type === "entity.too.large"
             ? 413

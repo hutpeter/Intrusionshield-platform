@@ -217,3 +217,46 @@ test("inspection API sends individual results, expected version, confirmation an
   assert.deepEqual(JSON.parse(calls[0].options.body), body);
   assert.equal(calls[0].options.headers["x-sterile-csrf"], session.csrf);
 });
+test("package API validates nested assembly scope, preserves versioned fields and sends CSRF", async (t) => {
+  let foreign = false;
+  const calls = [];
+  fake(t, async (path, options) => {
+    calls.push({ path, options });
+    return response({
+      ...session,
+      id: "package",
+      assemblyId: "assembly",
+      assemblyVersion: 3,
+      assemblySnapshot: {
+        ...session,
+        id: "assembly",
+        version: 3,
+        facilityId: foreign ? "other" : session.facilityId,
+      },
+      inspectionProofs: [],
+    });
+  });
+  const body = {
+    requestId: "request",
+    code: "PACK",
+    assemblyId: "assembly",
+    assemblyVersion: 3,
+    material: "DEMO",
+    materialLot: "LOT",
+    procedure: "PACK-DEMO",
+    procedureVersion: "1",
+    sealChecked: true,
+    contentsChecked: true,
+    confirmed: true,
+  };
+  await api.pack(session, body, signal());
+  assert.deepEqual(JSON.parse(calls[0].options.body), body);
+  assert.equal(calls[0].options.headers["x-sterile-csrf"], session.csrf);
+  await api.package(session, "package", signal(), 1);
+  assert.ok(calls[1].path.endsWith("/versions/1"));
+  foreign = true;
+  await assert.rejects(
+    api.package(session, "package", signal()),
+    (x) => x.code === "SERVICE_UNAVAILABLE",
+  );
+});

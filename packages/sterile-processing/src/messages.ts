@@ -1,4 +1,6 @@
 const es = {
+  PACKAGING_BLOCKED:
+    "Revise el armado completo, sus inspecciones previas y cualquier paquete activo antes de continuar.",
   PROCESSING_HOLD:
     "El instrumento está retenido en recepción, limpieza o inspección pendiente.",
   title: "Procesamiento estéril y gestión de instrumental",
@@ -28,6 +30,8 @@ const es = {
 };
 type Messages = Record<keyof typeof es, string>;
 const en: Messages = {
+  PACKAGING_BLOCKED:
+    "Review the completed assembly, prior inspections and any active package before continuing.",
   PROCESSING_HOLD:
     "The instrument is held for receiving, cleaning or pending inspection.",
   title: "Sterile Processing & Instrument Management",
@@ -57,6 +61,8 @@ const en: Messages = {
     "Service unavailable. The change has not been confirmed.",
 };
 const fr: Messages = {
+  PACKAGING_BLOCKED:
+    "Vérifiez l’assemblage complet, les inspections antérieures et tout emballage actif avant de continuer.",
   PROCESSING_HOLD:
     "L’instrument est retenu en réception, nettoyage ou attente d’inspection.",
   title: "Stérilisation et gestion des instruments",

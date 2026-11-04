@@ -390,6 +390,8 @@ export class TrayRegistry extends SterileRegistryBase {
           (input.action === "complete" && current.state !== "draft")
         )
           throw new SterileError("CONFLICT");
+        if (input.action === "disassemble" && (await tx.findActivePackage(key)))
+          throw new SterileError("PACKAGING_BLOCKED");
         if (input.action === "complete") {
           const fresh = await items(
             tx,

@@ -15,6 +15,8 @@ new dummy instrument while keeping the completed demonstration tray intact.
 See [inspection](INSPECTION.md) for the latest single smoke check and the
 [testing register](TESTING-REGISTER.md) for completed and deferred verification.
 
+See [packaging and labels](PACKAGING.md) for the latest one-check walkthrough.
+
 ## What works
 
 - Receiving episodes, attributed cleaning attempts, failure/retry evidence and holds pending inspection.

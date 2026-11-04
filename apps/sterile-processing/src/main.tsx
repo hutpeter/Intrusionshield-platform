@@ -1,3 +1,5 @@
+import { PackagingWorkspace } from "./Packaging";
+import { packagingLabels } from "./packaging-text";
 import { ProcessingWorkspace } from "./Processing";
 import { processingLabels } from "./processing-text";
 import { TrayWorkspace } from "./Trays";
@@ -236,7 +238,7 @@ function Workspace({
   onExpired: () => void;
 }) {
   const [tab, setTab] = useState<
-      "instruments" | "types" | "trays" | "processing"
+      "instruments" | "types" | "trays" | "processing" | "packaging"
     >("instruments"),
     [page, setPage] = useState(1),
     [historyPage, setHistoryPage] = useState(1),
@@ -284,7 +286,7 @@ function Workspace({
     setError(null);
     void (async () => {
       try {
-        if (tab === "trays" || tab === "processing") {
+        if (tab === "trays" || tab === "processing" || tab === "packaging") {
           setLoading(false);
           return;
         }
@@ -365,7 +367,9 @@ function Workspace({
       setNotice(null);
     });
   }
-  function navigate(target: "instruments" | "types" | "trays" | "processing") {
+  function navigate(
+    target: "instruments" | "types" | "trays" | "processing" | "packaging",
+  ) {
     guard(() => {
       setSelected(null);
       setTab(target);
@@ -538,6 +542,14 @@ function Workspace({
             <span aria-hidden="true">↻</span>
             {processingLabels(language).title}
           </button>
+          <button
+            aria-current={tab === "packaging" ? "page" : undefined}
+            disabled={busy}
+            onClick={() => navigate("packaging")}
+          >
+            <span aria-hidden="true">▣</span>
+            {packagingLabels(language).title}
+          </button>
         </nav>
         <div className="sidebar-bottom">
           <p>{t.facility}</p>
@@ -554,7 +566,7 @@ function Workspace({
         </div>
       </aside>
       <main className="content">
-        {tab !== "trays" && tab !== "processing" && (
+        {tab !== "trays" && tab !== "processing" && tab !== "packaging" && (
           <div className="page-heading">
             <div>
               <p className="eyebrow">{t.facility}</p>
@@ -795,6 +807,17 @@ function Workspace({
               </button>
             </div>
           </form>
+        )}
+        {tab === "packaging" && (
+          <PackagingWorkspace
+            key={trayReset}
+            session={session}
+            language={language}
+            blocked={blocked}
+            onExpired={onExpired}
+            onDirty={setTrayDirty}
+            onBusy={setTrayBusy}
+          />
         )}
         {tab === "processing" && (
           <ProcessingWorkspace

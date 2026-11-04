@@ -231,3 +231,6 @@ export { sterileCatalogues, sterileMessages } from "./messages.js";
 
 export * from "./processing-types.js";
 export { ProcessingRegistry } from "./processing.js";
+
+export * from "./packaging-types.js";
+export { PackagingRegistry } from "./packaging.js";

@@ -1010,3 +1010,59 @@ td {
   margin-top: 0.5rem;
   color: var(--muted);
 }
+.package-label {
+  border: 2px solid #183f36;
+  padding: 1.2rem;
+  max-width: 36rem;
+  background: white;
+  color: #111;
+  overflow-wrap: anywhere;
+}
+.package-label p {
+  margin: 0.45rem 0;
+}
+.package-label .label-warning {
+  display: block;
+  padding: 0.5rem;
+  border: 2px solid #111;
+  font-size: 1.1rem;
+}
+@media print {
+  body:has(.package-label)
+    :is(
+      .masthead,
+      .demo-banner,
+      .sidebar,
+      .page-heading,
+      .readonly-note,
+      .success,
+      .history,
+      .global-alert,
+      footer
+    ) {
+    display: none !important;
+  }
+  body:has(.package-label) .panel:not(:has(.package-label)) {
+    display: none !important;
+  }
+  body:has(.package-label) .panel:has(.package-label) > :not(.package-label) {
+    display: none !important;
+  }
+  body:has(.package-label)
+    :is(.shell, .workspace, .content, .panel:has(.package-label)) {
+    display: block !important;
+    min-height: 0 !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+  body:has(.package-label) .package-label {
+    width: 95mm;
+    max-width: 100%;
+    margin: 0;
+    font-size: 10pt;
+    break-inside: avoid;
+  }
+}
