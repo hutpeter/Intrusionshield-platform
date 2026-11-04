@@ -4,6 +4,10 @@ import type {
   SterilePackage,
   PackageSummary,
   PackageInput,
+  SterilizationLoad,
+  LoadSummary,
+  LoadInput,
+  CycleResultInput,
   ReceiveInput,
   StartCleaningInput,
   FinishCleaningInput,
@@ -163,6 +167,125 @@ async function checkedPackage(s: Session, promise: Promise<SterilePackage>) {
   return x;
 }
 export const api = {
+  loads: (s: Session, n: number, signal: AbortSignal) =>
+    scopedPage<LoadSummary>(s, base(s) + "/loads", n, signal),
+  load: (s: Session, id: string, signal: AbortSignal, version?: number) =>
+    scoped(
+      s,
+      call<SterilizationLoad>(
+        base(s) +
+          "/loads/" +
+          encodeURIComponent(id) +
+          (version === undefined ? "" : "/versions/" + version),
+        signal,
+      ),
+    ),
+  createLoad: (s: Session, body: LoadInput, signal: AbortSignal) =>
+    scoped(
+      s,
+      call<SterilizationLoad>(base(s) + "/loads", signal, body, s.csrf),
+    ),
+  loadContents: (
+    s: Session,
+    id: string,
+    body: {
+      requestId: string;
+      version: number;
+      packageIds: string[];
+      confirmed: boolean;
+    },
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<SterilizationLoad>(
+        base(s) + "/loads/" + encodeURIComponent(id) + "/contents",
+        signal,
+        body,
+        s.csrf,
+      ),
+    ),
+  startCycle: (
+    s: Session,
+    id: string,
+    body: {
+      requestId: string;
+      version: number;
+      cycleReference: string;
+      confirmed: boolean;
+    },
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<SterilizationLoad>(
+        base(s) + "/loads/" + encodeURIComponent(id) + "/start",
+        signal,
+        body,
+        s.csrf,
+      ),
+    ),
+  finishCycle: (
+    s: Session,
+    id: string,
+    body: CycleResultInput,
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<SterilizationLoad>(
+        base(s) + "/loads/" + encodeURIComponent(id) + "/finish",
+        signal,
+        body,
+        s.csrf,
+      ),
+    ),
+  cancelLoad: (
+    s: Session,
+    id: string,
+    body: {
+      requestId: string;
+      version: number;
+      reason: string;
+      confirmed: boolean;
+    },
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<SterilizationLoad>(
+        base(s) + "/loads/" + encodeURIComponent(id) + "/cancel",
+        signal,
+        body,
+        s.csrf,
+      ),
+    ),
+  loadHistory: (s: Session, id: string, n: number, signal: AbortSignal) =>
+    scopedPage<SterileAuditEvent>(
+      s,
+      base(s) + "/loads/" + encodeURIComponent(id) + "/history",
+      n,
+      signal,
+    ),
+  cycleExample: (s: Session, requestId: string, signal: AbortSignal) =>
+    scoped(
+      s,
+      call<SterilizationLoad>(
+        "/preview/cycle-example",
+        signal,
+        { requestId },
+        s.csrf,
+      ),
+    ),
+  async allPackages(s: Session, signal: AbortSignal) {
+    const rows: PackageSummary[] = [];
+    for (let n = 1; n <= 20; n++) {
+      const p = await api.packages(s, n, signal);
+      rows.push(...p.items);
+      if (!p.hasMore) return rows;
+    }
+    throw new ApiError(503, "SERVICE_UNAVAILABLE");
+  },
   packages: (s: Session, n: number, signal: AbortSignal) =>
     scopedPage<PackageSummary>(s, base(s) + "/packages", n, signal),
   package: (s: Session, id: string, signal: AbortSignal, version?: number) =>

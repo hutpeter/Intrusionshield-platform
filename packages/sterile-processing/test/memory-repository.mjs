@@ -1,6 +1,10 @@
 /** SQL-free test adapter only. Never loaded by the service composition root. */
 export class MemoryRepository {
   state = {
+    loads: [],
+    loadVersions: [],
+    loadAssignments: [],
+    machineCycles: [],
     packages: [],
     packageVersions: [],
     packageAssignments: [],
@@ -32,6 +36,96 @@ export class MemoryRepository {
       x.tenantId === scope.tenantId && x.facilityId === scope.facilityId;
     const read = (x) => (x ? structuredClone(x) : null);
     const tx = {
+      findLoad: async (id) => read(s.loads.find((x) => own(x) && x.id === id)),
+      findLoadByCode: async (code) =>
+        read(s.loads.find((x) => own(x) && x.code === code)),
+      listLoads: async (page) =>
+        s.loads
+          .filter(own)
+          .slice()
+          .reverse()
+          .slice((page - 1) * 50, (page - 1) * 50 + 51)
+          .map((x) => ({
+            id: x.id,
+            tenantId: x.tenantId,
+            facilityId: x.facilityId,
+            code: x.code,
+            sterilizer: x.sterilizer,
+            state: x.state,
+            version: x.version,
+            createdAt: x.createdAt,
+            packageCount: x.packages.length,
+          })),
+      insertLoad: async (x) => {
+        if (
+          !own(x) ||
+          s.loads.some((i) => own(i) && (i.id === x.id || i.code === x.code))
+        )
+          throw Error("constraint");
+        s.loads.push(structuredClone(x));
+      },
+      updateLoad: async (x, version) => {
+        const n = s.loads.findIndex(
+          (i) => own(i) && i.id === x.id && i.version === version,
+        );
+        if (n < 0) throw Error("conflict");
+        s.loads[n] = structuredClone(x);
+      },
+      insertLoadVersion: async (x) => {
+        if (
+          !own(x) ||
+          s.loadVersions.some(
+            (i) => own(i) && i.id === x.id && i.version === x.version,
+          )
+        )
+          throw Error("constraint");
+        s.loadVersions.push(structuredClone(x));
+      },
+      findLoadVersion: async (id, version) =>
+        read(
+          s.loadVersions.find(
+            (x) => own(x) && x.id === id && x.version === version,
+          ),
+        ),
+      findPackageLoad: async (id) => {
+        const a = s.loadAssignments.find((x) => own(x) && x.packageId === id),
+          l = a && s.loads.find((x) => own(x) && x.id === a.loadId);
+        return l ? { loadId: l.id, loadCode: l.code, state: l.state } : null;
+      },
+      replaceLoadAssignments: async (l) => {
+        s.loadAssignments = s.loadAssignments.filter(
+          (x) => !(own(x) && x.loadId === l.id),
+        );
+        if (l.state !== "cancelled")
+          for (const p of l.packages) {
+            if (s.loadAssignments.some((x) => own(x) && x.packageId === p.id))
+              throw Error("constraint");
+            s.loadAssignments.push({ ...scope, loadId: l.id, packageId: p.id });
+          }
+      },
+      findMachineCycle: async (sterilizer, reference) =>
+        s.machineCycles.find(
+          (x) =>
+            own(x) && x.sterilizer === sterilizer && x.reference === reference,
+        )?.loadId ?? null,
+      reserveMachineCycle: async (l) => {
+        if (
+          !own(l) ||
+          s.machineCycles.some(
+            (x) =>
+              own(x) &&
+              x.sterilizer === l.sterilizer &&
+              x.reference === l.cycleReference,
+          )
+        )
+          throw Error("constraint");
+        s.machineCycles.push({
+          ...scope,
+          sterilizer: l.sterilizer,
+          reference: l.cycleReference,
+          loadId: l.id,
+        });
+      },
       findPackage: async (id) =>
         read(s.packages.find((x) => own(x) && x.id === id)),
       findPackageByCode: async (code) =>

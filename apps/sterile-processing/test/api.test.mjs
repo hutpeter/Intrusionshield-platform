@@ -260,3 +260,36 @@ test("package API validates nested assembly scope, preserves versioned fields an
     (x) => x.code === "SERVICE_UNAVAILABLE",
   );
 });
+test("cycle API preserves evidence and expected version with CSRF and rejects foreign scope", async (t) => {
+  let foreign = false;
+  const calls = [];
+  fake(t, async (path, options) => {
+    calls.push({ path, options });
+    return response({
+      ...session,
+      facilityId: foreign ? "other" : session.facilityId,
+      id: "load",
+      state: "awaiting_review",
+    });
+  });
+  const body = {
+    requestId: "request",
+    version: 2,
+    outcome: "passed",
+    cycleEvidence: "CYCLE-DEMO",
+    indicatorEvidence: "INDICATOR-DEMO",
+    note: "",
+    confirmed: true,
+  };
+  await api.finishCycle(session, "load", body, signal());
+  assert.ok(calls[0].path.endsWith("/loads/load/finish"));
+  assert.deepEqual(JSON.parse(calls[0].options.body), body);
+  assert.equal(calls[0].options.headers["x-sterile-csrf"], session.csrf);
+  await api.load(session, "load", signal(), 1);
+  assert.ok(calls[1].path.endsWith("/versions/1"));
+  foreign = true;
+  await assert.rejects(
+    api.load(session, "load", signal()),
+    (e) => e.code === "SERVICE_UNAVAILABLE",
+  );
+});

@@ -1,3 +1,5 @@
+import { CycleWorkspace } from "./Cycles";
+import { cycleLabels } from "./cycle-text";
 import { PackagingWorkspace } from "./Packaging";
 import { packagingLabels } from "./packaging-text";
 import { ProcessingWorkspace } from "./Processing";
@@ -238,7 +240,7 @@ function Workspace({
   onExpired: () => void;
 }) {
   const [tab, setTab] = useState<
-      "instruments" | "types" | "trays" | "processing" | "packaging"
+      "instruments" | "types" | "trays" | "processing" | "packaging" | "cycles"
     >("instruments"),
     [page, setPage] = useState(1),
     [historyPage, setHistoryPage] = useState(1),
@@ -286,7 +288,12 @@ function Workspace({
     setError(null);
     void (async () => {
       try {
-        if (tab === "trays" || tab === "processing" || tab === "packaging") {
+        if (
+          tab === "trays" ||
+          tab === "processing" ||
+          tab === "packaging" ||
+          tab === "cycles"
+        ) {
           setLoading(false);
           return;
         }
@@ -368,7 +375,8 @@ function Workspace({
     });
   }
   function navigate(
-    target: "instruments" | "types" | "trays" | "processing" | "packaging",
+    target:
+      "instruments" | "types" | "trays" | "processing" | "packaging" | "cycles",
   ) {
     guard(() => {
       setSelected(null);
@@ -550,6 +558,14 @@ function Workspace({
             <span aria-hidden="true">▣</span>
             {packagingLabels(language).title}
           </button>
+          <button
+            aria-current={tab === "cycles" ? "page" : undefined}
+            disabled={busy}
+            onClick={() => navigate("cycles")}
+          >
+            <span aria-hidden="true">◷</span>
+            {cycleLabels(language).title}
+          </button>
         </nav>
         <div className="sidebar-bottom">
           <p>{t.facility}</p>
@@ -566,60 +582,65 @@ function Workspace({
         </div>
       </aside>
       <main className="content">
-        {tab !== "trays" && tab !== "processing" && tab !== "packaging" && (
-          <div className="page-heading">
-            <div>
-              <p className="eyebrow">{t.facility}</p>
-              <h1>
-                {selected
-                  ? (detail?.code ?? t.instruments)
-                  : tab === "types"
-                    ? t.types
-                    : t.instruments}
-              </h1>
-              <p>
-                {selected
-                  ? t.notReleased
-                  : tab === "types"
-                    ? t.typeHelp
-                    : t.instrumentHelp}
-              </p>
+        {tab !== "trays" &&
+          tab !== "processing" &&
+          tab !== "packaging" &&
+          tab !== "cycles" && (
+            <div className="page-heading">
+              <div>
+                <p className="eyebrow">{t.facility}</p>
+                <h1>
+                  {selected
+                    ? (detail?.code ?? t.instruments)
+                    : tab === "types"
+                      ? t.types
+                      : t.instruments}
+                </h1>
+                <p>
+                  {selected
+                    ? t.notReleased
+                    : tab === "types"
+                      ? t.typeHelp
+                      : t.instrumentHelp}
+                </p>
+              </div>
+              <div className="page-actions">
+                {selected ? (
+                  <button
+                    aria-label={t.back}
+                    disabled={busy}
+                    onClick={() =>
+                      guard(() => {
+                        setSelected(null);
+                        setNotice(null);
+                      })
+                    }
+                  >
+                    ← {t.back}
+                  </button>
+                ) : (
+                  <button
+                    disabled={busy || loading}
+                    onClick={() => guard(() => setNonce((n) => n + 1))}
+                  >
+                    {t.reload}
+                  </button>
+                )}
+                {session.canWrite && !selected && (
+                  <button
+                    aria-label={tab === "types" ? t.newType : t.newInstrument}
+                    className="primary"
+                    disabled={busy || loading || !!form}
+                    onClick={() =>
+                      begin(tab === "types" ? "type" : "instrument")
+                    }
+                  >
+                    ＋ {tab === "types" ? t.newType : t.newInstrument}
+                  </button>
+                )}
+              </div>
             </div>
-            <div className="page-actions">
-              {selected ? (
-                <button
-                  aria-label={t.back}
-                  disabled={busy}
-                  onClick={() =>
-                    guard(() => {
-                      setSelected(null);
-                      setNotice(null);
-                    })
-                  }
-                >
-                  ← {t.back}
-                </button>
-              ) : (
-                <button
-                  disabled={busy || loading}
-                  onClick={() => guard(() => setNonce((n) => n + 1))}
-                >
-                  {t.reload}
-                </button>
-              )}
-              {session.canWrite && !selected && (
-                <button
-                  aria-label={tab === "types" ? t.newType : t.newInstrument}
-                  className="primary"
-                  disabled={busy || loading || !!form}
-                  onClick={() => begin(tab === "types" ? "type" : "instrument")}
-                >
-                  ＋ {tab === "types" ? t.newType : t.newInstrument}
-                </button>
-              )}
-            </div>
-          </div>
-        )}
+          )}
         {!session.canWrite && <p className="readonly-note">{t.viewerNotice}</p>}
         {notice && (
           <p className="success" role="status">
@@ -807,6 +828,17 @@ function Workspace({
               </button>
             </div>
           </form>
+        )}
+        {tab === "cycles" && (
+          <CycleWorkspace
+            key={trayReset}
+            session={session}
+            language={language}
+            blocked={blocked}
+            onExpired={onExpired}
+            onDirty={setTrayDirty}
+            onBusy={setTrayBusy}
+          />
         )}
         {tab === "packaging" && (
           <PackagingWorkspace

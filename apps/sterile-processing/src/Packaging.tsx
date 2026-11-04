@@ -1,3 +1,4 @@
+import { cycleLabels } from "./cycle-text";
 import { useEffect, useRef, useState } from "react";
 import type {
   SterilePackage,
@@ -313,6 +314,12 @@ export function PackagingWorkspace({
           {p[d.state]}
         </span>
         <h2>{d.assemblySnapshot.definitionSnapshot.name}</h2>
+        {d.activeLoad && (
+          <p className="readonly-note">
+            {cycleLabels(language).title}: {d.activeLoad.loadCode} ·{" "}
+            {cycleLabels(language)[d.activeLoad.state]}
+          </p>
+        )}
         <dl className="details-grid">
           <div>
             <dt>{p.assembly}</dt>
@@ -457,7 +464,10 @@ export function PackagingWorkspace({
                 {label ? p.closeLabel : p.label}
               </button>
               {session.canWrite && (
-                <button disabled={busy || !!form} onClick={() => begin("void")}>
+                <button
+                  disabled={busy || !!form || !!detail.activeLoad}
+                  onClick={() => begin("void")}
+                >
                   {p.void}
                 </button>
               )}

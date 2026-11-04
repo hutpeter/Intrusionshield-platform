@@ -17,6 +17,8 @@ See [inspection](INSPECTION.md) for the latest single smoke check and the
 
 See [packaging and labels](PACKAGING.md) for the latest one-check walkthrough.
 
+See [loads and cycles](LOADS-CYCLES.md) for the current single smoke check.
+
 ## What works
 
 - Receiving episodes, attributed cleaning attempts, failure/retry evidence and holds pending inspection.
@@ -32,8 +34,7 @@ See [packaging and labels](PACKAGING.md) for the latest one-check walkthrough.
 - Same-origin browser sessions with HttpOnly/SameSite cookies, CSRF checks,
   host/origin validation and no browser-stored bearer token.
 
-Registration is not sterilization or clinical release. No processing-cycle,
-patient, release, equipment-control or Athena integration endpoint is enabled.
+Registration is not sterilization or clinical release. No patient, clinical-release, equipment-control or Athena integration endpoint is enabled. Cycle endpoints record manual evidence only.
 The yellow banner identifies the local dummy-data mode on every screen.
 
 ## Start on the owner's Windows machine

@@ -4,6 +4,7 @@ import {
   TrayRegistry,
   ProcessingRegistry,
   PackagingRegistry,
+  CycleRegistry,
   SterileError,
   sterileUuid,
   type SterileRepository,
@@ -30,7 +31,9 @@ export interface SterileDependencies {
       | "processing:read"
       | "processing:write"
       | "packaging:read"
-      | "packaging:write",
+      | "packaging:write"
+      | "cycles:read"
+      | "cycles:write",
   ) => Promise<boolean>;
 }
 function body(value: unknown, keys: string[]): Record<string, unknown> {
@@ -123,21 +126,25 @@ export function createSterileApp(
         facilityId,
       };
       const readOnly = req.method === "GET" || req.method === "HEAD";
-      const permission = req.path.startsWith("/packages")
+      const permission = req.path.startsWith("/loads")
         ? readOnly
-          ? "packaging:read"
-          : "packaging:write"
-        : req.path.startsWith("/processing")
+          ? "cycles:read"
+          : "cycles:write"
+        : req.path.startsWith("/packages")
           ? readOnly
-            ? "processing:read"
-            : "processing:write"
-          : req.path.startsWith("/tray-")
+            ? "packaging:read"
+            : "packaging:write"
+          : req.path.startsWith("/processing")
             ? readOnly
-              ? "trays:read"
-              : "trays:write"
-            : readOnly
-              ? "instruments:read"
-              : "instruments:write";
+              ? "processing:read"
+              : "processing:write"
+            : req.path.startsWith("/tray-")
+              ? readOnly
+                ? "trays:read"
+                : "trays:write"
+              : readOnly
+                ? "instruments:read"
+                : "instruments:write";
       if (
         (await dependencies.authorize!(scope, "sterile.core", permission)) !==
         true
@@ -543,6 +550,116 @@ export function createSterileApp(
       ),
     );
   });
+  const cycles = () => new CycleRegistry(dependencies.repository!);
+  app.get(prefix + "/loads", async (req, res) =>
+    res.json(await cycles().list(res.locals.scope, page(req))),
+  );
+  app.get(prefix + "/loads/:id", async (req, res) => {
+    noQuery(req);
+    res.json(await cycles().get(res.locals.scope, sterileUuid(req.params.id)));
+  });
+  app.get(prefix + "/loads/:id/versions/:version", async (req, res) => {
+    noQuery(req);
+    res.json(
+      await cycles().get(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        Number(req.params.version),
+      ),
+    );
+  });
+  app.get(prefix + "/loads/:id/history", async (req, res) =>
+    res.json(
+      await cycles().history(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        page(req),
+      ),
+    ),
+  );
+  app.post(prefix + "/loads", async (req, res) => {
+    noQuery(req);
+    const v = body(req.body, [
+      "requestId",
+      "code",
+      "sterilizer",
+      "method",
+      "profile",
+      "profileVersion",
+      "packageIds",
+      "confirmed",
+    ]);
+    res
+      .status(201)
+      .json(
+        await cycles().create(
+          res.locals.scope,
+          v as unknown as Parameters<CycleRegistry["create"]>[1],
+        ),
+      );
+  });
+  app.post(prefix + "/loads/:id/contents", async (req, res) => {
+    noQuery(req);
+    const v = body(req.body, [
+      "requestId",
+      "version",
+      "packageIds",
+      "confirmed",
+    ]);
+    res.json(
+      await cycles().contents(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        v as unknown as Parameters<CycleRegistry["contents"]>[2],
+      ),
+    );
+  });
+  app.post(prefix + "/loads/:id/start", async (req, res) => {
+    noQuery(req);
+    const v = body(req.body, [
+      "requestId",
+      "version",
+      "cycleReference",
+      "confirmed",
+    ]);
+    res.json(
+      await cycles().start(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        v as unknown as Parameters<CycleRegistry["start"]>[2],
+      ),
+    );
+  });
+  app.post(prefix + "/loads/:id/finish", async (req, res) => {
+    noQuery(req);
+    const v = body(req.body, [
+      "requestId",
+      "version",
+      "outcome",
+      "cycleEvidence",
+      "indicatorEvidence",
+      "note",
+      "confirmed",
+    ]);
+    res.json(
+      await cycles().finish(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        v as unknown as Parameters<CycleRegistry["finish"]>[2],
+      ),
+    );
+  });
+  app.post(prefix + "/loads/:id/cancel", async (req, res) => {
+    noQuery(req);
+    const v = body(req.body, ["requestId", "version", "reason", "confirmed"]);
+    res.json(
+      await cycles().cancel(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        v as unknown as Parameters<CycleRegistry["cancel"]>[2],
+      ),
+    );
+  });
   app.use((_req, res) => {
     res.status(404).json({ error: "NOT_FOUND" });
   });
@@ -566,6 +683,7 @@ export function createSterileApp(
               INSTRUMENT_ASSIGNED: 409,
               PROCESSING_HOLD: 409,
               PACKAGING_BLOCKED: 409,
+              LOAD_BLOCKED: 409,
             }[code as SterileError["code"]]
           : parser.type === "entity.too.large"
             ? 413

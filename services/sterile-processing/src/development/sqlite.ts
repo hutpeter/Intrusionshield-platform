@@ -22,6 +22,9 @@ import {
   type ProcessingEpisode,
   type SterilePackage,
   type PackageSummary,
+  type SterilizationLoad,
+  type LoadSummary,
+  type PackageLoad,
 } from "@intrusionshield/sterile-processing";
 import { assertSterilePreviewEnvironment } from "./guard.js";
 
@@ -77,6 +80,10 @@ CREATE TABLE IF NOT EXISTS sp_processing_holds(tenant_id TEXT NOT NULL,facility_
 CREATE TABLE IF NOT EXISTS sp_packages(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,code TEXT NOT NULL,assembly_id TEXT NOT NULL,version INTEGER NOT NULL CHECK(version>0),payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,code),FOREIGN KEY(tenant_id,facility_id,assembly_id) REFERENCES sp_assemblies(tenant_id,facility_id,id));
 CREATE TABLE IF NOT EXISTS sp_package_versions(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id,version),FOREIGN KEY(tenant_id,facility_id,id) REFERENCES sp_packages(tenant_id,facility_id,id));
 CREATE TABLE IF NOT EXISTS sp_package_assignments(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,assembly_id TEXT NOT NULL,package_id TEXT NOT NULL,PRIMARY KEY(tenant_id,facility_id,assembly_id),FOREIGN KEY(tenant_id,facility_id,assembly_id) REFERENCES sp_assemblies(tenant_id,facility_id,id),FOREIGN KEY(tenant_id,facility_id,package_id) REFERENCES sp_packages(tenant_id,facility_id,id));
+CREATE TABLE IF NOT EXISTS sp_loads(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,code TEXT NOT NULL,version INTEGER NOT NULL CHECK(version>0),state TEXT NOT NULL CHECK(state IN ('draft','running','awaiting_review','failed','aborted','cancelled')),payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,code));
+CREATE TABLE IF NOT EXISTS sp_load_versions(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id,version),FOREIGN KEY(tenant_id,facility_id,id) REFERENCES sp_loads(tenant_id,facility_id,id));
+CREATE TABLE IF NOT EXISTS sp_load_assignments(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,package_id TEXT NOT NULL,load_id TEXT NOT NULL,PRIMARY KEY(tenant_id,facility_id,package_id),FOREIGN KEY(tenant_id,facility_id,package_id) REFERENCES sp_packages(tenant_id,facility_id,id),FOREIGN KEY(tenant_id,facility_id,load_id) REFERENCES sp_loads(tenant_id,facility_id,id));
+CREATE TABLE IF NOT EXISTS sp_machine_cycles(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,sterilizer TEXT NOT NULL,cycle_reference TEXT NOT NULL,load_id TEXT NOT NULL,PRIMARY KEY(tenant_id,facility_id,sterilizer,cycle_reference),UNIQUE(tenant_id,facility_id,load_id),FOREIGN KEY(tenant_id,facility_id,load_id) REFERENCES sp_loads(tenant_id,facility_id,id));
 CREATE INDEX IF NOT EXISTS sp_assignment_assembly ON sp_assignments(tenant_id,facility_id,assembly_id);`);
     } catch (error) {
       this.db.close();
@@ -142,6 +149,101 @@ CREATE INDEX IF NOT EXISTS sp_assignment_assembly ON sp_assignments(tenant_id,fa
         return rows.map((row) => JSON.parse(row.payload) as V);
       };
       const tx: SterileTransaction = {
+        findLoad: async (id) =>
+          read<SterilizationLoad>(
+            "SELECT payload FROM sp_loads WHERE tenant_id=? AND facility_id=? AND id=?",
+            id,
+          ),
+        findLoadByCode: async (code) =>
+          read<SterilizationLoad>(
+            "SELECT payload FROM sp_loads WHERE tenant_id=? AND facility_id=? AND code=?",
+            code,
+          ),
+        listLoads: async (page) =>
+          list<LoadSummary>(
+            "SELECT json_object('id',id,'tenantId',tenant_id,'facilityId',facility_id,'code',code,'sterilizer',json_extract(payload,'$.sterilizer'),'state',state,'version',version,'createdAt',json_extract(payload,'$.createdAt'),'packageCount',json_array_length(payload,'$.packages')) AS payload FROM sp_loads WHERE tenant_id=? AND facility_id=? ORDER BY rowid DESC LIMIT 51 OFFSET ?",
+            page,
+          ),
+        insertLoad: async (item) => {
+          own(item);
+          this.db
+            .prepare("INSERT INTO sp_loads VALUES(?,?,?,?,?,?,?)")
+            .run(
+              ...args,
+              item.id,
+              item.code,
+              item.version,
+              item.state,
+              JSON.stringify(item),
+            );
+        },
+        updateLoad: async (item, expected) => {
+          own(item);
+          if (item.version !== expected + 1)
+            throw new SterileError("INVALID_REQUEST");
+          const r = this.db
+            .prepare(
+              "UPDATE sp_loads SET version=?,state=?,payload=? WHERE tenant_id=? AND facility_id=? AND id=? AND version=?",
+            )
+            .run(
+              item.version,
+              item.state,
+              JSON.stringify(item),
+              ...args,
+              item.id,
+              expected,
+            );
+          if (r.changes !== 1) throw new SterileError("CONFLICT");
+        },
+        insertLoadVersion: async (item) => {
+          own(item);
+          this.db
+            .prepare("INSERT INTO sp_load_versions VALUES(?,?,?,?,?)")
+            .run(...args, item.id, item.version, JSON.stringify(item));
+        },
+        findLoadVersion: async (id, version) =>
+          read<SterilizationLoad>(
+            "SELECT payload FROM sp_load_versions WHERE tenant_id=? AND facility_id=? AND id=? AND version=?",
+            id,
+            version,
+          ),
+        findPackageLoad: async (id) => {
+          const row = this.db
+            .prepare(
+              "SELECT l.id AS loadId,l.code AS loadCode,l.state FROM sp_load_assignments a JOIN sp_loads l ON l.tenant_id=a.tenant_id AND l.facility_id=a.facility_id AND l.id=a.load_id WHERE a.tenant_id=? AND a.facility_id=? AND a.package_id=?",
+            )
+            .get(...args, id) as PackageLoad | undefined;
+          return row ?? null;
+        },
+        replaceLoadAssignments: async (item) => {
+          own(item);
+          this.db
+            .prepare(
+              "DELETE FROM sp_load_assignments WHERE tenant_id=? AND facility_id=? AND load_id=?",
+            )
+            .run(...args, item.id);
+          if (item.state !== "cancelled")
+            for (const p of item.packages)
+              this.db
+                .prepare("INSERT INTO sp_load_assignments VALUES(?,?,?,?)")
+                .run(...args, p.id, item.id);
+        },
+        findMachineCycle: async (sterilizer, reference) => {
+          const r = this.db
+            .prepare(
+              "SELECT load_id FROM sp_machine_cycles WHERE tenant_id=? AND facility_id=? AND sterilizer=? AND cycle_reference=?",
+            )
+            .get(...args, sterilizer, reference) as
+            { load_id: string } | undefined;
+          return r?.load_id ?? null;
+        },
+        reserveMachineCycle: async (item) => {
+          own(item);
+          if (!item.cycleReference) throw new SterileError("INVALID_REQUEST");
+          this.db
+            .prepare("INSERT INTO sp_machine_cycles VALUES(?,?,?,?,?)")
+            .run(...args, item.sterilizer, item.cycleReference, item.id);
+        },
         findPackage: async (id) =>
           read<SterilePackage>(
             "SELECT payload FROM sp_packages WHERE tenant_id=? AND facility_id=? AND id=?",

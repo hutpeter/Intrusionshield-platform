@@ -165,6 +165,8 @@ export class PackagingRegistry extends SterileRegistryBase {
         if (!old) throw new SterileError("NOT_FOUND");
         if (old.version !== version || old.state !== "packaged")
           throw new SterileError("CONFLICT");
+        if (await tx.findPackageLoad(key))
+          throw new SterileError("LOAD_BLOCKED");
         const item: SterilePackage = {
           ...old,
           state: "voided",
@@ -214,7 +216,13 @@ export class PackagingRegistry extends SterileRegistryBase {
       p = pageOf(page);
     return this.repository.transaction(s, async (tx) => {
       const rows = await tx.listPackages(p);
-      return { items: rows.slice(0, 50), page: p, hasMore: rows.length > 50 };
+      const items = await Promise.all(
+        rows.slice(0, 50).map(async (row) => {
+          const activeLoad = await tx.findPackageLoad(row.id);
+          return { ...row, ...(activeLoad ? { activeLoad } : {}) };
+        }),
+      );
+      return { items, page: p, hasMore: rows.length > 50 };
     });
   }
   async get(scope: SterileScope, id: string, version?: number) {
@@ -227,7 +235,9 @@ export class PackagingRegistry extends SterileRegistryBase {
           ? await tx.findPackage(key)
           : await tx.findPackageVersion(key, version);
       if (!item) throw new SterileError("NOT_FOUND");
-      return item;
+      const activeLoad =
+        version === undefined ? await tx.findPackageLoad(key) : null;
+      return { ...item, ...(activeLoad ? { activeLoad } : {}) };
     });
   }
   async history(scope: SterileScope, id: string, page = 1) {

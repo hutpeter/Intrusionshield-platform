@@ -1,4 +1,6 @@
 const es = {
+  LOAD_BLOCKED:
+    "Revise los paquetes y cualquier carga activa antes de continuar.",
   PACKAGING_BLOCKED:
     "Revise el armado completo, sus inspecciones previas y cualquier paquete activo antes de continuar.",
   PROCESSING_HOLD:
@@ -30,6 +32,7 @@ const es = {
 };
 type Messages = Record<keyof typeof es, string>;
 const en: Messages = {
+  LOAD_BLOCKED: "Review the packages and any active load before continuing.",
   PACKAGING_BLOCKED:
     "Review the completed assembly, prior inspections and any active package before continuing.",
   PROCESSING_HOLD:
@@ -61,6 +64,8 @@ const en: Messages = {
     "Service unavailable. The change has not been confirmed.",
 };
 const fr: Messages = {
+  LOAD_BLOCKED:
+    "Vérifiez les emballages et toute charge active avant de continuer.",
   PACKAGING_BLOCKED:
     "Vérifiez l’assemblage complet, les inspections antérieures et tout emballage actif avant de continuer.",
   PROCESSING_HOLD:

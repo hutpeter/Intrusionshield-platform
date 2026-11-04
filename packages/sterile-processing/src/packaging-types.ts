@@ -1,3 +1,4 @@
+import type { PackageLoad } from "./cycle-types.js";
 import type { TrayAssembly } from "./tray-types.js";
 import type { InspectionItem } from "./processing-types.js";
 export interface InspectionProof {
@@ -15,6 +16,7 @@ export interface InspectionProof {
   checks: InspectionItem;
 }
 export interface SterilePackage {
+  activeLoad?: PackageLoad;
   id: string;
   tenantId: string;
   facilityId: string;
@@ -47,7 +49,7 @@ export type PackageSummary = Pick<
   | "state"
   | "version"
   | "createdAt"
-> & { trayName: string; instrumentCount: number };
+> & { trayName: string; instrumentCount: number; activeLoad?: PackageLoad };
 export interface PackageInput {
   requestId: string;
   code: string;

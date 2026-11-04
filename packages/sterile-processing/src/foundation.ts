@@ -1,3 +1,8 @@
+import type {
+  SterilizationLoad,
+  LoadSummary,
+  PackageLoad,
+} from "./cycle-types.js";
 import type { SterilePackage, PackageSummary } from "./packaging-types.js";
 import type { ProcessingEpisode } from "./processing-types.js";
 import type { TrayDefinition, TrayAssembly } from "./tray-types.js";
@@ -44,6 +49,11 @@ export interface SterileAuditEvent {
   actorId: string;
   at: string;
   action:
+    | "load-created"
+    | "load-contents-updated"
+    | "cycle-started"
+    | "cycle-recorded"
+    | "load-cancelled"
     | "package-created"
     | "package-voided"
     | "inspection-recorded"
@@ -70,13 +80,31 @@ export type SterileRecord =
   | TrayDefinition
   | TrayAssembly
   | ProcessingEpisode
-  | SterilePackage;
+  | SterilePackage
+  | SterilizationLoad;
 export interface CommandReceipt {
   hash: string;
   result: SterileRecord;
 }
 /** All methods are scoped to the transaction's tenant/facility. Writes and audit commit together. */
 export interface SterileTransaction {
+  findLoad(id: string): Promise<SterilizationLoad | null>;
+  findLoadByCode(code: string): Promise<SterilizationLoad | null>;
+  listLoads(page: number): Promise<LoadSummary[]>;
+  insertLoad(item: SterilizationLoad): Promise<void>;
+  updateLoad(item: SterilizationLoad, expected: number): Promise<void>;
+  insertLoadVersion(item: SterilizationLoad): Promise<void>;
+  findLoadVersion(
+    id: string,
+    version: number,
+  ): Promise<SterilizationLoad | null>;
+  findPackageLoad(packageId: string): Promise<PackageLoad | null>;
+  replaceLoadAssignments(item: SterilizationLoad): Promise<void>;
+  findMachineCycle(
+    sterilizer: string,
+    reference: string,
+  ): Promise<string | null>;
+  reserveMachineCycle(item: SterilizationLoad): Promise<void>;
   findPackage(id: string): Promise<SterilePackage | null>;
   findPackageByCode(code: string): Promise<SterilePackage | null>;
   listPackages(page: number): Promise<PackageSummary[]>;
@@ -161,7 +189,8 @@ export class SterileError extends Error {
       | "ASSEMBLY_INCOMPLETE"
       | "INSTRUMENT_ASSIGNED"
       | "PROCESSING_HOLD"
-      | "PACKAGING_BLOCKED",
+      | "PACKAGING_BLOCKED"
+      | "LOAD_BLOCKED",
   ) {
     super(code);
   }

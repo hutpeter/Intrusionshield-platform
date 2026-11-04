@@ -26,6 +26,11 @@ Wait for **Ready: http://127.0.0.1:9553**, leave PowerShell running and refresh.
 That is the only manual check requested for this build. No physical printing,
 voiding, older-module walkthrough or end-to-end regression is requested now.
 
+**Workflow update:** manual load/cycle records now exist. Packages assigned to a
+retained load cannot be voided, and a satisfactory cycle leaves them unreleased.
+See [LOADS-CYCLES.md](LOADS-CYCLES.md). The packaging smoke check is already
+owner-confirmed; it does not need repeating for this build.
+
 ## Implemented behavior
 
 A package records a completed assembly and its exact version, an immutable copy of
@@ -52,7 +57,7 @@ Voiding requires acknowledgement that earlier physical labels will be removed.
 The preview cannot revoke a printed piece of paper or determine whether a damaged
 or opened package needs reprocessing. Do not interpret a clerical void/repack as
 a clinical disposition; those policies remain part of the full workflow design.
-Future cycle/load association must also prevent inappropriate voiding or reuse.
+Cycle/load association now prevents voiding while the package remains assigned. Authorized disposition and reprocessing remain deferred.
 
 ## Label and print boundaries
 
