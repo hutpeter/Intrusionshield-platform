@@ -1,6 +1,6 @@
 # Testing register — Ruby Sterile Processing
 
-Updated November 3, 2026. This is the continuing register for every increment of
+Updated November 4, 2026. This is the continuing register for every increment of
 this application. Update it with each build and after each user-reported result.
 It distinguishes automated verification from the owner's manual verification.
 A successful developer check never implies that the owner performed it.
@@ -21,16 +21,21 @@ A successful developer check never implies that the owner performed it.
 
 ## Build ledger
 
-| Build                                  | Delivered change                                                                                        | Automated / developer verification                                                                                                          | Owner verification                                                                                                         | Outstanding                                                                                         |
-| -------------------------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| 427feeb / a85508a / 9287358            | Instrument catalogue, registration, history, preview startup fixes                                      | Scoped checks and browser flow recorded in LOCAL-PREVIEW.md; Windows pnpm launcher and cross-site entry fixes included                      | Confirmed registration of INS-DEMO-001, retained records after refresh/restart, and working preview                        | Formal retirement, auditor and language regression on Windows deferred                              |
-| 0ac4dab                                | Tray definitions, assembly, reservations and immutable versions                                         | 53 automated checks; browser composition/history/disassembly; restart persistence                                                           | Confirmed ARMADO-DEMO-001 completion with INS-DEMO-001, versions 1–3, and saved assembly after reopening following refresh | Manual duplicate-assignment, definition revision, disassembly/reuse and auditor regression deferred |
-| 58aaf13                                | Receipt, cleaning attempts, failure/retry and processing holds                                          | 69 automated checks; Spanish cleaning/retry browser workflow; EN/FR/mobile/auditor/session checks; full restart retained evidence and holds | Not yet reported. Minimal receipt smoke check offered; no result received                                                  | Receipt smoke check pending; longer manual failure/retry walkthrough deferred                       |
-| Inspection increment (see Git history) | Individual inspection checks, held failures/rework, passed inspection enables assembly; fictional setup | Results recorded below after verification                                                                                                   | Pending — one check specified below                                                                                        | Failure/rework, group handling and full workflow manual review deferred                             |
+| Build                       | Delivered change                                                                                        | Automated / developer verification                                                                                                          | Owner verification                                                                                                         | Outstanding                                                                                         |
+| --------------------------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| 427feeb / a85508a / 9287358 | Instrument catalogue, registration, history, preview startup fixes                                      | Scoped checks and browser flow recorded in LOCAL-PREVIEW.md; Windows pnpm launcher and cross-site entry fixes included                      | Confirmed registration of INS-DEMO-001, retained records after refresh/restart, and working preview                        | Formal retirement, auditor and language regression on Windows deferred                              |
+| 0ac4dab                     | Tray definitions, assembly, reservations and immutable versions                                         | 53 automated checks; browser composition/history/disassembly; restart persistence                                                           | Confirmed ARMADO-DEMO-001 completion with INS-DEMO-001, versions 1–3, and saved assembly after reopening following refresh | Manual duplicate-assignment, definition revision, disassembly/reuse and auditor regression deferred |
+| 58aaf13                     | Receipt, cleaning attempts, failure/retry and processing holds                                          | 69 automated checks; Spanish cleaning/retry browser workflow; EN/FR/mobile/auditor/session checks; full restart retained evidence and holds | Not yet reported. Minimal receipt smoke check offered; no result received                                                  | Receipt smoke check pending; longer manual failure/retry walkthrough deferred                       |
+| ad63b0b                     | Individual inspection checks, held failures/rework, passed inspection enables assembly; fictional setup | Results recorded below after verification                                                                                                   | Passed November 4, 2026 — owner confirmed with screenshot                                                                  | Failure/rework, group handling and full workflow manual review deferred                             |
 
 ## Owner's single check for the inspection build
 
-**U-INSP-01 — Pending.** In **Recepción y limpieza**, choose **Preparar ejemplo
+**U-INSP-01 — Passed November 4, 2026.** The owner reported “It worked” and
+supplied a screenshot showing the saved all-pass inspection and its individual
+results. This confirms the single smoke check below; it does not validate the
+deferred cleaner/inspector separation requirement in [RSP-ISS-001](ISSUES.md#rsp-iss-001--independent-inspector-role-and-no-self-inspection).
+
+Original smoke check: In **Recepción y limpieza**, choose **Preparar ejemplo
 ficticio de inspección**, then **Registrar inspección**. Enter dummy procedure
 `INSPECT-DEMO`, version `1`, evidence `EVID-INSP-DEMO`. Choose **Conforme** for the
 four checks, confirm and save. Expected: **Inspección satisfactoria — disponible
@@ -59,6 +64,8 @@ simulated cleaning; it does not perform cleaning or alter existing demo records.
 | CLIN-01      | Approved procedures/checklists, competent roles, local rules and clinical acceptance           | Pending client procedures and operational validation; no clinical acceptance claimed      |
 
 ## Known limitations to carry forward
+
+See the [issues log](ISSUES.md) for explicitly deferred development requirements.
 
 - Refresh returns to the instrument list; reopen the saved record through its
   module. Data persistence and screen-navigation persistence are different checks.
@@ -96,8 +103,9 @@ Inspection-specific mobile/EN/FR/manual failure/rework and full restart UI scena
 remain deferred. Automated SQLite reopening passed; the previous cleaning build's
 full restart result is historical evidence, not a new inspection restart check.
 
-**Owner result remains pending:** U-INSP-01. No deferred scenario has been marked
-passed merely because development continued.
+**Owner smoke check passed November 4, 2026:** U-INSP-01, confirmed by message and
+screenshot. All other deferred scenarios remain unverified. Independent-inspector
+authorization is deferred under [RSP-ISS-001](ISSUES.md#rsp-iss-001--independent-inspector-role-and-no-self-inspection).
 
 ## Repeatable automated commands
 
@@ -113,5 +121,5 @@ node --test scripts/sterile-preview-command.test.mjs
 
 The repository test files are durable evidence of automated coverage. Browser
 smoke checks and results are summarized per build here; local traces and dummy
-SQLite data stay ignored. Record the next owner response against U-INSP-01, not
-against the deferred manual scenarios.
+SQLite data stay ignored. Record subsequent owner results against their specific check IDs, not against
+unperformed deferred scenarios.
