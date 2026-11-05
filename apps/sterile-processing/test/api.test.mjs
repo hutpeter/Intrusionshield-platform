@@ -498,3 +498,39 @@ test("traceability search escapes exact codes, uses read-only requests and rejec
     (e) => e.code === "SERVICE_UNAVAILABLE",
   );
 });
+
+test("recall impact and extension preserve scope, exact source version, confirmation hash and CSRF", async (t) => {
+  const calls = [];
+  let foreign = false;
+  fake(t, async (path, options) => {
+    calls.push({ path, options });
+    return response({
+      ...session,
+      tenantId: foreign ? "other" : session.tenantId,
+      items: [],
+      instruments: [],
+    });
+  });
+  await api.recallImpact(session, "package", "package", 3, signal());
+  assert.ok(
+    calls[0].path.endsWith(
+      "/recalls/impact?sourceKind=package&sourceId=package&sourceVersion=3",
+    ),
+  );
+  const body = {
+    requestId: "request",
+    version: 1,
+    impactHash: "hash",
+    reason: "Extend",
+    reference: "Demo",
+    confirmed: true,
+  };
+  await api.extendRecall(session, "recall", body, signal());
+  assert.deepEqual(JSON.parse(calls[1].options.body), body);
+  assert.equal(calls[1].options.headers["x-sterile-csrf"], session.csrf);
+  foreign = true;
+  await assert.rejects(
+    api.recallCaseImpact(session, "recall", signal()),
+    (e) => e.code === "SERVICE_UNAVAILABLE",
+  );
+});

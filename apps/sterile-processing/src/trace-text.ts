@@ -27,7 +27,7 @@ const en = {
   boundary:
     "Local fictional-data report. It shows recorded links, not physical tracking or clinical approval. Co-loaded packages appear as load context; their unrelated instrument histories are not expanded.",
   recallNote:
-    "Recall blocks apply to their recorded targets. This report does not propagate a later recall to reprocessed descendants.",
+    "New or explicitly extended recalls include linked reprocessing and current custody. Older cases keep their saved scope until a reviewer extends them.",
   point:
     "This is a snapshot at the displayed time. Search again to refresh current status.",
   missing: "Referenced version not available in this report",
@@ -75,7 +75,7 @@ const es: Text = {
   boundary:
     "Informe local ficticio. Muestra vínculos registrados; no localización física ni aprobación clínica. Otros paquetes de la carga son contexto; no se expanden historiales de instrumentos ajenos.",
   recallNote:
-    "Los bloqueos por retirada se aplican a los objetivos registrados. Este informe no propaga retiradas posteriores a descendientes reprocesados.",
+    "Las retiradas nuevas o ampliadas incluyen el reprocesamiento vinculado y la custodia actual. Los casos anteriores conservan su alcance hasta que un revisor los amplíe.",
   point:
     "Es una instantánea de la fecha indicada. Repita la búsqueda para actualizar el estado.",
   missing: "Versión referenciada no disponible en este informe",
@@ -122,7 +122,7 @@ const fr: Text = {
   boundary:
     "Rapport local fictif. Liens enregistrés uniquement ; ni suivi physique ni approbation clinique. Les autres paquets de la charge restent contextuels, sans expansion de leurs historiques.",
   recallNote:
-    "Les blocages de rappel concernent les cibles enregistrées. Ce rapport ne propage pas un rappel ultérieur aux descendants retraités.",
+    "Les rappels nouveaux ou étendus incluent le retraitement lié et la garde actuelle. Les anciens dossiers conservent leur périmètre jusqu’à leur extension par un réviseur.",
   point:
     "Instantané à la date indiquée. Relancez la recherche pour actualiser l’état.",
   missing: "Version référencée indisponible dans ce rapport",
@@ -237,6 +237,7 @@ const words: Record<Language, Record<string, string>> = {
     disposition: "Disposition",
     recall_member: "Recall target",
     recovery: "Recovery",
+    instrument_recall: "Instrument recall block",
     processing_hold: "Processing hold",
     active_assembly: "Active assembly",
     recall_block: "Recall block",
@@ -362,6 +363,7 @@ const words: Record<Language, Record<string, string>> = {
     disposition: "Disposición",
     recall_member: "Objetivo de retirada",
     recovery: "Recuperación",
+    instrument_recall: "Bloqueo del instrumento por retirada",
     processing_hold: "Retención de procesamiento",
     active_assembly: "Armado activo",
     recall_block: "Bloqueo por retirada",
@@ -487,6 +489,7 @@ const words: Record<Language, Record<string, string>> = {
     disposition: "Disposition",
     recall_member: "Cible du rappel",
     recovery: "Récupération",
+    instrument_recall: "Blocage de rappel de l’instrument",
     processing_hold: "Retenue de traitement",
     active_assembly: "Assemblage actif",
     recall_block: "Blocage de rappel",
@@ -564,6 +567,11 @@ export const traceWord = (language: Language, key: string) =>
   words[language][key] ?? key;
 
 const actions: Record<string, [string, string, string]> = {
+  "recall-expanded": [
+    "Recall scope extended",
+    "Alcance de retirada ampliado",
+    "Périmètre du rappel étendu",
+  ],
   "type-created": [
     "Instrument type created",
     "Tipo de instrumental creado",

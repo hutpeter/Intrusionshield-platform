@@ -59,6 +59,8 @@ export class PackagingRegistry extends SterileRegistryBase {
           throw new SterileError("PACKAGING_BLOCKED");
         const proofs: InspectionProof[] = [];
         for (const snapshot of a.instruments) {
+          if (await tx.findInstrumentRecallBlock(snapshot.id))
+            throw new SterileError("RECALL_BLOCKED");
           const i = await tx.findInstrument(snapshot.id),
             assignment = await tx.findActiveAssignment(snapshot.id);
           if (

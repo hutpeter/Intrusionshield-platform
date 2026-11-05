@@ -1,4 +1,6 @@
 const es = {
+  RECALL_LIMIT:
+    "El alcance supera el límite de esta vista previa. No registre una retirada parcial; solicite una revisión completa.",
   TRACE_LIMIT:
     "El historial supera el límite del informe. Busque un instrumento o paquete más específico.",
   RETURN_BLOCKED:
@@ -42,6 +44,8 @@ const es = {
 };
 type Messages = Record<keyof typeof es, string>;
 const en: Messages = {
+  RECALL_LIMIT:
+    "The impact exceeds this preview limit. Do not record a partial recall; arrange a full scope review.",
   TRACE_LIMIT:
     "The history exceeds the report limit. Search for a more specific instrument or package.",
   RETURN_BLOCKED:
@@ -84,6 +88,8 @@ const en: Messages = {
     "Service unavailable. The change has not been confirmed.",
 };
 const fr: Messages = {
+  RECALL_LIMIT:
+    "Le périmètre dépasse la limite de cette prévisualisation. N’enregistrez pas un rappel partiel ; demandez une révision complète.",
   TRACE_LIMIT:
     "L’historique dépasse la limite du rapport. Recherchez un instrument ou paquet plus précis.",
   RETURN_BLOCKED: "Le paquet retourné reste bloqué. Consultez sa disposition.",

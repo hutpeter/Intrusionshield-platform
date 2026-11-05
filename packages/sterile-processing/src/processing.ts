@@ -312,6 +312,10 @@ export class ProcessingRegistry extends SterileRegistryBase {
         )
           ? "passed"
           : "failed";
+        if (outcome === "passed")
+          for (const i of old.instruments)
+            if (await tx.findInstrumentRecallBlock(i.id))
+              throw new SterileError("RECALL_BLOCKED");
         const item: ProcessingEpisode = {
           ...old,
           version: version + 1,
@@ -374,7 +378,18 @@ export class ProcessingRegistry extends SterileRegistryBase {
       p = pageOf(page);
     return this.repository.transaction(s, async (tx) => {
       const rows = await tx.listProcessing(p);
-      return { items: rows.slice(0, 50), hasMore: rows.length > 50, page: p };
+      const items = await Promise.all(
+        rows.slice(0, 50).map(async (r) => {
+          const blocks = await Promise.all(
+            r.instruments.map((i) => tx.findInstrumentRecallBlock(i.id)),
+          );
+          return {
+            ...r,
+            ...(blocks.some(Boolean) ? { recallBlocked: true } : {}),
+          };
+        }),
+      );
+      return { items, hasMore: rows.length > 50, page: p };
     });
   }
   async get(scope: SterileScope, id: string, version?: number) {
@@ -387,7 +402,16 @@ export class ProcessingRegistry extends SterileRegistryBase {
           ? await tx.findProcessing(key)
           : await tx.findProcessingVersion(key, version);
       if (!row) throw new SterileError("NOT_FOUND");
-      return row;
+      const blocks =
+        version === undefined
+          ? await Promise.all(
+              row.instruments.map((i) => tx.findInstrumentRecallBlock(i.id)),
+            )
+          : [];
+      return {
+        ...row,
+        ...(blocks.some(Boolean) ? { recallBlocked: true } : {}),
+      };
     });
   }
   async history(scope: SterileScope, id: string, page = 1) {

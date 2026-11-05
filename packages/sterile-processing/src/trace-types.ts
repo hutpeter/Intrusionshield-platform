@@ -80,7 +80,12 @@ export interface TraceLink {
   targetAvailable?: boolean;
 }
 export interface TraceAlert {
-  kind: "processing_hold" | "active_assembly" | "recall_block" | "return_block";
+  kind:
+    | "instrument_recall"
+    | "processing_hold"
+    | "active_assembly"
+    | "recall_block"
+    | "return_block";
   entityKind: TraceKind;
   entityId: string;
   code: string;

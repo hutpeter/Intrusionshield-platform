@@ -409,6 +409,17 @@ export class TraceabilityRegistry {
       }
       const alerts: TraceReport["alerts"] = [];
       for (const i of by("instrument").filter((r) => r.current)) {
+        const instrumentRecall = await tx.findInstrumentRecallBlock(
+          i.record.id,
+        );
+        if (instrumentRecall)
+          alerts.push({
+            kind: "instrument_recall",
+            entityKind: "instrument",
+            entityId: i.record.id,
+            code: traceCode(i.record),
+            reference: instrumentRecall.caseCode,
+          });
         const hold = await tx.findProcessingHold(i.record.id),
           assembly = await tx.findActiveAssignment(i.record.id);
         if (hold)

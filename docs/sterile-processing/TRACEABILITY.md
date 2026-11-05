@@ -58,7 +58,8 @@ record types, explicitly choose the matching type.
   search. Counts distinguish all source-load packages from matched packages.
 - This report shows recorded links, not proof that missing physical steps happened,
   an equipment validation, a clinical release certificate or physical tracking.
-  Later recall propagation to reprocessed descendants remains RSP-ISS-004.
+  New or explicitly extended recalls now include recorded reprocessing lineage and
+  current custody. Legacy cases require explicit extension; see RECALL-LINEAGE.md.
 
 The report is a point-in-time snapshot with a generation timestamp. Searching again
 refreshes current status; exporting preserves the displayed snapshot. Repeated
@@ -92,5 +93,6 @@ or plan a later paginated/report-job implementation for larger histories. UI lis
 paginate within the already generated report.
 
 See TESTING-REGISTER.md for automated/developer evidence and deferred owner tests.
-RSP-ISS-001 independent inspection remains parked, and RSP-ISS-004 recall propagation
-remains unresolved; a traceability report does not change workflow authorization.
+RSP-ISS-001 independent inspection remains parked. RSP-ISS-004 is partially implemented
+by RECALL-LINEAGE.md; production policies and validation remain pending. A traceability
+report is read-only and does not itself extend a recall or change authorization.

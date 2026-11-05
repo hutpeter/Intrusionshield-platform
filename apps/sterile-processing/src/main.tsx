@@ -669,6 +669,11 @@ function Workspace({
         </div>
       </aside>
       <main className="content">
+        {detail?.recall && (
+          <p className="alert">
+            {recallLabels(language).blocked} · {detail.recall.caseCode}
+          </p>
+        )}
         {tab !== "trays" &&
           tab !== "processing" &&
           tab !== "packaging" &&

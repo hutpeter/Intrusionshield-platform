@@ -1,6 +1,6 @@
 # Ruby Sterile Processing — issues log
 
-Updated November 4, 2026. Deferred requirements are recorded here so development
+Updated November 5, 2026. Deferred requirements are recorded here so development
 can continue without losing them. Deferral is not implementation or acceptance.
 Keep test execution status in [TESTING-REGISTER.md](TESTING-REGISTER.md).
 
@@ -74,17 +74,23 @@ Keep test execution status in [TESTING-REGISTER.md](TESTING-REGISTER.md).
 
 ## RSP-ISS-004 — Recall propagation across reprocessing lineage
 
-- **Status:** Deferred; required before production recall acceptance.
-- **Current behavior:** Return records and receiving episodes retain bidirectional
-  source identifiers. Traceability search now exposes the recorded lineage and
-  current direct-target blocks without altering those blocks. A recall blocks its targeted package/load; a recalled package
-  cannot enter the current reprocessing shortcut. A later recall against an older
-  package does not automatically block descendant episodes/packages already created.
-- **Remaining scope:** Traverse instrument and package lineage across processing
-  episodes, define affected descendants, preserve independent historical case scope,
-  invalidate downstream availability/labels and coordinate recovery without silently
-  releasing unrelated instruments or closing earlier cases.
-- **Acceptance checks:** Recall an ancestor after new cleaning/inspection, packaging,
-  release and issue; verify all affected descendants are identified and blocked,
-  tenant/facility boundaries hold and overlapping cases remain independent. Define
-  partial-return, shared-tray and physical recovery policies before clinical use.
+- **Status:** Partially implemented in the local preview on November 5, 2026.
+- **Delivered:** New recalls preview original targets, packages reached by recorded
+  return/episode/inspection-proof links and affected instruments' current package
+  custody. Persistent instrument blocks prevent later assembly/packaging and passed
+  inspection from bypassing the recall. Original release/issue facts remain intact.
+  Explicit reviewer extension upgrades older cases, retains their original versions
+  and dispositions, adds targets and reopens recovery when necessary. Closure does
+  not lift blocks. No physical recovery or notification is inferred.
+- **Boundary:** Only original source instruments receive instrument blocks; mixed
+  packages remain held as a whole, without silently releasing other members. Legacy
+  cases keep their saved scope until explicitly extended. All scope remains within
+  the authenticated tenant/facility. Oversized impact is rejected, not truncated.
+- **Remaining scope:** Operational/clinical validation, historical-target recovery
+  reconciliation, approved contamination/separation and clearance policies, partial
+  returns, cross-facility propagation, real notification/recovery coordination and
+  scalable recall jobs. No production acceptance is claimed by the fictional check.
+- **Acceptance evidence:** Multi-generation, scope, persistent blocks, overlap,
+  rollback and race checks are automated; browser ancestor/descendant save and stale
+  label invalidation passed. Owner U-LINEAGE-01 and broader manual acceptance remain
+  pending in TESTING-REGISTER.md. See [RECALL-LINEAGE.md](RECALL-LINEAGE.md).

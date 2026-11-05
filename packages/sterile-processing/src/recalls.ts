@@ -1,3 +1,4 @@
+import { recallImpact } from "./recall-impact.js";
 import { randomUUID } from "node:crypto";
 import {
   SterileRegistryBase,
@@ -10,7 +11,12 @@ import {
   type SterileScope,
   type SterileTransaction,
 } from "./foundation.js";
-import type { RecallRecord, RecallInput, RecallItem } from "./recall-types.js";
+import type {
+  RecallRecord,
+  RecallInput,
+  RecallItem,
+  RecallExtensionInput,
+} from "./recall-types.js";
 const invalid = (): never => {
   throw new SterileError("INVALID_REQUEST");
 };
@@ -38,50 +44,21 @@ export class RecallRegistry extends SterileRegistryBase {
       input,
       async (tx, at) => {
         if (await tx.findRecallByCode(code)) throw new SterileError("CONFLICT");
-        let refs: { id: string; version: number }[], sourceCode: string;
-        if (input.sourceKind === "load") {
-          const l = await tx.findLoad(sourceId);
-          if (!l) throw new SterileError("NOT_FOUND");
-          if (l.version !== sourceVersion) throw new SterileError("CONFLICT");
-          refs = l.packages.map((p) => ({ id: p.id, version: p.version }));
-          sourceCode = l.code;
-        } else {
-          const p = await tx.findPackage(sourceId);
-          if (!p) throw new SterileError("NOT_FOUND");
-          if (p.version !== sourceVersion) throw new SterileError("CONFLICT");
-          refs = [{ id: p.id, version: p.version }];
-          sourceCode = p.code;
-        }
-        if (
-          !refs.length ||
-          refs.length > 100 ||
-          new Set(refs.map((x) => x.id)).size !== refs.length
-        )
-          invalid();
-        const items: RecallItem[] = [];
-        for (const ref of refs) {
-          const p = await tx.findPackage(ref.id);
-          if (!p) throw new SterileError("NOT_FOUND");
-          const d = await tx.findDistributionByPackage(p.id);
-          items.push({
-            packageId: p.id,
-            packageCode: p.code,
-            packageVersion: ref.version,
-            atRecall: d
-              ? {
-                  id: d.id,
-                  version: d.version,
-                  state: d.state,
-                  location: d.location,
-                  destination: d.destination,
-                  recipient: d.recipient,
-                }
-              : null,
-            status: "outstanding",
-            recovery: null,
-            disposition: null,
-          });
-        }
+        const impact = await recallImpact(tx, s, {
+          sourceKind: input.sourceKind,
+          sourceId,
+          sourceVersion,
+        });
+        if (input.impactHash !== undefined) {
+          if (
+            typeof input.impactHash !== "string" ||
+            input.impactHash !== impact.impactHash
+          )
+            throw new SterileError("CONFLICT");
+        } else if (impact.items.length !== impact.rootPackageIds.length)
+          throw new SterileError("CONFLICT");
+        const items = impact.items,
+          sourceCode = impact.sourceCode;
         const record: RecallRecord = {
           id: randomUUID(),
           tenantId: s.tenantId,
@@ -94,6 +71,12 @@ export class RecallRegistry extends SterileRegistryBase {
           reason,
           reference,
           items,
+          lineage: {
+            rootPackageIds: impact.rootPackageIds,
+            instrumentIds: impact.instruments.map((i) => i.id),
+            impactHash: impact.impactHash,
+            policy: "recorded-lineage-and-current-custody",
+          },
           state: "open",
           version: 1,
           createdAt: at,
@@ -102,6 +85,7 @@ export class RecallRegistry extends SterileRegistryBase {
         };
         await tx.insertRecall(record);
         await tx.insertRecallBlocks(record);
+        await tx.insertRecallInstrumentBlocks(record);
         await this.record(
           tx,
           s,
@@ -110,6 +94,83 @@ export class RecallRegistry extends SterileRegistryBase {
           at,
           "recall-created",
           reason,
+        );
+        return record;
+      },
+    );
+  }
+  async impact(
+    scope: SterileScope,
+    sourceKind: "load" | "package",
+    id: string,
+    version: number,
+  ) {
+    const s = scopeOf(scope),
+      sourceId = sterileUuid(id),
+      sourceVersion = versionOf(version);
+    if (!["load", "package"].includes(sourceKind)) invalid();
+    return this.repository.transaction(s, (tx) =>
+      recallImpact(tx, s, { sourceKind, sourceId, sourceVersion }),
+    );
+  }
+  async caseImpact(scope: SterileScope, id: string) {
+    const s = scopeOf(scope),
+      key = sterileUuid(id);
+    return this.repository.transaction(s, async (tx) => {
+      const old = await tx.findRecall(key);
+      if (!old) throw new SterileError("NOT_FOUND");
+      return recallImpact(tx, s, old, old);
+    });
+  }
+  async extend(scope: SterileScope, id: string, input: RecallExtensionInput) {
+    const s = scopeOf(scope),
+      key = sterileUuid(id),
+      version = versionOf(input.version),
+      reason = field(input.reason, 500),
+      reference = field(input.reference, 200);
+    if (input.confirmed !== true || typeof input.impactHash !== "string")
+      invalid();
+    return this.command(
+      s,
+      input.requestId,
+      "recall-expanded",
+      { ...input, id: key },
+      async (tx, at) => {
+        const old = await tx.findRecall(key);
+        if (!old) throw new SterileError("NOT_FOUND");
+        if (old.version !== version) throw new SterileError("CONFLICT");
+        const plan = await recallImpact(tx, s, old, old);
+        if (plan.impactHash !== input.impactHash)
+          throw new SterileError("CONFLICT");
+        const added = plan.items.filter(
+          (p) => !old.items.some((i) => i.packageId === p.packageId),
+        );
+        if (!added.length && old.lineage) throw new SterileError("CONFLICT");
+        const items = [...old.items, ...added];
+        const record: RecallRecord = {
+          ...old,
+          items,
+          version: version + 1,
+          updatedAt: at,
+          state: added.length ? "open" : old.state,
+          lineage: {
+            rootPackageIds: plan.rootPackageIds,
+            instrumentIds: plan.instruments.map((i) => i.id),
+            impactHash: plan.impactHash,
+            policy: "recorded-lineage-and-current-custody",
+          },
+        };
+        await tx.updateRecall(record, version);
+        await tx.insertRecallBlocks({ ...record, items: added });
+        await tx.insertRecallInstrumentBlocks(record);
+        await this.record(
+          tx,
+          s,
+          record,
+          input.requestId,
+          at,
+          "recall-expanded",
+          reason + " · " + reference,
         );
         return record;
       },
@@ -272,7 +333,11 @@ export class RecallRegistry extends SterileRegistryBase {
     r: RecallRecord,
     requestId: string,
     at: string,
-    action: "recall-created" | "recall-recovered" | "recall-disposition",
+    action:
+      | "recall-created"
+      | "recall-recovered"
+      | "recall-disposition"
+      | "recall-expanded",
     reason: string,
   ) {
     await tx.insertRecallVersion(r);

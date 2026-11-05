@@ -111,6 +111,8 @@ async function items(
   if (new Set(normalized).size !== normalized.length) invalid();
   const output: AssemblyInstrument[] = [];
   for (const id of normalized) {
+    if (await tx.findInstrumentRecallBlock(id))
+      throw new SterileError("RECALL_BLOCKED");
     if (await tx.findProcessingHold(id))
       throw new SterileError("PROCESSING_HOLD");
     const i = await tx.findInstrument(id);

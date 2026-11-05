@@ -185,10 +185,12 @@ export class InstrumentRegistry extends SterileRegistryBase {
       const rows = await tx.listInstruments(p);
       const items = await Promise.all(
         rows.slice(0, 50).map(async (item) => {
+          const recall = await tx.findInstrumentRecallBlock(item.id);
           const processingHold = await tx.findProcessingHold(item.id);
           const activeAssembly = await tx.findActiveAssignment(item.id);
           return {
             ...item,
+            ...(recall ? { recall } : {}),
             ...(processingHold ? { processingHold } : {}),
             ...(activeAssembly ? { activeAssembly } : {}),
           };
@@ -217,10 +219,12 @@ export class InstrumentRegistry extends SterileRegistryBase {
     return this.repository.transaction(s, async (tx) => {
       const item = await tx.findInstrument(key);
       if (!item) throw new SterileError("NOT_FOUND");
+      const recall = await tx.findInstrumentRecallBlock(key);
       const processingHold = await tx.findProcessingHold(key);
       const activeAssembly = await tx.findActiveAssignment(key);
       return {
         ...item,
+        ...(recall ? { recall } : {}),
         ...(processingHold ? { processingHold } : {}),
         ...(activeAssembly ? { activeAssembly } : {}),
       };

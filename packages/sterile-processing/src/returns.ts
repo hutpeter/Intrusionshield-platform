@@ -148,6 +148,8 @@ export class ReturnRegistry extends SterileRegistryBase {
             throw new SterileError("CONFLICT");
           const instruments: ProcessingEpisode["instruments"] = [];
           for (const member of a.instruments) {
+            if (await tx.findInstrumentRecallBlock(member.id))
+              throw new SterileError("RECALL_BLOCKED");
             const i = await tx.findInstrument(member.id),
               assignment = await tx.findActiveAssignment(member.id);
             if (

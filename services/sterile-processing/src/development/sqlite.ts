@@ -107,6 +107,7 @@ CREATE TABLE IF NOT EXISTS sp_return_versions(tenant_id TEXT NOT NULL,facility_i
 CREATE TABLE IF NOT EXISTS sp_recalls(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,code TEXT NOT NULL,version INTEGER NOT NULL CHECK(version>0),payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,code));
 CREATE TABLE IF NOT EXISTS sp_recall_versions(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id,version),FOREIGN KEY(tenant_id,facility_id,id) REFERENCES sp_recalls(tenant_id,facility_id,id));
 CREATE TABLE IF NOT EXISTS sp_recall_blocks(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,package_id TEXT NOT NULL,package_version INTEGER NOT NULL,recall_id TEXT NOT NULL,PRIMARY KEY(tenant_id,facility_id,package_id,recall_id),FOREIGN KEY(tenant_id,facility_id,package_id,package_version) REFERENCES sp_package_versions(tenant_id,facility_id,id,version),FOREIGN KEY(tenant_id,facility_id,recall_id) REFERENCES sp_recalls(tenant_id,facility_id,id));
+CREATE TABLE IF NOT EXISTS sp_recall_instruments(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,instrument_id TEXT NOT NULL,recall_id TEXT NOT NULL,PRIMARY KEY(tenant_id,facility_id,instrument_id,recall_id),FOREIGN KEY(tenant_id,facility_id,instrument_id) REFERENCES sp_instruments(tenant_id,facility_id,id),FOREIGN KEY(tenant_id,facility_id,recall_id) REFERENCES sp_recalls(tenant_id,facility_id,id));
 CREATE INDEX IF NOT EXISTS sp_assignment_assembly ON sp_assignments(tenant_id,facility_id,assembly_id);`);
     } catch (error) {
       this.db.close();
@@ -412,6 +413,23 @@ CREATE INDEX IF NOT EXISTS sp_assignment_assembly ON sp_assignments(tenant_id,fa
             this.db
               .prepare("INSERT INTO sp_recall_blocks VALUES(?,?,?,?,?)")
               .run(...args, p.packageId, p.packageVersion, item.id);
+        },
+        insertRecallInstrumentBlocks: async (item) => {
+          own(item);
+          for (const id of item.lineage?.instrumentIds ?? [])
+            this.db
+              .prepare(
+                "INSERT OR IGNORE INTO sp_recall_instruments VALUES(?,?,?,?)",
+              )
+              .run(...args, id, item.id);
+        },
+        findInstrumentRecallBlock: async (id) => {
+          const row = this.db
+            .prepare(
+              "SELECT r.id AS caseId,r.code AS caseCode,json_extract(r.payload,'$.state') AS state,(SELECT count(*) FROM sp_recall_instruments b WHERE b.tenant_id=a.tenant_id AND b.facility_id=a.facility_id AND b.instrument_id=a.instrument_id) AS count FROM sp_recall_instruments a JOIN sp_recalls r ON r.tenant_id=a.tenant_id AND r.facility_id=a.facility_id AND r.id=a.recall_id WHERE a.tenant_id=? AND a.facility_id=? AND a.instrument_id=? ORDER BY r.rowid DESC LIMIT 1",
+            )
+            .get(...args, id) as RecallBlock | undefined;
+          return row ?? null;
         },
         findRecallBlock: async (id) => {
           const row = this.db

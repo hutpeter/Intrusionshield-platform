@@ -16,6 +16,8 @@ import type {
   ReturnSummary,
   ReturnInput,
   ReturnDispositionInput,
+  RecallImpact,
+  RecallExtensionInput,
   RecallRecord,
   RecallSummary,
   RecallInput,
@@ -296,6 +298,59 @@ export const api = {
     }
     throw new ApiError(503, "SERVICE_UNAVAILABLE");
   },
+  recallImpact: (
+    s: Session,
+    sourceKind: "load" | "package",
+    sourceId: string,
+    sourceVersion: number,
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<RecallImpact>(
+        base(s) +
+          "/recalls/impact?sourceKind=" +
+          sourceKind +
+          "&sourceId=" +
+          encodeURIComponent(sourceId) +
+          "&sourceVersion=" +
+          sourceVersion,
+        signal,
+      ),
+    ),
+  recallCaseImpact: (s: Session, id: string, signal: AbortSignal) =>
+    scoped(
+      s,
+      call<RecallImpact>(
+        base(s) + "/recalls/" + encodeURIComponent(id) + "/impact",
+        signal,
+      ),
+    ),
+  extendRecall: (
+    s: Session,
+    id: string,
+    body: RecallExtensionInput,
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<RecallRecord>(
+        base(s) + "/recalls/" + encodeURIComponent(id) + "/extend",
+        signal,
+        body,
+        s.csrf,
+      ),
+    ),
+  lineageRecallExample: (s: Session, requestId: string, signal: AbortSignal) =>
+    scoped(
+      s,
+      call<{
+        tenantId: string;
+        facilityId: string;
+        sourcePackage: { id: string; code: string; version: number };
+        descendantPackage: { id: string; code: string; version: number };
+      }>("/preview/lineage-recall-example", signal, { requestId }, s.csrf),
+    ),
   recalls: (s: Session, n: number, signal: AbortSignal) =>
     scopedPage<RecallSummary>(s, base(s) + "/recalls", n, signal),
   recall: (s: Session, id: string, signal: AbortSignal, version?: number) =>

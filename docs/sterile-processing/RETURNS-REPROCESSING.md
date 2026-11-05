@@ -79,7 +79,8 @@ repair or locate instruments. No notifications are sent.
 
 Partial returns, missing instruments, direct unopened restock, damaged-instrument
 repair, quarantine clearance, corrected dispositions, use/procedure recording,
-production policies and cross-episode propagation of later recalls remain deferred.
-See RSP-ISS-003 and RSP-ISS-004. A historical recall is not automatically propagated
-across newly reprocessed packages; production recall acceptance requires that gap
-resolved. Full manual/end-to-end testing remains pending in TESTING-REGISTER.md.
+production policies and cross-facility recall handling remain deferred.
+See RSP-ISS-003 and RSP-ISS-004. New or explicitly extended recalls now traverse
+recorded reprocessing lineage and block the original instruments' current custody;
+older cases require explicit reviewer extension. See RECALL-LINEAGE.md.
+Full manual/end-to-end testing remains pending in TESTING-REGISTER.md.

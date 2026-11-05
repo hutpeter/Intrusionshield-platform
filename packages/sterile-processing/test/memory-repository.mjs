@@ -6,6 +6,7 @@ export class MemoryRepository {
     recalls: [],
     recallVersions: [],
     recallBlocks: [],
+    recallInstruments: [],
     distribution: [],
     distributionVersions: [],
     reviews: [],
@@ -232,6 +233,36 @@ export class MemoryRepository {
             packageId: p.packageId,
             recallId: r.id,
           });
+      },
+      insertRecallInstrumentBlocks: async (r) => {
+        for (const id of r.lineage?.instrumentIds ?? []) {
+          if (
+            !s.recallInstruments.some(
+              (x) => own(x) && x.instrumentId === id && x.recallId === r.id,
+            )
+          )
+            s.recallInstruments.push({
+              ...scope,
+              instrumentId: id,
+              recallId: r.id,
+            });
+        }
+      },
+      findInstrumentRecallBlock: async (id) => {
+        const refs = s.recallInstruments.filter(
+            (x) => own(x) && x.instrumentId === id,
+          ),
+          latest = refs.at(-1),
+          r =
+            latest && s.recalls.find((x) => own(x) && x.id === latest.recallId);
+        return r
+          ? {
+              caseId: r.id,
+              caseCode: r.code,
+              state: r.state,
+              count: refs.length,
+            }
+          : null;
       },
       findRecallBlock: async (id) => {
         const refs = s.recallBlocks.filter((x) => own(x) && x.packageId === id),

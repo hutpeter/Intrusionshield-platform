@@ -226,3 +226,9 @@ remain blocked; a new linked receiving episode is required for reprocessing.
 See [TRACEABILITY.md](TRACEABILITY.md) for exact-code search, current blocks alongside
 historical evidence, source versions and CSV export. The latest-return shortcut is
 read-only and uses the records already saved during the owner's return check.
+
+## Recall lineage update — November 5, 2026
+
+See [RECALL-LINEAGE.md](RECALL-LINEAGE.md) for impact preview, descendant/current-custody
+package blocks, persistent instrument blocks and explicit extension of older cases.
+New cases use this policy; existing saved cases are not silently migrated.

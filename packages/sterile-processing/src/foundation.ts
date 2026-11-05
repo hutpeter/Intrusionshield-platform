@@ -48,6 +48,7 @@ export interface InstrumentType {
   version: number;
 }
 export interface Instrument {
+  recall?: RecallBlock;
   processingHold?: { episodeId: string; episodeCode: string };
   activeAssembly?: { assemblyId: string; assemblyCode: string };
   id: string;
@@ -75,6 +76,7 @@ export interface SterileAuditEvent {
   action:
     | "package-returned"
     | "return-disposition"
+    | "recall-expanded"
     | "recall-created"
     | "recall-recovered"
     | "recall-disposition"
@@ -137,6 +139,8 @@ export interface SterileTransaction {
   insertReturnVersion(item: ReturnRecord): Promise<void>;
   findReturnVersion(id: string, version: number): Promise<ReturnRecord | null>;
 
+  insertRecallInstrumentBlocks(item: RecallRecord): Promise<void>;
+  findInstrumentRecallBlock(id: string): Promise<RecallBlock | null>;
   findRecall(id: string): Promise<RecallRecord | null>;
   findRecallByCode(code: string): Promise<RecallRecord | null>;
   listRecalls(page: number): Promise<RecallSummary[]>;
@@ -273,6 +277,7 @@ export class SterileError extends Error {
       | "DISTRIBUTION_BLOCKED"
       | "TRACE_LIMIT"
       | "RETURN_BLOCKED"
+      | "RECALL_LIMIT"
       | "RECALL_BLOCKED",
   ) {
     super(code);

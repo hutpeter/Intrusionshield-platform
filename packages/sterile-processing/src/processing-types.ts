@@ -42,6 +42,7 @@ export interface InspectInput {
   confirmed: boolean;
 }
 export interface ProcessingEpisode {
+  recallBlocked?: boolean;
   returnSource?: {
     returnId: string;
     returnCode: string;

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type {
+  RecallImpact,
   RecallRecord,
   RecallSummary,
   SterileAuditEvent,
@@ -49,7 +50,7 @@ export function RecallWorkspace({
     [historyPage, setHistoryPage] = useState(1),
     [nonce, setNonce] = useState(0),
     [form, setForm] = useState<{
-      kind: "create" | "recover" | "dispose";
+      kind: "create" | "recover" | "dispose" | "extend";
       requestId: string;
       version?: number;
     } | null>(null),
@@ -58,6 +59,7 @@ export function RecallWorkspace({
     [saving, setSaving] = useState(false),
     [error, setError] = useState<unknown>(null),
     [notice, setNotice] = useState(false),
+    [impact, setImpact] = useState<RecallImpact | null>(null),
     [discard, setDiscard] = useState<(() => void) | null>(null);
   const pending = useRef<AbortController | null>(null),
     inspection = useRef<AbortController | null>(null),
@@ -121,9 +123,14 @@ export function RecallWorkspace({
     })();
     return () => ac.abort();
   }, [session, selected, page, historyPage, nonce, onExpired]);
-  const patch = (v: Partial<ReturnType<typeof empty>>) =>
-    setFields((x) => ({ ...x, ...v }));
+  const patch = (v: Partial<ReturnType<typeof empty>>) => {
+    if ("sourceId" in v || "sourceKind" in v) {
+      setImpact(null);
+      setFields((x) => ({ ...x, ...v, confirmed: false }));
+    } else setFields((x) => ({ ...x, ...v }));
+  };
   function clear() {
+    setImpact(null);
     setForm(null);
     setFields(empty());
     setDiscard(null);
@@ -140,7 +147,10 @@ export function RecallWorkspace({
       action();
     }
   }
-  function begin(kind: "create" | "recover" | "dispose", packageId = "") {
+  function begin(
+    kind: "create" | "recover" | "dispose" | "extend",
+    packageId = "",
+  ) {
     guard(() => {
       setNotice(false);
       setError(null);
@@ -158,6 +168,7 @@ export function RecallWorkspace({
       !form ||
       busy ||
       !fields.confirmed ||
+      ((form.kind === "create" || form.kind === "extend") && !impact) ||
       (form.kind === "recover" ? !session.canRecover : !session.canRecall)
     )
       return;
@@ -180,6 +191,22 @@ export function RecallWorkspace({
             sourceKind: fields.sourceKind,
             sourceId: source.id,
             sourceVersion: source.version,
+            reason: fields.reason,
+            reference: fields.reference,
+            confirmed: true,
+            impactHash: impact!.impactHash,
+          },
+          ac.signal,
+        );
+      } else if (form.kind === "extend") {
+        if (!selected || !form.version || !impact) return;
+        r = await api.extendRecall(
+          session,
+          selected,
+          {
+            requestId: form.requestId,
+            version: form.version,
+            impactHash: impact.impactHash,
             reason: fields.reason,
             reference: fields.reference,
             confirmed: true,
@@ -226,7 +253,7 @@ export function RecallWorkspace({
       pending.current = null;
     }
   }
-  async function example() {
+  async function example(lineage = false) {
     if (
       busy ||
       form ||
@@ -239,22 +266,85 @@ export function RecallWorkspace({
     setSaving(true);
     setError(null);
     try {
-      const d = await api.recallExample(session, exampleKey.current, ac.signal);
+      let source: Source;
+      if (lineage) {
+        const e = await api.lineageRecallExample(
+          session,
+          exampleKey.current,
+          ac.signal,
+        );
+        source = e.sourcePackage;
+      } else {
+        const d = await api.recallExample(
+          session,
+          exampleKey.current,
+          ac.signal,
+        );
+        source = {
+          id: d.packageId,
+          code: d.packageCode,
+          version: d.packageVersion,
+        };
+      }
+      const plan = await api.recallImpact(
+        session,
+        "package",
+        source.id,
+        source.version,
+        ac.signal,
+      );
       if (ac.signal.aborted) return;
-      setPackages((x) => [
-        { id: d.packageId, code: d.packageCode, version: d.packageVersion },
-        ...x.filter((p) => p.id !== d.packageId),
-      ]);
+      setPackages((x) => [source, ...x.filter((p) => p.id !== source.id)]);
       setForm({ kind: "create", requestId: crypto.randomUUID() });
       setFields({
         ...empty(),
         code: "RECALL-DEMO-" + exampleKey.current,
         sourceKind: "package",
-        sourceId: d.packageId,
-        reason: "SIMULATED recall demonstration",
+        sourceId: source.id,
+        reason: lineage
+          ? "SIMULATED recall after reprocessing"
+          : "SIMULATED recall demonstration",
         reference: "SIMULATED-RECALL",
       });
+      setImpact(plan);
       exampleKey.current = crypto.randomUUID();
+    } catch (e) {
+      if (!ac.signal.aborted) {
+        if (e instanceof ApiError && e.status === 401) onExpired();
+        else setError(e);
+      }
+    } finally {
+      if (!ac.signal.aborted) setSaving(false);
+      pending.current = null;
+    }
+  }
+  async function previewImpact() {
+    if (busy || !form) return;
+    const ac = new AbortController();
+    pending.current = ac;
+    setSaving(true);
+    setError(null);
+    setImpact(null);
+    setFields((x) => ({ ...x, confirmed: false }));
+    try {
+      let r: RecallImpact;
+      if (form.kind === "extend") {
+        if (!selected) return;
+        r = await api.recallCaseImpact(session, selected, ac.signal);
+      } else {
+        const source = (fields.sourceKind === "load" ? loads : packages).find(
+          (x) => x.id === fields.sourceId,
+        );
+        if (!source) return;
+        r = await api.recallImpact(
+          session,
+          fields.sourceKind,
+          source.id,
+          source.version,
+          ac.signal,
+        );
+      }
+      if (!ac.signal.aborted) setImpact(r);
     } catch (e) {
       if (!ac.signal.aborted) {
         if (e instanceof ApiError && e.status === 401) onExpired();
@@ -300,7 +390,9 @@ export function RecallWorkspace({
       ? p.recovery
       : form?.kind === "dispose"
         ? p.dispose
-        : p.create;
+        : form?.kind === "extend"
+          ? p.extend
+          : p.create;
   return (
     <section>
       <div className="page-heading">
@@ -343,6 +435,12 @@ export function RecallWorkspace({
           <section className="demo-example">
             <button disabled={busy || loading} onClick={() => void example()}>
               {p.example}
+            </button>
+            <button
+              disabled={busy || loading}
+              onClick={() => void example(true)}
+            >
+              {p.lineageExample}
             </button>
             <small>{p.exampleHelp}</small>
           </section>
@@ -476,6 +574,38 @@ export function RecallWorkspace({
                 </label>
               ))}
             </div>
+            {(form.kind === "create" || form.kind === "extend") && (
+              <>
+                <button
+                  type="button"
+                  disabled={
+                    busy || (form.kind === "create" && !fields.sourceId)
+                  }
+                  onClick={() => void previewImpact()}
+                >
+                  {p.preview}
+                </button>
+                {impact && (
+                  <section className="readonly-note">
+                    <h3>
+                      {p.impact}: {impact.items.length}
+                    </h3>
+                    <p>
+                      {p.instruments}:{" "}
+                      {impact.instruments.map((i) => i.code).join(", ")}
+                    </p>
+                    <p>{p.lineageNotice}</p>
+                    <ul>
+                      {impact.items.map((i) => (
+                        <li key={i.packageId}>
+                          {i.packageCode} · {p[i.origin ?? "direct"]}
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                )}
+              </>
+            )}
             <label className="check">
               <input
                 type="checkbox"
@@ -486,13 +616,28 @@ export function RecallWorkspace({
                 ? p.confirmRecovery
                 : form.kind === "dispose"
                   ? p.confirmDisposition
-                  : p.confirm}
+                  : form.kind === "extend"
+                    ? p.confirmExtension
+                    : p.confirm}
             </label>
           </fieldset>
           <div className="form-footer">
             <button
               className="primary"
-              disabled={busy || loading || !fields.confirmed}
+              disabled={
+                busy ||
+                loading ||
+                !fields.confirmed ||
+                ((form.kind === "create" || form.kind === "extend") &&
+                  !impact) ||
+                (form.kind === "extend" &&
+                  !!detail?.lineage &&
+                  !!impact &&
+                  !impact.items.some(
+                    (p) =>
+                      !detail.items.some((i) => i.packageId === p.packageId),
+                  ))
+              }
             >
               {busy
                 ? t.saving
@@ -500,7 +645,9 @@ export function RecallWorkspace({
                   ? p.saveRecovery
                   : form.kind === "dispose"
                     ? p.saveDisposition
-                    : p.save}
+                    : form.kind === "extend"
+                      ? p.saveExtension
+                      : p.save}
             </button>
           </div>
         </form>
@@ -581,6 +728,17 @@ export function RecallWorkspace({
           )}
           <section className="panel">
             <span className="badge retired">{p[shown.state]}</span>
+            {session.canRecall && !past && !form && (
+              <button disabled={busy} onClick={() => begin("extend")}>
+                {p.extend}
+              </button>
+            )}
+            {shown.lineage && (
+              <p className="readonly-note">
+                {p.lineageNotice} · {p.instruments}:{" "}
+                {shown.lineage.instrumentIds.length}
+              </p>
+            )}
             <dl className="details-grid">
               <div>
                 <dt>{p.source}</dt>
@@ -612,6 +770,13 @@ export function RecallWorkspace({
             <h2>{p.items}</h2>
             {shown.items.map((item) => (
               <article className="cleaning-attempt" key={item.packageId}>
+                <p>{p[item.origin ?? "direct"]}</p>
+                {item.previousReturn && (
+                  <p>
+                    {p.previousReturn}: {item.previousReturn.code} ·{" "}
+                    {item.previousReturn.episodeCode ?? "—"}
+                  </p>
+                )}
                 <div className="panel-heading">
                   <div>
                     <h3>{item.packageCode}</h3>
@@ -640,7 +805,7 @@ export function RecallWorkspace({
                 </div>
                 <dl className="details-grid">
                   <div>
-                    <dt>{p.where}</dt>
+                    <dt>{item.previousReturn ? p.whereHistorical : p.where}</dt>
                     <dd>
                       {item.atRecall
                         ? (item.atRecall.location ??
@@ -701,7 +866,9 @@ export function RecallWorkspace({
                           ? p.created
                           : h.action === "recall-recovered"
                             ? p.recoveryEvent
-                            : p.dispositionEvent}
+                            : h.action === "recall-expanded"
+                              ? p.expanded
+                              : p.dispositionEvent}
                       </strong>
                       <time dateTime={h.at}>{date(h.at)}</time>
                       <small>

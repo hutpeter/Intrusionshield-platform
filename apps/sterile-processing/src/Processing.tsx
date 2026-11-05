@@ -1,3 +1,4 @@
+import { recallLabels } from "./recall-text";
 import { returnLabels } from "./return-text";
 import { useEffect, useRef, useState } from "react";
 import type {
@@ -358,6 +359,9 @@ export function ProcessingWorkspace({
   );
   const episode = (d: ProcessingEpisode) => (
     <>
+      {d.recallBlocked && (
+        <p className="alert">{recallLabels(language).blocked}</p>
+      )}
       {d.returnSource && (
         <p className="readonly-note">
           {returnLabels(language).origin}: {d.returnSource.returnCode} ·{" "}

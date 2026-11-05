@@ -939,6 +939,47 @@ export function createSterileApp(
   app.get(prefix + "/recalls", async (req, res) =>
     res.json(await recalls().list(res.locals.scope, page(req))),
   );
+  app.get(prefix + "/recalls/impact", async (req, res) => {
+    if (
+      Object.keys(req.query).length !== 3 ||
+      typeof req.query.sourceKind !== "string" ||
+      typeof req.query.sourceId !== "string" ||
+      typeof req.query.sourceVersion !== "string"
+    )
+      throw new SterileError("INVALID_REQUEST");
+    res.json(
+      await recalls().impact(
+        res.locals.scope,
+        req.query.sourceKind as "load" | "package",
+        req.query.sourceId,
+        Number(req.query.sourceVersion),
+      ),
+    );
+  });
+  app.get(prefix + "/recalls/:id/impact", async (req, res) => {
+    noQuery(req);
+    res.json(
+      await recalls().caseImpact(res.locals.scope, sterileUuid(req.params.id)),
+    );
+  });
+  app.post(prefix + "/recalls/:id/extend", async (req, res) => {
+    noQuery(req);
+    const v = body(req.body, [
+      "requestId",
+      "version",
+      "impactHash",
+      "reason",
+      "reference",
+      "confirmed",
+    ]);
+    res.json(
+      await recalls().extend(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        v as unknown as Parameters<RecallRegistry["extend"]>[2],
+      ),
+    );
+  });
   app.get(prefix + "/recalls/:id", async (req, res) => {
     noQuery(req);
     res.json(await recalls().get(res.locals.scope, sterileUuid(req.params.id)));
@@ -965,6 +1006,7 @@ export function createSterileApp(
   app.post(prefix + "/recalls", async (req, res) => {
     noQuery(req);
     const v = body(req.body, [
+      ...(Object.hasOwn(req.body ?? {}, "impactHash") ? ["impactHash"] : []),
       "requestId",
       "code",
       "sourceKind",
@@ -1048,6 +1090,7 @@ export function createSterileApp(
               REVIEW_BLOCKED: 409,
               DISTRIBUTION_BLOCKED: 409,
               RECALL_BLOCKED: 409,
+              RECALL_LIMIT: 409,
               RETURN_BLOCKED: 409,
               TRACE_LIMIT: 409,
             }[code as SterileError["code"]]

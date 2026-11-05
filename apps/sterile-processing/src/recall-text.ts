@@ -1,5 +1,21 @@
 import type { Language } from "./text";
 const es = {
+  previousReturn: "Devolución registrada",
+  whereHistorical: "Referencia de entrega/almacenamiento original (histórica)",
+  preview: "Revisar alcance afectado",
+  impact: "Alcance de la retirada",
+  instruments: "Instrumentos bloqueados",
+  direct: "Objetivo original",
+  reprocessed: "Paquete reprocesado vinculado",
+  current_custody: "Custodia actual del instrumento",
+  lineageExample: "Preparar ejemplo ficticio de retirada tras reprocesamiento",
+  extend: "Ampliar retirada",
+  saveExtension: "Guardar ampliación",
+  expanded: "Alcance de retirada ampliado",
+  lineageNotice:
+    "Se conservan los objetivos originales y se bloquean paquetes posteriores vinculados y la custodia actual. Los instrumentos afectados no pueden volver a armado o empaque; cerrar el caso no levanta el bloqueo.",
+  confirmExtension:
+    "Confirmo esta ampliación y los bloqueos mostrados; se conserva el historial original.",
   title: "Retiradas y recuperación",
   intro:
     "Bloquee paquetes afectados y conserve localización, recuperación y disposición.",
@@ -13,7 +29,7 @@ const es = {
   reason: "Motivo",
   reference: "Referencia",
   confirm:
-    "Confirmo esta retirada y el bloqueo de todos los paquetes afectados.",
+    "Confirmo esta retirada, los paquetes afectados y los bloqueos persistentes de los instrumentos.",
   save: "Guardar retirada",
   open: "Retirada abierta — entrega bloqueada",
   closed: "Caso cerrado — paquetes bloqueados",
@@ -69,6 +85,22 @@ const es = {
 };
 type Text = Record<keyof typeof es, string>;
 const en: Text = {
+  previousReturn: "Recorded return",
+  whereHistorical: "Original issue/storage reference (historical)",
+  preview: "Preview affected history",
+  impact: "Recall impact",
+  instruments: "Blocked instruments",
+  direct: "Original target",
+  reprocessed: "Linked reprocessed package",
+  current_custody: "Current instrument custody",
+  lineageExample: "Prepare fictional reprocessing recall example",
+  extend: "Extend recall",
+  saveExtension: "Save extension",
+  expanded: "Recall scope extended",
+  lineageNotice:
+    "Original targets are retained. Linked later packages and current instrument custody are blocked. Affected instruments cannot return to assembly or packaging; closing the case does not lift the block.",
+  confirmExtension:
+    "I confirm this extension and the displayed blocks; original history is retained.",
   title: "Withdrawal and recall",
   intro:
     "Block affected packages and preserve location, recovery and disposition records.",
@@ -81,7 +113,8 @@ const en: Text = {
   sourceVersion: "Source version",
   reason: "Reason",
   reference: "Reference",
-  confirm: "I confirm this recall and the block on every affected package.",
+  confirm:
+    "I confirm this recall, the affected packages and persistent instrument blocks.",
   save: "Save recall",
   open: "Recall open — issue blocked",
   closed: "Case closed — packages blocked",
@@ -136,6 +169,22 @@ const en: Text = {
     "Demo reviewer creates cases and records disposition; Demo operator records recoveries; Demo auditor reads only.",
 };
 const fr: Text = {
+  previousReturn: "Retour enregistré",
+  whereHistorical: "Référence initiale de remise/stockage (historique)",
+  preview: "Prévisualiser l’historique affecté",
+  impact: "Périmètre du rappel",
+  instruments: "Instruments bloqués",
+  direct: "Cible initiale",
+  reprocessed: "Paquet retraité lié",
+  current_custody: "Garde actuelle de l’instrument",
+  lineageExample: "Préparer un exemple fictif de rappel après retraitement",
+  extend: "Étendre le rappel",
+  saveExtension: "Enregistrer l’extension",
+  expanded: "Périmètre du rappel étendu",
+  lineageNotice:
+    "Les cibles initiales sont conservées. Les paquets ultérieurs liés et la garde actuelle sont bloqués. Les instruments affectés ne peuvent pas revenir à l’assemblage ou l’emballage ; clôturer le dossier ne lève pas le blocage.",
+  confirmExtension:
+    "Je confirme cette extension et les blocages affichés ; l’historique initial est conservé.",
   title: "Retrait et rappel",
   intro:
     "Bloquez les emballages concernés et conservez localisation, récupération et disposition.",
@@ -148,7 +197,8 @@ const fr: Text = {
   sourceVersion: "Version d’origine",
   reason: "Motif",
   reference: "Référence",
-  confirm: "Je confirme ce rappel et le blocage de chaque emballage concerné.",
+  confirm:
+    "Je confirme ce rappel, les paquets concernés et les blocages persistants des instruments.",
   save: "Enregistrer le rappel",
   open: "Rappel ouvert — remise bloquée",
   closed: "Dossier clos — emballages bloqués",
