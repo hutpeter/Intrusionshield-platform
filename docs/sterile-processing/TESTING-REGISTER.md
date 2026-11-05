@@ -39,7 +39,7 @@ A successful developer check never implies that the owner performed it.
 
 | Maintenance increment (this commit) | Defect hold, assessment/repair evidence and reviewer-authorized fresh receiving | 234 scoped tests, builds and developer browser lifecycle/refresh check | U-MAINT-01 passed November 5, 2026 | Broader owner repair/authorization, active-custody incidents, physical evidence and production policy deferred |
 
-| Instrument scanning increment (this commit) | Stable internal identifier, vector Data Matrix label and current scoped lookup | 243 scoped tests, builds, independent symbol decoding and developer browser print/Enter/lookup check | U-SCAN-01 pending | Physical scanners/printers/DPM and operational scan-assisted actions deferred |
+| Instrument scanning increment (this commit) | Stable internal identifier, vector Data Matrix label and current scoped lookup | 243 scoped tests, builds, independent symbol decoding and developer browser print/Enter/lookup check | U-SCAN-01 passed November 5, 2026 | Physical scanners/printers/DPM and operational scan-assisted actions deferred |
 
 ## Instrument scanning increment verification
 
@@ -55,7 +55,7 @@ held instrument, invalid/unknown input stayed in lookup, and auditor lookup was 
 The list-loading race found during the check was fixed; lookup no longer waits on the
 background instrument list. Owner acceptance is not inferred.
 
-**Current single owner check U-SCAN-01 pending:** Demo operator → Instruments →
+**Current single owner check U-SCAN-01 passed November 5, 2026:** Demo operator → Instruments →
 Prepare fictional scan example → Simulate this scan. Expected matching SCAN-DEMO
 record, current-record success message and maintenance hold still visible. See
 [INSTRUMENT-SCANNING.md](INSTRUMENT-SCANNING.md). No physical scanner is needed.
@@ -572,3 +572,12 @@ U-MAINT-01 passed: owner screenshot confirms **Maintenance hold — unavailable*
 is now available. This confirms defect/hold saving only; owner assessment, repair,
 authorization and full reprocessing remain deferred. No checkbox-layout update
 acceptance is inferred from this screenshot of the saved record.
+
+## Owner simulated scan result — November 5, 2026
+
+U-SCAN-01 passed: owner screenshots show the fictional Data Matrix label, followed by
+the matching `SCAN-DEMO-C6E99996-11F5-4E9F-A542-FDCED5A59FD1` instrument detail,
+current-record success message, maintenance hold and saved fictional defect/history.
+This confirms simulated identifier lookup and current hold display in Spanish. It
+does not establish physical scanner, printed-label or operational scan-action acceptance.
+M-SCAN-01 through M-SCAN-04 remain deferred.
