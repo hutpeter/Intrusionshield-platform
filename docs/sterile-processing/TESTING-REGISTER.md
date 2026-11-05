@@ -37,7 +37,7 @@ A successful developer check never implies that the owner performed it.
 | 5d69126                     | Previewed original/descendant/current-custody scope, persistent instrument blocks and explicit legacy-case extension | 205 scoped automated tests, builds and targeted browser check                                                                               | U-LINEAGE-01 passed November 5, 2026                                                                                       | Manual legacy extension, closure/reconciliation, language/mobile, physical labels and operational acceptance deferred            |
 | 52cc212                     | Reviewer evidence/decision, operator admission preview, fresh linked receiving, overlap and old-package protection   | 223 scoped automated tests, builds and targeted browser verification                                                                        | U-CLEAR-01 passed November 5, 2026; U-CLEAR-02 receiving passed November 5, 2026                                           | Broader manual recovery/clearance, overlap, paused episodes, language/mobile, physical labels and production validation deferred |
 
-| Maintenance increment (this commit) | Defect hold, assessment/repair evidence and reviewer-authorized fresh receiving | 234 scoped tests, builds and developer browser lifecycle/refresh check | U-MAINT-01 pending | Broader owner repair/authorization, active-custody incidents, physical evidence and production policy deferred |
+| Maintenance increment (this commit) | Defect hold, assessment/repair evidence and reviewer-authorized fresh receiving | 234 scoped tests, builds and developer browser lifecycle/refresh check | U-MAINT-01 passed November 5, 2026 | Broader owner repair/authorization, active-custody incidents, physical evidence and production policy deferred |
 
 ## Maintenance increment verification
 
@@ -49,7 +49,7 @@ restrictions, no old availability, fresh processing through inspection/assembly,
 idempotency, competing commands, persistence and late audit rollback. Developer browser
 and automated results do not establish owner acceptance.
 
-**U-MAINT-01 pending.** Deferred M-MAINT-01: owner assessment/repair/authorization and
+**U-MAINT-01 passed November 5, 2026.** Deferred M-MAINT-01: owner assessment/repair/authorization and
 complete fresh-processing walkthrough; M-MAINT-02: Windows, ES/FR/mobile, stale/conflict,
 failed service and multiple cycles; M-MAINT-03: real repair/function evidence, production
 roles/competency, active-custody incidents, correction/retirement and vendor integration.
@@ -57,7 +57,7 @@ RSP-ISS-006 records remaining maintenance work. RSP-ISS-001 remains parked.
 
 ## Owner's current single check — maintenance hold
 
-**U-MAINT-01 pending.** Follow [MAINTENANCE-REPAIR.md](MAINTENANCE-REPAIR.md): Demo
+**U-MAINT-01 passed November 5, 2026.** Follow [MAINTENANCE-REPAIR.md](MAINTENANCE-REPAIR.md): Demo
 operator → Instruments → Prepare fictional maintenance instrument → Report defect
 and hold → keep fictional values, confirm and save. Expected **Maintenance hold —
 unavailable** with recorded defect/location. Only this one new aspect is requested.
@@ -538,3 +538,13 @@ Both maintenance confirmation labels now use the existing checkbox-row style. Ta
 developer Chromium verification checks a 17px checkbox aligned with its label, clicking
 label text selects it and enables Save, and saving works through all maintenance stages.
 Scoped builds passed. Broader deferred manual checks remain unchanged.
+
+## Owner maintenance hold result — November 5, 2026
+
+U-MAINT-01 passed: owner screenshot confirms **Maintenance hold — unavailable**,
+**SIMULATED damaged hinge**, **DEMO-MAINT-QUARANTINE**, updated timestamp and a
+**Defect recorded** audit entry attributed to Demo operator. Instrument code:
+`MAINT-DEMO-A151A482-A934-4850-BE63-ACE1502C0FD0`. The **Record assessment** action
+is now available. This confirms defect/hold saving only; owner assessment, repair,
+authorization and full reprocessing remain deferred. No checkbox-layout update
+acceptance is inferred from this screenshot of the saved record.
