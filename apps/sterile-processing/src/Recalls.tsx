@@ -591,7 +591,7 @@ export function RecallWorkspace({
                       {p.impact}: {impact.items.length}
                     </h3>
                     <p>
-                      {p.instruments}:{" "}
+                      {p.instrumentsPreview}:{" "}
                       {impact.instruments.map((i) => i.code).join(", ")}
                     </p>
                     <p>{p.lineageNotice}</p>
