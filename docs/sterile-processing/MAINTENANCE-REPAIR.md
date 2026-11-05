@@ -9,7 +9,7 @@ git pull --ff-only origin feature/sterile-processing-preview
 pnpm sterile:preview
 ```
 
-After **Ready**, refresh the browser. **U-MAINT-01 remains pending:**
+After **Ready**, refresh the browser. **U-MAINT-01 passed November 5, 2026** from the owner screenshot. Original steps:
 
 1. Enter as **Demo operator** and open **Instruments**.
 2. Click **Prepare fictional maintenance instrument**. It creates a separate fictional
@@ -82,7 +82,7 @@ No inherited cleaning/inspection is accepted. Domain tests continue the new epis
 through new cleaning/inspection and tray assignment. SQLite tests verify reopening
 and rollback after a late audit failure.
 
-Owner U-MAINT-01 and broader Windows/ES/FR/mobile, physical service/functional evidence,
+Owner U-MAINT-01 passed; broader Windows/ES/FR/mobile, physical service/functional evidence,
 production identity/competency, active-custody defect reporting, corrections, failed or
 unrepairable items, vendor integrations, costs/scheduling and preventive/predictive
 maintenance acceptance remain pending. No actual equipment, repair, clinical release,

@@ -39,6 +39,30 @@ A successful developer check never implies that the owner performed it.
 
 | Maintenance increment (this commit) | Defect hold, assessment/repair evidence and reviewer-authorized fresh receiving | 234 scoped tests, builds and developer browser lifecycle/refresh check | U-MAINT-01 passed November 5, 2026 | Broader owner repair/authorization, active-custody incidents, physical evidence and production policy deferred |
 
+| Instrument scanning increment (this commit) | Stable internal identifier, vector Data Matrix label and current scoped lookup | 243 scoped tests, builds, independent symbol decoding and developer browser print/Enter/lookup check | U-SCAN-01 pending | Physical scanners/printers/DPM and operational scan-assisted actions deferred |
+
+## Instrument scanning increment verification
+
+**Developer verification November 5, 2026:** 243 scoped automated tests (126 domain,
+94 service/SQLite/HTTP, 23 web API/export/symbol) and scoped builds. Coverage: stable
+legacy/current identifier without mutation, manufacturer serial separation, exact-token
+validation, foreign/unknown lookup, current maintenance/processing/retired state,
+read-only roles, strict queries, CSRF-protected explicit fixture, replay-safe setup,
+foreign response rejection and independent Data Matrix decoding. Targeted browser
+verification passed: rendered SVG independently decoded to the exact token, print/PDF
+isolated the identification label, simulation and keyboard Enter opened the correct
+held instrument, invalid/unknown input stayed in lookup, and auditor lookup was read-only.
+The list-loading race found during the check was fixed; lookup no longer waits on the
+background instrument list. Owner acceptance is not inferred.
+
+**Current single owner check U-SCAN-01 pending:** Demo operator → Instruments →
+Prepare fictional scan example → Simulate this scan. Expected matching SCAN-DEMO
+record, current-record success message and maintenance hold still visible. See
+[INSTRUMENT-SCANNING.md](INSTRUMENT-SCANNING.md). No physical scanner is needed.
+M-SCAN-01 real scanner/focus/keyboard suffix; M-SCAN-02 printer and physical labels;
+M-SCAN-03 DPM, UDI/GS1, camera and ES/FR/mobile; M-SCAN-04 operational scan-assisted
+transitions remain deferred. RSP-ISS-007 records those boundaries.
+
 ## Maintenance increment verification
 
 **Passed November 5, 2026:** 234 scoped automated tests (121 domain, 92 service/SQLite/
@@ -55,7 +79,7 @@ failed service and multiple cycles; M-MAINT-03: real repair/function evidence, p
 roles/competency, active-custody incidents, correction/retirement and vendor integration.
 RSP-ISS-006 records remaining maintenance work. RSP-ISS-001 remains parked.
 
-## Owner's current single check — maintenance hold
+## Owner's completed maintenance hold check
 
 **U-MAINT-01 passed November 5, 2026.** Follow [MAINTENANCE-REPAIR.md](MAINTENANCE-REPAIR.md): Demo
 operator → Instruments → Prepare fictional maintenance instrument → Report defect

@@ -247,6 +247,16 @@ export function createSterileApp(
   app.get(prefix + "/instruments", async (req, res) => {
     res.json(await registry().list(res.locals.scope, page(req)));
   });
+  app.get(prefix + "/instrument-scan", async (req, res) => {
+    if (
+      Object.keys(req.query).length !== 1 ||
+      typeof req.query.identifier !== "string"
+    )
+      throw new SterileError("INVALID_REQUEST");
+    res.json(
+      await registry().lookupScan(res.locals.scope, req.query.identifier),
+    );
+  });
   app.get(prefix + "/instruments/:id", async (req, res) => {
     noQuery(req);
     res.json(

@@ -131,3 +131,15 @@ This is partial implementation evidence for RSP-001/002/003/004/020/022/024/025,
 not completion of the full SRS or any clinical acceptance scenario. The complete
 20-scenario acceptance plan remains planned/unexecuted. Memory transaction tests
 are not proof of SQL isolation or durability.
+
+## Shared product foundations — agreed November 5, 2026
+
+Maintenance and repair should become a shared platform foundation reused by Sterile
+Processing and Asset Management: defect, service hold, assessment, repair/provider
+history, evidence and authorized return. Product-specific return policies remain
+separate: Sterile Processing requires fresh receiving, cleaning and inspection.
+Asset Management can add work orders, schedules, warranties, spares, costs and downtime.
+The current sterile preview implementation has not yet been extracted into a shared
+service; that architectural extraction is future work, avoiding duplicate repair systems.
+Internal identification follows the same separation: the RSP-I format currently identifies
+sterile instruments only and must not silently become a manufacturer UDI or asset code.

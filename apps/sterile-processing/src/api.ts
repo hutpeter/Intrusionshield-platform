@@ -221,6 +221,23 @@ async function checkedMovement(
   return r;
 }
 export const api = {
+  prepareScan: (s: Session, requestId: string, signal: AbortSignal) =>
+    scoped(
+      s,
+      call<Instrument>("/preview/scan-example", signal, { requestId }, s.csrf),
+    ),
+
+  scanInstrument: (s: Session, identifier: string, signal: AbortSignal) =>
+    scoped(
+      s,
+      call<Instrument>(
+        base(s) +
+          "/instrument-scan?identifier=" +
+          encodeURIComponent(identifier),
+        signal,
+      ),
+    ),
+
   prepareMaintenance: (s: Session, requestId: string, signal: AbortSignal) =>
     scoped(
       s,

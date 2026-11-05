@@ -1068,3 +1068,76 @@ td {
     break-inside: avoid;
   }
 }
+
+.scan-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 16px 0;
+}
+.instrument-identification {
+  border: 2px solid #183f36;
+  padding: 16px;
+  max-width: 36rem;
+  margin: 16px 0;
+  background: white;
+  color: #111;
+  overflow-wrap: anywhere;
+}
+.instrument-identification img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  image-rendering: pixelated;
+  margin: 12px 0;
+}
+.instrument-identification img[hidden] {
+  display: none;
+}
+.scan-token {
+  font-family: monospace;
+  font-size: 14px;
+}
+@media print {
+  body:has(.instrument-identification)
+    :is(.masthead, .demo-banner, .sidebar, footer) {
+    display: none !important;
+  }
+  body:has(.instrument-identification)
+    .content
+    > :not(:has(.instrument-identification)) {
+    display: none !important;
+  }
+  body:has(.instrument-identification)
+    .panel:has(.instrument-identification)
+    > :not(.instrument-identification):not(:has(.instrument-identification)) {
+    display: none !important;
+  }
+  body:has(.instrument-identification)
+    .instrument-scan
+    > div:has(.instrument-identification)
+    > :not(.instrument-identification) {
+    display: none !important;
+  }
+  body:has(.instrument-identification)
+    :is(.shell, .workspace, .content, .panel:has(.instrument-identification)) {
+    display: block !important;
+    min-height: 0 !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+  }
+  body:has(.instrument-identification) .instrument-identification {
+    width: 90mm;
+    max-width: 100%;
+    margin: 0;
+    font-size: 10pt;
+    break-inside: avoid;
+  }
+  body:has(.instrument-identification) .instrument-identification img {
+    width: 32mm;
+    height: auto;
+  }
+}

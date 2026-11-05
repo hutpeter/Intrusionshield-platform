@@ -131,3 +131,18 @@ Keep test execution status in [TESTING-REGISTER.md](TESTING-REGISTER.md).
   passed. U-MAINT-01 and broader manual/clinical acceptance remain pending. Independent
   cleaner/inspector separation remains separately parked under RSP-ISS-001.
   See [MAINTENANCE-REPAIR.md](MAINTENANCE-REPAIR.md).
+
+## RSP-ISS-007 — Physical identification and operational scanning
+
+- **Status:** Initial internal Data Matrix label/lookup preview delivered.
+- **Delivered:** Stable UUID-derived RSP-I instrument identifier separate from serial;
+  local vector label with identity-only warning; focused keyboard/Enter and simulated
+  exact lookup fetching current scoped record and holds; read-only auditor access.
+- **Deferred:** Physical 2D scanner settings/focus and Windows acceptance; print scale,
+  dimensions, quiet-zone/contrast and label media durability; validated direct part
+  marking and suitable DPM imagers; manufacturer UDI/GS1 parsing, AIM prefixes, camera
+  scanning, cross-site identity/import policies and scan-assisted operational actions.
+  Printed identity never bypasses current holds or constitutes release evidence.
+- **Validation:** Scoped tests/builds and independent Data Matrix decoding; owner
+  U-SCAN-01 and broader physical/manual acceptance pending. See
+  [INSTRUMENT-SCANNING.md](INSTRUMENT-SCANNING.md).

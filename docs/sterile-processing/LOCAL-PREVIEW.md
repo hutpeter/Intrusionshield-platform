@@ -244,3 +244,8 @@ cleaning/inspection before assembly. Existing records and older versions are ret
 
 See [MAINTENANCE-REPAIR.md](MAINTENANCE-REPAIR.md) for the fictional instrument setup,
 defect hold, assessment/repair evidence and reviewer-authorized fresh receiving.
+
+## Instrument Data Matrix labels and lookup
+
+Run `pnpm install --frozen-lockfile` for the new encoder dependency, then see
+[INSTRUMENT-SCANNING.md](INSTRUMENT-SCANNING.md) for the one simulated-scan check.

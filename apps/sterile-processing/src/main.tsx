@@ -1,3 +1,5 @@
+import { InstrumentScan, InstrumentLabel } from "./InstrumentScan";
+import { scanLabels } from "./scan-text";
 import { MaintenancePanel } from "./Maintenance";
 import { maintenanceLabels, maintenanceEvent } from "./maintenance-text";
 import { TraceabilityWorkspace } from "./Traceability";
@@ -303,7 +305,9 @@ function Workspace({
   const [trayDirty, setTrayDirty] = useState(false),
     [trayBusy, setTrayBusy] = useState(false),
     [trayReset, setTrayReset] = useState(0);
-  const busy = saving || blocked || trayBusy;
+  const [scanBusy, setScanBusy] = useState(false),
+    [scanMatched, setScanMatched] = useState(false);
+  const busy = saving || blocked || trayBusy || scanBusy;
   const pending = useRef<AbortController | null>(null),
     read = useRef<AbortController | null>(null);
   useEffect(
@@ -389,6 +393,7 @@ function Workspace({
   }, [discard]);
 
   function clear() {
+    setScanMatched(false);
     setTrayDirty(false);
     setTrayReset((n) => n + 1);
     setForm(null);
@@ -671,6 +676,27 @@ function Workspace({
         </div>
       </aside>
       <main className="content">
+        {tab === "instruments" && !selected && (
+          <InstrumentScan
+            session={session}
+            language={language}
+            blocked={busy || dirty}
+            onBusy={setScanBusy}
+            onExpired={onExpired}
+            onOpen={(i) => {
+              setScanMatched(true);
+              setSelected(i.id);
+              setHistoryPage(1);
+              setNotice(null);
+              setNonce((n) => n + 1);
+            }}
+          />
+        )}
+        {scanMatched && selected && !loading && (
+          <p className="success" role="status">
+            {scanLabels(language).matched}
+          </p>
+        )}
         {detail?.recall && (
           <p className="alert">
             {recallLabels(language).blocked} · {detail.recall.caseCode}
@@ -1137,6 +1163,14 @@ function Workspace({
                   </>
                 )}
               </dl>
+            </section>
+            <section className="panel">
+              <h2>{scanLabels(language).title}</h2>
+              <InstrumentLabel
+                instrument={detail}
+                language={language}
+                disabled={busy || dirty}
+              />
             </section>
             <MaintenancePanel
               key={detail.id + ":" + trayReset}

@@ -48,6 +48,8 @@ export interface InstrumentType {
   version: number;
 }
 export interface Instrument {
+  /** Internal lookup identifier, separate from manufacturer serial / UDI. */
+  scanIdentifier?: string;
   maintenance?: import("./maintenance.js").MaintenanceEntry[];
   recall?: RecallBlock;
   processingHold?: { episodeId: string; episodeCode: string };

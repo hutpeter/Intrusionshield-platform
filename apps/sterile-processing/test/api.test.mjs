@@ -615,3 +615,25 @@ test("maintenance authorization preserves evidence, version and CSRF and rejects
     (e) => e instanceof ApiError && e.code === "SERVICE_UNAVAILABLE",
   );
 });
+test("scanner lookup encodes the complete token and rejects foreign result scope", async (t) => {
+  const token = "RSP-I-123 +?";
+  fake(t, async (path, options) => {
+    assert.ok(
+      path.endsWith("/instrument-scan?identifier=" + encodeURIComponent(token)),
+    );
+    assert.equal(options.method, "GET");
+    assert.equal(options.body, undefined);
+    return new Response(
+      JSON.stringify({
+        id: "foreign",
+        tenantId: "other",
+        facilityId: session.facilityId,
+      }),
+      { status: 200 },
+    );
+  });
+  await assert.rejects(
+    api.scanInstrument(session, token, signal()),
+    (e) => e instanceof ApiError && e.code === "SERVICE_UNAVAILABLE",
+  );
+});

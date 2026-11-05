@@ -164,6 +164,14 @@ export class InstrumentRegistry extends SterileRegistryBase {
       },
     );
   }
+  async lookupScan(scope: SterileScope, value: unknown): Promise<Instrument> {
+    if (typeof value !== "string" || value.length > 128)
+      throw new SterileError("INVALID_REQUEST");
+    const token = value.trim();
+    if (!/^RSP-I-[a-f0-9-]{36}$/i.test(token))
+      throw new SterileError("INVALID_REQUEST");
+    return this.get(scope, sterileUuid(token.slice(6)));
+  }
   async listTypes(
     scope: SterileScope,
     page = 1,
@@ -190,6 +198,7 @@ export class InstrumentRegistry extends SterileRegistryBase {
           const activeAssembly = await tx.findActiveAssignment(item.id);
           return {
             ...item,
+            scanIdentifier: "RSP-I-" + item.id.toUpperCase(),
             ...(recall ? { recall } : {}),
             ...(processingHold ? { processingHold } : {}),
             ...(activeAssembly ? { activeAssembly } : {}),
@@ -224,6 +233,7 @@ export class InstrumentRegistry extends SterileRegistryBase {
       const activeAssembly = await tx.findActiveAssignment(key);
       return {
         ...item,
+        scanIdentifier: "RSP-I-" + item.id.toUpperCase(),
         ...(recall ? { recall } : {}),
         ...(processingHold ? { processingHold } : {}),
         ...(activeAssembly ? { activeAssembly } : {}),
