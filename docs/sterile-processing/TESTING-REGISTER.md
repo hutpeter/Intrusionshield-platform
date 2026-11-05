@@ -37,9 +37,27 @@ A successful developer check never implies that the owner performed it.
 | 5d69126                     | Previewed original/descendant/current-custody scope, persistent instrument blocks and explicit legacy-case extension | 205 scoped automated tests, builds and targeted browser check                                                                               | U-LINEAGE-01 passed November 5, 2026                                                                                       | Manual legacy extension, closure/reconciliation, language/mobile, physical labels and operational acceptance deferred            |
 | 52cc212                     | Reviewer evidence/decision, operator admission preview, fresh linked receiving, overlap and old-package protection   | 223 scoped automated tests, builds and targeted browser verification                                                                        | U-CLEAR-01 passed November 5, 2026; U-CLEAR-02 receiving passed November 5, 2026                                           | Broader manual recovery/clearance, overlap, paused episodes, language/mobile, physical labels and production validation deferred |
 
-| Maintenance increment (this commit) | Defect hold, assessment/repair evidence and reviewer-authorized fresh receiving | 234 scoped tests, builds and developer browser lifecycle/refresh check | U-MAINT-01 passed November 5, 2026 | Broader owner repair/authorization, active-custody incidents, physical evidence and production policy deferred |
+| 89b59f6 | Defect hold, assessment/repair evidence and reviewer-authorized fresh receiving | 234 scoped tests, builds and developer browser lifecycle/refresh check | U-MAINT-01 passed November 5, 2026 | Broader owner repair/authorization, active-custody incidents, physical evidence and production policy deferred |
 
-| Instrument scanning increment (this commit) | Stable internal identifier, vector Data Matrix label and current scoped lookup | 243 scoped tests, builds, independent symbol decoding and developer browser print/Enter/lookup check | U-SCAN-01 passed November 5, 2026 | Physical scanners/printers/DPM and operational scan-assisted actions deferred |
+| 4a6814b | Stable internal identifier, vector Data Matrix label and current scoped lookup | 243 scoped tests, builds, independent symbol decoding and developer browser print/Enter/lookup check | U-SCAN-01 passed November 5, 2026 | Physical scanners/printers/DPM and operational scan-assisted actions deferred |
+
+| Tray scanning increment (this commit) | Confirmed single-instrument scan into draft with type/quantity/hold gates and atomic reservation | 252 scoped tests, builds and developer browser count/duplicate/Enter/audit check | U-TRAYSCAN-01 pending | Physical scanners and owner exception/full workflow acceptance deferred |
+
+## Current single owner check — tray scanning
+
+**U-TRAYSCAN-01 pending:** follow [TRAY-SCANNING.md](TRAY-SCANNING.md): Demo operator →
+Trays → Prepare fictional tray scan example → confirm placement → Simulate instrument
+scan. Expected saved draft with assigned 1, missing 0 and Instrument added by scan.
+Only this one new aspect is requested.
+
+**Developer passed November 5, 2026:** 252 scoped tests (132 domain, 96 service/SQLite/
+HTTP, 24 web API/export/symbol), scoped builds and targeted browser confirmation,
+0→1 assignment, duplicate refusal, keyboard Enter and audit check. Domain/HTTP/SQLite
+checks cover required type/quantity, current state/holds, ownership/version, scope,
+CSRF/roles, idempotency, competing reservations, reopen and late audit rollback.
+M-TRAYSCAN-01 owner exception/history/edit interaction; M-TRAYSCAN-02 Windows scanner,
+ES/FR/mobile and repetition; M-TRAYSCAN-03 physical placement/full processing acceptance
+remain deferred. RSP-ISS-001 remains parked. RSP-ISS-007 tracks remaining scan scope.
 
 ## Instrument scanning increment verification
 
@@ -55,7 +73,7 @@ held instrument, invalid/unknown input stayed in lookup, and auditor lookup was 
 The list-loading race found during the check was fixed; lookup no longer waits on the
 background instrument list. Owner acceptance is not inferred.
 
-**Current single owner check U-SCAN-01 passed November 5, 2026:** Demo operator → Instruments →
+**Completed lookup check U-SCAN-01 passed November 5, 2026:** Demo operator → Instruments →
 Prepare fictional scan example → Simulate this scan. Expected matching SCAN-DEMO
 record, current-record success message and maintenance hold still visible. See
 [INSTRUMENT-SCANNING.md](INSTRUMENT-SCANNING.md). No physical scanner is needed.

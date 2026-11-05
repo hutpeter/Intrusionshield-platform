@@ -637,3 +637,27 @@ test("scanner lookup encodes the complete token and rejects foreign result scope
     (e) => e instanceof ApiError && e.code === "SERVICE_UNAVAILABLE",
   );
 });
+test("tray scan command carries version, explicit placement confirmation and CSRF", async (t) => {
+  const input = {
+    requestId: "request",
+    version: 3,
+    identifier: "RSP-I-INSTRUMENT",
+    confirmed: true,
+  };
+  fake(t, async (path, options) => {
+    assert.ok(path.endsWith("/tray-assemblies/assembly/scan"));
+    assert.equal(options.headers["x-sterile-csrf"], session.csrf);
+    assert.deepEqual(JSON.parse(options.body), input);
+    return new Response(
+      JSON.stringify({
+        tenantId: session.tenantId,
+        facilityId: session.facilityId,
+        id: "assembly",
+        version: 4,
+      }),
+      { status: 200 },
+    );
+  });
+  const r = await api.addTrayScan(session, "assembly", input, signal());
+  assert.equal(r.version, 4);
+});

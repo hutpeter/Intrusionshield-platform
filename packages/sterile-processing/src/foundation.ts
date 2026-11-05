@@ -77,6 +77,7 @@ export interface SterileAuditEvent {
   actorId: string;
   at: string;
   action:
+    | "tray-instrument-added-by-scan"
     | "maintenance-reported"
     | "maintenance-assessed"
     | "maintenance-repaired"
@@ -285,6 +286,9 @@ export interface SterileRepository {
 export class SterileError extends Error {
   constructor(
     public readonly code:
+      | "SCAN_DUPLICATE"
+      | "SCAN_TYPE"
+      | "SCAN_INELIGIBLE"
       | "INVALID_REQUEST"
       | "NOT_FOUND"
       | "CONFLICT"
@@ -325,6 +329,15 @@ export function sterileUuid(value: unknown): string {
   )
     return fail("INVALID_REQUEST");
   return value.toLowerCase();
+}
+/** Only the internal plain payload is supported. No URLs, UDI parsing or scope selection. */
+export function instrumentIdFromScan(value: unknown): string {
+  if (typeof value !== "string" || value.length > 128)
+    throw new SterileError("INVALID_REQUEST");
+  const token = value.trim();
+  if (!/^RSP-I-[a-f0-9-]{36}$/i.test(token))
+    throw new SterileError("INVALID_REQUEST");
+  return sterileUuid(token.slice(6));
 }
 export function scopeOf(value: SterileScope): SterileScope {
   return {

@@ -249,3 +249,8 @@ defect hold, assessment/repair evidence and reviewer-authorized fresh receiving.
 
 Run `pnpm install --frozen-lockfile` for the new encoder dependency, then see
 [INSTRUMENT-SCANNING.md](INSTRUMENT-SCANNING.md) for the one simulated-scan check.
+
+## Scan-assisted tray assembly
+
+See [TRAY-SCANNING.md](TRAY-SCANNING.md) for a fictional eligible instrument/draft
+setup and the one confirmed scan-add check. No scanner hardware is needed.

@@ -90,3 +90,9 @@ Headless Chromium completed the Spanish create/assign/confirm/history/disassembl
 workflow, locked completed contents, mobile overflow check and EN/FR screens.
 The owner's earlier Windows instrument registration and persistence checks were
 reported successful; this tray increment still needs that Windows walkthrough.
+
+## Scan-assisted draft additions
+
+[TRAY-SCANNING.md](TRAY-SCANNING.md) adds a separate confirmed one-instrument scan
+action with current type/quantity/hold/assignment gates and atomic reservation/history.
+Manual contents editing and separate assembly-completion confirmation remain available.

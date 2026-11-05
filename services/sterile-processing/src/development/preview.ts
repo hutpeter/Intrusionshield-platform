@@ -1,3 +1,4 @@
+import { prepareTrayScanExample } from "./tray-scan-example.js";
 import { prepareScanExample } from "./scan-example.js";
 import { prepareMaintenanceExample } from "./maintenance-example.js";
 import { prepareRecallClearanceExample } from "./recall-clearance-example.js";
@@ -467,6 +468,33 @@ export function createSterilePreview({
       .status(201)
       .json(
         await prepareMaintenanceExample(
+          repository,
+          { tenantId, facilityId, actorId: actors.operator },
+          sterileUuid(req.body.requestId),
+        ),
+      );
+  });
+  app.post("/preview/tray-scan-example", async (req, res) => {
+    const session = res.locals.session as Session;
+    if (session.role !== "operator") {
+      res
+        .status(session.role ? 403 : 401)
+        .json({ error: session.role ? "FORBIDDEN" : "UNAUTHENTICATED" });
+      return;
+    }
+    if (
+      Object.keys(req.query).length ||
+      !req.body ||
+      Array.isArray(req.body) ||
+      Object.keys(req.body).length !== 1
+    ) {
+      res.status(400).json({ error: "INVALID_REQUEST" });
+      return;
+    }
+    res
+      .status(201)
+      .json(
+        await prepareTrayScanExample(
           repository,
           { tenantId, facilityId, actorId: actors.operator },
           sterileUuid(req.body.requestId),

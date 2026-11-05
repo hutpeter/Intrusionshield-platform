@@ -13,7 +13,7 @@ pnpm sterile:preview
 This build adds a label encoder dependency; installation is required once. After
 **Ready**, refresh the browser. No scanner purchase is needed for this check.
 
-**U-SCAN-01 pending:**
+**U-SCAN-01 passed November 5, 2026** from owner screenshots. Original check:
 
 1. Enter as **Demo operator** and open **Instruments**.
 2. Click **Prepare fictional scan example**. A separate fictional instrument is
@@ -84,9 +84,15 @@ ZXing decoder checks the exact token encoded in the generated Data Matrix; the b
 check also decodes the rendered SVG, checks print isolation, simulated scan, keyboard
 Enter, invalid/unknown input, auditor lookup and current maintenance hold.
 
-Owner U-SCAN-01 remains pending. Deferred: M-SCAN-01 real 2D scanner, Enter/suffix/layout
+Owner U-SCAN-01 passed November 5, 2026. Deferred: M-SCAN-01 real 2D scanner, Enter/suffix/layout
 settings and focus handling on Windows; M-SCAN-02 label printer, dimensions, print scale,
 quiet zones/contrast, adhesives/durability and physical scan verification; M-SCAN-03
 DPM equipment/marking policy, manufacturer UDI/GS1 parsing, camera scanning and ES/FR/mobile;
 M-SCAN-04 scan-assisted receiving, tray assembly, packaging, load/issue actions with their
 own confirmation and evidence rules. No production or clinical acceptance is claimed.
+
+## Operational tray scan update
+
+[TRAY-SCANNING.md](TRAY-SCANNING.md) now adds confirmed scan-to-draft with server-side
+type, quantity, hold and assignment checks. Other operational scan actions and physical
+hardware validation remain deferred.

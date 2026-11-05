@@ -605,6 +605,11 @@ export const traceWord = (language: Language, key: string) =>
   key;
 
 const actions: Record<string, [string, string, string]> = {
+  "tray-instrument-added-by-scan": [
+    "Instrument added by scan",
+    "Instrumento añadido por escaneo",
+    "Instrument ajouté par lecture",
+  ],
   "recall-cleared-for-reprocessing": [
     "Recall cleared for new reprocessing",
     "Retirada autorizada para nuevo reprocesamiento",

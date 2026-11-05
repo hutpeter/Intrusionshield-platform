@@ -1,3 +1,5 @@
+import { TrayScan } from "./TrayScan";
+import { trayScanLabels } from "./tray-scan-text";
 import { maintenanceLabels } from "./maintenance-text";
 import { useEffect, useRef, useState } from "react";
 import type {
@@ -76,15 +78,24 @@ export function TrayWorkspace({
     [discard, setDiscard] = useState<(() => void) | null>(null);
   const pending = useRef<AbortController | null>(null),
     inspection = useRef<AbortController | null>(null);
-  const busy = saving || blocked;
+  const [scanDirty, setScanDirty] = useState(false),
+    [scanBusy, setScanBusy] = useState(false),
+    [scanReset, setScanReset] = useState(0),
+    [scanNotice, setScanNotice] = useState(false),
+    [scanExample, setScanExample] = useState<{
+      assembly: TrayAssembly;
+      instrument: Instrument;
+    } | null>(null);
+  const scanExampleRequest = useRef(crypto.randomUUID());
+  const busy = saving || blocked || scanBusy;
   useEffect(() => {
-    onDirty(!!form);
+    onDirty(!!form || scanDirty);
     return () => onDirty(false);
-  }, [form, onDirty]);
+  }, [form, scanDirty, onDirty]);
   useEffect(() => {
-    onBusy(saving);
+    onBusy(saving || scanBusy);
     return () => onBusy(false);
-  }, [saving, onBusy]);
+  }, [saving, scanBusy, onBusy]);
   useEffect(
     () => () => {
       pending.current?.abort();
@@ -160,13 +171,16 @@ export function TrayWorkspace({
     return () => c.abort();
   }, [session, selected, tab, page, historyPage, nonce, onExpired]);
   function clear() {
+    setScanDirty(false);
+    setScanReset((n) => n + 1);
+    setScanNotice(false);
     setForm(null);
     setFields(empty());
     setDiscard(null);
   }
   function guard(action: () => void) {
     if (busy) return;
-    if (form)
+    if (form || scanDirty)
       setDiscard(() => () => {
         clear();
         action();
@@ -496,6 +510,42 @@ export function TrayWorkspace({
           </button>
           {session.canWrite && !selected && (
             <button
+              disabled={busy || loading || !!form}
+              onClick={async () => {
+                if (pending.current) return;
+                const c = new AbortController();
+                pending.current = c;
+                setSaving(true);
+                setError(null);
+                try {
+                  const example = await api.prepareTrayScan(
+                    session,
+                    scanExampleRequest.current,
+                    c.signal,
+                  );
+                  if (!c.signal.aborted) {
+                    setScanExample(example);
+                    scanExampleRequest.current = crypto.randomUUID();
+                    setSelected({ kind: "assembly", id: example.assembly.id });
+                    setTab("assemblies");
+                    setNonce((n) => n + 1);
+                  }
+                } catch (e) {
+                  if (!c.signal.aborted) {
+                    if (e instanceof ApiError && e.status === 401) onExpired();
+                    else setError(e);
+                  }
+                } finally {
+                  pending.current = null;
+                  if (!c.signal.aborted) setSaving(false);
+                }
+              }}
+            >
+              {trayScanLabels(language).prepare}
+            </button>
+          )}
+          {session.canWrite && !selected && (
+            <button
               className="primary"
               disabled={busy || loading || !!form}
               onClick={() =>
@@ -524,6 +574,11 @@ export function TrayWorkspace({
         </button>
       </div>
       <p className="readonly-note">{t.assemblyNotSterile}</p>
+      {scanNotice && (
+        <p className="success" role="status">
+          {trayScanLabels(language).added}
+        </p>
+      )}
       {notice && (
         <p role="status" className="success">
           {t[notice]}
@@ -1055,6 +1110,30 @@ export function TrayWorkspace({
             )}
             {assessmentTable(view)}
           </section>
+          {session.canWrite && view.assembly.state === "draft" && !form && (
+            <TrayScan
+              key={
+                view.assembly.id + ":" + view.assembly.version + ":" + scanReset
+              }
+              assembly={view.assembly}
+              session={session}
+              language={language}
+              blocked={blocked || saving}
+              demoIdentifier={
+                scanExample?.assembly.id === view.assembly.id
+                  ? scanExample.instrument.scanIdentifier
+                  : undefined
+              }
+              onDirty={setScanDirty}
+              onBusy={setScanBusy}
+              onExpired={onExpired}
+              onSaved={() => {
+                setScanNotice(true);
+                setHistoryPage(1);
+                setNonce((n) => n + 1);
+              }}
+            />
+          )}
           <section className="panel">
             <h2>{t.contents}</h2>
             {contentsTable(view.assembly)}

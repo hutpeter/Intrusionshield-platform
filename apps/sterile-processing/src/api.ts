@@ -221,6 +221,43 @@ async function checkedMovement(
   return r;
 }
 export const api = {
+  prepareTrayScan: async (
+    s: Session,
+    requestId: string,
+    signal: AbortSignal,
+  ) => {
+    const r = await call<{ assembly: TrayAssembly; instrument: Instrument }>(
+      "/preview/tray-scan-example",
+      signal,
+      { requestId },
+      s.csrf,
+    );
+    await scoped(s, Promise.resolve(r.assembly));
+    await scoped(s, Promise.resolve(r.instrument));
+    return r;
+  },
+
+  addTrayScan: (
+    s: Session,
+    id: string,
+    body: {
+      requestId: string;
+      version: number;
+      identifier: string;
+      confirmed: boolean;
+    },
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<TrayAssembly>(
+        base(s) + "/tray-assemblies/" + encodeURIComponent(id) + "/scan",
+        signal,
+        body,
+        s.csrf,
+      ),
+    ),
+
   prepareScan: (s: Session, requestId: string, signal: AbortSignal) =>
     scoped(
       s,

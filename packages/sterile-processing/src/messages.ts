@@ -1,4 +1,7 @@
 const es = {
+  SCAN_DUPLICATE: "Este instrumento ya está asignado a la bandeja.",
+  SCAN_TYPE: "El tipo no corresponde o su cantidad requerida ya está cubierta.",
+  SCAN_INELIGIBLE: "El instrumento está retirado o retenido por mantenimiento.",
   CLEARANCE_BLOCKED:
     "Revise la conciliación, disposición para reprocesamiento, otras retiradas y la limpieza en curso antes de continuar.",
   RECALL_LIMIT:
@@ -46,6 +49,10 @@ const es = {
 };
 type Messages = Record<keyof typeof es, string>;
 const en: Messages = {
+  SCAN_DUPLICATE: "This instrument is already assigned to the tray.",
+  SCAN_TYPE:
+    "Instrument type does not match or its required quantity is already filled.",
+  SCAN_INELIGIBLE: "The instrument is retired or held for maintenance.",
   CLEARANCE_BLOCKED:
     "Review reconciliation, reprocessing disposition, other recalls and any cleaning in progress before continuing.",
   RECALL_LIMIT:
@@ -92,6 +99,9 @@ const en: Messages = {
     "Service unavailable. The change has not been confirmed.",
 };
 const fr: Messages = {
+  SCAN_DUPLICATE: "Cet instrument est déjà affecté au plateau.",
+  SCAN_TYPE: "Type incompatible ou quantité requise déjà atteinte.",
+  SCAN_INELIGIBLE: "Instrument retiré ou bloqué pour maintenance.",
   CLEARANCE_BLOCKED:
     "Vérifiez la réconciliation, la disposition pour retraitement, les autres rappels et tout nettoyage en cours avant de continuer.",
   RECALL_LIMIT:

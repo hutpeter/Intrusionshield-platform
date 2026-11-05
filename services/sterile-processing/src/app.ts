@@ -450,6 +450,22 @@ export function createSterileApp(
         ),
       );
   });
+  app.post(prefix + "/tray-assemblies/:id/scan", async (req, res) => {
+    noQuery(req);
+    const v = body(req.body, [
+      "requestId",
+      "version",
+      "identifier",
+      "confirmed",
+    ]);
+    res.json(
+      await trays().addByScan(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        v as unknown as Parameters<TrayRegistry["addByScan"]>[2],
+      ),
+    );
+  });
   app.post(prefix + "/tray-assemblies/:id/contents", async (req, res) => {
     noQuery(req);
     const v = body(req.body, ["requestId", "version", "instrumentIds"]);
@@ -1194,6 +1210,9 @@ export function createSterileApp(
       const status =
         error instanceof SterileError
           ? {
+              SCAN_DUPLICATE: 409,
+              SCAN_TYPE: 409,
+              SCAN_INELIGIBLE: 409,
               INVALID_REQUEST: 400,
               NOT_FOUND: 404,
               CONFLICT: 409,

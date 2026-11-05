@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import {
   SterileRegistryBase,
   scopeOf,
+  instrumentIdFromScan,
   field,
   codeOf,
   pageOf,
@@ -165,12 +166,7 @@ export class InstrumentRegistry extends SterileRegistryBase {
     );
   }
   async lookupScan(scope: SterileScope, value: unknown): Promise<Instrument> {
-    if (typeof value !== "string" || value.length > 128)
-      throw new SterileError("INVALID_REQUEST");
-    const token = value.trim();
-    if (!/^RSP-I-[a-f0-9-]{36}$/i.test(token))
-      throw new SterileError("INVALID_REQUEST");
-    return this.get(scope, sterileUuid(token.slice(6)));
+    return this.get(scope, instrumentIdFromScan(value));
   }
   async listTypes(
     scope: SterileScope,

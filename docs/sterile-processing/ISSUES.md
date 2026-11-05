@@ -146,3 +146,12 @@ Keep test execution status in [TESTING-REGISTER.md](TESTING-REGISTER.md).
 - **Validation:** Scoped tests/builds and independent Data Matrix decoding; owner
   U-SCAN-01 and broader physical/manual acceptance pending. See
   [INSTRUMENT-SCANNING.md](INSTRUMENT-SCANNING.md).
+
+### RSP-ISS-007 update — draft tray addition
+
+Confirmed operator scan-to-draft now saves a single eligible member with frozen-type/
+quantity, duplicate, current-hold and assignment gates; reservation/history/audit/receipt
+are atomic. Normal completion remains separately confirmed. Developer 252 scoped tests,
+builds and targeted browser checks passed; owner U-TRAYSCAN-01 remains pending. Physical
+scanner/printer/DPM and receiving, packaging, loading and distribution scan actions remain
+future work. See [TRAY-SCANNING.md](TRAY-SCANNING.md).

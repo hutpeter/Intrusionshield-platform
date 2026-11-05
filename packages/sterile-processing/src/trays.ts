@@ -3,6 +3,7 @@ import {
   SterileRegistryBase,
   SterileError,
   scopeOf,
+  instrumentIdFromScan,
   sterileUuid,
   field,
   codeOf,
@@ -314,6 +315,73 @@ export class TrayRegistry extends SterileRegistryBase {
           at,
           "tray-assembly-created",
           a,
+        );
+        return a;
+      },
+    );
+  }
+  async addByScan(
+    scope: SterileScope,
+    id: string,
+    input: {
+      requestId: string;
+      version: number;
+      identifier: string;
+      confirmed: boolean;
+    },
+  ): Promise<TrayAssembly> {
+    const s = scopeOf(scope),
+      key = sterileUuid(id),
+      version = expected(input.version),
+      instrumentId = instrumentIdFromScan(input.identifier);
+    if (input.confirmed !== true) invalid();
+    return this.command(
+      s,
+      input.requestId,
+      "tray-scan-add",
+      { id: key, version, instrumentId },
+      async (tx, at) => {
+        const old = await tx.findAssembly(key);
+        if (!old) throw new SterileError("NOT_FOUND");
+        if (old.state !== "draft" || old.version !== version)
+          throw new SterileError("CONFLICT");
+        if (old.instruments.some((i) => i.id === instrumentId))
+          throw new SterileError("SCAN_DUPLICATE");
+        if (old.instruments.length >= 1000) invalid();
+        const i = await tx.findInstrument(instrumentId);
+        if (!i) throw new SterileError("NOT_FOUND");
+        if (i.state !== "registered") throw new SterileError("SCAN_INELIGIBLE");
+        const required = old.definitionSnapshot.requirements.find(
+          (r) => r.instrumentTypeId === i.instrumentTypeId,
+        );
+        if (
+          !required ||
+          old.instruments.filter(
+            (x) => x.instrumentTypeId === i.instrumentTypeId,
+          ).length >= required.quantity
+        )
+          throw new SterileError("SCAN_TYPE");
+        const a: TrayAssembly = {
+          ...old,
+          instruments: await items(
+            tx,
+            [...old.instruments.map((x) => x.id), instrumentId],
+            key,
+          ),
+          version: version + 1,
+          updatedAt: at,
+        };
+        await tx.updateAssembly(a, version);
+        await tx.replaceAssignments(a);
+        await tx.insertAssemblyVersion(a);
+        await this.event(
+          tx,
+          s,
+          input.requestId,
+          at,
+          "tray-instrument-added-by-scan",
+          a,
+          `${i.code} · RSP-I-${i.id.toUpperCase()}`,
         );
         return a;
       },
