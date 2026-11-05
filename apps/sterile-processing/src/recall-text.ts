@@ -14,7 +14,7 @@ const es = {
   saveExtension: "Guardar ampliación",
   expanded: "Alcance de retirada ampliado",
   lineageNotice:
-    "Se conservan los objetivos originales y se bloquean paquetes posteriores vinculados y la custodia actual. Los instrumentos afectados no pueden volver a armado o empaque; cerrar el caso no levanta el bloqueo.",
+    "Los paquetes originales permanecen bloqueados. Las retenciones de instrumentos requieren autorización y nueva recepción; cerrar el caso por sí solo no las levanta.",
   confirmExtension:
     "Confirmo esta ampliación y los bloqueos mostrados; se conserva el historial original.",
   title: "Retiradas y recuperación",
@@ -100,7 +100,7 @@ const en: Text = {
   saveExtension: "Save extension",
   expanded: "Recall scope extended",
   lineageNotice:
-    "Original targets are retained. Linked later packages and current instrument custody are blocked. Affected instruments cannot return to assembly or packaging; closing the case does not lift the block.",
+    "Original packages remain blocked. Instrument holds require authorized clearance and new receiving admission; closing the case alone does not lift them.",
   confirmExtension:
     "I confirm this extension and the displayed blocks; original history is retained.",
   title: "Withdrawal and recall",
@@ -185,7 +185,7 @@ const fr: Text = {
   saveExtension: "Enregistrer l’extension",
   expanded: "Périmètre du rappel étendu",
   lineageNotice:
-    "Les cibles initiales sont conservées. Les paquets ultérieurs liés et la garde actuelle sont bloqués. Les instruments affectés ne peuvent pas revenir à l’assemblage ou l’emballage ; clôturer le dossier ne lève pas le blocage.",
+    "Les paquets initiaux restent bloqués. Les retenues des instruments exigent une autorisation et une nouvelle réception ; clôturer seul ne les lève pas.",
   confirmExtension:
     "Je confirme cette extension et les blocages affichés ; l’historique initial est conservé.",
   title: "Retrait et rappel",

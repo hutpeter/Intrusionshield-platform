@@ -1,3 +1,4 @@
+import { recallAdmissionPlan, admitRecall } from "./recall-readmission.js";
 import { recallImpact } from "./recall-impact.js";
 import { randomUUID } from "node:crypto";
 import {
@@ -16,6 +17,8 @@ import type {
   RecallInput,
   RecallItem,
   RecallExtensionInput,
+  RecallClearanceInput,
+  RecallAdmissionInput,
 } from "./recall-types.js";
 const invalid = (): never => {
   throw new SterileError("INVALID_REQUEST");
@@ -138,7 +141,8 @@ export class RecallRegistry extends SterileRegistryBase {
       async (tx, at) => {
         const old = await tx.findRecall(key);
         if (!old) throw new SterileError("NOT_FOUND");
-        if (old.version !== version) throw new SterileError("CONFLICT");
+        if (old.version !== version || old.clearance)
+          throw new SterileError("CONFLICT");
         const plan = await recallImpact(tx, s, old, old);
         if (plan.impactHash !== input.impactHash)
           throw new SterileError("CONFLICT");
@@ -171,6 +175,148 @@ export class RecallRegistry extends SterileRegistryBase {
           at,
           "recall-expanded",
           reason + " · " + reference,
+        );
+        return record;
+      },
+    );
+  }
+  async clear(scope: SterileScope, id: string, input: RecallClearanceInput) {
+    const s = scopeOf(scope),
+      key = sterileUuid(id),
+      version = versionOf(input.version),
+      resolution = field(input.resolution, 500),
+      evidence = field(input.evidence, 500),
+      procedure = field(input.procedure, 200),
+      procedureVersion = field(input.procedureVersion, 100);
+    if (
+      [
+        input.causeReviewed,
+        input.recoveryReviewed,
+        input.dispositionReviewed,
+        input.reprocessingRequired,
+        input.confirmed,
+      ].some((v) => v !== true)
+    )
+      invalid();
+    return this.command(
+      s,
+      input.requestId,
+      "recall-cleared-for-reprocessing",
+      { ...input, id: key },
+      async (tx, at) => {
+        const old = await tx.findRecall(key);
+        if (!old) throw new SterileError("NOT_FOUND");
+        if (old.version !== version || old.clearance)
+          throw new SterileError("CONFLICT");
+        if (
+          old.state !== "closed" ||
+          !old.lineage?.instrumentIds.length ||
+          !old.items.length ||
+          old.items.some(
+            (i) =>
+              i.status !== "disposed" ||
+              i.disposition?.action !== "reprocess_required",
+          )
+        )
+          throw new SterileError("CLEARANCE_BLOCKED");
+        const impact = await recallImpact(tx, s, old, old);
+        if (
+          impact.items.some(
+            (p) => !old.items.some((i) => i.packageId === p.packageId),
+          )
+        )
+          throw new SterileError("CONFLICT");
+        const record: RecallRecord = {
+          ...old,
+          version: version + 1,
+          updatedAt: at,
+          clearance: {
+            version: version + 1,
+            instrumentIds: [...old.lineage.instrumentIds],
+            resolution,
+            evidence,
+            procedure,
+            procedureVersion,
+            causeReviewed: true,
+            recoveryReviewed: true,
+            dispositionReviewed: true,
+            reprocessingRequired: true,
+            actorId: s.actorId,
+            at,
+          },
+        };
+        await tx.updateRecall(record, version);
+        await this.record(
+          tx,
+          s,
+          record,
+          input.requestId,
+          at,
+          "recall-cleared-for-reprocessing",
+          resolution,
+        );
+        return record;
+      },
+    );
+  }
+  async admissionPlan(scope: SterileScope, id: string) {
+    const s = scopeOf(scope),
+      key = sterileUuid(id);
+    return this.repository.transaction(s, async (tx) => {
+      const old = await tx.findRecall(key);
+      if (!old) throw new SterileError("NOT_FOUND");
+      return recallAdmissionPlan(tx, s, old);
+    });
+  }
+  async admit(scope: SterileScope, id: string, input: RecallAdmissionInput) {
+    const s = scopeOf(scope),
+      key = sterileUuid(id),
+      version = versionOf(input.version),
+      episodeCode = codeOf(input.episodeCode),
+      custodian = field(input.custodian, 200),
+      location = field(input.location, 200),
+      condition = field(input.condition, 500),
+      reference = field(input.reference, 200),
+      note = field(input.note, 500, false);
+    if (
+      input.confirmed !== true ||
+      input.contentsChecked !== true ||
+      typeof input.impactHash !== "string"
+    )
+      invalid();
+    return this.command(
+      s,
+      input.requestId,
+      "recall-reprocessing-admitted",
+      { ...input, id: key },
+      async (tx, at) => {
+        const old = await tx.findRecall(key);
+        if (!old) throw new SterileError("NOT_FOUND");
+        if (old.version !== version) throw new SterileError("CONFLICT");
+        const record = await admitRecall(
+          tx,
+          s,
+          old,
+          {
+            ...input,
+            episodeCode,
+            custodian,
+            location,
+            condition,
+            reference,
+            note,
+          },
+          at,
+        );
+        await tx.updateRecall(record, version);
+        await this.record(
+          tx,
+          s,
+          record,
+          input.requestId,
+          at,
+          "recall-reprocessing-admitted",
+          reference,
         );
         return record;
       },
@@ -337,7 +483,9 @@ export class RecallRegistry extends SterileRegistryBase {
       | "recall-created"
       | "recall-recovered"
       | "recall-disposition"
-      | "recall-expanded",
+      | "recall-expanded"
+      | "recall-cleared-for-reprocessing"
+      | "recall-reprocessing-admitted",
     reason: string,
   ) {
     await tx.insertRecallVersion(r);
@@ -370,6 +518,32 @@ export class RecallRegistry extends SterileRegistryBase {
           ? await tx.findRecall(key)
           : await tx.findRecallVersion(key, version);
       if (!r) throw new SterileError("NOT_FOUND");
+      if (version === undefined && r.clearance) {
+        const episodes = new Map<
+            string,
+            { episodeId: string; episodeCode: string; instrumentIds: string[] }
+          >(),
+          pendingInstrumentIds: string[] = [];
+        for (const id of r.clearance.instrumentIds) {
+          const link = await tx.findRecallReadmission(r.id, id);
+          if (!link) pendingInstrumentIds.push(id);
+          else {
+            const row = episodes.get(link.episodeId) ?? {
+              ...link,
+              instrumentIds: [],
+            };
+            row.instrumentIds.push(id);
+            episodes.set(link.episodeId, row);
+          }
+        }
+        return {
+          ...r,
+          readmission: {
+            pendingInstrumentIds,
+            episodes: [...episodes.values()],
+          },
+        };
+      }
       return r;
     });
   }

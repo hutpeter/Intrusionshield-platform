@@ -359,6 +359,17 @@ export function ProcessingWorkspace({
   );
   const episode = (d: ProcessingEpisode) => (
     <>
+      {d.recallSource && (
+        <p className="readonly-note">
+          {recallLabels(language).code}: {d.recallSource.caseCode} ·{" "}
+          {d.recallSource.receivingLocation}
+        </p>
+      )}
+      {d.supersededBy && (
+        <p className="readonly-note">
+          {p.superseded} · {d.supersededBy}
+        </p>
+      )}
       {d.recallBlocked && (
         <p className="alert">{recallLabels(language).blocked}</p>
       )}

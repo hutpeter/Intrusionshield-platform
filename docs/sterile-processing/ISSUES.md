@@ -81,7 +81,9 @@ Keep test execution status in [TESTING-REGISTER.md](TESTING-REGISTER.md).
   inspection from bypassing the recall. Original release/issue facts remain intact.
   Explicit reviewer extension upgrades older cases, retains their original versions
   and dispositions, adds targets and reopens recovery when necessary. Closure does
-  not lift blocks. No physical recovery or notification is inferred.
+  not lift blocks. Authorized clearance and fresh receiving are now available as a
+  separate versioned workflow (RECALL-CLEARANCE.md); package blocks remain. No physical
+  recovery or notification is inferred.
 - **Boundary:** Only original source instruments receive instrument blocks; mixed
   packages remain held as a whole, without silently releasing other members. Legacy
   cases keep their saved scope until explicitly extended. All scope remains within
@@ -92,5 +94,22 @@ Keep test execution status in [TESTING-REGISTER.md](TESTING-REGISTER.md).
   scalable recall jobs. No production acceptance is claimed by the fictional check.
 - **Acceptance evidence:** Multi-generation, scope, persistent blocks, overlap,
   rollback and race checks are automated; browser ancestor/descendant save and stale
-  label invalidation passed. Owner U-LINEAGE-01 and broader manual acceptance remain
+  label invalidation passed. Owner U-LINEAGE-01 passed November 5; broader manual acceptance remains
   pending in TESTING-REGISTER.md. See [RECALL-LINEAGE.md](RECALL-LINEAGE.md).
+
+## RSP-ISS-005 — Production clearance, corrections and exception policies
+
+- **Status:** Partial preview delivered; operational/production policies pending.
+- **Delivered:** Closed cases with reviewed reprocessing dispositions can receive an
+  explicit reviewer clearance. Operator admission previews full custody/processing
+  groups, rejects unresolved recalls and running cleaning/cycles, creates fresh
+  receiving holds and keeps old package/label blocks. Overlapping cleared restrictions
+  can share the same admission. Superseded evidence and earlier case versions remain.
+- **Remaining scope:** Verified person/competency policy, clinical clearance evidence,
+  physical recovery/reconciliation, quarantine/discard corrections and repaired items,
+  partial-instrument clearance, admission batches above 100 instruments, cross-site
+  coordination and operational acceptance. Historical links must be reconciled when
+  later incidents supersede receiving episodes. No arbitrary unblock/restock is supplied.
+- **Validation:** Scoped domain/SQLite/HTTP/web checks cover permissions, scope, gates,
+  overlap, concurrency, audit rollback and fresh proof. Owner U-CLEAR-01 and broader
+  manual checks remain pending. See [RECALL-CLEARANCE.md](RECALL-CLEARANCE.md).

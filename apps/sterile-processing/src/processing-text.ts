@@ -1,5 +1,6 @@
 import type { Language } from "./text";
 const es = {
+  superseded: "Sustituido por nueva recepción — historial conservado",
   example: "Preparar ejemplo ficticio de inspección",
   exampleHelp:
     "Crea registros nuevos y una limpieza simulada; conserva sus instrumentos y bandejas existentes.",
@@ -84,6 +85,7 @@ const es = {
 };
 type Text = Record<keyof typeof es, string>;
 const en: Text = {
+  superseded: "Superseded by new receiving — history retained",
   example: "Prepare fictional inspection example",
   exampleHelp:
     "Creates new records with simulated cleaning; preserves your existing instruments and trays.",
@@ -166,6 +168,7 @@ const en: Text = {
   confirm: "Confirm",
 };
 const fr: Text = {
+  superseded: "Remplacé par une nouvelle réception — historique conservé",
   example: "Préparer un exemple fictif d’inspection",
   exampleHelp:
     "Crée de nouveaux enregistrements avec un nettoyage simulé ; conserve les instruments et plateaux existants.",

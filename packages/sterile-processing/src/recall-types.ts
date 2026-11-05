@@ -31,6 +31,16 @@ export interface RecallItem {
   } | null;
 }
 export interface RecallRecord {
+  clearance?: RecallClearance;
+  admissions?: RecallReadmission[];
+  readmission?: {
+    pendingInstrumentIds: string[];
+    episodes: {
+      episodeId: string;
+      episodeCode: string;
+      instrumentIds: string[];
+    }[];
+  };
   lineage?: {
     rootPackageIds: string[];
     instrumentIds: string[];
@@ -94,4 +104,81 @@ export interface RecallExtensionInput {
   reason: string;
   reference: string;
   confirmed: boolean;
+}
+
+export interface RecallClearanceInput {
+  requestId: string;
+  version: number;
+  resolution: string;
+  evidence: string;
+  procedure: string;
+  procedureVersion: string;
+  causeReviewed: boolean;
+  recoveryReviewed: boolean;
+  dispositionReviewed: boolean;
+  reprocessingRequired: boolean;
+  confirmed: boolean;
+}
+export interface RecallClearance {
+  version: number;
+  instrumentIds: string[];
+  resolution: string;
+  evidence: string;
+  procedure: string;
+  procedureVersion: string;
+  causeReviewed: true;
+  recoveryReviewed: true;
+  dispositionReviewed: true;
+  reprocessingRequired: true;
+  actorId: string;
+  at: string;
+}
+export interface RecallReadmission {
+  episodeId: string;
+  episodeCode: string;
+  instrumentIds: string[];
+  reference: string;
+  location: string;
+  actorId: string;
+  at: string;
+}
+export interface RecallAdmissionInput {
+  requestId: string;
+  version: number;
+  impactHash: string;
+  episodeCode: string;
+  custodian: string;
+  location: string;
+  condition: string;
+  reference: string;
+  note: string;
+  contentsChecked: boolean;
+  confirmed: boolean;
+}
+export interface RecallAdmissionPlan {
+  tenantId: string;
+  facilityId: string;
+  caseId: string;
+  caseVersion: number;
+  pendingInstrumentIds: string[];
+  instruments: { id: string; code: string; version: number }[];
+  assemblies: {
+    id: string;
+    code: string;
+    version: number;
+    packageId: string | null;
+    packageVersion: number | null;
+  }[];
+  episodes: { id: string; code: string; version: number; state: string }[];
+  clearances: {
+    caseId: string;
+    caseCode: string;
+    version: number;
+    instrumentIds: string[];
+  }[];
+  blockedCases: { id: string; code: string }[];
+  activeCleaning: string[];
+  activeCycles: string[];
+  ready: boolean;
+  impactHash: string;
 }

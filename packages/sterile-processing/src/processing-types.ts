@@ -42,6 +42,22 @@ export interface InspectInput {
   confirmed: boolean;
 }
 export interface ProcessingEpisode {
+  supersededBy?: string;
+  supersededReason?: string;
+  recallSource?: {
+    caseId: string;
+    caseCode: string;
+    clearanceVersion: number;
+    clearances: {
+      caseId: string;
+      caseCode: string;
+      version: number;
+      instrumentIds: string[];
+    }[];
+    previousEpisodeIds: string[];
+    packageIds: string[];
+    receivingLocation: string;
+  };
   recallBlocked?: boolean;
   returnSource?: {
     returnId: string;
@@ -65,7 +81,8 @@ export interface ProcessingEpisode {
     | "cleaning_failed"
     | "awaiting_inspection"
     | "inspection_failed"
-    | "ready_for_assembly";
+    | "ready_for_assembly"
+    | "superseded";
   /** Optional for episodes saved before inspection was introduced. */
   inspections?: InspectionRecord[];
   attempts: CleaningAttempt[];

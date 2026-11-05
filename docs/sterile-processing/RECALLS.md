@@ -42,12 +42,14 @@ Each item must be recovered before disposition: keep quarantined, reprocessing
 required or discard recorded. These are documented actions, not physical operations.
 The case closes after every item has a disposition. Closing never restores stock
 availability or validates old labels. Overlapping cases retain independent history;
-all blocks persist. Recovery locations belong to the case; original issue/storage
+package blocks persist. Instrument restrictions require separate authorized clearance
+and fresh receiving (RECALL-CLEARANCE.md). Recovery locations belong to the case; original issue/storage
 records remain historical custody evidence rather than live physical tracking.
 
 Versions, confirmation, scoped permissions and audit apply to each action. No
-notifications are sent. Actual reprocessing, return-to-stock, rescission, disposal
-execution, production identity and operational recall validation remain future work.
+notifications are sent. Fresh receiving after clearance is now available through RECALL-CLEARANCE.md.
+Return-to-stock, rescission, disposal execution, production identity and operational
+recall validation remain future work.
 Independent cleaner/inspector separation remains parked as RSP-ISS-001.
 
 ## Recall lineage update — November 5, 2026

@@ -232,3 +232,10 @@ read-only and uses the records already saved during the owner's return check.
 See [RECALL-LINEAGE.md](RECALL-LINEAGE.md) for impact preview, descendant/current-custody
 package blocks, persistent instrument blocks and explicit extension of older cases.
 New cases use this policy; existing saved cases are not silently migrated.
+
+## Authorized recall clearance update
+
+See [RECALL-CLEARANCE.md](RECALL-CLEARANCE.md) for the reviewer’s single clearance
+check and the separate operator fresh-receiving workflow. Old packages/labels remain
+blocked; current instrument restrictions require clearance and admission, then fresh
+cleaning/inspection before assembly. Existing records and older versions are retained.

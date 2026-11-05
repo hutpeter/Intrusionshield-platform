@@ -1,4 +1,6 @@
 const es = {
+  CLEARANCE_BLOCKED:
+    "Revise la conciliación, disposición para reprocesamiento, otras retiradas y la limpieza en curso antes de continuar.",
   RECALL_LIMIT:
     "El alcance supera el límite de esta vista previa. No registre una retirada parcial; solicite una revisión completa.",
   TRACE_LIMIT:
@@ -44,6 +46,8 @@ const es = {
 };
 type Messages = Record<keyof typeof es, string>;
 const en: Messages = {
+  CLEARANCE_BLOCKED:
+    "Review reconciliation, reprocessing disposition, other recalls and any cleaning in progress before continuing.",
   RECALL_LIMIT:
     "The impact exceeds this preview limit. Do not record a partial recall; arrange a full scope review.",
   TRACE_LIMIT:
@@ -88,6 +92,8 @@ const en: Messages = {
     "Service unavailable. The change has not been confirmed.",
 };
 const fr: Messages = {
+  CLEARANCE_BLOCKED:
+    "Vérifiez la réconciliation, la disposition pour retraitement, les autres rappels et tout nettoyage en cours avant de continuer.",
   RECALL_LIMIT:
     "Le périmètre dépasse la limite de cette prévisualisation. N’enregistrez pas un rappel partiel ; demandez une révision complète.",
   TRACE_LIMIT:

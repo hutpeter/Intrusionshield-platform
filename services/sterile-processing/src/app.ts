@@ -47,6 +47,8 @@ export interface SterileDependencies {
       | "returns:read"
       | "returns:write"
       | "returns:dispose"
+      | "recall:clear"
+      | "recall:admit"
       | "recall:read"
       | "recall:write"
       | "recall:recover",
@@ -153,9 +155,13 @@ export function createSterileApp(
           : req.path.startsWith("/recalls")
             ? readOnly
               ? "recall:read"
-              : req.path.endsWith("/recover")
-                ? "recall:recover"
-                : "recall:write"
+              : req.path.endsWith("/clear")
+                ? "recall:clear"
+                : req.path.endsWith("/admit")
+                  ? "recall:admit"
+                  : req.path.endsWith("/recover")
+                    ? "recall:recover"
+                    : "recall:write"
             : req.path.startsWith("/distribution")
               ? readOnly
                 ? "distribution:read"
@@ -980,6 +986,61 @@ export function createSterileApp(
       ),
     );
   });
+  app.get(prefix + "/recalls/:id/admission-plan", async (req, res) => {
+    noQuery(req);
+    res.json(
+      await recalls().admissionPlan(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+      ),
+    );
+  });
+  app.post(prefix + "/recalls/:id/clear", async (req, res) => {
+    noQuery(req);
+    const v = body(req.body, [
+      "requestId",
+      "version",
+      "resolution",
+      "evidence",
+      "procedure",
+      "procedureVersion",
+      "causeReviewed",
+      "recoveryReviewed",
+      "dispositionReviewed",
+      "reprocessingRequired",
+      "confirmed",
+    ]);
+    res.json(
+      await recalls().clear(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        v as unknown as Parameters<RecallRegistry["clear"]>[2],
+      ),
+    );
+  });
+  app.post(prefix + "/recalls/:id/admit", async (req, res) => {
+    noQuery(req);
+    const v = body(req.body, [
+      "requestId",
+      "version",
+      "impactHash",
+      "episodeCode",
+      "custodian",
+      "location",
+      "condition",
+      "reference",
+      "note",
+      "contentsChecked",
+      "confirmed",
+    ]);
+    res.json(
+      await recalls().admit(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        v as unknown as Parameters<RecallRegistry["admit"]>[2],
+      ),
+    );
+  });
   app.get(prefix + "/recalls/:id", async (req, res) => {
     noQuery(req);
     res.json(await recalls().get(res.locals.scope, sterileUuid(req.params.id)));
@@ -1091,6 +1152,7 @@ export function createSterileApp(
               DISTRIBUTION_BLOCKED: 409,
               RECALL_BLOCKED: 409,
               RECALL_LIMIT: 409,
+              CLEARANCE_BLOCKED: 409,
               RETURN_BLOCKED: 409,
               TRACE_LIMIT: 409,
             }[code as SterileError["code"]]

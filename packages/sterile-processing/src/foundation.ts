@@ -76,6 +76,9 @@ export interface SterileAuditEvent {
   action:
     | "package-returned"
     | "return-disposition"
+    | "recall-cleared-for-reprocessing"
+    | "recall-reprocessing-admitted"
+    | "processing-superseded"
     | "recall-expanded"
     | "recall-created"
     | "recall-recovered"
@@ -139,6 +142,16 @@ export interface SterileTransaction {
   insertReturnVersion(item: ReturnRecord): Promise<void>;
   findReturnVersion(id: string, version: number): Promise<ReturnRecord | null>;
 
+  findRecallReadmission(
+    caseId: string,
+    instrumentId: string,
+  ): Promise<{ episodeId: string; episodeCode: string } | null>;
+  listInstrumentRecallCases(instrumentId: string): Promise<RecallRecord[]>;
+  listPackageRecallCases(packageId: string): Promise<RecallRecord[]>;
+  insertRecallReadmissions(
+    episode: ProcessingEpisode,
+    pairs: { caseId: string; instrumentId: string }[],
+  ): Promise<void>;
   insertRecallInstrumentBlocks(item: RecallRecord): Promise<void>;
   findInstrumentRecallBlock(id: string): Promise<RecallBlock | null>;
   findRecall(id: string): Promise<RecallRecord | null>;
@@ -277,6 +290,7 @@ export class SterileError extends Error {
       | "DISTRIBUTION_BLOCKED"
       | "TRACE_LIMIT"
       | "RETURN_BLOCKED"
+      | "CLEARANCE_BLOCKED"
       | "RECALL_LIMIT"
       | "RECALL_BLOCKED",
   ) {

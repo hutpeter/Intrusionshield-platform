@@ -78,6 +78,17 @@ export async function recallImpact(
     changed = false;
     const linked = new Set<string>();
     for (const e of episodes) {
+      if (
+        e.recallSource &&
+        e.recallSource.packageIds.some((id) => targets.has(id))
+      ) {
+        const c = await tx.findRecall(e.recallSource.caseId);
+        if (
+          c?.clearance?.version === e.recallSource.clearanceVersion &&
+          c.admissions?.some((a) => a.episodeId === e.id)
+        )
+          linked.add(e.id);
+      }
       const from = e.returnSource;
       if (!from || !targets.has(from.packageId)) continue;
       const ret = await tx.findReturn(from.returnId);

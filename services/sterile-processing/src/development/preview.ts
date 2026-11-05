@@ -1,3 +1,4 @@
+import { prepareRecallClearanceExample } from "./recall-clearance-example.js";
 import { prepareLineageRecallExample } from "./lineage-recall-example.js";
 import { prepareReturnExample } from "./return-example.js";
 import { prepareDistributionExample } from "./distribution-example.js";
@@ -119,6 +120,8 @@ export function createSterilePreview({
             canWrite: session.role === "operator",
             canReview: session.role === "reviewer",
             canRecall: session.role === "reviewer",
+            canClearRecall: session.role === "reviewer",
+            canAdmitRecall: session.role === "operator",
             canRecover: session.role === "operator",
             canReturn: session.role === "operator",
             canDisposeReturn: session.role === "reviewer",
@@ -441,6 +444,44 @@ export function createSterilePreview({
         ),
       );
   });
+  app.post("/preview/recall-clearance-example", async (req, res) => {
+    const s = res.locals.session as Session;
+    if (!s.role) {
+      res.status(401).json({ error: "UNAUTHENTICATED" });
+      return;
+    }
+    if (s.role !== "reviewer") {
+      res.status(403).json({ error: "FORBIDDEN" });
+      return;
+    }
+    if (
+      Object.keys(req.query).length ||
+      !req.body ||
+      Array.isArray(req.body) ||
+      Object.keys(req.body).length !== 1 ||
+      typeof req.body.requestId !== "string"
+    ) {
+      res.status(400).json({ error: "INVALID_REQUEST" });
+      return;
+    }
+    let id: string;
+    try {
+      id = sterileUuid(req.body.requestId);
+    } catch {
+      res.status(400).json({ error: "INVALID_REQUEST" });
+      return;
+    }
+    res
+      .status(201)
+      .json(
+        await prepareRecallClearanceExample(
+          repository,
+          { tenantId, facilityId, actorId: actors.operator },
+          { tenantId, facilityId, actorId: actors.reviewer },
+          id,
+        ),
+      );
+  });
   app.post("/preview/return-example", async (req, res) => {
     const s = res.locals.session as Session;
     if (!s.role) {
@@ -523,12 +564,14 @@ export function createSterilePreview({
         ((scope.actorId === actors.operator &&
           permission !== "release:write" &&
           permission !== "recall:write" &&
+          permission !== "recall:clear" &&
           permission !== "returns:dispose") ||
           (scope.actorId === actors.viewer && permission.endsWith(":read")) ||
           (scope.actorId === actors.reviewer &&
             (permission.endsWith(":read") ||
               permission === "release:write" ||
               permission === "recall:write" ||
+              permission === "recall:clear" ||
               permission === "returns:dispose"))),
     }),
   );

@@ -7,6 +7,7 @@ export class MemoryRepository {
     recallVersions: [],
     recallBlocks: [],
     recallInstruments: [],
+    recallReadmissions: [],
     distribution: [],
     distributionVersions: [],
     reviews: [],
@@ -234,6 +235,66 @@ export class MemoryRepository {
             recallId: r.id,
           });
       },
+      findRecallReadmission: async (caseId, instrumentId) => {
+        const link = s.recallReadmissions.find(
+            (x) =>
+              own(x) && x.caseId === caseId && x.instrumentId === instrumentId,
+          ),
+          e =
+            link && s.processing.find((x) => own(x) && x.id === link.episodeId);
+        return e ? { episodeId: e.id, episodeCode: e.code } : null;
+      },
+      listInstrumentRecallCases: async (id) =>
+        read(
+          s.recalls.filter(
+            (r) =>
+              own(r) &&
+              (s.recallInstruments.some(
+                (x) => own(x) && x.recallId === r.id && x.instrumentId === id,
+              ) ||
+                (!r.lineage &&
+                  r.items.some((item) =>
+                    s.packages.some(
+                      (p) =>
+                        own(p) &&
+                        p.id === item.packageId &&
+                        p.assemblySnapshot.instruments.some((i) => i.id === id),
+                    ),
+                  ))),
+          ),
+        ),
+      listPackageRecallCases: async (id) =>
+        read(
+          s.recalls.filter(
+            (r) =>
+              own(r) &&
+              s.recallBlocks.some(
+                (b) => own(b) && b.packageId === id && b.recallId === r.id,
+              ),
+          ),
+        ),
+      insertRecallReadmissions: async (episode, pairs) => {
+        for (const pair of pairs) {
+          const r = s.recalls.find((x) => own(x) && x.id === pair.caseId);
+          if (
+            !own(episode) ||
+            !r?.clearance ||
+            r.state !== "closed" ||
+            s.recallReadmissions.some(
+              (x) =>
+                own(x) &&
+                x.caseId === pair.caseId &&
+                x.instrumentId === pair.instrumentId,
+            )
+          )
+            throw Error("readmission constraint");
+          s.recallReadmissions.push({
+            ...scope,
+            ...pair,
+            episodeId: episode.id,
+          });
+        }
+      },
       insertRecallInstrumentBlocks: async (r) => {
         for (const id of r.lineage?.instrumentIds ?? []) {
           if (
@@ -250,7 +311,13 @@ export class MemoryRepository {
       },
       findInstrumentRecallBlock: async (id) => {
         const refs = s.recallInstruments.filter(
-            (x) => own(x) && x.instrumentId === id,
+            (x) =>
+              own(x) &&
+              x.instrumentId === id &&
+              !s.recallReadmissions.some(
+                (a) =>
+                  own(a) && a.caseId === x.recallId && a.instrumentId === id,
+              ),
           ),
           latest = refs.at(-1),
           r =

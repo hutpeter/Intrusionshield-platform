@@ -220,6 +220,11 @@ export class TraceabilityRegistry {
           for (const i of e.instruments)
             if (instruments.includes(i.id))
               link(row, "instrument", i.id, i.instrumentVersion, "received");
+          if (e.recallSource)
+            for (const c of e.recallSource.clearances)
+              link(row, "recall", c.caseId, c.version, "cleared_reprocessing");
+          if (e.supersededBy)
+            link(row, "processing", e.supersededBy, 1, "superseded_by");
           if (e.returnSource)
             link(
               row,
@@ -365,6 +370,22 @@ export class TraceabilityRegistry {
         if (row.kind === "recall") {
           const recall = r as RecallRecord;
           scalar.push({ key: "packageCount", value: recall.items.length });
+          if (recall.clearance)
+            fact(
+              "clearance",
+              recall.clearance.at,
+              recall.clearance.actorId,
+              recall.clearance,
+              ["resolution", "evidence", "procedure", "procedureVersion"],
+            );
+          for (const a of recall.admissions ?? []) {
+            fact("readmission", a.at, a.actorId, a, [
+              "episodeCode",
+              "location",
+              "reference",
+            ]);
+            link(row, "processing", a.episodeId, 1, "new_episode");
+          }
           for (const item of recall.items.filter((i) =>
             packageIds.includes(i.packageId),
           )) {

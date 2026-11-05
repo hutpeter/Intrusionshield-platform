@@ -16,6 +16,9 @@ import type {
   ReturnSummary,
   ReturnInput,
   ReturnDispositionInput,
+  RecallClearanceInput,
+  RecallAdmissionInput,
+  RecallAdmissionPlan,
   RecallImpact,
   RecallExtensionInput,
   RecallRecord,
@@ -55,6 +58,8 @@ export interface Session {
   canWrite?: boolean;
   canReview?: boolean;
   canRecall?: boolean;
+  canClearRecall?: boolean;
+  canAdmitRecall?: boolean;
   canRecover?: boolean;
   canReturn?: boolean;
   canDisposeReturn?: boolean;
@@ -298,6 +303,58 @@ export const api = {
     }
     throw new ApiError(503, "SERVICE_UNAVAILABLE");
   },
+  clearRecall: (
+    s: Session,
+    id: string,
+    body: RecallClearanceInput,
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<RecallRecord>(
+        base(s) + "/recalls/" + encodeURIComponent(id) + "/clear",
+        signal,
+        body,
+        s.csrf,
+      ),
+    ),
+  recallAdmissionPlan: (s: Session, id: string, signal: AbortSignal) =>
+    scoped(
+      s,
+      call<RecallAdmissionPlan>(
+        base(s) + "/recalls/" + encodeURIComponent(id) + "/admission-plan",
+        signal,
+      ),
+    ),
+  admitRecall: (
+    s: Session,
+    id: string,
+    body: RecallAdmissionInput,
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<RecallRecord>(
+        base(s) + "/recalls/" + encodeURIComponent(id) + "/admit",
+        signal,
+        body,
+        s.csrf,
+      ),
+    ),
+  recallClearanceExample: (
+    s: Session,
+    requestId: string,
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<RecallRecord>(
+        "/preview/recall-clearance-example",
+        signal,
+        { requestId },
+        s.csrf,
+      ),
+    ),
   recallImpact: (
     s: Session,
     sourceKind: "load" | "package",

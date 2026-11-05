@@ -78,7 +78,7 @@ Cleaning observations and failed-inspection evidence can still be recorded. A pa
 inspection recorded before the recall remains historical evidence; it cannot bypass
 the current block. Current instrument/processing screens and traceability show the
 recall block. Closing a case retains both package and instrument blocks. There is
-no clearance/reinstatement endpoint in this increment. Already printed paper cannot
+now a separate authorized clearance and new receiving workflow; see RECALL-CLEARANCE.md. Already printed paper cannot
 be revoked; staff must reconcile labels and physical custody under their procedure.
 
 ## Explicit extension of older cases
@@ -107,6 +107,12 @@ The preview rejects more than 100 affected packages, 1,000 original instruments 
 1,000 queried snapshots in either lineage source collection with RECALL_LIMIT.
 It does not save a partial recall; larger cases need a full scope review and a later
 scalable recall-job implementation. Operational validation, physical reconciliation,
-partial returns, repair, clearance and authorized cross-site policy remain pending.
+partial returns, repair, production clearance policies and authorized cross-site policy remain pending.
 See RSP-ISS-004 and TESTING-REGISTER.md. RSP-ISS-001 independent inspection remains
 parked at the owner's request.
+
+## Authorized clearance update
+
+[RECALL-CLEARANCE.md](RECALL-CLEARANCE.md) now supplies reviewer clearance and operator
+fresh receiving. Closing alone still does not lift restrictions, and old package/label
+blocks remain. Cleared cases cannot be extended; new incidents require a new recall.

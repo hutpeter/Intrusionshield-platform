@@ -108,6 +108,7 @@ CREATE TABLE IF NOT EXISTS sp_recalls(tenant_id TEXT NOT NULL,facility_id TEXT N
 CREATE TABLE IF NOT EXISTS sp_recall_versions(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id,version),FOREIGN KEY(tenant_id,facility_id,id) REFERENCES sp_recalls(tenant_id,facility_id,id));
 CREATE TABLE IF NOT EXISTS sp_recall_blocks(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,package_id TEXT NOT NULL,package_version INTEGER NOT NULL,recall_id TEXT NOT NULL,PRIMARY KEY(tenant_id,facility_id,package_id,recall_id),FOREIGN KEY(tenant_id,facility_id,package_id,package_version) REFERENCES sp_package_versions(tenant_id,facility_id,id,version),FOREIGN KEY(tenant_id,facility_id,recall_id) REFERENCES sp_recalls(tenant_id,facility_id,id));
 CREATE TABLE IF NOT EXISTS sp_recall_instruments(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,instrument_id TEXT NOT NULL,recall_id TEXT NOT NULL,PRIMARY KEY(tenant_id,facility_id,instrument_id,recall_id),FOREIGN KEY(tenant_id,facility_id,instrument_id) REFERENCES sp_instruments(tenant_id,facility_id,id),FOREIGN KEY(tenant_id,facility_id,recall_id) REFERENCES sp_recalls(tenant_id,facility_id,id));
+CREATE TABLE IF NOT EXISTS sp_recall_readmissions(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,instrument_id TEXT NOT NULL,recall_id TEXT NOT NULL,episode_id TEXT NOT NULL,PRIMARY KEY(tenant_id,facility_id,instrument_id,recall_id),FOREIGN KEY(tenant_id,facility_id,instrument_id,recall_id) REFERENCES sp_recall_instruments(tenant_id,facility_id,instrument_id,recall_id),FOREIGN KEY(tenant_id,facility_id,episode_id) REFERENCES sp_processing(tenant_id,facility_id,id));
 CREATE INDEX IF NOT EXISTS sp_assignment_assembly ON sp_assignments(tenant_id,facility_id,assembly_id);`);
     } catch (error) {
       this.db.close();
@@ -414,6 +415,50 @@ CREATE INDEX IF NOT EXISTS sp_assignment_assembly ON sp_assignments(tenant_id,fa
               .prepare("INSERT INTO sp_recall_blocks VALUES(?,?,?,?,?)")
               .run(...args, p.packageId, p.packageVersion, item.id);
         },
+        findRecallReadmission: async (caseId, instrumentId) => {
+          const row = this.db
+            .prepare(
+              "SELECT p.id AS episodeId,json_extract(p.payload,'$.code') AS episodeCode FROM sp_recall_readmissions a JOIN sp_processing p ON p.tenant_id=a.tenant_id AND p.facility_id=a.facility_id AND p.id=a.episode_id WHERE a.tenant_id=? AND a.facility_id=? AND a.recall_id=? AND a.instrument_id=?",
+            )
+            .get(...args, caseId, instrumentId) as
+            { episodeId: string; episodeCode: string } | undefined;
+          return row ?? null;
+        },
+        listInstrumentRecallCases: async (id) =>
+          (
+            this.db
+              .prepare(
+                "SELECT DISTINCT r.payload FROM sp_recalls r WHERE r.tenant_id=? AND r.facility_id=? AND (EXISTS(SELECT 1 FROM sp_recall_instruments a WHERE a.tenant_id=r.tenant_id AND a.facility_id=r.facility_id AND a.recall_id=r.id AND a.instrument_id=?) OR (json_type(r.payload,'$.lineage') IS NULL AND EXISTS(SELECT 1 FROM json_each(r.payload,'$.items') item JOIN sp_packages p ON p.tenant_id=r.tenant_id AND p.facility_id=r.facility_id AND p.id=json_extract(item.value,'$.packageId') WHERE EXISTS(SELECT 1 FROM json_each(p.payload,'$.assemblySnapshot.instruments') i WHERE json_extract(i.value,'$.id')=?))))",
+              )
+              .all(...args, id, id) as { payload: string }[]
+          ).map((x) => JSON.parse(x.payload)),
+        listPackageRecallCases: async (id) =>
+          (
+            this.db
+              .prepare(
+                "SELECT r.payload FROM sp_recalls r JOIN sp_recall_blocks a ON a.tenant_id=r.tenant_id AND a.facility_id=r.facility_id AND a.recall_id=r.id WHERE a.tenant_id=? AND a.facility_id=? AND a.package_id=?",
+              )
+              .all(...args, id) as { payload: string }[]
+          ).map((x) => JSON.parse(x.payload)),
+        insertRecallReadmissions: async (episode, pairs) => {
+          own(episode);
+          for (const pair of pairs) {
+            const result = this.db
+              .prepare(
+                "INSERT INTO sp_recall_readmissions SELECT ?,?,?,?,? WHERE EXISTS(SELECT 1 FROM sp_recalls r WHERE r.tenant_id=? AND r.facility_id=? AND r.id=? AND json_type(r.payload,'$.clearance')='object' AND json_extract(r.payload,'$.state')='closed')",
+              )
+              .run(
+                ...args,
+                pair.instrumentId,
+                pair.caseId,
+                episode.id,
+                ...args,
+                pair.caseId,
+              );
+            if (result.changes !== 1)
+              throw new SterileError("CLEARANCE_BLOCKED");
+          }
+        },
         insertRecallInstrumentBlocks: async (item) => {
           own(item);
           for (const id of item.lineage?.instrumentIds ?? [])
@@ -426,7 +471,7 @@ CREATE INDEX IF NOT EXISTS sp_assignment_assembly ON sp_assignments(tenant_id,fa
         findInstrumentRecallBlock: async (id) => {
           const row = this.db
             .prepare(
-              "SELECT r.id AS caseId,r.code AS caseCode,json_extract(r.payload,'$.state') AS state,(SELECT count(*) FROM sp_recall_instruments b WHERE b.tenant_id=a.tenant_id AND b.facility_id=a.facility_id AND b.instrument_id=a.instrument_id) AS count FROM sp_recall_instruments a JOIN sp_recalls r ON r.tenant_id=a.tenant_id AND r.facility_id=a.facility_id AND r.id=a.recall_id WHERE a.tenant_id=? AND a.facility_id=? AND a.instrument_id=? ORDER BY r.rowid DESC LIMIT 1",
+              "SELECT r.id AS caseId,r.code AS caseCode,json_extract(r.payload,'$.state') AS state,(SELECT count(*) FROM sp_recall_instruments b WHERE b.tenant_id=a.tenant_id AND b.facility_id=a.facility_id AND b.instrument_id=a.instrument_id AND NOT EXISTS(SELECT 1 FROM sp_recall_readmissions d WHERE d.tenant_id=b.tenant_id AND d.facility_id=b.facility_id AND d.instrument_id=b.instrument_id AND d.recall_id=b.recall_id)) AS count FROM sp_recall_instruments a JOIN sp_recalls r ON r.tenant_id=a.tenant_id AND r.facility_id=a.facility_id AND r.id=a.recall_id WHERE a.tenant_id=? AND a.facility_id=? AND a.instrument_id=? AND NOT EXISTS(SELECT 1 FROM sp_recall_readmissions d WHERE d.tenant_id=a.tenant_id AND d.facility_id=a.facility_id AND d.instrument_id=a.instrument_id AND d.recall_id=a.recall_id) ORDER BY r.rowid DESC LIMIT 1",
             )
             .get(...args, id) as RecallBlock | undefined;
           return row ?? null;

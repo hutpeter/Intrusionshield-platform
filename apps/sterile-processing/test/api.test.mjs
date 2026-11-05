@@ -534,3 +534,56 @@ test("recall impact and extension preserve scope, exact source version, confirma
     (e) => e.code === "SERVICE_UNAVAILABLE",
   );
 });
+
+test("recall clearance and new admission preserve evidence, version/hash, CSRF and scoped plan reads", async (t) => {
+  const calls = [];
+  let foreign = false;
+  fake(t, async (path, options) => {
+    calls.push({ path, options });
+    return response({
+      ...session,
+      tenantId: foreign ? "other" : session.tenantId,
+    });
+  });
+  const body = {
+    requestId: "clear",
+    version: 5,
+    resolution: "Demo",
+    evidence: "Demo",
+    procedure: "Demo",
+    procedureVersion: "1",
+    causeReviewed: true,
+    recoveryReviewed: true,
+    dispositionReviewed: true,
+    reprocessingRequired: true,
+    confirmed: true,
+  };
+  await api.clearRecall(session, "case", body, signal());
+  assert.ok(calls[0].path.endsWith("/recalls/case/clear"));
+  assert.deepEqual(JSON.parse(calls[0].options.body), body);
+  assert.equal(calls[0].options.headers["x-sterile-csrf"], session.csrf);
+  await api.admitRecall(
+    session,
+    "case",
+    {
+      requestId: "admit",
+      version: 6,
+      impactHash: "hash",
+      episodeCode: "NEW",
+      custodian: "Demo",
+      location: "Demo",
+      condition: "Held",
+      reference: "Demo",
+      note: "",
+      contentsChecked: true,
+      confirmed: true,
+    },
+    signal(),
+  );
+  assert.ok(calls[1].path.endsWith("/admit"));
+  foreign = true;
+  await assert.rejects(
+    api.recallAdmissionPlan(session, "case", signal()),
+    (e) => e.code === "SERVICE_UNAVAILABLE",
+  );
+});

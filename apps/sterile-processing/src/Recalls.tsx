@@ -1,3 +1,5 @@
+import { RecallClearancePanel } from "./RecallClearance";
+import { clearanceLabels } from "./clearance-text";
 import { useEffect, useRef, useState } from "react";
 import type {
   RecallImpact,
@@ -59,20 +61,23 @@ export function RecallWorkspace({
     [saving, setSaving] = useState(false),
     [error, setError] = useState<unknown>(null),
     [notice, setNotice] = useState(false),
+    [childDirty, setChildDirty] = useState(false),
+    [childBusy, setChildBusy] = useState(false),
+    [childReset, setChildReset] = useState(0),
     [impact, setImpact] = useState<RecallImpact | null>(null),
     [discard, setDiscard] = useState<(() => void) | null>(null);
   const pending = useRef<AbortController | null>(null),
     inspection = useRef<AbortController | null>(null),
     exampleKey = useRef(crypto.randomUUID()),
-    busy = blocked || saving;
+    busy = blocked || saving || childBusy;
   useEffect(() => {
-    onDirty(!!form);
+    onDirty(!!form || childDirty);
     return () => onDirty(false);
-  }, [form, onDirty]);
+  }, [form, childDirty, onDirty]);
   useEffect(() => {
-    onBusy(saving);
+    onBusy(saving || childBusy);
     return () => onBusy(false);
-  }, [saving, onBusy]);
+  }, [saving, childBusy, onBusy]);
   useEffect(
     () => () => {
       pending.current?.abort();
@@ -130,6 +135,8 @@ export function RecallWorkspace({
     } else setFields((x) => ({ ...x, ...v }));
   };
   function clear() {
+    setChildReset((n) => n + 1);
+    setChildDirty(false);
     setImpact(null);
     setForm(null);
     setFields(empty());
@@ -137,7 +144,7 @@ export function RecallWorkspace({
   }
   function guard(action: () => void) {
     if (busy) return;
-    if (form)
+    if (form || childDirty)
       setDiscard(() => () => {
         clear();
         action();
@@ -355,6 +362,35 @@ export function RecallWorkspace({
       pending.current = null;
     }
   }
+  async function clearanceExample() {
+    if (busy || form) return;
+    const ac = new AbortController();
+    pending.current = ac;
+    setSaving(true);
+    setError(null);
+    try {
+      const r = await api.recallClearanceExample(
+        session,
+        exampleKey.current,
+        ac.signal,
+      );
+      if (ac.signal.aborted) return;
+      clear();
+      setSelected(r.id);
+      setHistoryPage(1);
+      setNotice(false);
+      setNonce((n) => n + 1);
+      exampleKey.current = crypto.randomUUID();
+    } catch (e) {
+      if (!ac.signal.aborted) {
+        if (e instanceof ApiError && e.status === 401) onExpired();
+        else setError(e);
+      }
+    } finally {
+      if (!ac.signal.aborted) setSaving(false);
+      pending.current = null;
+    }
+  }
   async function inspect(version: number) {
     if (!selected || busy || form) return;
     inspection.current?.abort();
@@ -442,6 +478,14 @@ export function RecallWorkspace({
             >
               {p.lineageExample}
             </button>
+            {session.canClearRecall && (
+              <button
+                disabled={busy || loading}
+                onClick={() => void clearanceExample()}
+              >
+                {clearanceLabels(language).example}
+              </button>
+            )}
             <small>{p.exampleHelp}</small>
           </section>
         )}
@@ -728,15 +772,20 @@ export function RecallWorkspace({
           )}
           <section className="panel">
             <span className="badge retired">{p[shown.state]}</span>
-            {session.canRecall && !past && !form && (
+            {session.canRecall && !past && !form && !shown.clearance && (
               <button disabled={busy} onClick={() => begin("extend")}>
                 {p.extend}
               </button>
             )}
             {shown.lineage && (
               <p className="readonly-note">
-                {p.lineageNotice} · {p.instruments}:{" "}
-                {shown.lineage.instrumentIds.length}
+                {p.lineageNotice}
+                {!shown.clearance && (
+                  <>
+                    {" "}
+                    · {p.instruments}: {shown.lineage.instrumentIds.length}
+                  </>
+                )}
               </p>
             )}
             <dl className="details-grid">
@@ -766,6 +815,22 @@ export function RecallWorkspace({
               </div>
             </dl>
           </section>
+          {!past && !form && detail && (
+            <RecallClearancePanel
+              key={childReset}
+              record={detail}
+              session={session}
+              language={language}
+              blocked={blocked || saving || loading}
+              onExpired={onExpired}
+              onDirty={setChildDirty}
+              onBusy={setChildBusy}
+              onSaved={() => {
+                setNotice(true);
+                setNonce((n) => n + 1);
+              }}
+            />
+          )}
           <section className="panel">
             <h2>{p.items}</h2>
             {shown.items.map((item) => (
@@ -866,9 +931,13 @@ export function RecallWorkspace({
                           ? p.created
                           : h.action === "recall-recovered"
                             ? p.recoveryEvent
-                            : h.action === "recall-expanded"
-                              ? p.expanded
-                              : p.dispositionEvent}
+                            : h.action === "recall-cleared-for-reprocessing"
+                              ? clearanceLabels(language).clearanceEvent
+                              : h.action === "recall-reprocessing-admitted"
+                                ? clearanceLabels(language).admissionEvent
+                                : h.action === "recall-expanded"
+                                  ? p.expanded
+                                  : p.dispositionEvent}
                       </strong>
                       <time dateTime={h.at}>{date(h.at)}</time>
                       <small>
