@@ -1,3 +1,4 @@
+import { maintenanceLabels, maintenanceEvent } from "./maintenance-text";
 import type { Language } from "./text";
 const en = {
   title: "Traceability and reports",
@@ -259,6 +260,10 @@ const words: Record<Language, Record<string, string>> = {
     cleared_reprocessing: "Clearance for new reprocessing",
     superseded_by: "Replaced by new receiving",
     episodeCode: "Receiving episode code",
+    maintenance_receiving: "Receiving after repair",
+    maintenance_source: "Repair source",
+    defect: "Defect",
+    provider: "Service provider",
     superseded: "Superseded",
     clearance: "Clearance for new reprocessing",
     readmission: "New receiving admission",
@@ -392,6 +397,10 @@ const words: Record<Language, Record<string, string>> = {
     cleared_reprocessing: "Autorización para nuevo reprocesamiento",
     superseded_by: "Sustituido por nueva recepción",
     episodeCode: "Código del episodio de recepción",
+    maintenance_receiving: "Recepción tras reparación",
+    maintenance_source: "Origen de reparación",
+    defect: "Defecto",
+    provider: "Proveedor del servicio",
     superseded: "Sustituido",
     clearance: "Autorización para nuevo reprocesamiento",
     readmission: "Nueva recepción",
@@ -525,6 +534,10 @@ const words: Record<Language, Record<string, string>> = {
     cleared_reprocessing: "Autorisation de nouveau retraitement",
     superseded_by: "Remplacé par une nouvelle réception",
     episodeCode: "Code d’épisode de réception",
+    maintenance_receiving: "Réception après réparation",
+    maintenance_source: "Origine de réparation",
+    defect: "Défaut",
+    provider: "Prestataire",
     superseded: "Remplacé",
     clearance: "Autorisation de nouveau retraitement",
     readmission: "Nouvelle réception",
@@ -585,7 +598,11 @@ export const traceLabels = (language: Language) =>
 export const traceKind = (language: Language, key: string) =>
   (kinds[language] as Record<string, string>)[key] ?? key;
 export const traceWord = (language: Language, key: string) =>
-  words[language][key] ?? key;
+  (["maintenance", "maintenance_hold"].includes(key)
+    ? maintenanceLabels(language).hold
+    : maintenanceEvent(key, language)) ??
+  words[language][key] ??
+  key;
 
 const actions: Record<string, [string, string, string]> = {
   "recall-cleared-for-reprocessing": [

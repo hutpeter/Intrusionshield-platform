@@ -1,3 +1,4 @@
+import { maintenanceLabels } from "./maintenance-text";
 import { recallLabels } from "./recall-text";
 import { returnLabels } from "./return-text";
 import { useEffect, useRef, useState } from "react";
@@ -359,6 +360,13 @@ export function ProcessingWorkspace({
   );
   const episode = (d: ProcessingEpisode) => (
     <>
+      {d.maintenanceSource && (
+        <p className="readonly-note">
+          {maintenanceLabels(language).title} ·{" "}
+          {d.maintenanceSource.maintenanceId} · {d.maintenanceSource.procedure}{" "}
+          · {d.maintenanceSource.procedureVersion}
+        </p>
+      )}
       {d.recallSource && (
         <p className="readonly-note">
           {recallLabels(language).code}: {d.recallSource.caseCode} ·{" "}
@@ -719,7 +727,7 @@ export function ProcessingWorkspace({
                           key={i.id}
                           value={i.id}
                           disabled={
-                            i.state === "retired" ||
+                            i.state !== "registered" ||
                             !!i.activeAssembly ||
                             !!i.processingHold ||
                             fields.instrumentIds.includes(i.id)
@@ -730,9 +738,11 @@ export function ProcessingWorkspace({
                             ? " · " + i.activeAssembly.assemblyCode
                             : i.processingHold
                               ? " · " + i.processingHold.episodeCode
-                              : i.state === "retired"
-                                ? " · " + t.retired
-                                : ""}
+                              : i.state === "maintenance"
+                                ? " · " + maintenanceLabels(language).hold
+                                : i.state === "retired"
+                                  ? " · " + t.retired
+                                  : ""}
                         </option>
                       ))}
                     </select>

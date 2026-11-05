@@ -1,3 +1,4 @@
+import { maintenanceLabels } from "./maintenance-text";
 import { useEffect, useRef, useState } from "react";
 import type {
   TrayDefinition,
@@ -737,7 +738,7 @@ export function TrayWorkspace({
                           key={i.id}
                           value={i.id}
                           disabled={
-                            i.state === "retired" ||
+                            i.state !== "registered" ||
                             !!i.processingHold ||
                             fields.instrumentIds.includes(i.id) ||
                             !!(
@@ -756,7 +757,11 @@ export function TrayWorkspace({
                           {i.processingHold
                             ? " · " + i.processingHold.episodeCode
                             : ""}
-                          {i.state === "retired" ? " · " + t.retired : ""}
+                          {i.state === "maintenance"
+                            ? " · " + maintenanceLabels(language).hold
+                            : i.state === "retired"
+                              ? " · " + t.retired
+                              : ""}
                         </option>
                       ))}
                     </select>

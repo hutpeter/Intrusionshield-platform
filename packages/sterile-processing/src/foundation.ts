@@ -48,6 +48,7 @@ export interface InstrumentType {
   version: number;
 }
 export interface Instrument {
+  maintenance?: import("./maintenance.js").MaintenanceEntry[];
   recall?: RecallBlock;
   processingHold?: { episodeId: string; episodeCode: string };
   activeAssembly?: { assemblyId: string; assemblyCode: string };
@@ -58,7 +59,7 @@ export interface Instrument {
   instrumentTypeId: string;
   code: string;
   serialNumber: string;
-  state: "registered" | "retired";
+  state: "registered" | "maintenance" | "retired";
   createdAt: string;
   updatedAt: string;
   retiredAt: string | null;
@@ -74,6 +75,10 @@ export interface SterileAuditEvent {
   actorId: string;
   at: string;
   action:
+    | "maintenance-reported"
+    | "maintenance-assessed"
+    | "maintenance-repaired"
+    | "maintenance-authorized"
     | "package-returned"
     | "return-disposition"
     | "recall-cleared-for-reprocessing"

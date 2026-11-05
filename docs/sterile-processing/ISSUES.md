@@ -111,5 +111,23 @@ Keep test execution status in [TESTING-REGISTER.md](TESTING-REGISTER.md).
   coordination and operational acceptance. Historical links must be reconciled when
   later incidents supersede receiving episodes. No arbitrary unblock/restock is supplied.
 - **Validation:** Scoped domain/SQLite/HTTP/web checks cover permissions, scope, gates,
-  overlap, concurrency, audit rollback and fresh proof. Owner U-CLEAR-01 and broader
+  overlap, concurrency, audit rollback and fresh proof. Owner U-CLEAR-01 and receiving U-CLEAR-02 passed November 5; broader
   manual checks remain pending. See [RECALL-CLEARANCE.md](RECALL-CLEARANCE.md).
+
+## RSP-ISS-006 — Maintenance exceptions and production service policy
+
+- **Status:** Initial maintenance/repair preview delivered; broader policy pending.
+- **Delivered:** Defect/quarantine hold for unassigned instruments outside active
+  processing; immutable assessment/repair evidence and actor history; dedicated reviewer
+  authorization creates fresh receiving/processing hold with no inherited inspection.
+  Current recall restrictions remain independent. Traceability includes hold and evidence.
+- **Deferred:** Defect reporting against active trays, issued/loaded packages or active
+  processing; incident-driven custody reconciliation (including recalls newly recorded
+  during maintenance, which remain held); failed/unrepairable repair and
+  authorized retirement/disposal; evidence correction/amendment; production person and
+  competency checks; service-provider connections, scheduling, costs, preventive and
+  predictive maintenance; history beyond 100 maintenance records per instrument.
+- **Validation:** 234 scoped tests, builds and targeted developer browser walkthrough
+  passed. U-MAINT-01 and broader manual/clinical acceptance remain pending. Independent
+  cleaner/inspector separation remains separately parked under RSP-ISS-001.
+  See [MAINTENANCE-REPAIR.md](MAINTENANCE-REPAIR.md).

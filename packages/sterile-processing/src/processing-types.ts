@@ -42,6 +42,12 @@ export interface InspectInput {
   confirmed: boolean;
 }
 export interface ProcessingEpisode {
+  maintenanceSource?: {
+    instrumentId: string;
+    maintenanceId: string;
+    procedure: string;
+    procedureVersion: string;
+  };
   supersededBy?: string;
   supersededReason?: string;
   recallSource?: {

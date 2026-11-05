@@ -587,3 +587,31 @@ test("recall clearance and new admission preserve evidence, version/hash, CSRF a
     (e) => e.code === "SERVICE_UNAVAILABLE",
   );
 });
+test("maintenance authorization preserves evidence, version and CSRF and rejects a foreign result", async (t) => {
+  const input = {
+    requestId: "request",
+    version: 4,
+    confirmed: true,
+    reason: "reviewed",
+    evidence: "FUNCTION",
+    procedure: "REPROCESS",
+    procedureVersion: "1",
+    code: "NEW-RECEIVING",
+    custodian: "Receiver",
+    location: "Quarantine",
+    functionalChecked: true,
+  };
+  fake(t, async (path, options) => {
+    assert.match(path, /\/instruments\/instrument\/maintenance\/authorize$/);
+    assert.equal(options.headers["x-sterile-csrf"], session.csrf);
+    assert.deepEqual(JSON.parse(options.body), input);
+    return new Response(
+      JSON.stringify({ tenantId: "foreign", facilityId: session.facilityId }),
+      { status: 200 },
+    );
+  });
+  await assert.rejects(
+    api.maintenance(session, "instrument", "authorize", input, signal()),
+    (e) => e instanceof ApiError && e.code === "SERVICE_UNAVAILABLE",
+  );
+});

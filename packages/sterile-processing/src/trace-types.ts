@@ -81,6 +81,7 @@ export interface TraceLink {
 }
 export interface TraceAlert {
   kind:
+    | "maintenance_hold"
     | "instrument_recall"
     | "processing_hold"
     | "active_assembly"

@@ -117,3 +117,10 @@ No old package is restocked, no notification or equipment control is performed, 
 no cross-facility propagation, arbitrary unblock, quarantine/discard correction,
 partial-instrument clearance or batches above 100 instruments are implemented.
 See RSP-ISS-005 and TESTING-REGISTER.md for deferred manual/production acceptance.
+
+## Owner result update — November 5, 2026
+
+U-CLEAR-01 reviewer clearance and U-CLEAR-02 operator receiving admission both passed
+from owner screenshots. After admission, zero instruments await receiving, a linked
+episode is shown and the admission button is absent to prevent duplicates. Continue
+in Receiving and cleaning; broader manual/clinical acceptance remains deferred.

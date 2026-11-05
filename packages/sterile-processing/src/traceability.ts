@@ -202,6 +202,53 @@ export class TraceabilityRegistry {
           o: object,
           keys: string[],
         ) => facts.push({ kind, at, actorId, fields: fields(o, keys) });
+        if (row.kind === "instrument") {
+          const i = r as import("./foundation.js").Instrument;
+          for (const m of i.maintenance ?? []) {
+            fact("maintenance-reported", m.reportedAt, m.reportedBy, m, [
+              "defect",
+              "location",
+            ]);
+            if (m.assessment)
+              fact(
+                "maintenance-assessed",
+                m.assessment.at,
+                m.assessment.actorId,
+                m.assessment,
+                ["note", "evidence"],
+              );
+            if (m.repair)
+              fact(
+                "maintenance-repaired",
+                m.repair.at,
+                m.repair.actorId,
+                m.repair,
+                ["note", "evidence", "provider"],
+              );
+            if (m.authorization) {
+              fact(
+                "maintenance-authorized",
+                m.authorization.at,
+                m.authorization.actorId,
+                m.authorization,
+                [
+                  "reason",
+                  "evidence",
+                  "procedure",
+                  "procedureVersion",
+                  "episodeCode",
+                ],
+              );
+              link(
+                row,
+                "processing",
+                m.authorization.episodeId,
+                1,
+                "maintenance_receiving",
+              );
+            }
+          }
+        }
         if (row.kind === "assembly") {
           const a = r as TrayAssembly;
           link(
@@ -220,6 +267,14 @@ export class TraceabilityRegistry {
           for (const i of e.instruments)
             if (instruments.includes(i.id))
               link(row, "instrument", i.id, i.instrumentVersion, "received");
+          if (e.maintenanceSource)
+            link(
+              row,
+              "instrument",
+              e.maintenanceSource.instrumentId,
+              null,
+              "maintenance_source",
+            );
           if (e.recallSource)
             for (const c of e.recallSource.clearances)
               link(row, "recall", c.caseId, c.version, "cleared_reprocessing");
@@ -430,6 +485,20 @@ export class TraceabilityRegistry {
       }
       const alerts: TraceReport["alerts"] = [];
       for (const i of by("instrument").filter((r) => r.current)) {
+        if (
+          (i.record as import("./foundation.js").Instrument).state ===
+          "maintenance"
+        )
+          alerts.push({
+            kind: "maintenance_hold",
+            entityKind: "instrument",
+            entityId: i.record.id,
+            code: traceCode(i.record),
+            reference:
+              (
+                i.record as import("./foundation.js").Instrument
+              ).maintenance?.at(-1)?.id ?? "",
+          });
         const instrumentRecall = await tx.findInstrumentRecallBlock(
           i.record.id,
         );

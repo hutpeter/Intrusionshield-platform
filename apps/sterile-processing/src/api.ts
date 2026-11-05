@@ -221,6 +221,38 @@ async function checkedMovement(
   return r;
 }
 export const api = {
+  prepareMaintenance: (s: Session, requestId: string, signal: AbortSignal) =>
+    scoped(
+      s,
+      call<Instrument>(
+        "/preview/maintenance-example",
+        signal,
+        { requestId },
+        s.csrf,
+      ),
+    ),
+
+  maintenance: (
+    s: Session,
+    id: string,
+    step: "report" | "assess" | "repair" | "authorize",
+    body: Record<string, unknown>,
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<Instrument>(
+        base(s) +
+          "/instruments/" +
+          encodeURIComponent(id) +
+          "/maintenance/" +
+          step,
+        signal,
+        body,
+        s.csrf,
+      ),
+    ),
+
   traceSearch: (s: Session, code: string, signal: AbortSignal) =>
     scoped(
       s,

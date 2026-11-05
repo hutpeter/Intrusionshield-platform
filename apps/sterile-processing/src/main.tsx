@@ -1,3 +1,5 @@
+import { MaintenancePanel } from "./Maintenance";
+import { maintenanceLabels, maintenanceEvent } from "./maintenance-text";
 import { TraceabilityWorkspace } from "./Traceability";
 import { traceLabels } from "./trace-text";
 import { ReturnWorkspace } from "./Returns";
@@ -723,6 +725,35 @@ function Workspace({
                     {t.reload}
                   </button>
                 )}
+                {session.canWrite && tab === "instruments" && !selected && (
+                  <button
+                    disabled={busy || loading || !!form}
+                    onClick={async () => {
+                      const c = new AbortController();
+                      pending.current = c;
+                      setBusy(true);
+                      setError(null);
+                      try {
+                        const i = await api.prepareMaintenance(
+                          session,
+                          crypto.randomUUID(),
+                          c.signal,
+                        );
+                        if (!c.signal.aborted) setSelected(i.id);
+                      } catch (e) {
+                        if (!c.signal.aborted) {
+                          if (e instanceof ApiError && e.status === 401)
+                            onExpired();
+                          else setError(e);
+                        }
+                      } finally {
+                        if (!c.signal.aborted) setBusy(false);
+                      }
+                    }}
+                  >
+                    {maintenanceLabels(language).prepare}
+                  </button>
+                )}
                 {session.canWrite && !selected && (
                   <button
                     aria-label={tab === "types" ? t.newType : t.newInstrument}
@@ -1042,7 +1073,11 @@ function Workspace({
                       "badge " + (detail.state === "retired" ? "retired" : "")
                     }
                   >
-                    {detail.state === "retired" ? t.retired : t.recorded}
+                    {detail.state === "maintenance"
+                      ? maintenanceLabels(language).hold
+                      : detail.state === "retired"
+                        ? t.retired
+                        : t.recorded}
                   </span>
                   <h2>{name(detail.instrumentTypeId)}</h2>
                 </div>
@@ -1103,6 +1138,17 @@ function Workspace({
                 )}
               </dl>
             </section>
+            <MaintenancePanel
+              key={detail.id + ":" + trayReset}
+              instrument={detail}
+              session={session}
+              language={language}
+              blocked={blocked || saving || !!form}
+              onDirty={setTrayDirty}
+              onBusy={setTrayBusy}
+              onSaved={() => setNonce((n) => n + 1)}
+              onExpired={onExpired}
+            />
             <section className="panel history">
               <h2>{t.history}</h2>
               {history?.items.length ? (
@@ -1112,11 +1158,12 @@ function Workspace({
                       <span className="timeline-dot" />
                       <div>
                         <strong>
-                          {event.action === "instrument-retired"
-                            ? t.instrumentRetired
-                            : event.action === "type-created"
-                              ? t.typeCreated
-                              : t.instrumentRegistered}
+                          {maintenanceEvent(event.action, language) ??
+                            (event.action === "instrument-retired"
+                              ? t.instrumentRetired
+                              : event.action === "type-created"
+                                ? t.typeCreated
+                                : t.instrumentRegistered)}
                         </strong>
                         <time dateTime={event.at}>{date(event.at)}</time>
                         <small>
@@ -1193,7 +1240,11 @@ function Workspace({
                                   (i.state === "retired" ? "retired" : "")
                                 }
                               >
-                                {i.state === "retired" ? t.retired : t.recorded}
+                                {i.state === "maintenance"
+                                  ? maintenanceLabels(language).hold
+                                  : i.state === "retired"
+                                    ? t.retired
+                                    : t.recorded}
                               </span>
                             </td>
                             <td>

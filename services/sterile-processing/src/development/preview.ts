@@ -1,3 +1,4 @@
+import { prepareMaintenanceExample } from "./maintenance-example.js";
 import { prepareRecallClearanceExample } from "./recall-clearance-example.js";
 import { prepareLineageRecallExample } from "./lineage-recall-example.js";
 import { prepareReturnExample } from "./return-example.js";
@@ -444,6 +445,33 @@ export function createSterilePreview({
         ),
       );
   });
+  app.post("/preview/maintenance-example", async (req, res) => {
+    const session = res.locals.session as Session;
+    if (session.role !== "operator") {
+      res
+        .status(session.role ? 403 : 401)
+        .json({ error: session.role ? "FORBIDDEN" : "UNAUTHENTICATED" });
+      return;
+    }
+    if (
+      Object.keys(req.query).length ||
+      !req.body ||
+      Array.isArray(req.body) ||
+      Object.keys(req.body).length !== 1
+    ) {
+      res.status(400).json({ error: "INVALID_REQUEST" });
+      return;
+    }
+    res
+      .status(201)
+      .json(
+        await prepareMaintenanceExample(
+          repository,
+          { tenantId, facilityId, actorId: actors.operator },
+          sterileUuid(req.body.requestId),
+        ),
+      );
+  });
   app.post("/preview/recall-clearance-example", async (req, res) => {
     const s = res.locals.session as Session;
     if (!s.role) {
@@ -562,6 +590,7 @@ export function createSterilePreview({
         fixtureGrants.has("core.authentication") &&
         fixtureGrants.has("core.authorization") &&
         ((scope.actorId === actors.operator &&
+          permission !== "maintenance:authorize" &&
           permission !== "release:write" &&
           permission !== "recall:write" &&
           permission !== "recall:clear" &&
@@ -569,6 +598,7 @@ export function createSterilePreview({
           (scope.actorId === actors.viewer && permission.endsWith(":read")) ||
           (scope.actorId === actors.reviewer &&
             (permission.endsWith(":read") ||
+              permission === "maintenance:authorize" ||
               permission === "release:write" ||
               permission === "recall:write" ||
               permission === "recall:clear" ||

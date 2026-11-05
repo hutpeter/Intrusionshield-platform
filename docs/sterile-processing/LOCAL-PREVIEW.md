@@ -239,3 +239,8 @@ See [RECALL-CLEARANCE.md](RECALL-CLEARANCE.md) for the reviewer’s single clear
 check and the separate operator fresh-receiving workflow. Old packages/labels remain
 blocked; current instrument restrictions require clearance and admission, then fresh
 cleaning/inspection before assembly. Existing records and older versions are retained.
+
+## Instrument maintenance and repair
+
+See [MAINTENANCE-REPAIR.md](MAINTENANCE-REPAIR.md) for the fictional instrument setup,
+defect hold, assessment/repair evidence and reviewer-authorized fresh receiving.
