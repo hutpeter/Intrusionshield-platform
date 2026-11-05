@@ -178,7 +178,7 @@ export function MaintenancePanel({
               </label>
             ))}
             {form.step === "authorize" && (
-              <label>
+              <label className="check">
                 <input
                   type="checkbox"
                   checked={functional}
@@ -187,7 +187,7 @@ export function MaintenancePanel({
                 {t.functionalChecked}
               </label>
             )}
-            <label>
+            <label className="check">
               <input
                 type="checkbox"
                 checked={confirmed}

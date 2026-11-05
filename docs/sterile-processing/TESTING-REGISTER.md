@@ -529,3 +529,12 @@ unperformed deferred scenarios.
 The unsaved impact preview now says “Instruments that will be blocked” in ES/EN/FR.
 Saved cases retain “Blocked instruments.” This wording change does not alter blocks
 or workflow behavior; scoped web build verification applies.
+
+## Maintenance confirmation layout correction — November 5, 2026
+
+Owner U-MAINT-01 remains pending: screenshot showed the confirmation checkbox separated
+from its text by the default full-width input styling, with Save correctly disabled.
+Both maintenance confirmation labels now use the existing checkbox-row style. Targeted
+developer Chromium verification checks a 17px checkbox aligned with its label, clicking
+label text selects it and enables Save, and saving works through all maintenance stages.
+Scoped builds passed. Broader deferred manual checks remain unchanged.
