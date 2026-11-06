@@ -47,11 +47,11 @@ A successful developer check never implies that the owner performed it.
 
 | 23486a3 | Version-bound package Data Matrix and confirmed scan-to-draft load | 269 scoped tests, builds, independent symbol decode and developer label/print/add/duplicate/Enter check | U-LOADSCAN-01 passed November 6, 2026 | Physical scanner/printer and broader owner exception/operational acceptance deferred |
 
-| Storage/distribution scanning increment (this commit) | Release-validated package lookup into existing storage/transfer/issue controls | 275 scoped tests, builds and developer confirmation/location/existing-record-rescan check | U-STORESCAN-01 pending | Owner transfer/issue/exception, physical hardware/handover and operational acceptance deferred |
+| Storage/distribution scanning increment (this commit) | Release-validated package lookup into existing storage/transfer/issue controls | 275 scoped tests, builds and developer confirmation/location/existing-record-rescan check | U-STORESCAN-01 passed November 6, 2026 | Owner transfer/issue/exception, physical hardware/handover and operational acceptance deferred |
 
-## Current single owner check — scan to storage
+## Completed owner check — scan to storage
 
-**U-STORESCAN-01 pending:** follow [STORAGE-SCANNING.md](STORAGE-SCANNING.md): Demo
+**U-STORESCAN-01 passed November 6, 2026:** follow [STORAGE-SCANNING.md](STORAGE-SCANNING.md): Demo
 operator → Storage and distribution → Scan released package → Prepare fictional storage
 scan example → Simulate storage scan → keep location/reference and tick both movement
 checks → Save storage. Expected Movement saved, Stored, DEMO-SCAN-STORE-A and history.
@@ -687,3 +687,13 @@ LOADSCAN candidate listed once, and a version 2 scan audit entry attributed to D
 operator. Load: `LOADSCAN-DRAFT-4F813DF0-44CE-496F-B501-9BEE49BEF26C`. The earlier
 load-created version remains visible. No cycle-start, physical scanner/printer or broader
 exception/clinical acceptance is inferred; M-LOADSCAN-01–03 remain deferred.
+
+## Owner scanned storage result — November 6, 2026
+
+U-STORESCAN-01 passed: owner screenshot confirms **Movement saved**, **Stored**,
+location **DEMO-SCAN-STORE-A**, version 1, current package/load/review source traceability
+and one stored movement attributed to Demo operator with reference
+**SIMULATED-SCAN-STORAGE**. Package:
+`DEMO-CYCLE-PACK-C3FB56D1-86AC-456B-8AF9-00F2E86736EF`. Transfer/issue, exceptions,
+physical scanner/printer/handover and full operational acceptance are not inferred;
+M-STORESCAN-01–03 remain deferred.
