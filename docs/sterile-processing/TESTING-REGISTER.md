@@ -43,11 +43,11 @@ A successful developer check never implies that the owner performed it.
 
 | de3a3a2 | Confirmed single-instrument scan into draft with type/quantity/hold gates and atomic reservation | 252 scoped tests, builds and developer browser count/duplicate/Enter/audit check | U-TRAYSCAN-01 passed November 6, 2026 | Physical scanners and owner exception/full workflow acceptance deferred |
 
-| Receiving scanning increment (this commit) | Stage scanned members then confirm receipt with current holds and frozen identifier provenance | 260 scoped tests, builds and developer browser staging/Enter/confirmation/hold/refresh check | U-RECSCAN-01 pending | Hardware, owner exception and complete operational acceptance deferred |
+| Receiving scanning increment (this commit) | Stage scanned members then confirm receipt with current holds and frozen identifier provenance | 260 scoped tests, builds and developer browser staging/Enter/confirmation/hold/refresh check | U-RECSCAN-01 passed November 6, 2026 | Hardware, owner exception and complete operational acceptance deferred |
 
-## Current single owner check — receiving scan
+## Completed owner check — receiving scan
 
-**U-RECSCAN-01 pending:** follow [RECEIVING-SCANNING.md](RECEIVING-SCANNING.md): Demo
+**U-RECSCAN-01 passed November 6, 2026:** follow [RECEIVING-SCANNING.md](RECEIVING-SCANNING.md): Demo
 operator → Receiving and cleaning → Prepare fictional receiving scan example → Simulate
 receiving scan → confirm receipt → Save receipt. Expected Received episode, matching
 member and Internal identifiers recorded at receiving. Only this new aspect is requested.
@@ -628,3 +628,12 @@ The original version 1 assembly event remains visible. This establishes the save
 scan-add smoke result; counts/draft badge are outside this screenshot and no additional
 exception, physical scanner or full operational acceptance is inferred. Broader
 M-TRAYSCAN-01 through M-TRAYSCAN-03 checks remain deferred.
+
+## Owner receiving scan result — November 6, 2026
+
+U-RECSCAN-01 passed: owner screenshot confirms **Record saved**, **Received**, version 1,
+receipt `RECSCAN-REC-7241EF8C-E9E2-4B9B-A1B5-105389446897`, the matching received
+instrument and **Internal identifiers recorded at receiving**. No cleaning attempts
+are recorded; history attributes receipt and one internal identifier to Demo operator.
+This confirms scanned receipt saving only. Exception, cleaning/inspection, physical
+scanner and complete operational acceptance remain deferred under M-RECSCAN-01–03.
