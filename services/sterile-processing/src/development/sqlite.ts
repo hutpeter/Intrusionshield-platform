@@ -175,7 +175,8 @@ CREATE INDEX IF NOT EXISTS sp_assignment_assembly ON sp_assignments(tenant_id,fa
         return rows.map((row) => JSON.parse(row.payload) as V);
       };
       const tx: SterileTransaction = {
-        dashboardQueue: async (id) => readDashboardQueue(this.db, args, id),
+        dashboardQueue: async (id, offset) =>
+          readDashboardQueue(this.db, args, id, offset),
         searchTraceCode: async (code) => {
           const pairs = [
             ["instrument", "sp_instruments"],

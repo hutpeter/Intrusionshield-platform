@@ -8,6 +8,7 @@ export function readDashboardQueue(
   db: DatabaseSync,
   args: string[],
   id: DashboardQueueId,
+  offset = 0,
 ): { total: number; items: DashboardRow[] } {
   const state = "json_extract(p.payload,'$.state')",
     same = (alias: string) =>
@@ -56,8 +57,8 @@ export function readDashboardQueue(
   ).n;
   const items = db
     .prepare(
-      `SELECT p.id,p.code,${state} AS state,${updated} AS updatedAt,${units} AS units ${filter} ORDER BY ${updated} ASC,p.id ASC LIMIT 12`,
+      `SELECT p.id,p.code,${state} AS state,${updated} AS updatedAt,${units} AS units ${filter} ORDER BY ${updated} ASC,p.id ASC LIMIT 12 OFFSET ?`,
     )
-    .all(...args) as unknown as DashboardRow[];
+    .all(...args, offset) as unknown as DashboardRow[];
   return { total, items };
 }

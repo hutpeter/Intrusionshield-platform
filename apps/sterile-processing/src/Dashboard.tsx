@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import type {
   OperationalDashboard,
   DashboardWorkspace,
+  DashboardQueueId,
 } from "@intrusionshield/sterile-processing";
 import { api, ApiError, type Session } from "./api";
 import type { Language } from "./text";
@@ -28,6 +29,11 @@ export function Dashboard({
     [error, setError] = useState(false),
     [loading, setLoading] = useState(true),
     [nonce, setNonce] = useState(0),
+    [pages, setPages] = useState<Partial<Record<DashboardQueueId, number>>>({}),
+    [snapshots, setSnapshots] = useState<
+      Partial<Record<DashboardQueueId, string>>
+    >({}),
+    fixtureKey = useRef<string | null>(null),
     pending = useRef<AbortController | null>(null);
   useEffect(() => {
     onBusy(loading);
@@ -39,6 +45,8 @@ export function Dashboard({
     setLoading(true);
     setError(false);
     setValue(null);
+    setPages({});
+    setSnapshots({});
     void api
       .dashboard(session, c.signal)
       .then((v) => {
@@ -53,8 +61,64 @@ export function Dashboard({
       .finally(() => {
         if (!c.signal.aborted) setLoading(false);
       });
-    return () => c.abort();
+    return () => {
+      c.abort();
+      pending.current?.abort();
+    };
   }, [session, nonce, onExpired]);
+  const prepareExample = async () => {
+    if (blocked || loading) return;
+    const c = new AbortController();
+    pending.current = c;
+    setLoading(true);
+    setError(false);
+    fixtureKey.current ??= crypto.randomUUID();
+    try {
+      await api.prepareDashboardPaging(session, fixtureKey.current, c.signal);
+      if (!c.signal.aborted) {
+        fixtureKey.current = null;
+        setNonce((n) => n + 1);
+      }
+    } catch (e) {
+      if (!c.signal.aborted) {
+        if (e instanceof ApiError && e.status === 401) onExpired();
+        else {
+          setError(true);
+          setValue(null);
+        }
+      }
+    } finally {
+      if (!c.signal.aborted) setLoading(false);
+    }
+  };
+  const browse = async (id: DashboardQueueId, page: number) => {
+    if (blocked || loading) return;
+    const c = new AbortController();
+    pending.current = c;
+    setLoading(true);
+    setError(false);
+    try {
+      const r = await api.dashboardQueue(session, id, page, c.signal);
+      if (c.signal.aborted) return;
+      setValue((v) =>
+        v
+          ? { ...v, queues: v.queues.map((q) => (q.id === id ? r.queue : q)) }
+          : null,
+      );
+      setPages((v) => ({ ...v, [id]: page }));
+      setSnapshots((v) => ({ ...v, [id]: r.generatedAt }));
+    } catch (e) {
+      if (!c.signal.aborted) {
+        if (e instanceof ApiError && e.status === 401) onExpired();
+        else {
+          setError(true);
+          setValue(null);
+        }
+      }
+    } finally {
+      if (!c.signal.aborted) setLoading(false);
+    }
+  };
   const date = (d: string) =>
     new Intl.DateTimeFormat(language, {
       dateStyle: "medium",
@@ -77,6 +141,19 @@ export function Dashboard({
         </button>
       </div>
       <p className="readonly-note">{t.note}</p>
+      {session.mode === "local-dummy-preview" &&
+        session.role === "operator" && (
+          <div>
+            <button
+              disabled={blocked || loading}
+              onClick={() => void prepareExample()}
+            >
+              {t.example}
+            </button>
+            <p className="muted">{t.exampleNote}</p>
+          </div>
+        )}
+
       {error && (
         <p className="alert" role="alert">
           {t.error}
@@ -105,7 +182,8 @@ export function Dashboard({
                 ) : (
                   <>
                     <p className="muted">
-                      {t.showing} {q.items.length} {t.of} {q.total}
+                      {t.showing} {q.items.length} {t.of} {q.total} · {t.page}{" "}
+                      {pages[q.id] ?? 1}
                     </p>
                     {!q.items.length && <p>{t.empty}</p>}
                     <ul>
@@ -129,6 +207,35 @@ export function Dashboard({
                         </li>
                       ))}
                     </ul>
+                    <p className="muted">
+                      {t.asOf}: {date(snapshots[q.id] ?? value.generatedAt)}
+                    </p>
+                    <div className="pagination">
+                      <button
+                        disabled={blocked || loading || (pages[q.id] ?? 1) <= 1}
+                        onClick={() =>
+                          void browse(q.id, (pages[q.id] ?? 1) - 1)
+                        }
+                      >
+                        {t.previous}
+                      </button>
+                      <span>
+                        {t.page} {pages[q.id] ?? 1}
+                      </span>
+                      <button
+                        disabled={
+                          blocked ||
+                          loading ||
+                          (pages[q.id] ?? 1) >= 99999 ||
+                          (pages[q.id] ?? 1) * 12 >= q.total!
+                        }
+                        onClick={() =>
+                          void browse(q.id, (pages[q.id] ?? 1) + 1)
+                        }
+                      >
+                        {t.next}
+                      </button>
+                    </div>
                     <button
                       disabled={blocked || loading}
                       onClick={() => onModule(q.workspace)}

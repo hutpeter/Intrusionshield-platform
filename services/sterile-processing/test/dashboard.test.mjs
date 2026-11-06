@@ -155,6 +155,24 @@ test("SQLite dashboard counts current scoped pending returns and excludes dispos
   let data = await d.get(s, dashboardQueueIds);
   assert.equal(data.queues.find((q) => q.id === "cleaning").total, 18);
   assert.equal(data.queues.find((q) => q.id === "cleaning").items.length, 12);
+  const second = await d.queue(s, "cleaning", 2);
+  assert.equal(second.queue.total, 18);
+  assert.equal(second.queue.items.length, 6);
+  assert.equal(
+    new Set(
+      [
+        ...data.queues.find((q) => q.id === "cleaning").items,
+        ...second.queue.items,
+      ].map((i) => i.id),
+    ).size,
+    18,
+  );
+  assert.equal((await d.queue(s, "cleaning", 3)).queue.items.length, 0);
+  assert.equal(
+    (await d.queue({ ...s, facilityId: randomUUID() }, "cleaning", 2)).queue
+      .total,
+    0,
+  );
   assert.equal(data.queues.find((q) => q.id === "returns").total, 1);
   assert.equal(data.queues.find((q) => q.id === "returns").items[0].id, r.id);
   assert.equal(data.queues.find((q) => q.id === "loading").total, 0);
@@ -189,6 +207,37 @@ test("dashboard endpoint is read-only for preview roles and rejects query inject
     assert.ok(data.queues.every((q) => q.access === "allowed"));
   }
   assert.equal((await f.call(f.base + "/dashboard?queue=returns")).status, 400);
+  for (const role of ["operator", "reviewer", "viewer"]) {
+    await f.login(role);
+    const r = await f.call(f.base + "/dashboard/queues/returns?page=2");
+    assert.equal(r.status, 200);
+    const value = await r.json();
+    assert.equal(value.page, 2);
+    assert.equal(value.queue.id, "returns");
+  }
+  for (const path of [
+    "returns?page=0",
+    "returns?page=1.5",
+    "returns?page=100000",
+    "returns?page=2&page=3",
+    "returns?sql=1",
+    "unknown?page=1",
+  ]) {
+    assert.equal(
+      (await f.call(f.base + "/dashboard/queues/" + path)).status,
+      400,
+    );
+  }
+  assert.equal(
+    (
+      await f.call(
+        f.base.replace(f.session.facilityId, randomUUID()) +
+          "/dashboard/queues/returns?page=2",
+      )
+    ).status,
+    404,
+  );
+
   assert.equal(
     (
       await f.call(
@@ -243,6 +292,31 @@ test("dashboard source permissions hide queue totals and never read denied sourc
   assert.equal(r.status, 200);
   const data = await r.json();
   assert.deepEqual(calls, ["returns"]);
+  const url =
+    "http://127.0.0.1:" +
+    server.address().port +
+    "/api/v1/sterile/facilities/" +
+    s.facilityId +
+    "/dashboard/queues/";
+  assert.equal(
+    (
+      await fetch(url + "cleaning?page=2", {
+        headers: { authorization: "Bearer demo" },
+      })
+    ).status,
+    403,
+  );
+  assert.deepEqual(calls, ["returns"]);
+  assert.equal(
+    (
+      await fetch(url + "returns?page=2", {
+        headers: { authorization: "Bearer demo" },
+      })
+    ).status,
+    200,
+  );
+  assert.deepEqual(calls, ["returns", "returns"]);
+
   assert.ok(
     data.queues
       .filter((q) => q.id !== "returns")
@@ -251,4 +325,42 @@ test("dashboard source permissions hide queue totals and never read denied sourc
           q.total === null && q.items.length === 0 && q.access === "restricted",
       ),
   );
+});
+
+test("paging demo is operator-only, CSRF protected and retry-safe with 13 received episodes", async (t) => {
+  const f = await httpFixture(t),
+    requestId = randomUUID();
+  assert.equal(
+    (
+      await f.call(
+        "/preview/dashboard-paging-example",
+        { requestId },
+        { "x-sterile-csrf": "bad" },
+      )
+    ).status,
+    403,
+  );
+  for (const role of ["reviewer", "viewer"]) {
+    await f.login(role);
+    assert.equal(
+      (await f.call("/preview/dashboard-paging-example", { requestId })).status,
+      403,
+    );
+  }
+  await f.login("operator");
+  assert.equal(
+    (await f.call("/preview/dashboard-paging-example", { requestId, extra: 1 }))
+      .status,
+    400,
+  );
+  for (let n = 0; n < 2; n++) {
+    const r = await f.call("/preview/dashboard-paging-example", { requestId });
+    assert.equal(r.status, 201);
+    assert.equal((await r.json()).created, 13);
+  }
+  const data = await (
+    await f.call(f.base + "/dashboard/queues/cleaning?page=2")
+  ).json();
+  assert.equal(data.queue.total, 13);
+  assert.equal(data.queue.items.length, 1);
 });

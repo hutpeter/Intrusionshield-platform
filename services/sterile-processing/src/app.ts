@@ -161,7 +161,7 @@ export function createSterileApp(
       const permission =
         req.path.endsWith("/maintenance/authorize") && !readOnly
           ? "maintenance:authorize"
-          : req.path === "/dashboard"
+          : req.path === "/dashboard" || req.path.startsWith("/dashboard/")
             ? "dashboard:read"
             : req.path.startsWith("/traceability")
               ? "traceability:read"
@@ -238,25 +238,25 @@ export function createSterileApp(
     if (Object.keys(req.query).length)
       throw new SterileError("INVALID_REQUEST");
   };
+  const dashboardPermissions = {
+    cleaning: "processing:read",
+    inspection: "processing:read",
+    assembly: "trays:read",
+    loading: "packaging:read",
+    release: "release:read",
+    returns: "returns:read",
+    recall: "recall:read",
+    maintenance: "instruments:read",
+  } as const;
   app.get(prefix + "/dashboard", async (req, res) => {
     noQuery(req);
-    const permissions = {
-      cleaning: "processing:read",
-      inspection: "processing:read",
-      assembly: "trays:read",
-      loading: "packaging:read",
-      release: "release:read",
-      returns: "returns:read",
-      recall: "recall:read",
-      maintenance: "instruments:read",
-    } as const;
     const allowed: DashboardQueueId[] = [];
     for (const id of dashboardQueueIds)
       if (
         (await dependencies.authorize!(
           res.locals.scope,
           "sterile.core",
-          permissions[id],
+          dashboardPermissions[id],
         )) === true
       )
         allowed.push(id);
@@ -264,6 +264,29 @@ export function createSterileApp(
       await new DashboardRegistry(dependencies.repository!).get(
         res.locals.scope,
         allowed,
+      ),
+    );
+  });
+  app.get(prefix + "/dashboard/queues/:queueId", async (req, res) => {
+    const id = req.params.queueId as DashboardQueueId;
+    const n = page(req);
+    if (!dashboardQueueIds.includes(id))
+      throw new SterileError("INVALID_REQUEST");
+    if (
+      (await dependencies.authorize!(
+        res.locals.scope,
+        "sterile.core",
+        dashboardPermissions[id],
+      )) !== true
+    ) {
+      res.status(403).json({ error: "FORBIDDEN" });
+      return;
+    }
+    res.json(
+      await new DashboardRegistry(dependencies.repository!).queue(
+        res.locals.scope,
+        id,
+        n,
       ),
     );
   });

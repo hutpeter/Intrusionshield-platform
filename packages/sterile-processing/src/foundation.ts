@@ -141,6 +141,7 @@ export interface CommandReceipt {
 export interface SterileTransaction {
   dashboardQueue(
     id: import("./dashboard.js").DashboardQueueId,
+    offset?: number,
   ): Promise<{ total: number; items: import("./dashboard.js").DashboardRow[] }>;
   searchTraceCode(code: string): Promise<TraceMatch[]>;
   traceRows(kind: TraceKind, filter: TraceFilter): Promise<TraceRow[]>;

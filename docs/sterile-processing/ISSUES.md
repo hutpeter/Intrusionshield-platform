@@ -1,6 +1,6 @@
 # Ruby Sterile Processing — issues log
 
-Updated November 5, 2026. Deferred requirements are recorded here so development
+Updated November 6, 2026. Deferred requirements are recorded here so development
 can continue without losing them. Deferral is not implementation or acceptance.
 Keep test execution status in [TESTING-REGISTER.md](TESTING-REGISTER.md).
 
@@ -217,7 +217,9 @@ U-RETSCAN-01 passed November 6, 2026; broader manual/physical acceptance remains
 
 ## RSP-ISS-009 — Production dashboard scale and operational acceptance
 
-Deferred: representative facility query/index performance, paging beyond the oldest 12,
+Delivered November 6: scoped 12-row Previous/Next paging, per-card snapshot times and
+explicit fictional owner-check setup. U-DASHPAGE-01 pending; automated and browser checks
+passed. Deferred: representative facility query/index performance, cross-page snapshot consistency,
 real-time refresh requirements, priority/SLA definitions and production role/workspace
 acceptance. Current queues are manually refreshed read-only snapshots; they do not
 replace live workflow gates. U-DASH-01 passed November 6, 2026; M-DASH-01 tracks deferred broader checks.

@@ -1,6 +1,8 @@
 import type {
   TraceReport,
   OperationalDashboard,
+  DashboardQueuePage,
+  DashboardQueueId,
   TraceMatch,
   TraceRootKind,
   ProcessingEpisode,
@@ -231,6 +233,67 @@ export interface DistributionScanResult {
   distribution: DistributionRecord | null;
 }
 export const api = {
+  prepareDashboardPaging: (
+    s: Session,
+    requestId: string,
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<{ tenantId: string; facilityId: string; created: number }>(
+        "/preview/dashboard-paging-example",
+        signal,
+        { requestId },
+        s.csrf,
+      ),
+    ),
+  dashboardQueue: async (
+    s: Session,
+    id: DashboardQueueId,
+    page: number,
+    signal: AbortSignal,
+  ) => {
+    const r = await scoped(
+      s,
+      call<DashboardQueuePage>(
+        base(s) + "/dashboard/queues/" + id + "?page=" + page,
+        signal,
+      ),
+    );
+    const workspaces = {
+      cleaning: "processing",
+      inspection: "processing",
+      assembly: "trays",
+      loading: "packaging",
+      release: "reviews",
+      returns: "returns",
+      recall: "recalls",
+      maintenance: "instruments",
+    };
+    const q = r.queue;
+    if (
+      r.page !== page ||
+      r.limit !== 12 ||
+      !Number.isFinite(Date.parse(r.generatedAt)) ||
+      !q ||
+      q.id !== id ||
+      q.workspace !== workspaces[id] ||
+      q.access !== "allowed" ||
+      !Number.isSafeInteger(q.total) ||
+      q.total < 0 ||
+      !Array.isArray(q.items) ||
+      q.items.length > 12 ||
+      (q.items.length > 0 && (page - 1) * 12 + q.items.length > q.total) ||
+      q.items.some(
+        (i) =>
+          typeof i.id !== "string" ||
+          typeof i.code !== "string" ||
+          !Number.isFinite(Date.parse(i.updatedAt)),
+      )
+    )
+      throw new ApiError(503, "SERVICE_UNAVAILABLE");
+    return r;
+  },
   dashboard: async (s: Session, signal: AbortSignal) => {
     const r = await scoped(
       s,

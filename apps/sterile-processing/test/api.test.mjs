@@ -822,3 +822,48 @@ test("dashboard rejects a mismatched workspace or hidden queue count instead of 
     (e) => e instanceof ApiError && e.code === "SERVICE_UNAVAILABLE",
   );
 });
+
+test("dashboard queue paging refuses wrong page, scope, workspace and over-count data", async (t) => {
+  const valid = {
+    tenantId: session.tenantId,
+    facilityId: session.facilityId,
+    generatedAt: new Date().toISOString(),
+    page: 2,
+    limit: 12,
+    queue: {
+      id: "returns",
+      workspace: "returns",
+      access: "allowed",
+      total: 13,
+      items: [
+        {
+          id: "one",
+          code: "RETURN",
+          updatedAt: new Date().toISOString(),
+          state: "returned",
+          units: 1,
+        },
+      ],
+    },
+  };
+  let value = valid;
+  fake(t, async () => response(value));
+  assert.equal(
+    (await api.dashboardQueue(session, "returns", 2, signal())).queue.items
+      .length,
+    1,
+  );
+  for (const change of [
+    { page: 1 },
+    { facilityId: "foreign" },
+    { queue: { ...valid.queue, workspace: "instruments" } },
+    { queue: { ...valid.queue, access: "restricted" } },
+    { queue: { ...valid.queue, total: 12 } },
+  ]) {
+    value = { ...valid, ...change };
+    await assert.rejects(
+      () => api.dashboardQueue(session, "returns", 2, signal()),
+      (e) => e instanceof ApiError,
+    );
+  }
+});

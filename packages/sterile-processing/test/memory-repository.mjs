@@ -58,7 +58,7 @@ export class MemoryRepository {
       };
     };
     const tx = {
-      dashboardQueue: async (id) => {
+      dashboardQueue: async (id, offset = 0) => {
         const pending = (r) =>
           s.recallInstruments.some(
             (i) =>
@@ -138,15 +138,13 @@ export class MemoryRepository {
             );
         return {
           total: found.length,
-          items: found
-            .slice(0, 12)
-            .map((p) => ({
-              id: p.id,
-              code: p.code,
-              state: p.state,
-              updatedAt: p.updatedAt ?? p.createdAt,
-              units: units(p),
-            })),
+          items: found.slice(offset, offset + 12).map((p) => ({
+            id: p.id,
+            code: p.code,
+            state: p.state,
+            updatedAt: p.updatedAt ?? p.createdAt,
+            units: units(p),
+          })),
         };
       },
       searchTraceCode: async (code) =>

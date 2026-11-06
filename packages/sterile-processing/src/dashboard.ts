@@ -55,7 +55,42 @@ export interface OperationalDashboard {
   limit: 12;
   queues: DashboardQueue[];
 }
+export interface DashboardQueuePage {
+  tenantId: string;
+  facilityId: string;
+  generatedAt: string;
+  limit: 12;
+  page: number;
+  queue: DashboardQueue & { access: "allowed"; total: number };
+}
 export class DashboardRegistry extends SterileRegistryBase {
+  async queue(
+    scope: SterileScope,
+    id: DashboardQueueId,
+    page = 1,
+  ): Promise<DashboardQueuePage> {
+    const s = scopeOf(scope);
+    if (
+      !dashboardQueueIds.includes(id) ||
+      !Number.isSafeInteger(page) ||
+      page < 1 ||
+      page > 99999
+    )
+      throw new SterileError("INVALID_REQUEST");
+    return this.repository.transaction(s, async (tx) => ({
+      tenantId: s.tenantId,
+      facilityId: s.facilityId,
+      generatedAt: new Date().toISOString(),
+      limit: 12,
+      page,
+      queue: {
+        id,
+        workspace: dashboardWorkspaces[id],
+        access: "allowed",
+        ...(await tx.dashboardQueue(id, (page - 1) * 12)),
+      },
+    }));
+  }
   async get(
     scope: SterileScope,
     allowed: readonly DashboardQueueId[],

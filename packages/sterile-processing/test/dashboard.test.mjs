@@ -117,3 +117,38 @@ test("recall queue includes unresolved instrument holds after closure and remove
   );
   assert.equal(q.total, 0);
 });
+
+test("queue pages partition tied timestamps with exact totals, scope and current state", async () => {
+  const repo = new MemoryRepository(),
+    s = scope(),
+    registry = new DashboardRegistry(repo);
+  for (let n = 0; n < 29; n++)
+    repo.state.returns.push(row(s, "RETURN-" + n, "returned"));
+  repo.state.returns.push(
+    row({ ...s, facilityId: randomUUID() }, "FOREIGN", "returned"),
+  );
+  const before = structuredClone(repo.state);
+  const pages = await Promise.all(
+    [1, 2, 3, 4].map((p) => registry.queue(s, "returns", p)),
+  );
+  assert.deepEqual(
+    pages.map((p) => p.queue.items.length),
+    [12, 12, 5, 0],
+  );
+  assert.ok(pages.every((p) => p.queue.total === 29));
+  const ids = pages.flatMap((p) => p.queue.items.map((i) => i.id));
+  assert.equal(new Set(ids).size, 29);
+  assert.deepEqual(ids, [...ids].sort());
+  assert.deepEqual(repo.state, before);
+  repo.state.returns.find((i) => i.id === ids[0]).state = "quarantined";
+  assert.equal((await registry.queue(s, "returns", 1)).queue.total, 28);
+  for (const p of [0, -1, 1.5, 100000, NaN, "2"])
+    await assert.rejects(
+      () => registry.queue(s, "returns", p),
+      (e) => e.code === "INVALID_REQUEST",
+    );
+  await assert.rejects(
+    () => registry.queue(s, "bad", 1),
+    (e) => e.code === "INVALID_REQUEST",
+  );
+});

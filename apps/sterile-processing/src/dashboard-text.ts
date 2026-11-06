@@ -1,6 +1,9 @@
 import type { Language } from "./text";
 const en = {
   title: "Operational dashboard",
+  example: "Prepare fictional queue paging example",
+  exampleNote:
+    "Creates 13 new fictional receiving episodes for the cleaning queue. Existing records are preserved.",
   intro: "Current work queues for this facility.",
   refresh: "Refresh queues",
   asOf: "Snapshot",
@@ -8,7 +11,10 @@ const en = {
   module: "Open workspace",
   empty: "No records awaiting this step.",
   restricted: "Read access required for this queue.",
-  showing: "Showing oldest",
+  showing: "Records on this page",
+  page: "Page",
+  previous: "Previous",
+  next: "Next",
   of: "of",
   units: "Related items",
   note: "Queues can overlap and count different records: episodes, trays, packages, loads, returns, recall cases or instruments. Counts are a snapshot, not permission to proceed. Each record is checked again when opened.",
@@ -24,6 +30,9 @@ const en = {
 };
 const es: typeof en = {
   title: "Panel operativo",
+  example: "Preparar ejemplo ficticio de paginación",
+  exampleNote:
+    "Crea 13 recepciones ficticias para la cola de limpieza. Conserva los registros existentes.",
   intro: "Colas de trabajo vigentes de este centro.",
   refresh: "Actualizar colas",
   asOf: "Instantánea",
@@ -31,7 +40,10 @@ const es: typeof en = {
   module: "Abrir sección",
   empty: "No hay registros pendientes en esta etapa.",
   restricted: "Se requiere permiso de lectura para esta cola.",
-  showing: "Se muestran los más antiguos",
+  showing: "Registros en esta página",
+  page: "Página",
+  previous: "Anterior",
+  next: "Siguiente",
   of: "de",
   units: "Elementos relacionados",
   note: "Las colas pueden solaparse y cuentan episodios, bandejas, paquetes, cargas, devoluciones, casos de retirada o instrumentos. Son una instantánea, no autorización para continuar. Se verifica el registro vigente al abrirlo.",
@@ -47,6 +59,9 @@ const es: typeof en = {
 };
 const fr: typeof en = {
   title: "Tableau opérationnel",
+  example: "Préparer un exemple fictif de pagination",
+  exampleNote:
+    "Crée 13 réceptions fictives pour la file de nettoyage. Les enregistrements existants sont conservés.",
   intro: "Files de travail actuelles de cet établissement.",
   refresh: "Actualiser les files",
   asOf: "Instantané",
@@ -54,7 +69,10 @@ const fr: typeof en = {
   module: "Ouvrir la section",
   empty: "Aucun dossier en attente à cette étape.",
   restricted: "Droit de lecture requis pour cette file.",
-  showing: "Plus anciens affichés",
+  showing: "Enregistrements sur cette page",
+  page: "Page",
+  previous: "Précédent",
+  next: "Suivant",
   of: "sur",
   units: "Éléments associés",
   note: "Les files peuvent se chevaucher et comptent épisodes, plateaux, emballages, charges, retours, rappels ou instruments. Cet instantané n’autorise aucune action. Chaque fiche actuelle est revérifiée à l’ouverture.",
