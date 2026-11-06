@@ -2,7 +2,7 @@
 
 ## One new owner check
 
-U-PARTRETURN-01 pending. As Demo operator:
+U-PARTRETURN-01 passed November 6, 2026. As Demo operator:
 
 1. Open Returns and reprocessing → Prepare fictional return scan example → Simulate return scan.
 2. Select **Some expected instruments are missing.** The example has one expected instrument.
@@ -80,7 +80,12 @@ audit rollback, SQLite reopening and historical trace facts. Browser verificatio
 both confirmations, saved shortage/block, no disposition, refresh, later receipt without
 auto-reprocessing and historical version one retaining its shortage.
 
-U-PARTRETURN-01 remains pending. M-PARTRETURN-01: owner later recovery, reviewer disposition,
+U-PARTRETURN-01 passed November 6, 2026. M-PARTRETURN-01: owner later recovery, reviewer disposition,
 recall overlap, competing changes, error/retry and historical walkthrough. M-PARTRETURN-02:
 physical reconciliation, large manifests, Windows/scanners, ES/FR/mobile/accessibility and
 production identity/procedure/clinical acceptance. Broader testing remains deferred.
+
+Owner screenshot November 6, 2026 confirms Return record saved, Return discrepancy —
+blocked, Received instruments: 0, Missing instruments: 1, saved discrepancy reason,
+original issued contents/identifier and no Record disposition action. U-PARTRETURN-01
+passed. Later receipt, disposition and broader M-PARTRETURN-01–02 remain deferred.

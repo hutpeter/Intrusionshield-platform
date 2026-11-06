@@ -51,9 +51,9 @@ A successful developer check never implies that the owner performed it.
 
 | 2b12333 | Issued-package lookup, manifest reconciliation and confirmed complete return with frozen identifier | 284 scoped tests, builds and targeted browser verification | U-RETSCAN-01 passed November 6, 2026 | Owner exceptions/disposition, hardware, persistent partial returns and operational acceptance deferred |
 
-## Current owner check — partial-return discrepancy
+## Completed owner check — partial-return discrepancy
 
-**U-PARTRETURN-01 pending:** follow [PARTIAL-RETURNS.md](PARTIAL-RETURNS.md): prepare a
+**U-PARTRETURN-01 passed November 6, 2026:** follow [PARTIAL-RETURNS.md](PARTIAL-RETURNS.md): prepare a
 fictional return scan example, simulate scan, select missing expected instruments, leave
 the example member unreceived, enter reason, tick both confirmations and Save discrepancy.
 Expect Return discrepancy — blocked, Missing instruments: 1, Received instruments: 0,
@@ -791,3 +791,8 @@ Queue paging increment: U-DASHPAGE-01 Next passed November 6, 2026; owner Previo
 Owner evidence November 6, 2026: “it shows different codes” confirms Next/page-two
 record changes. Previous remains developer-verified only and is deferred with
 M-DASHPAGE-01; no owner pass is inferred for that control or broader testing.
+
+Owner screenshot November 6, 2026 confirms Return record saved, Return discrepancy —
+blocked, Received instruments: 0, Missing instruments: 1, saved discrepancy reason,
+original issued contents/identifier and no Record disposition action. U-PARTRETURN-01
+passed. Later receipt, disposition and broader M-PARTRETURN-01–02 remain deferred.

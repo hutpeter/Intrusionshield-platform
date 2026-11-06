@@ -204,7 +204,7 @@ U-RETSCAN-01 passed November 6, 2026; broader manual/physical acceptance remains
 ## RSP-ISS-008 — Persistent partial and mismatched return reconciliation
 
 - **Status:** Expected-member shortages and later receipt implemented in the local
-  preview November 6, 2026; owner U-PARTRETURN-01 pending.
+  preview November 6, 2026; owner U-PARTRETURN-01 passed November 6, 2026.
 - **Delivered:** Original manifest/issue retained; explicit actual received subset;
   derived missing set; saved blocked discrepancy; all reservations retained; operator
   later receipts with actor/time/location/reference and immutable versions. Once fully
@@ -214,7 +214,7 @@ U-RETSCAN-01 passed November 6, 2026; broader manual/physical acceptance remains
   receipt corrections, permanently missing/discard policies, partial-member processing,
   physical reconciliation, verified identity/competency and clinical/production acceptance.
 - **Testing:** 303 scoped tests/builds and targeted browser checks passed. Owner initial
-  shortage U-PARTRETURN-01 pending; M-PARTRETURN-01–02 broader checks deferred. See
+  shortage U-PARTRETURN-01 passed November 6, 2026; M-PARTRETURN-01–02 broader checks deferred. See
   [PARTIAL-RETURNS.md](PARTIAL-RETURNS.md). RSP-ISS-001 stays parked.
 
 ## RSP-ISS-009 — Production dashboard scale and operational acceptance
@@ -229,3 +229,8 @@ replace live workflow gates. U-DASH-01 passed November 6, 2026; M-DASH-01 tracks
 Owner evidence November 6, 2026: “it shows different codes” confirms Next/page-two
 record changes. Previous remains developer-verified only and is deferred with
 M-DASHPAGE-01; no owner pass is inferred for that control or broader testing.
+
+Owner screenshot November 6, 2026 confirms Return record saved, Return discrepancy —
+blocked, Received instruments: 0, Missing instruments: 1, saved discrepancy reason,
+original issued contents/identifier and no Record disposition action. U-PARTRETURN-01
+passed. Later receipt, disposition and broader M-PARTRETURN-01–02 remain deferred.
