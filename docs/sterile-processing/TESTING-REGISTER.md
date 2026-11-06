@@ -41,11 +41,11 @@ A successful developer check never implies that the owner performed it.
 
 | 4a6814b | Stable internal identifier, vector Data Matrix label and current scoped lookup | 243 scoped tests, builds, independent symbol decoding and developer browser print/Enter/lookup check | U-SCAN-01 passed November 5, 2026 | Physical scanners/printers/DPM and operational scan-assisted actions deferred |
 
-| Tray scanning increment (this commit) | Confirmed single-instrument scan into draft with type/quantity/hold gates and atomic reservation | 252 scoped tests, builds and developer browser count/duplicate/Enter/audit check | U-TRAYSCAN-01 pending | Physical scanners and owner exception/full workflow acceptance deferred |
+| Tray scanning increment (this commit) | Confirmed single-instrument scan into draft with type/quantity/hold gates and atomic reservation | 252 scoped tests, builds and developer browser count/duplicate/Enter/audit check | U-TRAYSCAN-01 passed November 6, 2026 | Physical scanners and owner exception/full workflow acceptance deferred |
 
-## Current single owner check — tray scanning
+## Completed owner check — tray scanning
 
-**U-TRAYSCAN-01 pending:** follow [TRAY-SCANNING.md](TRAY-SCANNING.md): Demo operator →
+**U-TRAYSCAN-01 passed November 6, 2026:** follow [TRAY-SCANNING.md](TRAY-SCANNING.md): Demo operator →
 Trays → Prepare fictional tray scan example → confirm placement → Simulate instrument
 scan. Expected saved draft with assigned 1, missing 0 and Instrument added by scan.
 Only this one new aspect is requested.
@@ -599,3 +599,13 @@ current-record success message, maintenance hold and saved fictional defect/hist
 This confirms simulated identifier lookup and current hold display in Spanish. It
 does not establish physical scanner, printed-label or operational scan-action acceptance.
 M-SCAN-01 through M-SCAN-04 remain deferred.
+
+## Owner tray scan result — November 6, 2026
+
+U-TRAYSCAN-01 passed: owner screenshot confirms instrument
+`TRAYSCAN-INS-E28511FA-B74B-461C-9F49-EB858EEA5888` in saved assembly contents and
+**Instrument added by scan**, version 2, attributed to Demo operator at 8:17 AM.
+The original version 1 assembly event remains visible. This establishes the saved
+scan-add smoke result; counts/draft badge are outside this screenshot and no additional
+exception, physical scanner or full operational acceptance is inferred. Broader
+M-TRAYSCAN-01 through M-TRAYSCAN-03 checks remain deferred.
