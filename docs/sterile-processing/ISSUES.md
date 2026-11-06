@@ -220,4 +220,4 @@ U-RETSCAN-01 passed November 6, 2026; broader manual/physical acceptance remains
 Deferred: representative facility query/index performance, paging beyond the oldest 12,
 real-time refresh requirements, priority/SLA definitions and production role/workspace
 acceptance. Current queues are manually refreshed read-only snapshots; they do not
-replace live workflow gates. U-DASH-01 remains pending; M-DASH-01 tracks broader checks.
+replace live workflow gates. U-DASH-01 passed November 6, 2026; M-DASH-01 tracks deferred broader checks.

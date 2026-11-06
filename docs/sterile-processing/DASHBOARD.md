@@ -30,7 +30,7 @@ versions, custody and holds remain enforced by the destination workflow.
 
 ## One owner check
 
-U-DASH-01 pending: as Demo operator, open Dashboard → Returns awaiting disposition →
+U-DASH-01 passed November 6, 2026 (owner confirmation); original check: as Demo operator, open Dashboard → Returns awaiting disposition →
 Open record. Confirm the return code matches the queue and the record says Returned —
 awaiting disposition. An empty queue is valid if all returns have already been disposed;
 use an existing pending return when available. Do not repeat the complete processing cycle.

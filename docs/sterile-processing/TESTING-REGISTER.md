@@ -51,9 +51,9 @@ A successful developer check never implies that the owner performed it.
 
 | 2b12333 | Issued-package lookup, manifest reconciliation and confirmed complete return with frozen identifier | 284 scoped tests, builds and targeted browser verification | U-RETSCAN-01 passed November 6, 2026 | Owner exceptions/disposition, hardware, persistent partial returns and operational acceptance deferred |
 
-## Current owner check — operational dashboard
+## Completed owner check — operational dashboard
 
-**U-DASH-01 pending:** Dashboard → Returns awaiting disposition → Open record.
+**U-DASH-01 passed November 6, 2026:** Dashboard → Returns awaiting disposition → Open record.
 Confirm the displayed return code matches and the current state is Returned — awaiting
 disposition. See [DASHBOARD.md](DASHBOARD.md). No full cycle retest is requested.
 
@@ -745,9 +745,14 @@ internal identifier plus returned instrument. Return:
 is present below. Discrepancy, disposition/reprocessing, physical scanner and complete
 operational acceptance are not inferred; M-RETSCAN-01–03 remain deferred.
 
-Dashboard increment: developer checks recorded above; owner U-DASH-01 pending.
+Dashboard increment: developer checks recorded above; owner U-DASH-01 passed November 6, 2026.
 
 Developer browser verification November 6: all eight cards rendered; links from the seven
 populated queues (cleaning, inspection, assembly, release, returns, recall, maintenance)
 opened matching current record headings. Refresh passed with no browser errors. Loading
 was empty in this fixture; its SQL classification is covered by automated checks.
+
+Owner confirmed **pass** November 6, 2026. Dashboard return navigation opened
+`RETURN-DEMO-865052A4-7195-4B38-B78F-DD2372AA5C77` with **Returned — awaiting
+disposition**. This confirms U-DASH-01 only; M-DASH-01 remains deferred and
+U-TRACE-01 remains pending. RSP-ISS-001 stays parked.
