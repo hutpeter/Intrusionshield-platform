@@ -9,7 +9,7 @@ git pull --ff-only origin feature/sterile-processing-preview
 pnpm sterile:preview
 ```
 
-After **Ready**, refresh. **U-LOADSCAN-01 pending:**
+After **Ready**, refresh. **U-LOADSCAN-01 passed November 6, 2026** from owner draft/two-package/audit screenshot. Original check:
 
 1. Enter as **Demo operator** → **Loads and cycles**.
 2. Click **Prepare fictional package load scan example**.
@@ -92,7 +92,7 @@ duplicate rejection, keyboard Enter and audit/version history. Automated checks 
 void/recall/return/other-load gates, stale input, non-draft loads, roles/CSRF/strict bodies,
 retry receipts, concurrent reservations, persistence and late audit rollback.
 
-Owner U-LOADSCAN-01 remains pending. Deferred M-LOADSCAN-01: owner exception/history/manual
+Owner U-LOADSCAN-01 passed November 6, 2026. Deferred M-LOADSCAN-01: owner exception/history/manual
 edit and full cycle/release walkthrough; M-LOADSCAN-02: physical scanner/printer, Windows,
 ES/FR/mobile, sizing/quiet zones/material durability and real equipment acceptance;
 M-LOADSCAN-03: manufacturer UDI/GS1, DPM, camera and distribution/return scan workflows.

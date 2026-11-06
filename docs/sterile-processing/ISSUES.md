@@ -179,3 +179,14 @@ checks passed. Owner U-LOADSCAN-01 and physical/exception/full operational accep
 remain pending. Print media/DPM, manufacturer UDI/GS1/camera, release-label enhancements,
 distribution and return scanning remain future work. See
 [PACKAGE-LOAD-SCANNING.md](PACKAGE-LOAD-SCANNING.md).
+
+### RSP-ISS-007 update — storage and distribution scanning
+
+Read-only package scan lookup now validates current release/load/package versions and
+recall/return/issued restrictions, opens a new storage form or the existing stored record,
+and uses the existing separately confirmed transfer/issue controls. Write-time release
+and custody revalidation remains authoritative; lookup records no movement. Developer
+275 scoped tests/builds and storage-confirmation/location/existing-record-rescan browser
+checks passed. Owner U-STORESCAN-01, transfer/issue exceptions, physical hardware and
+handover, production identity and operational acceptance remain pending. DPM/UDI/GS1,
+camera and return scanning remain future work. See [STORAGE-SCANNING.md](STORAGE-SCANNING.md).

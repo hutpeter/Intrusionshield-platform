@@ -1,3 +1,5 @@
+import { DistributionScan } from "./DistributionScan";
+import { distributionScanLabels } from "./distribution-scan-text";
 import { returnLabels } from "./return-text";
 import { recallLabels } from "./recall-text";
 import { useEffect, useRef, useState } from "react";
@@ -57,18 +59,20 @@ export function DistributionWorkspace({
     [error, setError] = useState<unknown>(null),
     [notice, setNotice] = useState(false),
     [discard, setDiscard] = useState<(() => void) | null>(null);
+  const [scanBusy, setScanBusy] = useState(false),
+    [scanNotice, setScanNotice] = useState(false);
   const pending = useRef<AbortController | null>(null),
     inspection = useRef<AbortController | null>(null),
     exampleKey = useRef(crypto.randomUUID()),
-    busy = blocked || saving;
+    busy = blocked || saving || scanBusy;
   useEffect(() => {
     onDirty(!!form);
     return () => onDirty(false);
   }, [form, onDirty]);
   useEffect(() => {
-    onBusy(saving);
+    onBusy(saving || scanBusy);
     return () => onBusy(false);
-  }, [saving, onBusy]);
+  }, [saving, scanBusy, onBusy]);
   useEffect(
     () => () => {
       pending.current?.abort();
@@ -120,6 +124,7 @@ export function DistributionWorkspace({
   const patch = (v: Partial<ReturnType<typeof empty>>) =>
     setFields((x) => ({ ...x, ...v }));
   function clear() {
+    setScanNotice(false);
     setForm(null);
     setFields(empty());
     setDiscard(null);
@@ -378,6 +383,45 @@ export function DistributionWorkspace({
             <small>{p.exampleHelp}</small>
           </section>
         )}
+      {session.canWrite && !selected && !form && (
+        <DistributionScan
+          session={session}
+          language={language}
+          blocked={busy}
+          onBusy={setScanBusy}
+          onExpired={onExpired}
+          onOpen={(r, demo) => {
+            setNotice(false);
+            setError(null);
+            setScanNotice(true);
+            setPast(null);
+            if (r.distribution) {
+              setSelected(r.distribution.id);
+              setHistoryPage(1);
+              setNonce((n) => n + 1);
+            } else {
+              const pkg = r.package;
+              setOptions((old) => [pkg, ...old.filter((p) => p.id !== pkg.id)]);
+              setForm({ kind: "store", requestId: crypto.randomUUID() });
+              setFields({
+                ...empty(),
+                packageId: pkg.id,
+                ...(demo
+                  ? {
+                      location: "DEMO-SCAN-STORE-A",
+                      reference: "SIMULATED-SCAN-STORAGE",
+                    }
+                  : {}),
+              });
+            }
+          }}
+        />
+      )}
+      {scanNotice && (
+        <p className="success" role="status">
+          {distributionScanLabels(language).found}
+        </p>
+      )}
       {notice && (
         <p role="status" className="success">
           {p.notice}

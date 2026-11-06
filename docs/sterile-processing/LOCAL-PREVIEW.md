@@ -264,3 +264,8 @@ then explicitly confirm and save its receiving episode. No scanner hardware is r
 
 See [PACKAGE-LOAD-SCANNING.md](PACKAGE-LOAD-SCANNING.md) for version-bound internal
 package labels, confirmed one-package draft additions and the one fictional owner check.
+
+## Scan released packages
+
+See [STORAGE-SCANNING.md](STORAGE-SCANNING.md) for current-release lookup into the
+existing storage/transfer/issue workflow and the one fictional storage owner check.

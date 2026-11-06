@@ -717,3 +717,26 @@ test("load scan preserves version-bound package identifier and placement confirm
     3,
   );
 });
+test("distribution scan rejects nested foreign scope instead of opening a movement form", async (t) => {
+  fake(t, async (path, options) => {
+    assert.ok(
+      path.endsWith(
+        "/distribution-scan?identifier=" + encodeURIComponent("RSP-P-ID-V1"),
+      ),
+    );
+    assert.equal(options.method, "GET");
+    return new Response(
+      JSON.stringify({
+        tenantId: session.tenantId,
+        facilityId: session.facilityId,
+        package: { tenantId: "foreign", facilityId: session.facilityId },
+        distribution: null,
+      }),
+      { status: 200 },
+    );
+  });
+  await assert.rejects(
+    api.scanDistribution(session, "RSP-P-ID-V1", signal()),
+    (e) => e instanceof ApiError && e.code === "SERVICE_UNAVAILABLE",
+  );
+});

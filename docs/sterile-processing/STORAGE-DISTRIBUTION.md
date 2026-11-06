@@ -98,3 +98,8 @@ without duplicating them. Real movement writes themselves remain atomic.
   equipment/printer checks and full end-to-end/manual regression remain deferred.
 
 The single fictional handover smoke check does not satisfy these acceptance gates.
+
+## Scan released packages
+
+See [STORAGE-SCANNING.md](STORAGE-SCANNING.md) for current-release lookup into the
+existing storage/transfer/issue workflow and the one fictional storage owner check.

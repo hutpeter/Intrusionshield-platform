@@ -1,9 +1,11 @@
+import { reviewStatus } from "./review-types.js";
 import { returnStatus } from "./return-types.js";
 import { randomUUID } from "node:crypto";
 import {
   SterileRegistryBase,
   SterileError,
   scopeOf,
+  packageFromScan,
   sterileUuid,
   field,
   pageOf,
@@ -62,6 +64,56 @@ async function release(
   return { p, r, load, decision };
 }
 export class DistributionRegistry extends SterileRegistryBase {
+  async scan(scope: SterileScope, identifier: unknown) {
+    const s = scopeOf(scope),
+      target = packageFromScan(identifier);
+    return this.repository.transaction(s, async (tx) => {
+      const active = await tx.findPackageLoad(target.id);
+      if (!active) {
+        if (!(await tx.findPackage(target.id)))
+          throw new SterileError("NOT_FOUND");
+        throw new SterileError("DISTRIBUTION_BLOCKED");
+      }
+      const r = await tx.findReviewByLoad(active.loadId);
+      if (!r) throw new SterileError("DISTRIBUTION_BLOCKED");
+      const checked = await release(
+          tx,
+          target.id,
+          target.version,
+          r.id,
+          r.version,
+        ),
+        distribution = await tx.findDistributionByPackage(target.id);
+      if (
+        distribution &&
+        (distribution.state !== "stored" ||
+          distribution.packageVersion !== target.version ||
+          distribution.reviewId !== r.id ||
+          distribution.reviewVersion !== r.version)
+      )
+        throw new SterileError("DISTRIBUTION_BLOCKED");
+      return {
+        tenantId: s.tenantId,
+        facilityId: s.facilityId,
+        package: {
+          id: checked.p.id,
+          tenantId: checked.p.tenantId,
+          facilityId: checked.p.facilityId,
+          code: checked.p.code,
+          assemblyId: checked.p.assemblyId,
+          state: checked.p.state,
+          version: checked.p.version,
+          createdAt: checked.p.createdAt,
+          trayName: checked.p.assemblySnapshot.definitionSnapshot.name,
+          instrumentCount: checked.p.assemblySnapshot.instruments.length,
+          scanIdentifier: `RSP-P-${checked.p.id.toUpperCase()}-V${checked.p.version}`,
+          activeLoad: { ...active, review: reviewStatus(r) },
+        },
+        distribution,
+      };
+    });
+  }
+
   async store(scope: SterileScope, input: StoreInput) {
     const s = scopeOf(scope),
       packageId = sterileUuid(input.packageId),

@@ -45,7 +45,28 @@ A successful developer check never implies that the owner performed it.
 
 | 9c1b16a | Stage scanned members then confirm receipt with current holds and frozen identifier provenance | 260 scoped tests, builds and developer browser staging/Enter/confirmation/hold/refresh check | U-RECSCAN-01 passed November 6, 2026 | Hardware, owner exception and complete operational acceptance deferred |
 
-| Package/load scanning increment (this commit) | Version-bound package Data Matrix and confirmed scan-to-draft load | 269 scoped tests, builds, independent symbol decode and developer label/print/add/duplicate/Enter check | U-LOADSCAN-01 passed November 6, 2026 | Physical scanner/printer and broader owner exception/operational acceptance deferred |
+| 23486a3 | Version-bound package Data Matrix and confirmed scan-to-draft load | 269 scoped tests, builds, independent symbol decode and developer label/print/add/duplicate/Enter check | U-LOADSCAN-01 passed November 6, 2026 | Physical scanner/printer and broader owner exception/operational acceptance deferred |
+
+| Storage/distribution scanning increment (this commit) | Release-validated package lookup into existing storage/transfer/issue controls | 275 scoped tests, builds and developer confirmation/location/existing-record-rescan check | U-STORESCAN-01 pending | Owner transfer/issue/exception, physical hardware/handover and operational acceptance deferred |
+
+## Current single owner check — scan to storage
+
+**U-STORESCAN-01 pending:** follow [STORAGE-SCANNING.md](STORAGE-SCANNING.md): Demo
+operator → Storage and distribution → Scan released package → Prepare fictional storage
+scan example → Simulate storage scan → keep location/reference and tick both movement
+checks → Save storage. Expected Movement saved, Stored, DEMO-SCAN-STORE-A and history.
+Only this one new aspect is requested. The older issue-example helper is a separate flow.
+
+**Developer passed November 6, 2026:** 275 scoped tests (146 domain, 101 service/SQLite/
+HTTP, 28 web API/export/symbol), scoped builds and browser release-without-storage setup,
+scan/form selection, two confirmations, saved location/one event and Enter rescan into
+existing storage record. Automated lookup gates cover release/version/scope and
+held/rejected/issued/recall/return cases; movement revalidation/audit rollback and nested
+response-scope checks passed. Broader existing movement persistence/race/idempotency
+coverage remains passing. Developer results do not establish owner acceptance.
+M-STORESCAN-01 owner transfer/issue/exceptions, M-STORESCAN-02 physical scanner/Windows/
+ES/FR/mobile/labels and M-STORESCAN-03 physical handover/production/full operational
+acceptance remain deferred. RSP-ISS-001 stays parked; RSP-ISS-007 tracks scan follow-ups.
 
 ## Completed owner check — package into load
 

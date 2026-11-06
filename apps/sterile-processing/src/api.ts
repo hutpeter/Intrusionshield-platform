@@ -221,7 +221,46 @@ async function checkedMovement(
     throw new ApiError(503, "SERVICE_UNAVAILABLE");
   return r;
 }
+export interface DistributionScanResult {
+  tenantId: string;
+  facilityId: string;
+  package: PackageSummary;
+  distribution: DistributionRecord | null;
+}
 export const api = {
+  scanDistribution: async (
+    s: Session,
+    identifier: string,
+    signal: AbortSignal,
+  ) => {
+    const r = await scoped(
+      s,
+      call<DistributionScanResult>(
+        base(s) +
+          "/distribution-scan?identifier=" +
+          encodeURIComponent(identifier),
+        signal,
+      ),
+    );
+    await scoped(s, Promise.resolve(r.package));
+    if (r.distribution) await scoped(s, Promise.resolve(r.distribution));
+    return r;
+  },
+  prepareDistributionScan: (
+    s: Session,
+    requestId: string,
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<SterilePackage>(
+        "/preview/distribution-scan-example",
+        signal,
+        { requestId },
+        s.csrf,
+      ),
+    ),
+
   prepareLoadScan: async (
     s: Session,
     requestId: string,

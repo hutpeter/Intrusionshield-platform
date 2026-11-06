@@ -886,6 +886,19 @@ export function createSterileApp(
       );
   });
   const distribution = () => new DistributionRegistry(dependencies.repository!);
+  app.get(prefix + "/distribution-scan", async (req, res) => {
+    if (
+      Object.keys(req.query).length !== 1 ||
+      typeof req.query.identifier !== "string"
+    )
+      throw new SterileError("INVALID_REQUEST");
+    res.json(
+      await new DistributionRegistry(dependencies.repository!).scan(
+        res.locals.scope,
+        req.query.identifier,
+      ),
+    );
+  });
   app.get(prefix + "/distribution", async (req, res) =>
     res.json(await distribution().list(res.locals.scope, page(req))),
   );
