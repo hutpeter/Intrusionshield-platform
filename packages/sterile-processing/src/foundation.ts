@@ -301,6 +301,7 @@ export class SterileError extends Error {
       | "REVIEW_BLOCKED"
       | "DISTRIBUTION_BLOCKED"
       | "TRACE_LIMIT"
+      | "RETURN_CONTENTS_MISMATCH"
       | "RETURN_BLOCKED"
       | "CLEARANCE_BLOCKED"
       | "RECALL_LIMIT"

@@ -84,3 +84,8 @@ See RSP-ISS-003 and RSP-ISS-004. New or explicitly extended recalls now traverse
 recorded reprocessing lineage and block the original instruments' current custody;
 older cases require explicit reviewer extension. See RECALL-LINEAGE.md.
 Full manual/end-to-end testing remains pending in TESTING-REGISTER.md.
+
+## Scan-assisted complete returns
+
+See [RETURN-SCANNING.md](RETURN-SCANNING.md) for issued-package lookup, original-content
+reconciliation, explicit complete-return confirmation and the one fictional owner check.

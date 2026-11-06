@@ -190,3 +190,27 @@ and custody revalidation remains authoritative; lookup records no movement. Deve
 checks passed. Owner U-STORESCAN-01, transfer/issue exceptions, physical hardware and
 handover, production identity and operational acceptance remain pending. DPM/UDI/GS1,
 camera and return scanning remain future work. See [STORAGE-SCANNING.md](STORAGE-SCANNING.md).
+
+### RSP-ISS-007 update — issued-package return scanning
+
+Read-only return scan lookup now retrieves current version-bound package identity,
+original issued source and original contents. Confirmed complete scanned returns freeze
+identifier/manifest and preserve issue history; duplicate returns and mismatched contents
+are refused. Recalled packages can return without lifting recall or reprocessing gates.
+Developer scoped tests/builds cover lookup/receipt/gates and atomic persistence. Owner
+U-RETSCAN-01 and broader manual/physical acceptance remain pending. See
+[RETURN-SCANNING.md](RETURN-SCANNING.md).
+
+## RSP-ISS-008 — Persistent partial and mismatched return reconciliation
+
+- **Status:** Deferred; pre-save discrepancy stop supplied in scanned return form.
+- **Current boundary:** Only complete-package returns can be saved. A missing/mismatch
+  flag disables complete receipt and Save; exact manifest membership is also checked
+  server-side. This flag is unsaved form state, not a shortage case or new quarantine event.
+- **Remaining work:** Persistent discrepancy/partial receipt records, actual received/
+  missing/unexpected member reconciliation, later recovery, actor/competency policy,
+  package/instrument custody and recall interaction, disposition/reprocessing rules,
+  correction history and operational/clinical acceptance. Original issue must remain
+  immutable and no unavailable member may silently return to stock.
+- **Testing:** Broader owner and physical discrepancy acceptance remains deferred under
+  M-RETSCAN-01–03. Independent cleaner/inspector separation stays under RSP-ISS-001.

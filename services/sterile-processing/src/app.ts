@@ -134,6 +134,10 @@ export function createSterileApp(
     "/api/v1/sterile/facilities/:facilityId/processing/scanned-receipts",
     express.json({ limit: "16kb", strict: true }),
   );
+  app.use(
+    "/api/v1/sterile/facilities/:facilityId/returns/scanned",
+    express.json({ limit: "64kb", strict: true }),
+  );
   app.use(express.json({ limit: "8kb", strict: true }));
   const prefix = "/api/v1/sterile/facilities/:facilityId";
   app.use(prefix, async (req, res, next) => {
@@ -1011,6 +1015,45 @@ export function createSterileApp(
     );
   });
   const returns = () => new ReturnRegistry(dependencies.repository!);
+  app.get(prefix + "/returns/scan", async (req, res) => {
+    if (
+      Object.keys(req.query).length !== 1 ||
+      typeof req.query.identifier !== "string"
+    )
+      throw new SterileError("INVALID_REQUEST");
+    res.json(
+      await new ReturnRegistry(dependencies.repository!).scan(
+        res.locals.scope,
+        req.query.identifier,
+      ),
+    );
+  });
+  app.post(prefix + "/returns/scanned", async (req, res) => {
+    noQuery(req);
+    const v = body(req.body, [
+      "requestId",
+      "code",
+      "distributionId",
+      "distributionVersion",
+      "condition",
+      "location",
+      "custodian",
+      "reference",
+      "note",
+      "contentsChecked",
+      "confirmed",
+      "identifier",
+      "receivedInstrumentIds",
+    ]);
+    res
+      .status(201)
+      .json(
+        await new ReturnRegistry(dependencies.repository!).createScanned(
+          res.locals.scope,
+          v as unknown as Parameters<ReturnRegistry["createScanned"]>[1],
+        ),
+      );
+  });
   app.get(prefix + "/returns", async (req, res) =>
     res.json(await returns().list(res.locals.scope, page(req))),
   );
@@ -1296,6 +1339,7 @@ export function createSterileApp(
               RECALL_LIMIT: 409,
               CLEARANCE_BLOCKED: 409,
               RETURN_BLOCKED: 409,
+              RETURN_CONTENTS_MISMATCH: 409,
               TRACE_LIMIT: 409,
             }[code as SterileError["code"]]
           : parser.type === "entity.too.large"

@@ -269,3 +269,8 @@ package labels, confirmed one-package draft additions and the one fictional owne
 
 See [STORAGE-SCANNING.md](STORAGE-SCANNING.md) for current-release lookup into the
 existing storage/transfer/issue workflow and the one fictional storage owner check.
+
+## Scan-assisted complete returns
+
+See [RETURN-SCANNING.md](RETURN-SCANNING.md) for issued-package lookup, original-content
+reconciliation, explicit complete-return confirmation and the one fictional owner check.

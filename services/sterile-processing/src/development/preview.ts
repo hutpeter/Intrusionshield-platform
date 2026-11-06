@@ -1,3 +1,4 @@
+import { prepareReturnScanExample } from "./return-scan-example.js";
 import { prepareDistributionScanExample } from "./distribution-scan-example.js";
 import { prepareLoadScanExample } from "./load-scan-example.js";
 import { prepareReceivingScanExample } from "./receiving-scan-example.js";
@@ -658,6 +659,34 @@ export function createSterilePreview({
           { tenantId, facilityId, actorId: actors.operator },
           { tenantId, facilityId, actorId: actors.reviewer },
           id,
+        ),
+      );
+  });
+  app.post("/preview/return-scan-example", async (req, res) => {
+    const session = res.locals.session as Session;
+    if (session.role !== "operator") {
+      res
+        .status(session.role ? 403 : 401)
+        .json({ error: session.role ? "FORBIDDEN" : "UNAUTHENTICATED" });
+      return;
+    }
+    if (
+      Object.keys(req.query).length ||
+      !req.body ||
+      Array.isArray(req.body) ||
+      Object.keys(req.body).length !== 1
+    ) {
+      res.status(400).json({ error: "INVALID_REQUEST" });
+      return;
+    }
+    res
+      .status(201)
+      .json(
+        await prepareReturnScanExample(
+          repository,
+          { tenantId, facilityId, actorId: actors.operator },
+          { tenantId, facilityId, actorId: actors.reviewer },
+          sterileUuid(req.body.requestId),
         ),
       );
   });

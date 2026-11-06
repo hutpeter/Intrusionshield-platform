@@ -3,6 +3,7 @@ import {
   SterileRegistryBase,
   SterileError,
   scopeOf,
+  packageFromScan,
   sterileUuid,
   codeOf,
   field,
@@ -14,6 +15,8 @@ import {
 import type {
   ReturnRecord,
   ReturnInput,
+  ScannedReturnInput,
+  ReturnScanResult,
   ReturnDispositionInput,
 } from "./return-types.js";
 import type { ProcessingEpisode } from "./processing-types.js";
@@ -25,7 +28,58 @@ const ver = (n: number) => {
   return n;
 };
 export class ReturnRegistry extends SterileRegistryBase {
+  async scan(
+    scope: SterileScope,
+    identifier: unknown,
+  ): Promise<ReturnScanResult> {
+    const s = scopeOf(scope),
+      target = packageFromScan(identifier);
+    return this.repository.transaction(s, async (tx) => {
+      const p = await tx.findPackage(target.id);
+      if (!p) throw new SterileError("NOT_FOUND");
+      if (p.state !== "packaged" || p.version !== target.version)
+        throw new SterileError("CONFLICT");
+      if (await tx.findReturnByPackage(p.id))
+        throw new SterileError("RETURN_BLOCKED");
+      const issue = await tx.findDistributionByPackage(p.id);
+      if (
+        !issue ||
+        issue.state !== "issued" ||
+        issue.packageVersion !== p.version
+      )
+        throw new SterileError("RETURN_BLOCKED");
+      return {
+        tenantId: s.tenantId,
+        facilityId: s.facilityId,
+        identifier: `RSP-P-${p.id.toUpperCase()}-V${p.version}`,
+        issue,
+        manifest: p.assemblySnapshot.instruments,
+        recall: await tx.findRecallBlock(p.id),
+      };
+    });
+  }
+  async createScanned(scope: SterileScope, input: ScannedReturnInput) {
+    const { identifier, receivedInstrumentIds, ...receipt } = input,
+      target = packageFromScan(identifier);
+    if (
+      !Array.isArray(receivedInstrumentIds) ||
+      receivedInstrumentIds.length > 1000
+    )
+      invalid();
+    const ids = receivedInstrumentIds.map(sterileUuid);
+    if (new Set(ids).size !== ids.length)
+      throw new SterileError("RETURN_CONTENTS_MISMATCH");
+    return this.createInternal(scope, receipt, { ...target, receivedIds: ids });
+  }
+
   async create(scope: SterileScope, input: ReturnInput) {
+    return this.createInternal(scope, input);
+  }
+  private async createInternal(
+    scope: SterileScope,
+    input: ReturnInput,
+    scan?: { id: string; version: number; receivedIds: string[] },
+  ) {
     const s = scopeOf(scope),
       code = codeOf(input.code),
       id = sterileUuid(input.distributionId),
@@ -44,7 +98,7 @@ export class ReturnRegistry extends SterileRegistryBase {
       s,
       input.requestId,
       "package-returned",
-      input,
+      scan ? { ...input, scan } : input,
       async (tx, at) => {
         const d = await tx.findDistribution(id);
         if (!d) throw new SterileError("NOT_FOUND");
@@ -58,7 +112,25 @@ export class ReturnRegistry extends SterileRegistryBase {
         const p = await tx.findPackage(d.packageId);
         if (!p || p.version !== d.packageVersion || p.state !== "packaged")
           throw new SterileError("CONFLICT");
+        if (scan) {
+          if (scan.id !== p.id || scan.version !== p.version)
+            throw new SterileError("CONFLICT");
+          const expectedIds = p.assemblySnapshot.instruments.map((i) => i.id);
+          if (
+            scan.receivedIds.length !== expectedIds.length ||
+            expectedIds.some((id) => !scan.receivedIds.includes(id))
+          )
+            throw new SterileError("RETURN_CONTENTS_MISMATCH");
+        }
         const r: ReturnRecord = {
+          ...(scan
+            ? {
+                scanReceipt: {
+                  identifier: `RSP-P-${p.id.toUpperCase()}-V${p.version}`,
+                  contents: p.assemblySnapshot.instruments,
+                },
+              }
+            : {}),
           id: randomUUID(),
           tenantId: s.tenantId,
           facilityId: s.facilityId,

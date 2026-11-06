@@ -1,5 +1,8 @@
+import type { AssemblyInstrument } from "./tray-types.js";
+import type { RecallBlock } from "./recall-types.js";
 import type { DistributionRecord } from "./distribution-types.js";
 export interface ReturnRecord {
+  scanReceipt?: { identifier: string; contents: AssemblyInstrument[] };
   id: string;
   tenantId: string;
   facilityId: string;
@@ -28,7 +31,7 @@ export interface ReturnRecord {
   updatedAt: string;
   receivedBy: string;
 }
-export type ReturnSummary = Omit<ReturnRecord, "issue">;
+export type ReturnSummary = Omit<ReturnRecord, "issue" | "scanReceipt">;
 export type ReturnStatus = Pick<
   ReturnRecord,
   "id" | "code" | "state" | "episodeId" | "episodeCode"
@@ -62,3 +65,16 @@ export const returnStatus = (r: ReturnRecord): ReturnStatus => ({
   episodeId: r.episodeId,
   episodeCode: r.episodeCode,
 });
+
+export interface ScannedReturnInput extends ReturnInput {
+  identifier: string;
+  receivedInstrumentIds: string[];
+}
+export interface ReturnScanResult {
+  tenantId: string;
+  facilityId: string;
+  identifier: string;
+  issue: DistributionRecord;
+  manifest: AssemblyInstrument[];
+  recall: RecallBlock | null;
+}

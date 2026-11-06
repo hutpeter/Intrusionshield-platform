@@ -402,6 +402,17 @@ export class TraceabilityRegistry {
         }
         if (row.kind === "return") {
           const ret = r as ReturnRecord;
+          if (ret.scanReceipt)
+            fact(
+              "return_scan",
+              ret.createdAt,
+              ret.receivedBy,
+              {
+                identifier: ret.scanReceipt.identifier,
+                count: ret.scanReceipt.contents.length,
+              },
+              ["identifier", "count"],
+            );
           link(
             row,
             "package",

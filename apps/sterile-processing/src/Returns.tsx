@@ -1,3 +1,6 @@
+import { ReturnScan } from "./ReturnScan";
+import { returnScanLabels } from "./return-scan-text";
+import type { ReturnScanResult } from "@intrusionshield/sterile-processing";
 import { useState, useEffect, useRef } from "react";
 import type {
   ReturnRecord,
@@ -16,6 +19,7 @@ const empty = () => ({
   custodian: "",
   reference: "",
   note: "",
+  discrepancy: false,
   contentsChecked: false,
   confirmed: false,
   action: "quarantine" as "quarantine" | "reprocess",
@@ -59,17 +63,19 @@ export function ReturnWorkspace({
     } | null>(null),
     [fields, setFields] = useState(empty),
     [discard, setDiscard] = useState<(() => void) | null>(null);
+  const [scanBusy, setScanBusy] = useState(false),
+    [scanContext, setScanContext] = useState<ReturnScanResult | null>(null);
   const pending = useRef<AbortController | null>(null),
     exampleKey = useRef(crypto.randomUUID()),
-    busy = blocked || saving;
+    busy = blocked || saving || scanBusy;
   useEffect(() => {
     onDirty(!!form);
     return () => onDirty(false);
   }, [form, onDirty]);
   useEffect(() => {
-    onBusy(saving);
+    onBusy(saving || scanBusy);
     return () => onBusy(false);
-  }, [saving, onBusy]);
+  }, [saving, scanBusy, onBusy]);
   useEffect(() => () => pending.current?.abort(), []);
   function failed(e: unknown) {
     if (e instanceof ApiError && e.status === 401) onExpired();
@@ -113,6 +119,7 @@ export function ReturnWorkspace({
     return () => ac.abort();
   }, [session, selected, page, historyPage, nonce, onExpired]);
   function clear() {
+    setScanContext(null);
     setForm(null);
     setFields(empty());
     setDiscard(null);
@@ -180,26 +187,34 @@ export function ReturnWorkspace({
     try {
       let r: ReturnRecord;
       if (form.kind === "create") {
-        if (!session.canReturn || !fields.contentsChecked) return;
+        if (!session.canReturn || !fields.contentsChecked || fields.discrepancy)
+          return;
         const d = sources.find((x) => x.id === fields.distributionId);
         if (!d) return;
-        r = await api.createReturn(
-          session,
-          {
-            requestId: form.requestId,
-            code: fields.code,
-            distributionId: d.id,
-            distributionVersion: d.version,
-            condition: fields.condition,
-            location: fields.location,
-            custodian: fields.custodian,
-            reference: fields.reference,
-            note: fields.note,
-            contentsChecked: true,
-            confirmed: true,
-          },
-          ac.signal,
-        );
+        const receipt = {
+          requestId: form.requestId,
+          code: fields.code,
+          distributionId: d.id,
+          distributionVersion: d.version,
+          condition: fields.condition,
+          location: fields.location,
+          custodian: fields.custodian,
+          reference: fields.reference,
+          note: fields.note,
+          contentsChecked: true,
+          confirmed: true,
+        };
+        r = scanContext
+          ? await api.createScannedReturn(
+              session,
+              {
+                ...receipt,
+                identifier: scanContext.identifier,
+                receivedInstrumentIds: scanContext.manifest.map((i) => i.id),
+              },
+              ac.signal,
+            )
+          : await api.createReturn(session, receipt, ac.signal);
       } else {
         if (!session.canDisposeReturn || !selected) return;
         r = await api.disposeReturn(
@@ -302,6 +317,42 @@ export function ReturnWorkspace({
             </button>
           </section>
         )}
+      {session.canReturn && !selected && !form && (
+        <ReturnScan
+          session={session}
+          language={language}
+          blocked={busy}
+          onBusy={setScanBusy}
+          onExpired={onExpired}
+          onOpen={(r, demo) => {
+            setScanContext(r);
+            setSources((old) => [
+              r.issue,
+              ...old.filter((d) => d.id !== r.issue.id),
+            ]);
+            setNotice(false);
+            setError(null);
+            setFields({
+              ...empty(),
+              distributionId: r.issue.id,
+              ...(demo
+                ? {
+                    code: "RETSCAN-" + crypto.randomUUID().toUpperCase(),
+                    location: "DEMO-RETURN-SCAN-QUARANTINE",
+                    custodian: "DEMO-RETURNER",
+                    reference: "SIMULATED-RETURN-SCAN",
+                    note: "Fictional scanned return only",
+                  }
+                : {}),
+            });
+            setForm({
+              kind: "create",
+              requestId: crypto.randomUUID(),
+              version: 0,
+            });
+          }}
+        />
+      )}
       {notice && (
         <p role="status" className="success">
           {p.saved}
@@ -342,6 +393,42 @@ export function ReturnWorkspace({
             </button>
           </div>
           <fieldset disabled={busy}>
+            {form.kind === "create" && scanContext && (
+              <section>
+                <h3>{returnScanLabels(language).manifest}</h3>
+                <ul>
+                  {scanContext.manifest.map((i) => (
+                    <li key={i.id}>
+                      {i.code} · {i.instrumentTypeName} ·{" "}
+                      {i.serialNumber || "—"}
+                    </li>
+                  ))}
+                </ul>
+                {scanContext.recall && (
+                  <p className="alert">{returnScanLabels(language).recall}</p>
+                )}
+                <label className="check">
+                  <input
+                    type="checkbox"
+                    checked={fields.discrepancy}
+                    onChange={(e) =>
+                      patch({
+                        discrepancy: e.target.checked,
+                        contentsChecked: false,
+                        confirmed: false,
+                      })
+                    }
+                  />
+                  {returnScanLabels(language).discrepancy}
+                </label>
+                {fields.discrepancy && (
+                  <p className="alert" role="alert">
+                    {returnScanLabels(language).blocked}
+                  </p>
+                )}
+              </section>
+            )}
+
             <div className="form-grid">
               {form.kind === "create" ? (
                 <>
@@ -359,6 +446,7 @@ export function ReturnWorkspace({
                     <select
                       required
                       aria-label={p.source}
+                      disabled={!!scanContext}
                       value={fields.distributionId}
                       onChange={(e) =>
                         patch({ distributionId: e.target.value })
@@ -459,6 +547,7 @@ export function ReturnWorkspace({
               <label className="check">
                 <input
                   type="checkbox"
+                  disabled={fields.discrepancy}
                   checked={fields.contentsChecked}
                   onChange={(e) => patch({ contentsChecked: e.target.checked })}
                 />
@@ -478,7 +567,8 @@ export function ReturnWorkspace({
               disabled={
                 busy ||
                 !fields.confirmed ||
-                (form.kind === "create" && !fields.contentsChecked)
+                (form.kind === "create" &&
+                  (!fields.contentsChecked || fields.discrepancy))
               }
             >
               {saving
@@ -543,6 +633,19 @@ export function ReturnWorkspace({
               </>
             )}
           </section>
+          {r.scanReceipt && (
+            <section className="panel">
+              <h2>{returnScanLabels(language).recorded}</h2>
+              <p>{r.scanReceipt.identifier}</p>
+              <ul>
+                {r.scanReceipt.contents.map((i) => (
+                  <li key={i.id}>
+                    {i.code} · {i.instrumentTypeName}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
           <section className="panel">
             <h2>{p.origin}</h2>
             <dl className="details-grid">

@@ -15,6 +15,8 @@ import type {
   ReturnRecord,
   ReturnSummary,
   ReturnInput,
+  ScannedReturnInput,
+  ReturnScanResult,
   ReturnDispositionInput,
   RecallClearanceInput,
   RecallAdmissionInput,
@@ -228,6 +230,44 @@ export interface DistributionScanResult {
   distribution: DistributionRecord | null;
 }
 export const api = {
+  scanReturn: async (s: Session, identifier: string, signal: AbortSignal) => {
+    const r = await scoped(
+      s,
+      call<ReturnScanResult>(
+        base(s) + "/returns/scan?identifier=" + encodeURIComponent(identifier),
+        signal,
+      ),
+    );
+    await scoped(s, Promise.resolve(r.issue));
+    return r;
+  },
+  createScannedReturn: (
+    s: Session,
+    body: ScannedReturnInput,
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<ReturnRecord>(base(s) + "/returns/scanned", signal, body, s.csrf),
+    ),
+  prepareReturnScan: async (
+    s: Session,
+    requestId: string,
+    signal: AbortSignal,
+  ) => {
+    const r = await scoped(
+      s,
+      call<ReturnScanResult>(
+        "/preview/return-scan-example",
+        signal,
+        { requestId },
+        s.csrf,
+      ),
+    );
+    await scoped(s, Promise.resolve(r.issue));
+    return r;
+  },
+
   scanDistribution: async (
     s: Session,
     identifier: string,

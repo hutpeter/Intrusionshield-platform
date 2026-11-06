@@ -1,4 +1,6 @@
 const es = {
+  RETURN_CONTENTS_MISMATCH:
+    "El contenido no coincide. Solo se admiten devoluciones completas; concilie la discrepancia antes de continuar.",
   SCAN_DUPLICATE: "Este instrumento ya está asignado a la bandeja.",
   SCAN_TYPE: "El tipo no corresponde o su cantidad requerida ya está cubierta.",
   SCAN_INELIGIBLE: "El instrumento está retirado o retenido por mantenimiento.",
@@ -49,6 +51,8 @@ const es = {
 };
 type Messages = Record<keyof typeof es, string>;
 const en: Messages = {
+  RETURN_CONTENTS_MISMATCH:
+    "Contents do not match. Complete-package returns only; reconcile the discrepancy before continuing.",
   SCAN_DUPLICATE: "This instrument is already assigned to the tray.",
   SCAN_TYPE:
     "Instrument type does not match or its required quantity is already filled.",
@@ -99,6 +103,8 @@ const en: Messages = {
     "Service unavailable. The change has not been confirmed.",
 };
 const fr: Messages = {
+  RETURN_CONTENTS_MISMATCH:
+    "Contenu non conforme. Seuls les retours complets sont acceptés ; réconciliez l’écart avant de continuer.",
   SCAN_DUPLICATE: "Cet instrument est déjà affecté au plateau.",
   SCAN_TYPE: "Type incompatible ou quantité requise déjà atteinte.",
   SCAN_INELIGIBLE: "Instrument retiré ou bloqué pour maintenance.",

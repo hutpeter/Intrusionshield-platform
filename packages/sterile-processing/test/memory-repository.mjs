@@ -140,7 +140,7 @@ export class MemoryRepository {
           .reverse()
           .slice((page - 1) * 50, (page - 1) * 50 + 51)
           .map((x) => {
-            const { issue, ...summary } = x;
+            const { issue, scanReceipt, ...summary } = x;
             return structuredClone(summary);
           }),
       insertReturn: async (x) => {

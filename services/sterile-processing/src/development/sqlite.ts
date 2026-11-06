@@ -299,7 +299,7 @@ CREATE INDEX IF NOT EXISTS sp_assignment_assembly ON sp_assignments(tenant_id,fa
           ),
         listReturns: async (page) =>
           list<ReturnSummary>(
-            "SELECT json_remove(payload,'$.issue') AS payload FROM sp_returns WHERE tenant_id=? AND facility_id=? ORDER BY rowid DESC LIMIT 51 OFFSET ?",
+            "SELECT json_remove(payload,'$.issue','$.scanReceipt') AS payload FROM sp_returns WHERE tenant_id=? AND facility_id=? ORDER BY rowid DESC LIMIT 51 OFFSET ?",
             page,
           ),
         insertReturn: async (item) => {

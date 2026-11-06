@@ -47,7 +47,32 @@ A successful developer check never implies that the owner performed it.
 
 | 23486a3 | Version-bound package Data Matrix and confirmed scan-to-draft load | 269 scoped tests, builds, independent symbol decode and developer label/print/add/duplicate/Enter check | U-LOADSCAN-01 passed November 6, 2026 | Physical scanner/printer and broader owner exception/operational acceptance deferred |
 
-| Storage/distribution scanning increment (this commit) | Release-validated package lookup into existing storage/transfer/issue controls | 275 scoped tests, builds and developer confirmation/location/existing-record-rescan check | U-STORESCAN-01 passed November 6, 2026 | Owner transfer/issue/exception, physical hardware/handover and operational acceptance deferred |
+| af27e1e | Release-validated package lookup into existing storage/transfer/issue controls | 275 scoped tests, builds and developer confirmation/location/existing-record-rescan check | U-STORESCAN-01 passed November 6, 2026 | Owner transfer/issue/exception, physical hardware/handover and operational acceptance deferred |
+
+| Return scanning increment (this commit) | Issued-package lookup, manifest reconciliation and confirmed complete return with frozen identifier | 284 scoped tests, builds and targeted browser verification | U-RETSCAN-01 pending | Owner exceptions/disposition, hardware, persistent partial returns and operational acceptance deferred |
+
+## Current single owner check — scan to return
+
+**U-RETSCAN-01 pending:** [RETURN-SCANNING.md](RETURN-SCANNING.md): Demo operator →
+Returns and reprocessing → Scan issued package for return → Prepare fictional return scan
+example → Simulate return scan → review contents and tick both confirmations → Save
+return. Expected Returned — awaiting disposition, preserved original issue and Internal
+identifier and returned contents recorded. Only this one new aspect is requested.
+
+**Developer November 6, 2026:** 284 scoped tests (152 domain, 103 service/SQLite/HTTP,
+29 web API/export/symbol) and scoped builds passed. Tests cover issued read-only lookup,
+current token/source version, exact declared manifest, duplicate/foreign/invalid/not-issued
+refusal, immutable issue, recall-preserving receipt, downstream recall gates, roles/CSRF/
+strict bodies, retries, competing returns, reopen persistence and audit rollback. Browser
+verification passed: discrepancy flag blocks Save, complete-contents/return confirmations
+are required, identifier/manifest and original issue are preserved, the return remains
+unavailable pending disposition, duplicate lookup is blocked and refresh retains evidence.
+The successful reprocessing path also retains the scan snapshot in targeted domain checks.
+Owner acceptance is not inferred.
+M-RETSCAN-01 owner discrepancy/history/recall/disposition/reprocessing; M-RETSCAN-02 physical
+scanner/Windows/ES/FR/mobile/large manifests; M-RETSCAN-03 persistent partial returns,
+physical recovery, production identity and full operational acceptance remain deferred.
+RSP-ISS-001 stays parked; RSP-ISS-008 tracks persistent discrepancies.
 
 ## Completed owner check — scan to storage
 

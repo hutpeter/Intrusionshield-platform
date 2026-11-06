@@ -740,3 +740,37 @@ test("distribution scan rejects nested foreign scope instead of opening a moveme
     (e) => e instanceof ApiError && e.code === "SERVICE_UNAVAILABLE",
   );
 });
+test("scanned return carries original issue version, exact received IDs and confirmation with CSRF", async (t) => {
+  const input = {
+    requestId: "request",
+    code: "RETURN",
+    distributionId: "issue",
+    distributionVersion: 2,
+    condition: "used",
+    location: "Quarantine",
+    custodian: "Custodian",
+    reference: "Reference",
+    note: "",
+    contentsChecked: true,
+    confirmed: true,
+    identifier: "RSP-P-PACK-V1",
+    receivedInstrumentIds: ["instrument"],
+  };
+  fake(t, async (path, options) => {
+    assert.ok(path.endsWith("/returns/scanned"));
+    assert.equal(options.headers["x-sterile-csrf"], session.csrf);
+    assert.deepEqual(JSON.parse(options.body), input);
+    return new Response(
+      JSON.stringify({
+        id: "return",
+        tenantId: session.tenantId,
+        facilityId: session.facilityId,
+      }),
+      { status: 201 },
+    );
+  });
+  assert.equal(
+    (await api.createScannedReturn(session, input, signal())).id,
+    "return",
+  );
+});

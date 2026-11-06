@@ -9,7 +9,7 @@ git pull --ff-only origin feature/sterile-processing-preview
 pnpm sterile:preview
 ```
 
-After **Ready**, refresh. **U-STORESCAN-01 pending:**
+After **Ready**, refresh. **U-STORESCAN-01 passed November 6, 2026** from owner stored-location/history screenshot. Original check:
 
 1. Enter as **Demo operator** → **Storage and distribution**.
 2. In **Scan released package**, click **Prepare fictional storage scan example**.
@@ -81,7 +81,7 @@ integrity plus movement confirmation, saved `DEMO-SCAN-STORE-A`, one storage eve
 Enter-key rescan opening the existing record with issue action available. Developer
 checks do not establish owner or physical acceptance.
 
-U-STORESCAN-01 remains pending. Deferred M-STORESCAN-01: owner transfer/issue/exception,
+U-STORESCAN-01 passed November 6, 2026. Deferred M-STORESCAN-01: owner transfer/issue/exception,
 post-scan restriction and history walkthroughs; M-STORESCAN-02: physical scanner/focus,
 Windows, ES/FR/mobile, labels/printer and location vocabulary; M-STORESCAN-03: physical
 handover/recipient acknowledgement, production identity/policy and full operational
