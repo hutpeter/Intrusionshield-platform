@@ -45,11 +45,11 @@ A successful developer check never implies that the owner performed it.
 
 | 9c1b16a | Stage scanned members then confirm receipt with current holds and frozen identifier provenance | 260 scoped tests, builds and developer browser staging/Enter/confirmation/hold/refresh check | U-RECSCAN-01 passed November 6, 2026 | Hardware, owner exception and complete operational acceptance deferred |
 
-| Package/load scanning increment (this commit) | Version-bound package Data Matrix and confirmed scan-to-draft load | 269 scoped tests, builds, independent symbol decode and developer label/print/add/duplicate/Enter check | U-LOADSCAN-01 pending | Physical scanner/printer and broader owner exception/operational acceptance deferred |
+| Package/load scanning increment (this commit) | Version-bound package Data Matrix and confirmed scan-to-draft load | 269 scoped tests, builds, independent symbol decode and developer label/print/add/duplicate/Enter check | U-LOADSCAN-01 passed November 6, 2026 | Physical scanner/printer and broader owner exception/operational acceptance deferred |
 
-## Current single owner check — package into load
+## Completed owner check — package into load
 
-**U-LOADSCAN-01 pending:** [PACKAGE-LOAD-SCANNING.md](PACKAGE-LOAD-SCANNING.md): Demo
+**U-LOADSCAN-01 passed November 6, 2026:** [PACKAGE-LOAD-SCANNING.md](PACKAGE-LOAD-SCANNING.md): Demo
 operator → Loads and cycles → Prepare fictional package load scan example → confirm
 placement → Simulate package scan. Expected candidate listed once, total packages 2,
 Package added by scan, and Draft retained. The seed package explains the starting count 1.
@@ -657,3 +657,12 @@ instrument and **Internal identifiers recorded at receiving**. No cleaning attem
 are recorded; history attributes receipt and one internal identifier to Demo operator.
 This confirms scanned receipt saving only. Exception, cleaning/inspection, physical
 scanner and complete operational acceptance remain deferred under M-RECSCAN-01–03.
+
+## Owner package/load scan result — November 6, 2026
+
+U-LOADSCAN-01 passed: owner screenshot confirms **Package added by scan**,
+**Draft — packages reserved**, version 2, two distinct load-package rows with the
+LOADSCAN candidate listed once, and a version 2 scan audit entry attributed to Demo
+operator. Load: `LOADSCAN-DRAFT-4F813DF0-44CE-496F-B501-9BEE49BEF26C`. The earlier
+load-created version remains visible. No cycle-start, physical scanner/printer or broader
+exception/clinical acceptance is inferred; M-LOADSCAN-01–03 remain deferred.
