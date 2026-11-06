@@ -1,5 +1,7 @@
 import type {
   TraceReport,
+  ServicePolicyInput,
+  ServiceUsage,
   OperationalDashboard,
   DashboardQueuePage,
   DashboardQueueId,
@@ -571,6 +573,35 @@ export const api = {
       ),
     ),
 
+  servicePolicy: (
+    s: Session,
+    id: string,
+    body: ServicePolicyInput,
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<ServiceUsage>(
+        base(s) + "/instruments/" + id + "/service-policy",
+        signal,
+        body,
+        s.csrf,
+      ),
+    ),
+  prepareServiceThreshold: (
+    s: Session,
+    requestId: string,
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<Instrument>(
+        "/preview/service-threshold-example",
+        signal,
+        { requestId },
+        s.csrf,
+      ),
+    ),
   prepareMaintenance: (s: Session, requestId: string, signal: AbortSignal) =>
     scoped(
       s,

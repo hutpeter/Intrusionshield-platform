@@ -26,7 +26,7 @@ const en = {
   release: "Loads awaiting release review",
   returns: "Returns awaiting reconciliation or disposition",
   recall: "Recall actions outstanding",
-  maintenance: "Instruments on maintenance hold",
+  maintenance: "Instruments requiring maintenance or service",
 };
 const es: typeof en = {
   title: "Panel operativo",

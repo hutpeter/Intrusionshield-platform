@@ -81,6 +81,8 @@ export class PreviewSqliteRepository implements SterileRepository {
         .exec(`PRAGMA foreign_keys=ON; PRAGMA busy_timeout=0; PRAGMA journal_mode=WAL;
 CREATE TABLE IF NOT EXISTS sp_types(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,code TEXT NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,code));
 CREATE TABLE IF NOT EXISTS sp_instruments(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,type_id TEXT NOT NULL,code TEXT NOT NULL,version INTEGER NOT NULL CHECK(version>0),payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,code),FOREIGN KEY(tenant_id,facility_id,type_id) REFERENCES sp_types(tenant_id,facility_id,id));
+CREATE TABLE IF NOT EXISTS sp_service_usage(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,instrument_id TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,instrument_id),FOREIGN KEY(tenant_id,facility_id,instrument_id) REFERENCES sp_instruments(tenant_id,facility_id,id));
+CREATE TABLE IF NOT EXISTS sp_service_exposures(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,instrument_id TEXT NOT NULL,load_id TEXT NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,instrument_id,load_id),FOREIGN KEY(tenant_id,facility_id,instrument_id) REFERENCES sp_instruments(tenant_id,facility_id,id));
 CREATE TABLE IF NOT EXISTS sp_audit(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,entity_id TEXT NOT NULL,request_id TEXT NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,request_id));
 CREATE INDEX IF NOT EXISTS sp_audit_entity ON sp_audit(tenant_id,facility_id,entity_id);
 CREATE TABLE IF NOT EXISTS sp_receipts(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,request_id TEXT NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,request_id));
@@ -175,6 +177,70 @@ CREATE INDEX IF NOT EXISTS sp_assignment_assembly ON sp_assignments(tenant_id,fa
         return rows.map((row) => JSON.parse(row.payload) as V);
       };
       const tx: SterileTransaction = {
+        findServiceUsage: async (id) =>
+          read(
+            "SELECT payload FROM sp_service_usage WHERE tenant_id=? AND facility_id=? AND instrument_id=?",
+            id,
+          ),
+        saveServiceUsage: async (item, expected) => {
+          own(item);
+          if (item.version !== expected + 1)
+            throw new SterileError("INVALID_REQUEST");
+          if (expected === 0)
+            this.db
+              .prepare("INSERT INTO sp_service_usage VALUES(?,?,?,?,?)")
+              .run(
+                ...args,
+                item.instrumentId,
+                item.version,
+                JSON.stringify(item),
+              );
+          else if (
+            this.db
+              .prepare(
+                "UPDATE sp_service_usage SET version=?,payload=? WHERE tenant_id=? AND facility_id=? AND instrument_id=? AND version=?",
+              )
+              .run(
+                item.version,
+                JSON.stringify(item),
+                ...args,
+                item.instrumentId,
+                expected,
+              ).changes !== 1
+          )
+            throw new SterileError("CONFLICT");
+        },
+        insertServiceExposure: async (item) => {
+          own(item);
+          if (item.actorId !== scope.actorId)
+            throw new SterileError("INVALID_REQUEST");
+          const existing = read<
+            import("@intrusionshield/sterile-processing").ServiceExposure
+          >(
+            "SELECT payload FROM sp_service_exposures WHERE tenant_id=? AND facility_id=? AND instrument_id=? AND load_id=?",
+            item.instrumentId,
+            item.loadId,
+          );
+          if (existing) {
+            if (
+              existing.loadVersion !== item.loadVersion ||
+              existing.outcome !== item.outcome
+            )
+              throw new SterileError("CONFLICT");
+            return false;
+          }
+          this.db
+            .prepare("INSERT INTO sp_service_exposures VALUES(?,?,?,?,?)")
+            .run(...args, item.instrumentId, item.loadId, JSON.stringify(item));
+          return true;
+        },
+        listServiceExposures: async (id, page) =>
+          this.db
+            .prepare(
+              "SELECT payload FROM sp_service_exposures WHERE tenant_id=? AND facility_id=? AND instrument_id=? ORDER BY rowid DESC LIMIT 51 OFFSET ?",
+            )
+            .all(...args, id, (page - 1) * 50)
+            .map((row) => JSON.parse((row as { payload: string }).payload)),
         dashboardQueue: async (id, offset) =>
           readDashboardQueue(this.db, args, id, offset),
         searchTraceCode: async (code) => {

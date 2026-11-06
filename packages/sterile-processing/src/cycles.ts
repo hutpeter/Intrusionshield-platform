@@ -1,3 +1,4 @@
+import { recordServiceExposures } from "./service-usage.js";
 import { reviewStatus } from "./review-types.js";
 import { randomUUID } from "node:crypto";
 import {
@@ -316,6 +317,13 @@ export class CycleRegistry extends SterileRegistryBase {
           indicatorEvidence,
           note,
         };
+        await recordServiceExposures(
+          tx,
+          s,
+          item,
+          at,
+          sterileUuid(input.requestId),
+        );
         await tx.updateLoad(item, version);
         await this.record(
           tx,

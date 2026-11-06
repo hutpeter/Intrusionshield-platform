@@ -81,6 +81,7 @@ export interface TraceLink {
 }
 export interface TraceAlert {
   kind:
+    | "service_due"
     | "maintenance_hold"
     | "instrument_recall"
     | "processing_hold"

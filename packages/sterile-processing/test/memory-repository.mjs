@@ -1,6 +1,8 @@
 /** SQL-free test adapter only. Never loaded by the service composition root. */
 export class MemoryRepository {
   state = {
+    serviceUsages: [],
+    serviceExposures: [],
     returns: [],
     returnVersions: [],
     recalls: [],
@@ -58,6 +60,43 @@ export class MemoryRepository {
       };
     };
     const tx = {
+      findServiceUsage: async (id) =>
+        s.serviceUsages.find((x) => own(x) && x.instrumentId === id) ?? null,
+      saveServiceUsage: async (item, expected) => {
+        const n = s.serviceUsages.findIndex(
+          (x) => own(x) && x.instrumentId === item.instrumentId,
+        );
+        if (
+          item.version !== expected + 1 ||
+          (n < 0 ? expected !== 0 : s.serviceUsages[n].version !== expected)
+        )
+          throw Object.assign(Error("CONFLICT"), { code: "CONFLICT" });
+        if (n < 0) s.serviceUsages.push(structuredClone(item));
+        else s.serviceUsages[n] = structuredClone(item);
+      },
+      insertServiceExposure: async (item) => {
+        const old = s.serviceExposures.find(
+          (x) =>
+            own(x) &&
+            x.instrumentId === item.instrumentId &&
+            x.loadId === item.loadId,
+        );
+        if (old) {
+          if (
+            old.loadVersion !== item.loadVersion ||
+            old.outcome !== item.outcome
+          )
+            throw Object.assign(Error("CONFLICT"), { code: "CONFLICT" });
+          return false;
+        }
+        s.serviceExposures.push(structuredClone(item));
+        return true;
+      },
+      listServiceExposures: async (id, page) =>
+        s.serviceExposures
+          .filter((x) => own(x) && x.instrumentId === id)
+          .reverse()
+          .slice((page - 1) * 50, (page - 1) * 50 + 51),
       dashboardQueue: async (id, offset = 0) => {
         const pending = (r) =>
           s.recallInstruments.some(
@@ -127,7 +166,16 @@ export class MemoryRepository {
           ],
           maintenance: [
             s.instruments,
-            (p) => p.state === "maintenance",
+            (p) =>
+              p.state === "maintenance" ||
+              (p.state === "registered" &&
+                s.serviceUsages.some(
+                  (u) =>
+                    own(u) &&
+                    u.instrumentId === p.id &&
+                    u.interval !== null &&
+                    u.totalRecorded - u.serviceBaseline >= u.interval,
+                )),
             () => 1,
           ],
         }[id];

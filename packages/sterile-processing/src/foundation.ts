@@ -50,6 +50,7 @@ export interface InstrumentType {
 export interface Instrument {
   /** Internal lookup identifier, separate from manufacturer serial / UDI. */
   scanIdentifier?: string;
+  serviceUsage?: import("./service-usage.js").ServiceUsage | null;
   maintenance?: import("./maintenance.js").MaintenanceEntry[];
   recall?: RecallBlock;
   processingHold?: { episodeId: string; episodeCode: string };
@@ -83,6 +84,9 @@ export interface SterileAuditEvent {
     | "maintenance-assessed"
     | "maintenance-repaired"
     | "maintenance-authorized"
+    | "service-policy-configured"
+    | "service-exposure-recorded"
+    | "service-baseline-reset"
     | "return-discrepancy-recorded"
     | "return-missing-received"
     | "package-returned"
@@ -134,7 +138,8 @@ export type SterileRecord =
   | LoadReview
   | DistributionRecord
   | RecallRecord
-  | ReturnRecord;
+  | ReturnRecord
+  | import("./service-usage.js").ServiceUsage;
 export interface CommandReceipt {
   hash: string;
   result: SterileRecord;
@@ -148,6 +153,20 @@ export interface SterileTransaction {
   searchTraceCode(code: string): Promise<TraceMatch[]>;
   traceRows(kind: TraceKind, filter: TraceFilter): Promise<TraceRow[]>;
   traceAudit(ids: string[]): Promise<SterileAuditEvent[]>;
+  findServiceUsage(
+    id: string,
+  ): Promise<import("./service-usage.js").ServiceUsage | null>;
+  saveServiceUsage(
+    value: import("./service-usage.js").ServiceUsage,
+    expected: number,
+  ): Promise<void>;
+  insertServiceExposure(
+    value: import("./service-usage.js").ServiceExposure,
+  ): Promise<boolean>;
+  listServiceExposures(
+    id: string,
+    page: number,
+  ): Promise<import("./service-usage.js").ServiceExposure[]>;
   findReturn(id: string): Promise<ReturnRecord | null>;
   findReturnByCode(code: string): Promise<ReturnRecord | null>;
   findReturnByPackage(id: string): Promise<ReturnRecord | null>;
@@ -293,6 +312,7 @@ export interface SterileRepository {
 export class SterileError extends Error {
   constructor(
     public readonly code:
+      | "SERVICE_DUE"
       | "SCAN_DUPLICATE"
       | "SCAN_TYPE"
       | "SCAN_INELIGIBLE"

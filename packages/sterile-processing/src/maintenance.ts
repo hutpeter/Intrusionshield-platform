@@ -1,3 +1,4 @@
+import { resetServiceBaseline } from "./service-usage.js";
 import { randomUUID } from "node:crypto";
 import {
   SterileRegistryBase,
@@ -202,6 +203,14 @@ export class MaintenanceRegistry extends SterileRegistryBase {
             correlationRequestId: sterileUuid(input.requestId),
             reason: `Maintenance ${entry!.id}`,
           });
+          await resetServiceBaseline(
+            tx,
+            s,
+            key,
+            at,
+            sterileUuid(input.requestId),
+            values.reason!,
+          );
           state = "registered";
         }
         const item: Instrument = {

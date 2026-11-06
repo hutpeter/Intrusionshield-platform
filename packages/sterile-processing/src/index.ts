@@ -192,9 +192,11 @@ export class InstrumentRegistry extends SterileRegistryBase {
           const recall = await tx.findInstrumentRecallBlock(item.id);
           const processingHold = await tx.findProcessingHold(item.id);
           const activeAssembly = await tx.findActiveAssignment(item.id);
+          const serviceUsage = await tx.findServiceUsage(item.id);
           return {
             ...item,
             scanIdentifier: "RSP-I-" + item.id.toUpperCase(),
+            ...(serviceUsage ? { serviceUsage } : {}),
             ...(recall ? { recall } : {}),
             ...(processingHold ? { processingHold } : {}),
             ...(activeAssembly ? { activeAssembly } : {}),
@@ -227,9 +229,11 @@ export class InstrumentRegistry extends SterileRegistryBase {
       const recall = await tx.findInstrumentRecallBlock(key);
       const processingHold = await tx.findProcessingHold(key);
       const activeAssembly = await tx.findActiveAssignment(key);
+      const serviceUsage = await tx.findServiceUsage(key);
       return {
         ...item,
         scanIdentifier: "RSP-I-" + item.id.toUpperCase(),
+        ...(serviceUsage ? { serviceUsage } : {}),
         ...(recall ? { recall } : {}),
         ...(processingHold ? { processingHold } : {}),
         ...(activeAssembly ? { activeAssembly } : {}),
@@ -266,3 +270,5 @@ export * from "./traceability.js";
 export * from "./maintenance.js";
 
 export * from "./dashboard.js";
+
+export * from "./service-usage.js";

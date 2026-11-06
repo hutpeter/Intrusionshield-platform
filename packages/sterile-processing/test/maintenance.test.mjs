@@ -335,3 +335,35 @@ test("maintenance trace shows current hold, evidence and linked receiving; new p
       ),
   );
 });
+test("only reviewed repair authorization resets service baseline, retains lifetime exposure and requires fresh processing", async () => {
+  const { ServiceUsageRegistry, serviceDue } = await import("../dist/index.js"),
+    f = await fixture(),
+    u = new ServiceUsageRegistry(f.repo);
+  await u.configure(f.s, f.i.id, {
+    requestId: randomUUID(),
+    version: 0,
+    interval: 1,
+    warningBefore: 0,
+    reference: "DEMO",
+    confirmed: true,
+  });
+  f.repo.state.serviceUsages[0].totalRecorded = 4;
+  f.repo.state.serviceUsages[0].version = 2;
+  await repaired(f);
+  assert.ok(serviceDue((await u.get(f.s, f.i.id)).usage));
+  f.repo.failAudit = true;
+  const before = structuredClone(f.repo.state);
+  await assert.rejects(f.m.authorizeReturn(f.s, f.i.id, authorization()));
+  assert.deepEqual(f.repo.state, before);
+  f.repo.failAudit = false;
+  const b = authorization(),
+    i = await f.m.authorizeReturn(f.s, f.i.id, b);
+  await f.m.authorizeReturn(f.s, f.i.id, b);
+  const r = (await u.get(f.s, f.i.id)).usage;
+  assert.equal(r.totalRecorded, 4);
+  assert.equal(r.serviceBaseline, 4);
+  assert.ok(r.lastServiceAt);
+  assert.equal(serviceDue(r), false);
+  assert.ok((await f.ir.get(f.s, i.id)).processingHold);
+  assert.equal(r.interval, 1);
+});

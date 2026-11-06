@@ -1,3 +1,4 @@
+import { serviceDue } from "./service-usage.js";
 import {
   SterileError,
   scopeOf,
@@ -204,6 +205,35 @@ export class TraceabilityRegistry {
         ) => facts.push({ kind, at, actorId, fields: fields(o, keys) });
         if (row.kind === "instrument") {
           const i = r as import("./foundation.js").Instrument;
+          const usage = row.current ? await tx.findServiceUsage(i.id) : null;
+          if (usage)
+            fact(
+              "service_usage",
+              usage.updatedAt,
+              null,
+              {
+                totalRecorded: usage.totalRecorded,
+                sinceService: usage.totalRecorded - usage.serviceBaseline,
+                interval: usage.interval,
+                warningBefore: usage.warningBefore,
+                reference: usage.reference,
+                trackingStarted: usage.createdAt,
+                lastServiceAt: usage.lastServiceAt,
+                serviceVersion: usage.version,
+                due: serviceDue(usage),
+              },
+              [
+                "totalRecorded",
+                "sinceService",
+                "interval",
+                "warningBefore",
+                "reference",
+                "trackingStarted",
+                "lastServiceAt",
+                "serviceVersion",
+                "due",
+              ],
+            );
           for (const m of i.maintenance ?? []) {
             fact("maintenance-reported", m.reportedAt, m.reportedBy, m, [
               "defect",
@@ -538,6 +568,15 @@ export class TraceabilityRegistry {
               (
                 i.record as import("./foundation.js").Instrument
               ).maintenance?.at(-1)?.id ?? "",
+          });
+        const serviceUsage = await tx.findServiceUsage(i.record.id);
+        if (serviceDue(serviceUsage))
+          alerts.push({
+            kind: "service_due",
+            entityKind: "instrument",
+            entityId: i.record.id,
+            code: traceCode(i.record),
+            reference: serviceUsage!.reference,
           });
         const instrumentRecall = await tx.findInstrumentRecallBlock(
           i.record.id,

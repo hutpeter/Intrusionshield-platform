@@ -1,3 +1,4 @@
+import { serviceLabels } from "./service-text";
 import { useState, useEffect, useRef } from "react";
 import type { Instrument } from "@intrusionshield/sterile-processing";
 import { api, ApiError, type Session } from "./api";
@@ -23,8 +24,12 @@ export function MaintenancePanel({
   onExpired: () => void;
 }) {
   const t = maintenanceLabels(language),
+    u = serviceLabels(language),
+    usage = i.serviceUsage,
+    since = usage ? usage.totalRecorded - usage.serviceBaseline : 0,
+    due = usage?.interval != null && since >= usage.interval,
     [form, setForm] = useState<{
-      step: "report" | "assess" | "repair" | "authorize";
+      step: "report" | "assess" | "repair" | "authorize" | "policy";
       requestId: string;
     } | null>(null),
     [values, setValues] = useState<Record<string, string>>({}),
@@ -58,21 +63,23 @@ export function MaintenancePanel({
     !held &&
     (step === "authorize" ? session.canReview : session.canWrite);
   const keys =
-    form?.step === "report"
-      ? ["defect", "location"]
-      : form?.step === "authorize"
-        ? [
-            "reason",
-            "evidence",
-            "procedure",
-            "procedureVersion",
-            "code",
-            "custodian",
-            "location",
-          ]
-        : form?.step === "repair"
-          ? ["note", "evidence", "provider"]
-          : ["note", "evidence"];
+    form?.step === "policy"
+      ? ["interval", "warningBefore", "reference"]
+      : form?.step === "report"
+        ? ["defect", "location"]
+        : form?.step === "authorize"
+          ? [
+              "reason",
+              "evidence",
+              "procedure",
+              "procedureVersion",
+              "code",
+              "custodian",
+              "location",
+            ]
+          : form?.step === "repair"
+            ? ["note", "evidence", "provider"]
+            : ["note", "evidence"];
   const date = (v: string) =>
     new Intl.DateTimeFormat(language, {
       dateStyle: "medium",
@@ -110,21 +117,36 @@ export function MaintenancePanel({
     setSaving(true);
     setError(false);
     try {
-      await api.maintenance(
-        session,
-        i.id,
-        form.step,
-        {
-          requestId: form.requestId,
-          version: i.version,
-          confirmed,
-          ...Object.fromEntries(keys.map((k) => [k, values[k] ?? ""])),
-          ...(form.step === "authorize"
-            ? { functionalChecked: functional }
-            : {}),
-        },
-        c.signal,
-      );
+      if (form.step === "policy")
+        await api.servicePolicy(
+          session,
+          i.id,
+          {
+            requestId: form.requestId,
+            version: usage?.version ?? 0,
+            interval: Number(values.interval),
+            warningBefore: Number(values.warningBefore),
+            reference: values.reference ?? "",
+            confirmed,
+          },
+          c.signal,
+        );
+      else
+        await api.maintenance(
+          session,
+          i.id,
+          form.step,
+          {
+            requestId: form.requestId,
+            version: i.version,
+            confirmed,
+            ...Object.fromEntries(keys.map((k) => [k, values[k] ?? ""])),
+            ...(form.step === "authorize"
+              ? { functionalChecked: functional }
+              : {}),
+          },
+          c.signal,
+        );
       if (!c.signal.aborted) {
         setForm(null);
         onSaved();
@@ -140,6 +162,71 @@ export function MaintenancePanel({
   }
   return (
     <section className="panel">
+      <h2>{u.title}</h2>
+      <p>{u.help}</p>
+      <dl className="details-grid">
+        <div>
+          <dt>{u.total}</dt>
+          <dd>{usage?.totalRecorded ?? 0}</dd>
+        </div>
+        <div>
+          <dt>{u.since}</dt>
+          <dd>{since}</dd>
+        </div>
+        <div>
+          <dt>{u.interval}</dt>
+          <dd>{usage?.interval ?? u.unset}</dd>
+        </div>
+        {usage?.interval != null && (
+          <div>
+            <dt>{u.remaining}</dt>
+            <dd>{Math.max(0, usage.interval - since)}</dd>
+          </div>
+        )}
+        {usage && (
+          <>
+            <div>
+              <dt>{u.version}</dt>
+              <dd>{usage.version}</dd>
+            </div>
+            <div>
+              <dt>{u.date}</dt>
+              <dd>{date(usage.createdAt)}</dd>
+            </div>
+            <div>
+              <dt>{u.reference}</dt>
+              <dd>{usage.reference || "—"}</dd>
+            </div>
+          </>
+        )}
+      </dl>
+      {due ? (
+        <p className="alert" role="status">
+          {u.due}
+        </p>
+      ) : (
+        usage?.interval != null &&
+        usage.interval - since <= usage.warningBefore && (
+          <p className="readonly-note">{u.near}</p>
+        )
+      )}
+      {session.canReview && i.state !== "retired" && !due && !form && (
+        <button
+          disabled={blocked || saving}
+          onClick={() => {
+            setValues({
+              interval: String(usage?.interval ?? ""),
+              warningBefore: String(usage?.warningBefore ?? 0),
+              reference: usage?.reference ?? "",
+            });
+            setConfirmed(false);
+            setError(false);
+            setForm({ step: "policy", requestId: crypto.randomUUID() });
+          }}
+        >
+          {u.policy}
+        </button>
+      )}
       <h2>{t.title}</h2>
       <p className="notice">{t.help}</p>
       {i.state === "maintenance" && <p className="alert">{t.hold}</p>}
@@ -157,12 +244,30 @@ export function MaintenancePanel({
       {form && (
         <form onSubmit={save}>
           <fieldset disabled={blocked || saving}>
-            <legend>{t[form.step]}</legend>
+            <legend>{form.step === "policy" ? u.policy : t[form.step]}</legend>
             {keys.map((k) => (
               <label key={k}>
-                {t[k as keyof typeof t]}
+                {form.step === "policy"
+                  ? u[k as keyof typeof u]
+                  : t[k as keyof typeof t]}
                 <input
                   required
+                  type={
+                    form.step === "policy" && k !== "reference"
+                      ? "number"
+                      : "text"
+                  }
+                  min={k === "interval" ? 1 : 0}
+                  max={
+                    form.step === "policy"
+                      ? k === "interval"
+                        ? 1000000
+                        : k === "warningBefore"
+                          ? Number(values.interval) - 1
+                          : undefined
+                      : undefined
+                  }
+                  step={1}
                   maxLength={
                     ["defect", "note", "reason"].includes(k)
                       ? 500
@@ -171,9 +276,10 @@ export function MaintenancePanel({
                         : 200
                   }
                   value={values[k] ?? ""}
-                  onChange={(e) =>
-                    setValues((v) => ({ ...v, [k]: e.target.value }))
-                  }
+                  onChange={(e) => {
+                    setValues((v) => ({ ...v, [k]: e.target.value }));
+                    setConfirmed(false);
+                  }}
                 />
               </label>
             ))}
@@ -193,7 +299,7 @@ export function MaintenancePanel({
                 checked={confirmed}
                 onChange={(e) => setConfirmed(e.target.checked)}
               />
-              {t.confirmed}
+              {form.step === "policy" ? u.confirm : t.confirmed}
             </label>
             <button
               className="primary"
@@ -201,7 +307,7 @@ export function MaintenancePanel({
                 !confirmed || (form.step === "authorize" && !functional)
               }
             >
-              {t.save}
+              {form.step === "policy" ? u.save : t.save}
             </button>
             <button type="button" onClick={() => setForm(null)}>
               {t.cancel}

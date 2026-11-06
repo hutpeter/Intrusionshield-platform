@@ -234,3 +234,17 @@ Owner screenshot November 6, 2026 confirms Return record saved, Return discrepan
 blocked, Received instruments: 0, Missing instruments: 1, saved discrepancy reason,
 original issued contents/identifier and no Record disposition action. U-PARTRETURN-01
 passed. Later receipt, disposition and broader M-PARTRETURN-01–02 remain deferred.
+
+## RSP-ISS-010 — Service counters and production maintenance policies
+
+Initial recorded-cycle service thresholds delivered November 6, 2026. Counts start with
+newly recorded finished loads; all outcomes count once. Separate versioned policies and
+service baselines preserve instrument identity/evidence. Due holds block new assembly/
+packaging; existing loads remain under normal review gates. Only reviewed repair return
+authorization resets the baseline while retaining the total and requiring fresh processing.
+
+Deferred: approved manufacturer/calendar/lifetime policies, historical imports/backfill,
+verified equipment counters, per-component service, predictive maintenance, active-custody
+repair (RSP-ISS-006), production identity/competency and operational acceptance. Developer
+310 tests/build/browser checks; owner U-SERVICE-01 pending, M-SERVICE-01–02 deferred.
+See [SERVICE-THRESHOLDS.md](SERVICE-THRESHOLDS.md). RSP-ISS-001 remains parked.

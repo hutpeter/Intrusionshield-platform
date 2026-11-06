@@ -143,3 +143,8 @@ The current sterile preview implementation has not yet been extracted into a sha
 service; that architectural extraction is future work, avoiding duplicate repair systems.
 Internal identification follows the same separation: the RSP-I format currently identifies
 sterile instruments only and must not silently become a manufacturer UDI or asset code.
+
+Recorded-cycle service tracking now separates immutable exposure facts, versioned policies
+and service baselines from instrument identity versions. This complements the shared repair
+foundation for future Asset Management; it is not predictive maintenance or lifetime usage.
+See [SERVICE-THRESHOLDS.md](SERVICE-THRESHOLDS.md).

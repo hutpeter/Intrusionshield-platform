@@ -152,3 +152,22 @@ test("queue pages partition tied timestamps with exact totals, scope and current
     (e) => e.code === "INVALID_REQUEST",
   );
 });
+
+test("maintenance queue includes due registered instruments but excludes retired service records", async () => {
+  const repo = new MemoryRepository(),
+    s = scope();
+  for (const state of ["registered", "retired"]) {
+    const i = row(s, state, state);
+    repo.state.instruments.push(i);
+    repo.state.serviceUsages.push({
+      ...s,
+      instrumentId: i.id,
+      interval: 1,
+      totalRecorded: 1,
+      serviceBaseline: 0,
+    });
+  }
+  const q = (await new DashboardRegistry(repo).queue(s, "maintenance")).queue;
+  assert.equal(q.total, 1);
+  assert.equal(q.items[0].code, "registered");
+});

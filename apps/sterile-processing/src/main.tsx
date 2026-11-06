@@ -1,3 +1,4 @@
+import { serviceLabels } from "./service-text";
 import { Dashboard } from "./Dashboard";
 import { dashboardLabels } from "./dashboard-text";
 import type { DashboardWorkspace } from "@intrusionshield/sterile-processing";
@@ -799,6 +800,38 @@ function Workspace({
                     {maintenanceLabels(language).prepare}
                   </button>
                 )}
+                {session.mode === "local-dummy-preview" &&
+                  session.canWrite &&
+                  tab === "instruments" &&
+                  !selected && (
+                    <button
+                      disabled={busy || loading || !!form}
+                      onClick={async () => {
+                        const c = new AbortController();
+                        pending.current = c;
+                        setBusy(true);
+                        setError(null);
+                        try {
+                          const i = await api.prepareServiceThreshold(
+                            session,
+                            crypto.randomUUID(),
+                            c.signal,
+                          );
+                          if (!c.signal.aborted) setSelected(i.id);
+                        } catch (e) {
+                          if (!c.signal.aborted) {
+                            if (e instanceof ApiError && e.status === 401)
+                              onExpired();
+                            else setError(e);
+                          }
+                        } finally {
+                          if (!c.signal.aborted) setBusy(false);
+                        }
+                      }}
+                    >
+                      {serviceLabels(language).prepare}
+                    </button>
+                  )}
                 {session.canWrite && !selected && (
                   <button
                     aria-label={tab === "types" ? t.newType : t.newInstrument}

@@ -1,6 +1,7 @@
 import express from "express";
 import {
   InstrumentRegistry,
+  ServiceUsageRegistry,
   DashboardRegistry,
   dashboardQueueIds,
   type DashboardQueueId,
@@ -167,7 +168,9 @@ export function createSterileApp(
       };
       const readOnly = req.method === "GET" || req.method === "HEAD";
       const permission =
-        req.path.endsWith("/maintenance/authorize") && !readOnly
+        (req.path.endsWith("/maintenance/authorize") ||
+          req.path.endsWith("/service-policy")) &&
+        !readOnly
           ? "maintenance:authorize"
           : req.path === "/dashboard" || req.path.startsWith("/dashboard/")
             ? "dashboard:read"
@@ -295,6 +298,54 @@ export function createSterileApp(
         res.locals.scope,
         id,
         n,
+      ),
+    );
+  });
+  app.get(prefix + "/instruments/:id/service-usage", async (req, res) => {
+    noQuery(req);
+    res.json(
+      await new ServiceUsageRegistry(dependencies.repository!).get(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+      ),
+    );
+  });
+  app.get(
+    prefix + "/instruments/:id/service-usage/history",
+    async (req, res) => {
+      res.json(
+        await new ServiceUsageRegistry(dependencies.repository!).history(
+          res.locals.scope,
+          sterileUuid(req.params.id),
+          page(req),
+        ),
+      );
+    },
+  );
+  app.get(prefix + "/instruments/:id/service-usage/audit", async (req, res) =>
+    res.json(
+      await new ServiceUsageRegistry(dependencies.repository!).audit(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        page(req),
+      ),
+    ),
+  );
+  app.post(prefix + "/instruments/:id/service-policy", async (req, res) => {
+    noQuery(req);
+    const v = body(req.body, [
+      "requestId",
+      "version",
+      "interval",
+      "warningBefore",
+      "reference",
+      "confirmed",
+    ]);
+    res.json(
+      await new ServiceUsageRegistry(dependencies.repository!).configure(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        v as unknown as Parameters<ServiceUsageRegistry["configure"]>[2],
       ),
     );
   });
@@ -1437,6 +1488,7 @@ export function createSterileApp(
           ? {
               SCAN_DUPLICATE: 409,
               SCAN_TYPE: 409,
+              SERVICE_DUE: 409,
               SCAN_INELIGIBLE: 409,
               INVALID_REQUEST: 400,
               NOT_FOUND: 404,

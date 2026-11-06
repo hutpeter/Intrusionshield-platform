@@ -1,3 +1,4 @@
+import { prepareServiceThresholdExample } from "./service-threshold-example.js";
 import { prepareDashboardPagingExample } from "./dashboard-paging-example.js";
 import { prepareReturnScanExample } from "./return-scan-example.js";
 import { prepareDistributionScanExample } from "./distribution-scan-example.js";
@@ -567,6 +568,34 @@ export function createSterilePreview({
         await prepareDashboardPagingExample(
           repository,
           { tenantId, facilityId, actorId: actors.operator },
+          sterileUuid(req.body.requestId),
+        ),
+      );
+  });
+  app.post("/preview/service-threshold-example", async (req, res) => {
+    const session = res.locals.session as Session;
+    if (session.role !== "operator") {
+      res
+        .status(session.role ? 403 : 401)
+        .json({ error: session.role ? "FORBIDDEN" : "UNAUTHENTICATED" });
+      return;
+    }
+    if (
+      Object.keys(req.query).length ||
+      !req.body ||
+      Array.isArray(req.body) ||
+      Object.keys(req.body).length !== 1
+    ) {
+      res.status(400).json({ error: "INVALID_REQUEST" });
+      return;
+    }
+    res
+      .status(201)
+      .json(
+        await prepareServiceThresholdExample(
+          repository,
+          { tenantId, facilityId, actorId: actors.operator },
+          { tenantId, facilityId, actorId: actors.reviewer },
           sterileUuid(req.body.requestId),
         ),
       );

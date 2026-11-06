@@ -465,3 +465,150 @@ test("voided packages cannot be loaded and only a draft cancellation releases it
     confirmed: true,
   });
 });
+test("recorded exposures count each finished load once across all outcomes without changing identity versions", async () => {
+  const { ServiceUsageRegistry } = await import("../dist/index.js");
+  for (const outcome of ["passed", "failed", "aborted"]) {
+    const f = await fixture(),
+      u = new ServiceUsageRegistry(f.repo),
+      load = await f.cy.create(f.s, loadBody(f.packageRecord));
+    await u.configure(f.s, f.i.id, {
+      requestId: randomUUID(),
+      version: 0,
+      interval: 2,
+      warningBefore: 1,
+      reference: "DEMO-PROCEDURE",
+      confirmed: true,
+    });
+    assert.equal((await u.get(f.s, f.i.id)).usage.totalRecorded, 0);
+    await f.cy.start(f.s, load.id, cycleStart(1));
+    assert.equal((await u.get(f.s, f.i.id)).usage.totalRecorded, 0);
+    const b = result(2, {
+      outcome,
+      note: outcome === "passed" ? "" : "Fictional outcome",
+    });
+    await f.cy.finish(f.s, load.id, b);
+    await f.cy.finish(f.s, load.id, b);
+    const r = (await u.get(f.s, f.i.id)).usage;
+    assert.equal(r.totalRecorded, 1);
+    assert.equal(r.serviceBaseline, 0);
+    assert.equal(r.interval - r.totalRecorded, 1);
+    assert.equal((await f.ir.get(f.s, f.i.id)).version, f.i.version);
+    const history = await u.history(f.s, f.i.id);
+    assert.equal(history.items.length, 1);
+    assert.equal(history.items[0].outcome, outcome);
+  }
+});
+test("service limit blocks new tray membership and cannot be raised to bypass due service; current review remains intact", async () => {
+  const { ServiceUsageRegistry, ReviewRegistry } =
+      await import("../dist/index.js"),
+    f = await fixture(),
+    u = new ServiceUsageRegistry(f.repo),
+    policy = {
+      requestId: randomUUID(),
+      version: 0,
+      interval: 1,
+      warningBefore: 0,
+      reference: "DEMO-1",
+      confirmed: true,
+    };
+  const configured = await u.configure(f.s, f.i.id, policy);
+  assert.deepEqual(await u.configure(f.s, f.i.id, policy), configured);
+  const load = await f.cy.create(f.s, loadBody(f.packageRecord));
+  await f.cy.start(f.s, load.id, cycleStart(1));
+  const done = await f.cy.finish(f.s, load.id, result(2));
+  const usage = (await u.get(f.s, f.i.id)).usage;
+  assert.equal(usage.totalRecorded, 1);
+  await fail(
+    u.configure(f.s, f.i.id, {
+      ...policy,
+      requestId: randomUUID(),
+      version: usage.version,
+      interval: 100,
+    }),
+    "SERVICE_DUE",
+  );
+  const a = await f.tr.createAssembly(f.s, {
+    requestId: randomUUID(),
+    code: "NEW-TRAY",
+    definitionId: f.d.id,
+    definitionVersion: 1,
+  });
+  await fail(
+    f.tr.updateContents(f.s, a.id, {
+      requestId: randomUUID(),
+      version: 1,
+      instrumentIds: [f.i.id],
+    }),
+    "SERVICE_DUE",
+  );
+  const review = await new ReviewRegistry(f.repo).decide(
+    { ...f.s, actorId: randomUUID() },
+    {
+      requestId: randomUUID(),
+      loadId: load.id,
+      loadVersion: done.version,
+      reviewVersion: 0,
+      decision: "release",
+      reason: "Fictional valid existing-load review",
+      reference: "DEMO",
+      cycleChecked: true,
+      indicatorsChecked: true,
+      packagesChecked: true,
+      profileChecked: true,
+      confirmed: true,
+    },
+  );
+  assert.equal(review.state, "released");
+  const { TraceabilityRegistry } = await import("../dist/index.js");
+  const report = await new TraceabilityRegistry(f.repo).report(
+    f.s,
+    "instrument",
+    f.i.id,
+  );
+  assert.ok(report.alerts.some((a) => a.kind === "service_due"));
+  assert.ok(JSON.stringify(report).includes("service_usage"));
+});
+test("service policy validation, scope, stale updates and audit failure retain counters and cycle state", async () => {
+  const { ServiceUsageRegistry } = await import("../dist/index.js"),
+    f = await fixture(),
+    u = new ServiceUsageRegistry(f.repo),
+    b = {
+      requestId: randomUUID(),
+      version: 0,
+      interval: 10,
+      warningBefore: 2,
+      reference: "PROCEDURE",
+      confirmed: true,
+    };
+  for (const patch of [
+    { interval: 0 },
+    { interval: 1.2 },
+    { warningBefore: 10 },
+    { warningBefore: -1 },
+    { confirmed: false },
+    { reference: "" },
+  ])
+    await fail(u.configure(f.s, f.i.id, { ...b, ...patch }), "INVALID_REQUEST");
+  await fail(
+    u.configure({ ...f.s, facilityId: randomUUID() }, f.i.id, b),
+    "NOT_FOUND",
+  );
+  await u.configure(f.s, f.i.id, b);
+  await fail(
+    u.configure(f.s, f.i.id, { ...b, requestId: randomUUID() }),
+    "CONFLICT",
+  );
+  const load = await f.cy.create(f.s, loadBody(f.packageRecord));
+  await f.cy.start(f.s, load.id, cycleStart(1));
+  const before = structuredClone(f.repo.state);
+  f.repo.failAudit = true;
+  await assert.rejects(f.cy.finish(f.s, load.id, result(2)));
+  assert.deepEqual(f.repo.state, before);
+  f.repo.failAudit = false;
+  const r = await Promise.allSettled([
+    f.cy.finish(f.s, load.id, result(2)),
+    f.cy.finish(f.s, load.id, result(2)),
+  ]);
+  assert.equal(r.filter((x) => x.status === "fulfilled").length, 1);
+  assert.equal((await u.get(f.s, f.i.id)).usage.totalRecorded, 1);
+});

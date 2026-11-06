@@ -51,6 +51,20 @@ A successful developer check never implies that the owner performed it.
 
 | 2b12333 | Issued-package lookup, manifest reconciliation and confirmed complete return with frozen identifier | 284 scoped tests, builds and targeted browser verification | U-RETSCAN-01 passed November 6, 2026 | Owner exceptions/disposition, hardware, persistent partial returns and operational acceptance deferred |
 
+## Current owner check — service threshold
+
+**U-SERVICE-01 pending:** Demo operator → Instruments → Prepare fictional service
+threshold example. Expect Recorded cycles and service, count 1, interval 1, remaining 0,
+and Service due — new assembly and packaging blocked. See
+[SERVICE-THRESHOLDS.md](SERVICE-THRESHOLDS.md). No repair or full cycle retest is requested.
+
+Developer November 6, 2026: 310 scoped tests (167 domain, 111 service, 32 web), builds
+and targeted browser service-count/hold/refresh/dashboard and reviewer policy/warning
+checks. Owner acceptance is not inferred. M-SERVICE-01 policy/membership/repair/reset/
+recall/concurrency/error/history and M-SERVICE-02 hardware/language/layout/scale/production
+acceptance remain deferred. U-PARTRETURN-01 remains passed; later recovery is developer-
+verified only. U-TRACE-01 remains pending. RSP-ISS-001 remains parked.
+
 ## Completed owner check — partial-return discrepancy
 
 **U-PARTRETURN-01 passed November 6, 2026:** follow [PARTIAL-RETURNS.md](PARTIAL-RETURNS.md): prepare a

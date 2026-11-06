@@ -46,7 +46,11 @@ export function readDashboardQueue(
       `(${state}='open' OR ${pending})`,
       "json_array_length(p.payload,'$.items')",
     ],
-    maintenance: ["sp_instruments", `${state}='maintenance'`, "1"],
+    maintenance: [
+      "sp_instruments",
+      `(${state}='maintenance' OR (${state}='registered' AND EXISTS(SELECT 1 FROM sp_service_usage u WHERE ${same("u")} AND u.instrument_id=p.id AND json_extract(u.payload,'$.interval') IS NOT NULL AND json_extract(u.payload,'$.totalRecorded')-json_extract(u.payload,'$.serviceBaseline')>=json_extract(u.payload,'$.interval'))))`,
+      "1",
+    ],
   };
   const [table, where, units] = configs[id],
     filter = `FROM ${table} p WHERE p.tenant_id=? AND p.facility_id=? AND (${where})`,

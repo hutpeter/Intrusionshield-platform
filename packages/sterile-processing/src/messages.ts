@@ -1,4 +1,6 @@
 const es = {
+  SERVICE_DUE:
+    "Instrumento con servicio vencido: no se permite un nuevo armado o empaque. Complete el mantenimiento autorizado.",
   RETURN_CONTENTS_MISMATCH:
     "El contenido declarado no coincide con la operación. Revise los recibidos y faltantes; use el registro de discrepancia para una devolución parcial.",
   SCAN_DUPLICATE: "Este instrumento ya está asignado a la bandeja.",
@@ -51,6 +53,8 @@ const es = {
 };
 type Messages = Record<keyof typeof es, string>;
 const en: Messages = {
+  SERVICE_DUE:
+    "Instrument service is due: new assembly or packaging is blocked. Complete authorized maintenance.",
   RETURN_CONTENTS_MISMATCH:
     "Declared contents do not match this operation. Review received and missing items; use discrepancy recording for a partial return.",
   SCAN_DUPLICATE: "This instrument is already assigned to the tray.",
@@ -103,6 +107,8 @@ const en: Messages = {
     "Service unavailable. The change has not been confirmed.",
 };
 const fr: Messages = {
+  SERVICE_DUE:
+    "Entretien requis : nouvel assemblage ou emballage bloqué. Effectuez la maintenance autorisée.",
   RETURN_CONTENTS_MISMATCH:
     "Le contenu déclaré ne correspond pas à cette opération. Vérifiez les reçus et manquants ; utilisez l’enregistrement d’écart pour un retour partiel.",
   SCAN_DUPLICATE: "Cet instrument est déjà affecté au plateau.",
