@@ -691,3 +691,29 @@ test("scanned receiving sends selected IDs and scan provenance with explicit rec
     "episode",
   );
 });
+test("load scan preserves version-bound package identifier and placement confirmation", async (t) => {
+  const input = {
+    requestId: "request",
+    version: 2,
+    identifier: "RSP-P-PACKAGE-V1",
+    confirmed: true,
+  };
+  fake(t, async (path, options) => {
+    assert.ok(path.endsWith("/loads/load/scan"));
+    assert.equal(options.headers["x-sterile-csrf"], session.csrf);
+    assert.deepEqual(JSON.parse(options.body), input);
+    return new Response(
+      JSON.stringify({
+        id: "load",
+        tenantId: session.tenantId,
+        facilityId: session.facilityId,
+        version: 3,
+      }),
+      { status: 200 },
+    );
+  });
+  assert.equal(
+    (await api.addLoadScan(session, "load", input, signal())).version,
+    3,
+  );
+});

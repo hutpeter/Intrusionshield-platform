@@ -5,6 +5,7 @@ import {
   SterileRegistryBase,
   SterileError,
   scopeOf,
+  packageFromScan,
   sterileUuid,
   field,
   codeOf,
@@ -219,6 +220,12 @@ export class PackagingRegistry extends SterileRegistryBase {
       reason,
     });
   }
+  async lookupScan(scope: SterileScope, value: unknown) {
+    const parsed = packageFromScan(value),
+      current = await this.get(scope, parsed.id);
+    if (current.version !== parsed.version) throw new SterileError("CONFLICT");
+    return current;
+  }
   async list(scope: SterileScope, page = 1) {
     const s = scopeOf(scope),
       p = pageOf(page);
@@ -232,6 +239,7 @@ export class PackagingRegistry extends SterileRegistryBase {
           const activeLoad = await tx.findPackageLoad(row.id);
           return {
             ...row,
+            scanIdentifier: `RSP-P-${row.id.toUpperCase()}-V${row.version}`,
             ...(returned ? { returned: returnStatus(returned) } : {}),
             ...(recall ? { recall } : {}),
             ...(distribution
@@ -264,6 +272,7 @@ export class PackagingRegistry extends SterileRegistryBase {
         version === undefined ? await tx.findReturnByPackage(key) : null;
       return {
         ...item,
+        scanIdentifier: `RSP-P-${item.id.toUpperCase()}-V${item.version}`,
         ...(returned ? { returned: returnStatus(returned) } : {}),
         ...(recall ? { recall } : {}),
         ...(distribution

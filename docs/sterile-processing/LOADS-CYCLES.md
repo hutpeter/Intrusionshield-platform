@@ -109,3 +109,8 @@ No SQL Server migration or real equipment/database connection is performed.
   at production scale, physical equipment/printer validation and end-to-end testing.
 
 These are tracked as pending/deferred, not passed, in the testing register.
+
+## Package Data Matrix and draft-load scanning
+
+See [PACKAGE-LOAD-SCANNING.md](PACKAGE-LOAD-SCANNING.md) for version-bound internal
+package labels, confirmed one-package draft additions and the one fictional owner check.

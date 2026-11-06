@@ -103,3 +103,8 @@ This increment partially advances the roadmap's assembly/packaging/label stage.
 The testing register tracks the manual void/repack and inspection-proof review,
 physical printer/scan validation, and connected cycle/release workflow separately.
 The label is deliberately a preparation record until those later stages exist.
+
+## Package Data Matrix and draft-load scanning
+
+See [PACKAGE-LOAD-SCANNING.md](PACKAGE-LOAD-SCANNING.md) for version-bound internal
+package labels, confirmed one-package draft additions and the one fictional owner check.

@@ -1,9 +1,12 @@
+import { LoadScan } from "./LoadScan";
+import { loadScanLabels } from "./load-scan-text";
 import { returnLabels } from "./return-text";
 import { recallLabels } from "./recall-text";
 import { reviewLabels } from "./review-text";
 import { useEffect, useRef, useState } from "react";
 import type {
   SterilizationLoad,
+  SterilePackage,
   LoadSummary,
   PackageSummary,
   SterileAuditEvent,
@@ -65,18 +68,27 @@ export function CycleWorkspace({
     [error, setError] = useState<unknown>(null),
     [notice, setNotice] = useState(false),
     [discard, setDiscard] = useState<(() => void) | null>(null);
+  const [scanDirty, setScanDirty] = useState(false),
+    [scanBusy, setScanBusy] = useState(false),
+    [scanReset, setScanReset] = useState(0),
+    [scanNotice, setScanNotice] = useState(false),
+    [scanExample, setScanExample] = useState<{
+      load: SterilizationLoad;
+      package: SterilePackage;
+    } | null>(null);
+  const scanExampleKey = useRef(crypto.randomUUID());
   const pending = useRef<AbortController | null>(null),
     inspection = useRef<AbortController | null>(null),
     exampleKey = useRef(crypto.randomUUID()),
-    busy = blocked || saving;
+    busy = blocked || saving || scanBusy;
   useEffect(() => {
-    onDirty(!!form);
+    onDirty(!!form || scanDirty);
     return () => onDirty(false);
-  }, [form, onDirty]);
+  }, [form, scanDirty, onDirty]);
   useEffect(() => {
-    onBusy(saving);
+    onBusy(saving || scanBusy);
     return () => onBusy(false);
-  }, [saving, onBusy]);
+  }, [saving, scanBusy, onBusy]);
   useEffect(
     () => () => {
       pending.current?.abort();
@@ -124,13 +136,16 @@ export function CycleWorkspace({
   const patch = (v: Partial<ReturnType<typeof empty>>) =>
     setFields((x) => ({ ...x, ...v }));
   function clear() {
+    setScanDirty(false);
+    setScanReset((n) => n + 1);
+    setScanNotice(false);
     setForm(null);
     setFields(empty());
     setDiscard(null);
   }
   function guard(action: () => void) {
     if (busy) return;
-    if (form)
+    if (form || scanDirty)
       setDiscard(() => () => {
         clear();
         action();
@@ -319,6 +334,7 @@ export function CycleWorkspace({
             : p.cancel;
   const events: Record<string, string> = {
     "load-created": p.created,
+    "load-package-added-by-scan": loadScanLabels(language).added,
     "load-contents-updated": p.changed,
     "cycle-started": p.started,
     "cycle-recorded": p.recorded,
@@ -462,6 +478,42 @@ export function CycleWorkspace({
           >
             {selected ? p.back : t.reload}
           </button>
+          {session.canWrite && !selected && !form && (
+            <button
+              disabled={busy || loading}
+              onClick={async () => {
+                if (pending.current) return;
+                const c = new AbortController();
+                pending.current = c;
+                setSaving(true);
+                setError(null);
+                try {
+                  const sample = await api.prepareLoadScan(
+                    session,
+                    scanExampleKey.current,
+                    c.signal,
+                  );
+                  if (!c.signal.aborted) {
+                    scanExampleKey.current = crypto.randomUUID();
+                    setScanExample(sample);
+                    setSelected(sample.load.id);
+                    setHistoryPage(1);
+                    setNonce((n) => n + 1);
+                  }
+                } catch (e) {
+                  if (!c.signal.aborted) {
+                    if (e instanceof ApiError && e.status === 401) onExpired();
+                    else setError(e);
+                  }
+                } finally {
+                  pending.current = null;
+                  if (!c.signal.aborted) setSaving(false);
+                }
+              }}
+            >
+              {loadScanLabels(language).prepare}
+            </button>
+          )}
           {session.canWrite && !selected && (
             <button
               className="primary"
@@ -511,6 +563,11 @@ export function CycleWorkspace({
             <small>{p.exampleHelp}</small>
           </section>
         )}
+      {scanNotice && (
+        <p className="success" role="status">
+          {loadScanLabels(language).added}
+        </p>
+      )}
       {notice && (
         <p role="status" className="success">
           {p.notice}
@@ -834,6 +891,33 @@ export function CycleWorkspace({
           </div>
         </section>
       )}
+      {!loading &&
+        detail &&
+        !past &&
+        !form &&
+        session.canWrite &&
+        detail.state === "draft" && (
+          <LoadScan
+            key={detail.id + ":" + detail.version + ":" + scanReset}
+            load={detail}
+            session={session}
+            language={language}
+            blocked={blocked || saving}
+            demoIdentifier={
+              scanExample?.load.id === detail.id
+                ? scanExample.package.scanIdentifier
+                : undefined
+            }
+            onDirty={setScanDirty}
+            onBusy={setScanBusy}
+            onExpired={onExpired}
+            onSaved={() => {
+              setScanNotice(true);
+              setHistoryPage(1);
+              setNonce((n) => n + 1);
+            }}
+          />
+        )}
       {!loading && detail && (
         <>
           {past ? (

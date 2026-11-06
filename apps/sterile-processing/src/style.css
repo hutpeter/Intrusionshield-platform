@@ -1141,3 +1141,19 @@ td {
     height: auto;
   }
 }
+.package-label .data-matrix img {
+  display: block;
+  max-width: 100%;
+  width: 208px;
+  height: auto;
+  margin: 12px 0;
+}
+.package-label .data-matrix img[hidden] {
+  display: none;
+}
+@media print {
+  .package-label .data-matrix img {
+    width: 32mm;
+    height: auto;
+  }
+}

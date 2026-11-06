@@ -167,3 +167,15 @@ tests, builds and targeted browser checks passed; owner U-RECSCAN-01 and physica
 full operational acceptance remain pending. Packaging, loading and distribution scan
 actions, DPM/UDI/GS1 and physical hardware validation remain future work. See
 [RECEIVING-SCANNING.md](RECEIVING-SCANNING.md).
+
+### RSP-ISS-007 update — package identity and draft-load scanning
+
+Preparation labels now contain a version-bound internal package Data Matrix generated
+locally using the shared encoder. Confirmed scan additions atomically reserve one eligible
+package in a current draft load, rechecking lifecycle, active package/load assignments,
+returns, recalls and version consistency. Separate cycle-start/release controls remain.
+Developer 269 scoped tests/builds and actual symbol decode/print/add/duplicate/Enter browser
+checks passed. Owner U-LOADSCAN-01 and physical/exception/full operational acceptance
+remain pending. Print media/DPM, manufacturer UDI/GS1/camera, release-label enhancements,
+distribution and return scanning remain future work. See
+[PACKAGE-LOAD-SCANNING.md](PACKAGE-LOAD-SCANNING.md).

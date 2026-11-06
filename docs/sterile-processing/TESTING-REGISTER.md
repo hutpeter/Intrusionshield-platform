@@ -43,7 +43,27 @@ A successful developer check never implies that the owner performed it.
 
 | de3a3a2 | Confirmed single-instrument scan into draft with type/quantity/hold gates and atomic reservation | 252 scoped tests, builds and developer browser count/duplicate/Enter/audit check | U-TRAYSCAN-01 passed November 6, 2026 | Physical scanners and owner exception/full workflow acceptance deferred |
 
-| Receiving scanning increment (this commit) | Stage scanned members then confirm receipt with current holds and frozen identifier provenance | 260 scoped tests, builds and developer browser staging/Enter/confirmation/hold/refresh check | U-RECSCAN-01 passed November 6, 2026 | Hardware, owner exception and complete operational acceptance deferred |
+| 9c1b16a | Stage scanned members then confirm receipt with current holds and frozen identifier provenance | 260 scoped tests, builds and developer browser staging/Enter/confirmation/hold/refresh check | U-RECSCAN-01 passed November 6, 2026 | Hardware, owner exception and complete operational acceptance deferred |
+
+| Package/load scanning increment (this commit) | Version-bound package Data Matrix and confirmed scan-to-draft load | 269 scoped tests, builds, independent symbol decode and developer label/print/add/duplicate/Enter check | U-LOADSCAN-01 pending | Physical scanner/printer and broader owner exception/operational acceptance deferred |
+
+## Current single owner check — package into load
+
+**U-LOADSCAN-01 pending:** [PACKAGE-LOAD-SCANNING.md](PACKAGE-LOAD-SCANNING.md): Demo
+operator → Loads and cycles → Prepare fictional package load scan example → confirm
+placement → Simulate package scan. Expected candidate listed once, total packages 2,
+Package added by scan, and Draft retained. The seed package explains the starting count 1.
+Only this one new aspect is requested; no cycle-start or physical print check is required.
+
+**Developer passed November 6, 2026:** 269 scoped tests (142 domain, 100 service/SQLite/
+HTTP, 27 web API/export/symbol), scoped builds and targeted Chromium actual SVG decode,
+label-only PDF/preparation warning/print preflight, confirmation/add-once/duplicate/Enter
+check. Automated gates cover current label/load version, package lifecycle/custody,
+recalls/returns, existing member versions, scope/roles/CSRF, retries, competing connections,
+reopen and late audit rollback. Developer results do not establish owner acceptance.
+M-LOADSCAN-01 owner exception/history/manual edit/full cycle; M-LOADSCAN-02 physical
+hardware/Windows/ES/FR/mobile/label media/equipment; M-LOADSCAN-03 DPM/UDI/GS1/camera and
+remaining operational scan actions remain deferred. RSP-ISS-001 stays parked.
 
 ## Completed owner check — receiving scan
 

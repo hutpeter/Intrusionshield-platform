@@ -9,7 +9,7 @@ git pull --ff-only origin feature/sterile-processing-preview
 pnpm sterile:preview
 ```
 
-After **Ready**, refresh. **U-RECSCAN-01 pending:**
+After **Ready**, refresh. **U-RECSCAN-01 passed November 6, 2026** from owner saved-receipt screenshot. Original check:
 
 1. Enter as **Demo operator** → **Receiving and cleaning**.
 2. Click **Prepare fictional receiving scan example**. Receiving details are prefilled;
@@ -83,7 +83,7 @@ persistence. Domain checks carry the saved identifier through new cleaning/inspe
 service/SQLite checks cover roles, CSRF, strict input, scope, concurrent reservation,
 reopen persistence, idempotent retry and late audit rollback.
 
-U-RECSCAN-01 remains pending. Deferred M-RECSCAN-01: owner mixed lists/removal, post-scan
+U-RECSCAN-01 passed November 6, 2026. Deferred M-RECSCAN-01: owner mixed lists/removal, post-scan
 hold/conflict, cancellation and extended histories; M-RECSCAN-02: physical scanner/focus,
 Windows, ES/FR/mobile, batches/limits and label/printer acceptance; M-RECSCAN-03: full
 receiving-to-cleaning/inspection-to-release operational acceptance and production identity.

@@ -77,6 +77,7 @@ export interface SterileAuditEvent {
   actorId: string;
   at: string;
   action:
+    | "load-package-added-by-scan"
     | "tray-instrument-added-by-scan"
     | "maintenance-reported"
     | "maintenance-assessed"
@@ -338,6 +339,18 @@ export function instrumentIdFromScan(value: unknown): string {
   if (!/^RSP-I-[a-f0-9-]{36}$/i.test(token))
     throw new SterileError("INVALID_REQUEST");
   return sterileUuid(token.slice(6));
+}
+export function packageFromScan(value: unknown): {
+  id: string;
+  version: number;
+} {
+  if (typeof value !== "string" || value.length > 128)
+    throw new SterileError("INVALID_REQUEST");
+  const match = /^RSP-P-([a-f0-9-]{36})-V([1-9][0-9]{0,8})$/i.exec(
+    value.trim(),
+  );
+  if (!match) throw new SterileError("INVALID_REQUEST");
+  return { id: sterileUuid(match[1]), version: Number(match[2]) };
 }
 export function scopeOf(value: SterileScope): SterileScope {
   return {

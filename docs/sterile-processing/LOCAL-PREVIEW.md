@@ -259,3 +259,8 @@ setup and the one confirmed scan-add check. No scanner hardware is needed.
 
 See [RECEIVING-SCANNING.md](RECEIVING-SCANNING.md): stage a fictional scanned instrument,
 then explicitly confirm and save its receiving episode. No scanner hardware is required.
+
+## Package Data Matrix and draft-load scanning
+
+See [PACKAGE-LOAD-SCANNING.md](PACKAGE-LOAD-SCANNING.md) for version-bound internal
+package labels, confirmed one-package draft additions and the one fictional owner check.

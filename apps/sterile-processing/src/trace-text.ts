@@ -611,6 +611,11 @@ export const traceWord = (language: Language, key: string) =>
   key;
 
 const actions: Record<string, [string, string, string]> = {
+  "load-package-added-by-scan": [
+    "Package added by scan",
+    "Paquete añadido por escaneo",
+    "Emballage ajouté par lecture",
+  ],
   "tray-instrument-added-by-scan": [
     "Instrument added by scan",
     "Instrumento añadido por escaneo",

@@ -1,3 +1,5 @@
+import { DataMatrix } from "./DataMatrix";
+import { loadScanLabels } from "./load-scan-text";
 import { returnLabels } from "./return-text";
 import { recallLabels } from "./recall-text";
 import { distributionLabels } from "./distribution-text";
@@ -40,6 +42,7 @@ export function PackagingWorkspace({
   onDirty: (v: boolean) => void;
   onBusy: (v: boolean) => void;
 }) {
+  const [symbolReady, setSymbolReady] = useState(false);
   const t = labels(language),
     p = packagingLabels(language),
     [selected, setSelected] = useState<string | null>(null),
@@ -281,6 +284,7 @@ export function PackagingWorkspace({
       detail.state !== "packaged" ||
       busy ||
       !label ||
+      !symbolReady ||
       detail.activeLoad?.review?.state === "released"
     )
       return;
@@ -751,7 +755,10 @@ export function PackagingWorkspace({
                   !detail.recall &&
                   !detail.returned &&
                   detail.activeLoad?.review?.state !== "released" && (
-                    <button disabled={busy} onClick={() => void print()}>
+                    <button
+                      disabled={busy || !symbolReady}
+                      onClick={() => void print()}
+                    >
                       {p.print}
                     </button>
                   )}
@@ -781,8 +788,15 @@ export function PackagingWorkspace({
                 <p>
                   {p.packedBy}: {actor(detail.packedBy)}
                 </p>
-                <p>
-                  {p.identifier}: RSP-PACK-1:{detail.id}
+                <DataMatrix
+                  identifier={detail.scanIdentifier}
+                  alt={loadScanLabels(language).dataMatrix}
+                  onReady={setSymbolReady}
+                  loading={loadScanLabels(language).generating}
+                  error={loadScanLabels(language).renderError}
+                />
+                <p className="scan-token">
+                  {p.identifier}: {detail.scanIdentifier}
                 </p>
                 <p>
                   {p.version}: {detail.version}

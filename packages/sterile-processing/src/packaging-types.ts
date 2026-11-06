@@ -19,6 +19,7 @@ export interface InspectionProof {
   checks: InspectionItem;
 }
 export interface SterilePackage {
+  scanIdentifier?: string;
   recall?: RecallBlock;
   returned?: ReturnStatus;
   distribution?: DistributionStatus;
@@ -56,6 +57,7 @@ export type PackageSummary = Pick<
   | "version"
   | "createdAt"
 > & {
+  scanIdentifier?: string;
   trayName: string;
   instrumentCount: number;
   activeLoad?: PackageLoad;

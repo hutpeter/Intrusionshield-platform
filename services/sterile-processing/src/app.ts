@@ -183,7 +183,8 @@ export function createSterileApp(
                       ? readOnly
                         ? "cycles:read"
                         : "cycles:write"
-                      : req.path.startsWith("/packages")
+                      : req.path.startsWith("/packages") ||
+                          req.path === "/package-scan"
                         ? readOnly
                           ? "packaging:read"
                           : "packaging:write"
@@ -630,6 +631,19 @@ export function createSterileApp(
   app.get(prefix + "/packages", async (req, res) =>
     res.json(await packaging().list(res.locals.scope, page(req))),
   );
+  app.get(prefix + "/package-scan", async (req, res) => {
+    if (
+      Object.keys(req.query).length !== 1 ||
+      typeof req.query.identifier !== "string"
+    )
+      throw new SterileError("INVALID_REQUEST");
+    res.json(
+      await new PackagingRegistry(dependencies.repository!).lookupScan(
+        res.locals.scope,
+        req.query.identifier,
+      ),
+    );
+  });
   app.get(prefix + "/packages/:id", async (req, res) => {
     noQuery(req);
     res.json(
@@ -737,6 +751,22 @@ export function createSterileApp(
           v as unknown as Parameters<CycleRegistry["create"]>[1],
         ),
       );
+  });
+  app.post(prefix + "/loads/:id/scan", async (req, res) => {
+    noQuery(req);
+    const v = body(req.body, [
+      "requestId",
+      "version",
+      "identifier",
+      "confirmed",
+    ]);
+    res.json(
+      await new CycleRegistry(dependencies.repository!).addByScan(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        v as unknown as Parameters<CycleRegistry["addByScan"]>[2],
+      ),
+    );
   });
   app.post(prefix + "/loads/:id/contents", async (req, res) => {
     noQuery(req);

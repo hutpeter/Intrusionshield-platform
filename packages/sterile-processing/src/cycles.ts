@@ -4,6 +4,7 @@ import {
   SterileRegistryBase,
   SterileError,
   scopeOf,
+  packageFromScan,
   sterileUuid,
   field,
   codeOf,
@@ -109,6 +110,64 @@ export class CycleRegistry extends SterileRegistryBase {
         await tx.insertLoad(item);
         await tx.replaceLoadAssignments(item);
         await this.record(tx, s, item, input.requestId, at, "load-created", "");
+        return item;
+      },
+    );
+  }
+  async addByScan(
+    scope: SterileScope,
+    id: string,
+    input: {
+      requestId: string;
+      version: number;
+      identifier: string;
+      confirmed: boolean;
+    },
+  ) {
+    const s = scopeOf(scope),
+      key = sterileUuid(id),
+      version = versionOf(input.version),
+      target = packageFromScan(input.identifier);
+    if (input.confirmed !== true) invalid();
+    return this.command(
+      s,
+      input.requestId,
+      "load-scan-add",
+      { id: key, version, target },
+      async (tx, at) => {
+        const old = await tx.findLoad(key);
+        if (!old) throw new SterileError("NOT_FOUND");
+        if (old.version !== version || old.state !== "draft")
+          throw new SterileError("CONFLICT");
+        if (old.packages.some((p) => p.id === target.id))
+          throw new SterileError("SCAN_DUPLICATE");
+        const p = await tx.findPackage(target.id);
+        if (!p) throw new SterileError("NOT_FOUND");
+        if (p.version !== target.version) throw new SterileError("CONFLICT");
+        const packages = await members(
+          tx,
+          [...old.packages.map((p) => p.id), p.id],
+          key,
+        );
+        if (old.packages.some((p, n) => p.version !== packages[n].version))
+          throw new SterileError("CONFLICT");
+        const item: SterilizationLoad = {
+          ...old,
+          packages,
+          version: version + 1,
+          updatedAt: at,
+        };
+        await tx.updateLoad(item, version);
+        await tx.replaceLoadAssignments(item);
+        await this.record(
+          tx,
+          s,
+          item,
+          input.requestId,
+          at,
+          "load-package-added-by-scan",
+          `${p.code} · RSP-P-${p.id.toUpperCase()}-V${p.version}`,
+        );
         return item;
       },
     );

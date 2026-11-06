@@ -245,7 +245,10 @@ test("SQLite packaging evidence, summary and immutable versions survive reopenin
   const r = new PreviewSqliteRepository(f.file);
   try {
     const registry = new PackagingRegistry(r);
-    assert.deepEqual(await registry.get(f.s, p.id), p);
+    assert.deepEqual(await registry.get(f.s, p.id), {
+      ...p,
+      scanIdentifier: `RSP-P-${p.id.toUpperCase()}-V${p.version}`,
+    });
     assert.equal((await registry.list(f.s)).items[0].instrumentCount, 1);
     assert.equal(
       "assemblySnapshot" in (await registry.list(f.s)).items[0],

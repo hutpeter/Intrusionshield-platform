@@ -1,3 +1,4 @@
+import { useDataMatrix } from "./DataMatrix";
 import { useState, useEffect, useRef } from "react";
 import type { Instrument } from "@intrusionshield/sterile-processing";
 import { api, ApiError, type Session } from "./api";
@@ -13,36 +14,7 @@ export function InstrumentLabel({
   disabled?: boolean;
 }) {
   const t = scanLabels(language),
-    [image, setImage] = useState<string | null>(null),
-    [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
-  useEffect(() => {
-    let active = true;
-    setStatus("loading");
-    setImage(null);
-    if (!i.scanIdentifier) {
-      setStatus("error");
-      return;
-    }
-    void import("bwip-js/browser")
-      .then((b) => {
-        if (!active) return;
-        const svg = b.toSVG({
-          bcid: "datamatrix",
-          text: i.scanIdentifier!,
-          scale: 4,
-          paddingwidth: 4,
-          paddingheight: 4,
-          backgroundcolor: "FFFFFF",
-        });
-        setImage("data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg));
-      })
-      .catch(() => {
-        if (active) setStatus("error");
-      });
-    return () => {
-      active = false;
-    };
-  }, [i.scanIdentifier]);
+    { image, status, setStatus } = useDataMatrix(i.scanIdentifier);
   return (
     <>
       <p className="muted">{t.printing}</p>

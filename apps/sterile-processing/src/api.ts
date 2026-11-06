@@ -222,6 +222,51 @@ async function checkedMovement(
   return r;
 }
 export const api = {
+  prepareLoadScan: async (
+    s: Session,
+    requestId: string,
+    signal: AbortSignal,
+  ) => {
+    const r = await call<{ load: SterilizationLoad; package: SterilePackage }>(
+      "/preview/load-scan-example",
+      signal,
+      { requestId },
+      s.csrf,
+    );
+    await scoped(s, Promise.resolve(r.load));
+    await scoped(s, Promise.resolve(r.package));
+    return r;
+  },
+
+  scanPackage: (s: Session, identifier: string, signal: AbortSignal) =>
+    scoped(
+      s,
+      call<SterilePackage>(
+        base(s) + "/package-scan?identifier=" + encodeURIComponent(identifier),
+        signal,
+      ),
+    ),
+  addLoadScan: (
+    s: Session,
+    id: string,
+    body: {
+      requestId: string;
+      version: number;
+      identifier: string;
+      confirmed: boolean;
+    },
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<SterilizationLoad>(
+        base(s) + "/loads/" + encodeURIComponent(id) + "/scan",
+        signal,
+        body,
+        s.csrf,
+      ),
+    ),
+
   prepareReceivingScan: (s: Session, requestId: string, signal: AbortSignal) =>
     scoped(
       s,
