@@ -49,11 +49,11 @@ A successful developer check never implies that the owner performed it.
 
 | af27e1e | Release-validated package lookup into existing storage/transfer/issue controls | 275 scoped tests, builds and developer confirmation/location/existing-record-rescan check | U-STORESCAN-01 passed November 6, 2026 | Owner transfer/issue/exception, physical hardware/handover and operational acceptance deferred |
 
-| Return scanning increment (this commit) | Issued-package lookup, manifest reconciliation and confirmed complete return with frozen identifier | 284 scoped tests, builds and targeted browser verification | U-RETSCAN-01 pending | Owner exceptions/disposition, hardware, persistent partial returns and operational acceptance deferred |
+| Return scanning increment (this commit) | Issued-package lookup, manifest reconciliation and confirmed complete return with frozen identifier | 284 scoped tests, builds and targeted browser verification | U-RETSCAN-01 passed November 6, 2026 | Owner exceptions/disposition, hardware, persistent partial returns and operational acceptance deferred |
 
-## Current single owner check — scan to return
+## Completed owner check — scan to return
 
-**U-RETSCAN-01 pending:** [RETURN-SCANNING.md](RETURN-SCANNING.md): Demo operator →
+**U-RETSCAN-01 passed November 6, 2026:** [RETURN-SCANNING.md](RETURN-SCANNING.md): Demo operator →
 Returns and reprocessing → Scan issued package for return → Prepare fictional return scan
 example → Simulate return scan → review contents and tick both confirmations → Save
 return. Expected Returned — awaiting disposition, preserved original issue and Internal
@@ -722,3 +722,13 @@ and one stored movement attributed to Demo operator with reference
 `DEMO-CYCLE-PACK-C3FB56D1-86AC-456B-8AF9-00F2E86736EF`. Transfer/issue, exceptions,
 physical scanner/printer/handover and full operational acceptance are not inferred;
 M-STORESCAN-01–03 remain deferred.
+
+## Owner scanned return result — November 6, 2026
+
+U-RETSCAN-01 passed: owner screenshot confirms **Return record saved**, **Returned —
+awaiting disposition**, version 1, condition Used, **DEMO-RETURN-SCAN-QUARANTINE**,
+reference **SIMULATED-RETURN-SCAN**, receiving actor Demo operator, and the recorded
+internal identifier plus returned instrument. Return:
+`RETSCAN-3632B789-CCD9-4569-ABFA-136CBF3CA2A9`. The historical original-issue section
+is present below. Discrepancy, disposition/reprocessing, physical scanner and complete
+operational acceptance are not inferred; M-RETSCAN-01–03 remain deferred.
