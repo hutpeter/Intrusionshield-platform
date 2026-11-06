@@ -31,7 +31,7 @@ versions, custody and holds remain enforced by the destination workflow.
 
 ## Current owner check — queue paging
 
-**U-DASHPAGE-01 pending:** as Demo operator, click **Prepare fictional queue paging
+**U-DASHPAGE-01 Next passed November 6, 2026; owner Previous check unconfirmed:** as Demo operator, click **Prepare fictional queue paging
 example** once on Operational dashboard. This explicitly creates 13 new fictional
 receiving episodes with processing holds; existing records stay intact. In **Cleaning
 awaiting work**, click **Next** and confirm **Page 2** shows different receipt codes.
@@ -69,3 +69,7 @@ Developer browser verification November 6: all eight cards rendered; links from 
 populated queues (cleaning, inspection, assembly, release, returns, recall, maintenance)
 opened matching current record headings. Refresh passed with no browser errors. Loading
 was empty in this fixture; its SQL classification is covered by automated checks.
+
+Owner evidence November 6, 2026: “it shows different codes” confirms Next/page-two
+record changes. Previous remains developer-verified only and is deferred with
+M-DASHPAGE-01; no owner pass is inferred for that control or broader testing.

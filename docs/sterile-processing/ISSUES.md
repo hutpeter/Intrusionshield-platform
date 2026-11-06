@@ -218,8 +218,12 @@ U-RETSCAN-01 passed November 6, 2026; broader manual/physical acceptance remains
 ## RSP-ISS-009 — Production dashboard scale and operational acceptance
 
 Delivered November 6: scoped 12-row Previous/Next paging, per-card snapshot times and
-explicit fictional owner-check setup. U-DASHPAGE-01 pending; automated and browser checks
+explicit fictional owner-check setup. U-DASHPAGE-01 Next passed November 6, 2026; owner Previous check unconfirmed; automated and browser checks
 passed. Deferred: representative facility query/index performance, cross-page snapshot consistency,
 real-time refresh requirements, priority/SLA definitions and production role/workspace
 acceptance. Current queues are manually refreshed read-only snapshots; they do not
 replace live workflow gates. U-DASH-01 passed November 6, 2026; M-DASH-01 tracks deferred broader checks.
+
+Owner evidence November 6, 2026: “it shows different codes” confirms Next/page-two
+record changes. Previous remains developer-verified only and is deferred with
+M-DASHPAGE-01; no owner pass is inferred for that control or broader testing.

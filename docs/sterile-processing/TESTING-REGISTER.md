@@ -53,7 +53,7 @@ A successful developer check never implies that the owner performed it.
 
 ## Current owner check — dashboard queue paging
 
-**U-DASHPAGE-01 pending:** Dashboard → Prepare fictional queue paging example once →
+**U-DASHPAGE-01 Next passed November 6, 2026; owner Previous check unconfirmed:** Dashboard → Prepare fictional queue paging example once →
 Cleaning awaiting work → Next. Confirm Page 2 has different codes; Previous returns
 Page 1. Only this new aspect is requested. See [DASHBOARD.md](DASHBOARD.md).
 
@@ -771,4 +771,8 @@ Owner confirmed **pass** November 6, 2026. Dashboard return navigation opened
 disposition**. This confirms U-DASH-01 only; M-DASH-01 remains deferred and
 U-TRACE-01 remains pending. RSP-ISS-001 stays parked.
 
-Queue paging increment: U-DASHPAGE-01 pending; developer evidence recorded above.
+Queue paging increment: U-DASHPAGE-01 Next passed November 6, 2026; owner Previous check unconfirmed; developer evidence recorded above.
+
+Owner evidence November 6, 2026: “it shows different codes” confirms Next/page-two
+record changes. Previous remains developer-verified only and is deferred with
+M-DASHPAGE-01; no owner pass is inferred for that control or broader testing.
