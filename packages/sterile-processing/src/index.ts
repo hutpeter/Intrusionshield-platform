@@ -264,3 +264,5 @@ export * from "./trace-types.js";
 export * from "./traceability.js";
 
 export * from "./maintenance.js";
+
+export * from "./dashboard.js";

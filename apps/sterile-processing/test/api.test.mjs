@@ -774,3 +774,51 @@ test("scanned return carries original issue version, exact received IDs and conf
     "return",
   );
 });
+test("dashboard rejects a mismatched workspace or hidden queue count instead of routing it", async (t) => {
+  const ids = [
+      "cleaning",
+      "inspection",
+      "assembly",
+      "loading",
+      "release",
+      "returns",
+      "recall",
+      "maintenance",
+    ],
+    workspaces = [
+      "processing",
+      "processing",
+      "trays",
+      "packaging",
+      "reviews",
+      "returns",
+      "recalls",
+      "instruments",
+    ];
+  const queues = ids.map((id, n) => ({
+    id,
+    workspace: workspaces[n],
+    access: "restricted",
+    total: null,
+    items: [],
+  }));
+  queues[5] = { ...queues[5], total: 42 };
+  fake(
+    t,
+    async () =>
+      new Response(
+        JSON.stringify({
+          tenantId: session.tenantId,
+          facilityId: session.facilityId,
+          generatedAt: new Date().toISOString(),
+          limit: 12,
+          queues,
+        }),
+        { status: 200 },
+      ),
+  );
+  await assert.rejects(
+    api.dashboard(session, signal()),
+    (e) => e instanceof ApiError && e.code === "SERVICE_UNAVAILABLE",
+  );
+});

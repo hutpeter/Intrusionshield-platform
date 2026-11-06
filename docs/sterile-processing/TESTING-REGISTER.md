@@ -49,7 +49,19 @@ A successful developer check never implies that the owner performed it.
 
 | af27e1e | Release-validated package lookup into existing storage/transfer/issue controls | 275 scoped tests, builds and developer confirmation/location/existing-record-rescan check | U-STORESCAN-01 passed November 6, 2026 | Owner transfer/issue/exception, physical hardware/handover and operational acceptance deferred |
 
-| Return scanning increment (this commit) | Issued-package lookup, manifest reconciliation and confirmed complete return with frozen identifier | 284 scoped tests, builds and targeted browser verification | U-RETSCAN-01 passed November 6, 2026 | Owner exceptions/disposition, hardware, persistent partial returns and operational acceptance deferred |
+| 2b12333 | Issued-package lookup, manifest reconciliation and confirmed complete return with frozen identifier | 284 scoped tests, builds and targeted browser verification | U-RETSCAN-01 passed November 6, 2026 | Owner exceptions/disposition, hardware, persistent partial returns and operational acceptance deferred |
+
+## Current owner check — operational dashboard
+
+**U-DASH-01 pending:** Dashboard → Returns awaiting disposition → Open record.
+Confirm the displayed return code matches and the current state is Returned — awaiting
+disposition. See [DASHBOARD.md](DASHBOARD.md). No full cycle retest is requested.
+
+Developer November 6, 2026: 292 scoped tests (156 domain, 106 service, 30 web) and
+builds passed. Coverage includes exact totals beyond the 12-row preview, scope isolation,
+restricted queues not queried, pending-state classification and read-only behavior.
+M-DASH-01 broader owner queue/role/error/refresh/language/layout and production performance
+checks remain deferred. U-TRACE-01 remains pending; RSP-ISS-001 remains parked.
 
 ## Completed owner check — scan to return
 
@@ -732,3 +744,10 @@ internal identifier plus returned instrument. Return:
 `RETSCAN-3632B789-CCD9-4569-ABFA-136CBF3CA2A9`. The historical original-issue section
 is present below. Discrepancy, disposition/reprocessing, physical scanner and complete
 operational acceptance are not inferred; M-RETSCAN-01–03 remain deferred.
+
+Dashboard increment: developer checks recorded above; owner U-DASH-01 pending.
+
+Developer browser verification November 6: all eight cards rendered; links from the seven
+populated queues (cleaning, inspection, assembly, release, returns, recall, maintenance)
+opened matching current record headings. Refresh passed with no browser errors. Loading
+was empty in this fixture; its SQL classification is covered by automated checks.

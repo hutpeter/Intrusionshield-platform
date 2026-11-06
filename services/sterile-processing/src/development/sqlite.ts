@@ -1,3 +1,4 @@
+import { readDashboardQueue } from "./dashboard.js";
 import { DatabaseSync } from "node:sqlite";
 import {
   mkdirSync,
@@ -174,6 +175,7 @@ CREATE INDEX IF NOT EXISTS sp_assignment_assembly ON sp_assignments(tenant_id,fa
         return rows.map((row) => JSON.parse(row.payload) as V);
       };
       const tx: SterileTransaction = {
+        dashboardQueue: async (id) => readDashboardQueue(this.db, args, id),
         searchTraceCode: async (code) => {
           const pairs = [
             ["instrument", "sp_instruments"],

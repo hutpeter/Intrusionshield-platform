@@ -198,7 +198,7 @@ original issued source and original contents. Confirmed complete scanned returns
 identifier/manifest and preserve issue history; duplicate returns and mismatched contents
 are refused. Recalled packages can return without lifting recall or reprocessing gates.
 Developer scoped tests/builds cover lookup/receipt/gates and atomic persistence. Owner
-U-RETSCAN-01 and broader manual/physical acceptance remain pending. See
+U-RETSCAN-01 passed November 6, 2026; broader manual/physical acceptance remains pending. See
 [RETURN-SCANNING.md](RETURN-SCANNING.md).
 
 ## RSP-ISS-008 — Persistent partial and mismatched return reconciliation
@@ -214,3 +214,10 @@ U-RETSCAN-01 and broader manual/physical acceptance remain pending. See
   immutable and no unavailable member may silently return to stock.
 - **Testing:** Broader owner and physical discrepancy acceptance remains deferred under
   M-RETSCAN-01–03. Independent cleaner/inspector separation stays under RSP-ISS-001.
+
+## RSP-ISS-009 — Production dashboard scale and operational acceptance
+
+Deferred: representative facility query/index performance, paging beyond the oldest 12,
+real-time refresh requirements, priority/SLA definitions and production role/workspace
+acceptance. Current queues are manually refreshed read-only snapshots; they do not
+replace live workflow gates. U-DASH-01 remains pending; M-DASH-01 tracks broader checks.

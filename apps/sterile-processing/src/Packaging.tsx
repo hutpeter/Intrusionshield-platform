@@ -34,6 +34,7 @@ export function PackagingWorkspace({
   onExpired,
   onDirty,
   onBusy,
+  initialRecordId,
 }: {
   session: Session;
   language: Language;
@@ -41,11 +42,12 @@ export function PackagingWorkspace({
   onExpired: () => void;
   onDirty: (v: boolean) => void;
   onBusy: (v: boolean) => void;
+  initialRecordId?: string;
 }) {
   const [symbolReady, setSymbolReady] = useState(false);
   const t = labels(language),
     p = packagingLabels(language),
-    [selected, setSelected] = useState<string | null>(null),
+    [selected, setSelected] = useState<string | null>(initialRecordId ?? null),
     [rows, setRows] = useState<Page<PackageSummary> | null>(null),
     [detail, setDetail] = useState<SterilePackage | null>(null),
     [past, setPast] = useState<SterilePackage | null>(null),

@@ -50,6 +50,7 @@ export function ProcessingWorkspace({
   onExpired,
   onDirty,
   onBusy,
+  initialRecordId,
 }: {
   session: Session;
   language: Language;
@@ -57,10 +58,13 @@ export function ProcessingWorkspace({
   onExpired: () => void;
   onDirty: (v: boolean) => void;
   onBusy: (v: boolean) => void;
+  initialRecordId?: string;
 }) {
   const t = labels(language),
     p = processingLabels(language);
-  const [selected, setSelected] = useState<string | null>(null),
+  const [selected, setSelected] = useState<string | null>(
+      initialRecordId ?? null,
+    ),
     [page, setPage] = useState(1),
     [historyPage, setHistoryPage] = useState(1),
     [nonce, setNonce] = useState(0),

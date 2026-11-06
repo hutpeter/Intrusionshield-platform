@@ -9,7 +9,7 @@ git pull --ff-only origin feature/sterile-processing-preview
 pnpm sterile:preview
 ```
 
-After **Ready**, refresh. **U-RETSCAN-01 pending:**
+After **Ready**, refresh. **U-RETSCAN-01 passed November 6, 2026 (owner screenshot); original check:**
 
 1. Enter as **Demo operator** → **Returns and reprocessing**.
 2. In **Scan issued package for return**, click **Prepare fictional return scan example**.
@@ -93,7 +93,7 @@ recall-preserving return, reprocessing block, role/CSRF/strict inputs, retries, 
 returns, persistence and late audit rollback. Browser verification passed: discrepancy stop, both confirmations, saved pending
 disposition, frozen source/manifest, duplicate gate, package hold and refresh persistence.
 
-U-RETSCAN-01 remains pending. Deferred M-RETSCAN-01: owner discrepancy/exception/history/
+U-RETSCAN-01 passed November 6, 2026 based on the owner screenshot. Deferred M-RETSCAN-01: owner discrepancy/exception/history/
 recall and disposition/reprocessing walkthroughs; M-RETSCAN-02: physical scanner/focus,
 Windows, ES/FR/mobile and large manifests; M-RETSCAN-03: persistent partial/mismatched
 returns, physical recovery, recipient acknowledgement, production identity/policy and

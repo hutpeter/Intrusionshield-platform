@@ -31,6 +31,7 @@ export function RecallWorkspace({
   onExpired,
   onDirty,
   onBusy,
+  initialRecordId,
 }: {
   session: Session;
   language: Language;
@@ -38,10 +39,11 @@ export function RecallWorkspace({
   onExpired: () => void;
   onDirty: (v: boolean) => void;
   onBusy: (v: boolean) => void;
+  initialRecordId?: string;
 }) {
   const t = labels(language),
     p = recallLabels(language),
-    [selected, setSelected] = useState<string | null>(null),
+    [selected, setSelected] = useState<string | null>(initialRecordId ?? null),
     [rows, setRows] = useState<Page<RecallSummary> | null>(null),
     [detail, setDetail] = useState<RecallRecord | null>(null),
     [past, setPast] = useState<RecallRecord | null>(null),

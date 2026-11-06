@@ -1157,3 +1157,39 @@ td {
     height: auto;
   }
 }
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+  gap: 20px;
+}
+.dashboard-queue {
+  margin: 0;
+  min-width: 0;
+}
+.dashboard-queue h2 {
+  font-size: 18px;
+}
+.queue-total {
+  font-size: 28px;
+  color: #155e57;
+}
+.dashboard-queue ul {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0;
+}
+.dashboard-queue li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid #e4eae6;
+}
+.dashboard-queue li > div {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.dashboard-queue li button {
+  flex-shrink: 0;
+}

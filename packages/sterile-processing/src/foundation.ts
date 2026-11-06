@@ -139,6 +139,9 @@ export interface CommandReceipt {
 }
 /** All methods are scoped to the transaction's tenant/facility. Writes and audit commit together. */
 export interface SterileTransaction {
+  dashboardQueue(
+    id: import("./dashboard.js").DashboardQueueId,
+  ): Promise<{ total: number; items: import("./dashboard.js").DashboardRow[] }>;
   searchTraceCode(code: string): Promise<TraceMatch[]>;
   traceRows(kind: TraceKind, filter: TraceFilter): Promise<TraceRow[]>;
   traceAudit(ids: string[]): Promise<SterileAuditEvent[]>;

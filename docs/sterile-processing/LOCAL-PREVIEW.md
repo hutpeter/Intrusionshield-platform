@@ -274,3 +274,6 @@ existing storage/transfer/issue workflow and the one fictional storage owner che
 
 See [RETURN-SCANNING.md](RETURN-SCANNING.md) for issued-package lookup, original-content
 reconciliation, explicit complete-return confirmation and the one fictional owner check.
+
+The initial signed-in page is now **Operational dashboard**. Use its queue links to open
+current records, or the sidebar for normal module lists. See [DASHBOARD.md](DASHBOARD.md).

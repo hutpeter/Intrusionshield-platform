@@ -1,3 +1,6 @@
+import { Dashboard } from "./Dashboard";
+import { dashboardLabels } from "./dashboard-text";
+import type { DashboardWorkspace } from "@intrusionshield/sterile-processing";
 import { InstrumentScan, InstrumentLabel } from "./InstrumentScan";
 import { scanLabels } from "./scan-text";
 import { MaintenancePanel } from "./Maintenance";
@@ -268,6 +271,7 @@ function Workspace({
   onExpired: () => void;
 }) {
   const [tab, setTab] = useState<
+      | "dashboard"
       | "instruments"
       | "types"
       | "trays"
@@ -279,11 +283,15 @@ function Workspace({
       | "traceability"
       | "returns"
       | "recalls"
-    >("instruments"),
+    >("dashboard"),
     [page, setPage] = useState(1),
     [historyPage, setHistoryPage] = useState(1),
     [selected, setSelected] = useState<string | null>(null),
     [nonce, setNonce] = useState(0);
+  const [dashboardTarget, setDashboardTarget] = useState<{
+    workspace: DashboardWorkspace;
+    id: string;
+  } | null>(null);
   const [instruments, setInstruments] = useState<Page<Instrument> | null>(null),
     [types, setTypes] = useState<Page<InstrumentType> | null>(null),
     [options, setOptions] = useState<InstrumentType[]>([]),
@@ -329,6 +337,7 @@ function Workspace({
     void (async () => {
       try {
         if (
+          tab === "dashboard" ||
           tab === "trays" ||
           tab === "processing" ||
           tab === "packaging" ||
@@ -422,6 +431,7 @@ function Workspace({
   }
   function navigate(
     target:
+      | "dashboard"
       | "instruments"
       | "types"
       | "trays"
@@ -435,6 +445,7 @@ function Workspace({
       | "recalls",
   ) {
     guard(() => {
+      setDashboardTarget(null);
       setSelected(null);
       setTab(target);
       setPage(1);
@@ -573,6 +584,13 @@ function Workspace({
         <p className="eyebrow">STERILE PROCESSING</p>
         <nav aria-label={t.product}>
           <button
+            aria-current={tab === "dashboard" ? "page" : undefined}
+            disabled={busy}
+            onClick={() => navigate("dashboard")}
+          >
+            {dashboardLabels(language).title}
+          </button>
+          <button
             aria-current={
               tab === "instruments" && !selected ? "page" : undefined
             }
@@ -702,7 +720,8 @@ function Workspace({
             {recallLabels(language).blocked} · {detail.recall.caseCode}
           </p>
         )}
-        {tab !== "trays" &&
+        {tab !== "dashboard" &&
+          tab !== "trays" &&
           tab !== "processing" &&
           tab !== "packaging" &&
           tab !== "cycles" &&
@@ -985,6 +1004,26 @@ function Workspace({
             </div>
           </form>
         )}
+        {tab === "dashboard" && (
+          <Dashboard
+            session={session}
+            language={language}
+            blocked={blocked}
+            onBusy={setTrayBusy}
+            onExpired={onExpired}
+            onModule={(workspace) => navigate(workspace)}
+            onOpen={(workspace, id) =>
+              guard(() => {
+                setDashboardTarget({ workspace, id });
+                setTab(workspace);
+                setSelected(workspace === "instruments" ? id : null);
+                setPage(1);
+                setHistoryPage(1);
+                setNotice(null);
+              })
+            }
+          />
+        )}
         {tab === "traceability" && (
           <TraceabilityWorkspace
             key={trayReset}
@@ -997,6 +1036,11 @@ function Workspace({
         )}
         {tab === "returns" && (
           <ReturnWorkspace
+            initialRecordId={
+              dashboardTarget?.workspace === tab
+                ? dashboardTarget.id
+                : undefined
+            }
             key={trayReset}
             session={session}
             language={language}
@@ -1008,6 +1052,11 @@ function Workspace({
         )}
         {tab === "recalls" && (
           <RecallWorkspace
+            initialRecordId={
+              dashboardTarget?.workspace === tab
+                ? dashboardTarget.id
+                : undefined
+            }
             key={trayReset}
             session={session}
             language={language}
@@ -1030,6 +1079,11 @@ function Workspace({
         )}
         {tab === "reviews" && (
           <ReviewWorkspace
+            initialRecordId={
+              dashboardTarget?.workspace === tab
+                ? dashboardTarget.id
+                : undefined
+            }
             key={trayReset}
             session={session}
             language={language}
@@ -1052,6 +1106,11 @@ function Workspace({
         )}
         {tab === "packaging" && (
           <PackagingWorkspace
+            initialRecordId={
+              dashboardTarget?.workspace === tab
+                ? dashboardTarget.id
+                : undefined
+            }
             key={trayReset}
             session={session}
             language={language}
@@ -1063,6 +1122,11 @@ function Workspace({
         )}
         {tab === "processing" && (
           <ProcessingWorkspace
+            initialRecordId={
+              dashboardTarget?.workspace === tab
+                ? dashboardTarget.id
+                : undefined
+            }
             key={trayReset}
             session={session}
             language={language}
@@ -1074,6 +1138,11 @@ function Workspace({
         )}
         {tab === "trays" && (
           <TrayWorkspace
+            initialRecordId={
+              dashboardTarget?.workspace === tab
+                ? dashboardTarget.id
+                : undefined
+            }
             key={trayReset}
             session={session}
             language={language}

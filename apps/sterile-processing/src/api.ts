@@ -1,5 +1,6 @@
 import type {
   TraceReport,
+  OperationalDashboard,
   TraceMatch,
   TraceRootKind,
   ProcessingEpisode,
@@ -230,6 +231,61 @@ export interface DistributionScanResult {
   distribution: DistributionRecord | null;
 }
 export const api = {
+  dashboard: async (s: Session, signal: AbortSignal) => {
+    const r = await scoped(
+      s,
+      call<OperationalDashboard>(base(s) + "/dashboard", signal),
+    );
+    const ids = [
+      "cleaning",
+      "inspection",
+      "assembly",
+      "loading",
+      "release",
+      "returns",
+      "recall",
+      "maintenance",
+    ];
+    const workspaces = {
+      cleaning: "processing",
+      inspection: "processing",
+      assembly: "trays",
+      loading: "packaging",
+      release: "reviews",
+      returns: "returns",
+      recall: "recalls",
+      maintenance: "instruments",
+    };
+    if (
+      r.limit !== 12 ||
+      !Number.isFinite(Date.parse(r.generatedAt)) ||
+      !Array.isArray(r.queues) ||
+      r.queues.length !== 8 ||
+      new Set(r.queues.map((q) => q.id)).size !== 8 ||
+      r.queues.some(
+        (q) =>
+          !ids.includes(q.id) ||
+          q.workspace !== workspaces[q.id] ||
+          !Array.isArray(q.items) ||
+          q.items.length > 12 ||
+          (q.access === "restricted"
+            ? q.total !== null || q.items.length !== 0
+            : q.access !== "allowed" ||
+              !Number.isSafeInteger(q.total) ||
+              q.total! < 0 ||
+              q.total! < q.items.length) ||
+          q.items.some(
+            (i) =>
+              typeof i.id !== "string" ||
+              typeof i.code !== "string" ||
+              !Number.isFinite(Date.parse(i.updatedAt)),
+          ),
+      )
+    )
+      throw new ApiError(503, "SERVICE_UNAVAILABLE");
+    return r;
+  },
+
   scanReturn: async (s: Session, identifier: string, signal: AbortSignal) => {
     const r = await scoped(
       s,

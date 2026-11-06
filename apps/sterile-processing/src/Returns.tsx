@@ -33,6 +33,7 @@ export function ReturnWorkspace({
   onExpired,
   onDirty,
   onBusy,
+  initialRecordId,
 }: {
   session: Session;
   language: Language;
@@ -40,10 +41,11 @@ export function ReturnWorkspace({
   onExpired: () => void;
   onDirty: (v: boolean) => void;
   onBusy: (v: boolean) => void;
+  initialRecordId?: string;
 }) {
   const t = labels(language),
     p = returnLabels(language),
-    [selected, setSelected] = useState<string | null>(null),
+    [selected, setSelected] = useState<string | null>(initialRecordId ?? null),
     [rows, setRows] = useState<Page<ReturnSummary> | null>(null),
     [detail, setDetail] = useState<ReturnRecord | null>(null),
     [past, setPast] = useState<ReturnRecord | null>(null),

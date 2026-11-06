@@ -36,6 +36,7 @@ export function ReviewWorkspace({
   onExpired,
   onDirty,
   onBusy,
+  initialRecordId,
 }: {
   session: Session;
   language: Language;
@@ -43,6 +44,7 @@ export function ReviewWorkspace({
   onExpired: () => void;
   onDirty: (v: boolean) => void;
   onBusy: (v: boolean) => void;
+  initialRecordId?: string;
 }) {
   const t = labels(language),
     p = reviewLabels(language),
@@ -51,7 +53,7 @@ export function ReviewWorkspace({
     [selected, setSelected] = useState<{
       kind: "load" | "review";
       id: string;
-    } | null>(null),
+    } | null>(initialRecordId ? { kind: "load", id: initialRecordId } : null),
     [queue, setQueue] = useState<Page<ReviewQueueItem> | null>(null),
     [rows, setRows] = useState<Page<ReviewSummary> | null>(null),
     [load, setLoad] = useState<SterilizationLoad | null>(null),

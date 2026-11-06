@@ -1,6 +1,9 @@
 import express from "express";
 import {
   InstrumentRegistry,
+  DashboardRegistry,
+  dashboardQueueIds,
+  type DashboardQueueId,
   MaintenanceRegistry,
   TrayRegistry,
   ProcessingRegistry,
@@ -30,6 +33,7 @@ export interface SterileDependencies {
     scope: SterileScope,
     capability: "sterile.core",
     permission:
+      | "dashboard:read"
       | "traceability:read"
       | "maintenance:authorize"
       | "instruments:read"
@@ -157,52 +161,54 @@ export function createSterileApp(
       const permission =
         req.path.endsWith("/maintenance/authorize") && !readOnly
           ? "maintenance:authorize"
-          : req.path.startsWith("/traceability")
-            ? "traceability:read"
-            : req.path.startsWith("/returns")
-              ? readOnly
-                ? "returns:read"
-                : req.path.endsWith("/dispose")
-                  ? "returns:dispose"
-                  : "returns:write"
-              : req.path.startsWith("/recalls")
+          : req.path === "/dashboard"
+            ? "dashboard:read"
+            : req.path.startsWith("/traceability")
+              ? "traceability:read"
+              : req.path.startsWith("/returns")
                 ? readOnly
-                  ? "recall:read"
-                  : req.path.endsWith("/clear")
-                    ? "recall:clear"
-                    : req.path.endsWith("/admit")
-                      ? "recall:admit"
-                      : req.path.endsWith("/recover")
-                        ? "recall:recover"
-                        : "recall:write"
-                : req.path.startsWith("/distribution")
+                  ? "returns:read"
+                  : req.path.endsWith("/dispose")
+                    ? "returns:dispose"
+                    : "returns:write"
+                : req.path.startsWith("/recalls")
                   ? readOnly
-                    ? "distribution:read"
-                    : "distribution:write"
-                  : req.path.startsWith("/reviews")
+                    ? "recall:read"
+                    : req.path.endsWith("/clear")
+                      ? "recall:clear"
+                      : req.path.endsWith("/admit")
+                        ? "recall:admit"
+                        : req.path.endsWith("/recover")
+                          ? "recall:recover"
+                          : "recall:write"
+                  : req.path.startsWith("/distribution")
                     ? readOnly
-                      ? "release:read"
-                      : "release:write"
-                    : req.path.startsWith("/loads")
+                      ? "distribution:read"
+                      : "distribution:write"
+                    : req.path.startsWith("/reviews")
                       ? readOnly
-                        ? "cycles:read"
-                        : "cycles:write"
-                      : req.path.startsWith("/packages") ||
-                          req.path === "/package-scan"
+                        ? "release:read"
+                        : "release:write"
+                      : req.path.startsWith("/loads")
                         ? readOnly
-                          ? "packaging:read"
-                          : "packaging:write"
-                        : req.path.startsWith("/processing")
+                          ? "cycles:read"
+                          : "cycles:write"
+                        : req.path.startsWith("/packages") ||
+                            req.path === "/package-scan"
                           ? readOnly
-                            ? "processing:read"
-                            : "processing:write"
-                          : req.path.startsWith("/tray-")
+                            ? "packaging:read"
+                            : "packaging:write"
+                          : req.path.startsWith("/processing")
                             ? readOnly
-                              ? "trays:read"
-                              : "trays:write"
-                            : readOnly
-                              ? "instruments:read"
-                              : "instruments:write";
+                              ? "processing:read"
+                              : "processing:write"
+                            : req.path.startsWith("/tray-")
+                              ? readOnly
+                                ? "trays:read"
+                                : "trays:write"
+                              : readOnly
+                                ? "instruments:read"
+                                : "instruments:write";
       if (
         (await dependencies.authorize!(scope, "sterile.core", permission)) !==
         true
@@ -232,6 +238,35 @@ export function createSterileApp(
     if (Object.keys(req.query).length)
       throw new SterileError("INVALID_REQUEST");
   };
+  app.get(prefix + "/dashboard", async (req, res) => {
+    noQuery(req);
+    const permissions = {
+      cleaning: "processing:read",
+      inspection: "processing:read",
+      assembly: "trays:read",
+      loading: "packaging:read",
+      release: "release:read",
+      returns: "returns:read",
+      recall: "recall:read",
+      maintenance: "instruments:read",
+    } as const;
+    const allowed: DashboardQueueId[] = [];
+    for (const id of dashboardQueueIds)
+      if (
+        (await dependencies.authorize!(
+          res.locals.scope,
+          "sterile.core",
+          permissions[id],
+        )) === true
+      )
+        allowed.push(id);
+    res.json(
+      await new DashboardRegistry(dependencies.repository!).get(
+        res.locals.scope,
+        allowed,
+      ),
+    );
+  });
   app.get(prefix + "/instrument-types", async (req, res) => {
     res.json(await registry().listTypes(res.locals.scope, page(req)));
   });

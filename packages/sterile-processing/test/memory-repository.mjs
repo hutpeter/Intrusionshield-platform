@@ -58,6 +58,97 @@ export class MemoryRepository {
       };
     };
     const tx = {
+      dashboardQueue: async (id) => {
+        const pending = (r) =>
+          s.recallInstruments.some(
+            (i) =>
+              own(i) &&
+              i.recallId === r.id &&
+              !s.recallReadmissions.some(
+                (a) =>
+                  own(a) &&
+                  a.caseId === r.id &&
+                  a.instrumentId === i.instrumentId,
+              ),
+          );
+        const config = {
+          cleaning: [
+            s.processing,
+            (p) =>
+              ["received", "cleaning_failed", "inspection_failed"].includes(
+                p.state,
+              ),
+            (p) => p.instruments.length,
+          ],
+          inspection: [
+            s.processing,
+            (p) => p.state === "awaiting_inspection",
+            (p) => p.instruments.length,
+          ],
+          assembly: [
+            s.assemblies,
+            (p) => p.state === "draft",
+            (p) => p.instruments.length,
+          ],
+          loading: [
+            s.packages,
+            (p) =>
+              p.state === "packaged" &&
+              s.packageAssignments.some(
+                (a) => own(a) && a.packageId === p.id,
+              ) &&
+              !s.loadAssignments.some((a) => own(a) && a.packageId === p.id) &&
+              !s.returns.some((a) => own(a) && a.packageId === p.id) &&
+              !s.recallBlocks.some((a) => own(a) && a.packageId === p.id),
+            (p) => p.assemblySnapshot.instruments.length,
+          ],
+          release: [
+            s.loads,
+            (p) =>
+              p.state === "awaiting_review" &&
+              p.outcome === "passed" &&
+              !s.reviews.some(
+                (r) =>
+                  own(r) &&
+                  r.loadId === p.id &&
+                  ["released", "rejected"].includes(r.state),
+              ),
+            (p) => p.packages.length,
+          ],
+          returns: [s.returns, (p) => p.state === "returned", () => 1],
+          recall: [
+            s.recalls,
+            (p) => p.state === "open" || pending(p),
+            (p) => p.items.length,
+          ],
+          maintenance: [
+            s.instruments,
+            (p) => p.state === "maintenance",
+            () => 1,
+          ],
+        }[id];
+        const [rows, filter, units] = config,
+          found = rows
+            .filter((p) => own(p) && filter(p))
+            .sort(
+              (a, b) =>
+                (a.updatedAt ?? a.createdAt).localeCompare(
+                  b.updatedAt ?? b.createdAt,
+                ) || a.id.localeCompare(b.id),
+            );
+        return {
+          total: found.length,
+          items: found
+            .slice(0, 12)
+            .map((p) => ({
+              id: p.id,
+              code: p.code,
+              state: p.state,
+              updatedAt: p.updatedAt ?? p.createdAt,
+              units: units(p),
+            })),
+        };
+      },
       searchTraceCode: async (code) =>
         [
           ["instrument", "instruments"],

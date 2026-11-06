@@ -42,6 +42,7 @@ export function TrayWorkspace({
   onExpired,
   onDirty,
   onBusy,
+  initialRecordId,
 }: {
   session: Session;
   language: Language;
@@ -50,9 +51,14 @@ export function TrayWorkspace({
   onExpired: () => void;
   onDirty: (v: boolean) => void;
   onBusy: (v: boolean) => void;
+  initialRecordId?: string;
 }) {
-  const [tab, setTab] = useState<"definitions" | "assemblies">("definitions"),
-    [selected, setSelected] = useState<Selection | null>(null),
+  const [tab, setTab] = useState<"definitions" | "assemblies">(
+      initialRecordId ? "assemblies" : "definitions",
+    ),
+    [selected, setSelected] = useState<Selection | null>(
+      initialRecordId ? { kind: "assembly", id: initialRecordId } : null,
+    ),
     [page, setPage] = useState(1),
     [historyPage, setHistoryPage] = useState(1),
     [nonce, setNonce] = useState(0);
