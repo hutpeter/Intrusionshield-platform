@@ -19,6 +19,8 @@ import type {
   ReturnSummary,
   ReturnInput,
   ScannedReturnInput,
+  PartialReturnInput,
+  ReturnRecoveryInput,
   ReturnScanResult,
   ReturnDispositionInput,
   RecallClearanceInput,
@@ -360,6 +362,30 @@ export const api = {
     await scoped(s, Promise.resolve(r.issue));
     return r;
   },
+  createPartialReturn: (
+    s: Session,
+    body: PartialReturnInput,
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<ReturnRecord>(base(s) + "/returns/partial", signal, body, s.csrf),
+    ),
+  recoverMissingReturn: (
+    s: Session,
+    id: string,
+    body: ReturnRecoveryInput,
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<ReturnRecord>(
+        base(s) + "/returns/" + id + "/receive-missing",
+        signal,
+        body,
+        s.csrf,
+      ),
+    ),
   createScannedReturn: (
     s: Session,
     body: ScannedReturnInput,

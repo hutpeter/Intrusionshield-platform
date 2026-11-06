@@ -24,7 +24,7 @@ const en = {
   assembly: "Draft trays awaiting assembly",
   loading: "Packages awaiting loading",
   release: "Loads awaiting release review",
-  returns: "Returns awaiting disposition",
+  returns: "Returns awaiting reconciliation or disposition",
   recall: "Recall actions outstanding",
   maintenance: "Instruments on maintenance hold",
 };
@@ -53,7 +53,7 @@ const es: typeof en = {
   assembly: "Bandejas en borrador pendientes de armado",
   loading: "Paquetes pendientes de carga",
   release: "Cargas pendientes de revisión para liberar",
-  returns: "Devoluciones pendientes de disposición",
+  returns: "Devoluciones pendientes de conciliación o disposición",
   recall: "Acciones de retirada pendientes",
   maintenance: "Instrumentos retenidos por mantenimiento",
 };
@@ -82,7 +82,7 @@ const fr: typeof en = {
   assembly: "Plateaux en brouillon à assembler",
   loading: "Emballages à charger",
   release: "Charges en attente de revue de libération",
-  returns: "Retours en attente de disposition",
+  returns: "Retours en attente de rapprochement ou de disposition",
   recall: "Actions de rappel en attente",
   maintenance: "Instruments bloqués pour maintenance",
 };

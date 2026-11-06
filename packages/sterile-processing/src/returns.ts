@@ -13,6 +13,8 @@ import {
   type SterileAuditEvent,
 } from "./foundation.js";
 import type {
+  PartialReturnInput,
+  ReturnRecoveryInput,
   ReturnRecord,
   ReturnInput,
   ScannedReturnInput,
@@ -72,13 +74,144 @@ export class ReturnRegistry extends SterileRegistryBase {
     return this.createInternal(scope, receipt, { ...target, receivedIds: ids });
   }
 
+  async createPartial(scope: SterileScope, input: PartialReturnInput) {
+    const {
+      identifier,
+      receivedInstrumentIds,
+      reason,
+      observedConfirmed,
+      ...receipt
+    } = input;
+    if (
+      observedConfirmed !== true ||
+      !Array.isArray(receivedInstrumentIds) ||
+      receivedInstrumentIds.length > 1000
+    )
+      invalid();
+    const ids = receivedInstrumentIds.map(sterileUuid);
+    if (new Set(ids).size !== ids.length)
+      throw new SterileError("RETURN_CONTENTS_MISMATCH");
+    return this.createInternal(
+      scope,
+      { ...receipt, contentsChecked: true },
+      {
+        ...packageFromScan(identifier),
+        receivedIds: ids,
+        reason: field(reason, 500),
+      },
+    );
+  }
+  async recoverMissing(
+    scope: SterileScope,
+    id: string,
+    input: ReturnRecoveryInput,
+  ) {
+    const s = scopeOf(scope),
+      key = sterileUuid(id),
+      version = ver(input.version),
+      location = field(input.location, 200),
+      custodian = field(input.custodian, 200),
+      reference = field(input.reference, 200),
+      note = field(input.note, 500, false);
+    if (
+      input.confirmed !== true ||
+      !Array.isArray(input.receivedInstrumentIds) ||
+      !input.receivedInstrumentIds.length ||
+      input.receivedInstrumentIds.length > 1000
+    )
+      invalid();
+    const ids = input.receivedInstrumentIds.map(sterileUuid);
+    if (new Set(ids).size !== ids.length)
+      throw new SterileError("RETURN_CONTENTS_MISMATCH");
+    return this.command(
+      s,
+      input.requestId,
+      "return-missing-received",
+      { ...input, id: key },
+      async (tx, at) => {
+        const old = await tx.findReturn(key);
+        if (!old) throw new SterileError("NOT_FOUND");
+        if (
+          old.version !== version ||
+          old.state !== "discrepancy" ||
+          !old.reconciliation ||
+          old.disposition
+        )
+          throw new SterileError("CONFLICT");
+        const previous = old.reconciliation;
+        if (ids.some((id) => !previous.missingInstrumentIds.includes(id)))
+          throw new SterileError("RETURN_CONTENTS_MISMATCH");
+        const p = await tx.findPackage(old.packageId);
+        if (!p || p.version !== old.packageVersion || p.state !== "packaged")
+          throw new SterileError("CONFLICT");
+        await this.partialCustody(tx, p);
+        const missing = previous.missingInstrumentIds.filter(
+          (id) => !ids.includes(id),
+        );
+        const r: ReturnRecord = {
+          ...old,
+          version: version + 1,
+          updatedAt: at,
+          state: missing.length ? "discrepancy" : "returned",
+          reconciliation: {
+            ...previous,
+            receivedInstrumentIds: [...previous.receivedInstrumentIds, ...ids],
+            missingInstrumentIds: missing,
+            recoveries: [
+              ...previous.recoveries,
+              {
+                instrumentIds: ids,
+                location,
+                custodian,
+                reference,
+                note,
+                actorId: s.actorId,
+                at,
+              },
+            ],
+          },
+        };
+        await tx.updateReturn(r, version);
+        await this.record(
+          tx,
+          s,
+          r,
+          input.requestId,
+          at,
+          "return-missing-received",
+          reference,
+        );
+        return r;
+      },
+    );
+  }
+  private async partialCustody(
+    tx: SterileTransaction,
+    p: import("./packaging-types.js").SterilePackage,
+  ) {
+    const active = await tx.findActivePackage(p.assemblyId);
+    if (active?.packageId !== p.id) throw new SterileError("RETURN_BLOCKED");
+    for (const i of p.assemblySnapshot.instruments) {
+      const assignment = await tx.findActiveAssignment(i.id);
+      if (
+        assignment?.assemblyId !== p.assemblyId ||
+        (await tx.findProcessingHold(i.id))
+      )
+        throw new SterileError("RETURN_BLOCKED");
+    }
+  }
   async create(scope: SterileScope, input: ReturnInput) {
     return this.createInternal(scope, input);
   }
   private async createInternal(
     scope: SterileScope,
     input: ReturnInput,
-    scan?: { id: string; version: number; receivedIds: string[] },
+    scan?: {
+      id: string;
+      version: number;
+      receivedIds: string[];
+      reason?: string;
+    },
   ) {
     const s = scopeOf(scope),
       code = codeOf(input.code),
@@ -97,7 +230,7 @@ export class ReturnRegistry extends SterileRegistryBase {
     return this.command(
       s,
       input.requestId,
-      "package-returned",
+      scan?.reason ? "return-discrepancy-recorded" : "package-returned",
       scan ? { ...input, scan } : input,
       async (tx, at) => {
         const d = await tx.findDistribution(id);
@@ -116,7 +249,16 @@ export class ReturnRegistry extends SterileRegistryBase {
           if (scan.id !== p.id || scan.version !== p.version)
             throw new SterileError("CONFLICT");
           const expectedIds = p.assemblySnapshot.instruments.map((i) => i.id);
-          if (
+          if (scan.reason) {
+            if (
+              !expectedIds.length ||
+              expectedIds.length > 1000 ||
+              scan.receivedIds.length >= expectedIds.length ||
+              scan.receivedIds.some((id) => !expectedIds.includes(id))
+            )
+              throw new SterileError("RETURN_CONTENTS_MISMATCH");
+            await this.partialCustody(tx, p);
+          } else if (
             scan.receivedIds.length !== expectedIds.length ||
             expectedIds.some((id) => !scan.receivedIds.includes(id))
           )
@@ -128,6 +270,19 @@ export class ReturnRegistry extends SterileRegistryBase {
                 scanReceipt: {
                   identifier: `RSP-P-${p.id.toUpperCase()}-V${p.version}`,
                   contents: p.assemblySnapshot.instruments,
+                },
+              }
+            : {}),
+          ...(scan?.reason
+            ? {
+                reconciliation: {
+                  manifest: p.assemblySnapshot.instruments,
+                  receivedInstrumentIds: scan.receivedIds,
+                  missingInstrumentIds: p.assemblySnapshot.instruments
+                    .filter((i) => !scan.receivedIds.includes(i.id))
+                    .map((i) => i.id),
+                  reason: scan.reason,
+                  recoveries: [],
                 },
               }
             : {}),
@@ -144,7 +299,7 @@ export class ReturnRegistry extends SterileRegistryBase {
           custodian,
           reference,
           note,
-          state: "returned",
+          state: scan?.reason ? "discrepancy" : "returned",
           disposition: null,
           episodeId: null,
           episodeCode: null,
@@ -160,8 +315,8 @@ export class ReturnRegistry extends SterileRegistryBase {
           r,
           input.requestId,
           at,
-          "package-returned",
-          note,
+          scan?.reason ? "return-discrepancy-recorded" : "package-returned",
+          scan?.reason ?? note,
         );
         return r;
       },
@@ -194,8 +349,10 @@ export class ReturnRegistry extends SterileRegistryBase {
       async (tx, at) => {
         const old = await tx.findReturn(key);
         if (!old) throw new SterileError("NOT_FOUND");
-        if (old.version !== version || old.state !== "returned")
-          throw new SterileError("CONFLICT");
+        if (old.version !== version) throw new SterileError("CONFLICT");
+        if (old.reconciliation?.missingInstrumentIds.length)
+          throw new SterileError("RETURN_BLOCKED");
+        if (old.state !== "returned") throw new SterileError("CONFLICT");
         let episode: ProcessingEpisode | null = null;
         if (input.action === "reprocess") {
           // Recall handling and damaged-instrument repair require their own authorization policy.

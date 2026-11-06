@@ -1,3 +1,8 @@
+> November 6 update: complete returns retain the workflow below. A separate confirmed
+> expected-member shortage and later-receipt workflow is now implemented; see
+> [PARTIAL-RETURNS.md](PARTIAL-RETURNS.md). It replaces the former pre-save-only missing
+> contents stop. Unexpected/mismatched instrument custody remains deferred.
+
 # Scan-assisted complete-package returns
 
 ## Update and one owner check
@@ -67,8 +72,8 @@ partial/mismatched return reconciliation is logged separately under RSP-ISS-008.
 
 The scanned save requires explicit complete-contents and return confirmations, current
 issue version, exact package token and the exact set of original instrument IDs. Missing,
-extra, duplicate or mismatched IDs are rejected with RETURN_CONTENTS_MISMATCH. No partial
-return or partial gate rows are saved. The normal manual complete-return path retains
+extra, duplicate or mismatched IDs are rejected with RETURN_CONTENTS_MISMATCH. The complete-return endpoint saves no partial
+return or partial gate rows; shortages use the separate discrepancy endpoint. The normal manual complete-return path retains
 its established contract.
 
 Successful save freezes the internal identifier and declared received contents, original

@@ -402,6 +402,30 @@ export class TraceabilityRegistry {
         }
         if (row.kind === "return") {
           const ret = r as ReturnRecord;
+          if (ret.reconciliation) {
+            fact(
+              "return_reconciliation",
+              ret.updatedAt,
+              null,
+              {
+                reason: ret.reconciliation.reason,
+                received: ret.reconciliation.receivedInstrumentIds.length,
+                missing: ret.reconciliation.missingInstrumentIds.length,
+                receivedIds:
+                  ret.reconciliation.receivedInstrumentIds.join(", "),
+                missingIds: ret.reconciliation.missingInstrumentIds.join(", "),
+              },
+              ["reason", "received", "missing", "receivedIds", "missingIds"],
+            );
+            for (const receipt of ret.reconciliation.recoveries)
+              fact(
+                "return_missing_received",
+                receipt.at,
+                receipt.actorId,
+                { ...receipt, instrumentIds: receipt.instrumentIds.join(", ") },
+                ["instrumentIds", "location", "custodian", "reference", "note"],
+              );
+          }
           if (ret.scanReceipt)
             fact(
               "return_scan",

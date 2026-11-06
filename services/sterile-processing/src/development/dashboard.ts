@@ -40,7 +40,7 @@ export function readDashboardQueue(
       `${state}='awaiting_review' AND json_extract(p.payload,'$.outcome')='passed' AND NOT EXISTS(SELECT 1 FROM sp_reviews r WHERE ${same("r")} AND r.load_id=p.id AND r.state IN ('released','rejected'))`,
       "json_array_length(p.payload,'$.packages')",
     ],
-    returns: ["sp_returns", `${state}='returned'`, "1"],
+    returns: ["sp_returns", `${state} IN ('returned','discrepancy')`, "1"],
     recall: [
       "sp_recalls",
       `(${state}='open' OR ${pending})`,

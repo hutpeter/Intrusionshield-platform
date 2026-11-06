@@ -1,3 +1,4 @@
+import { partialReturnLabels } from "./partial-return-text";
 import { ReturnScan } from "./ReturnScan";
 import { returnScanLabels } from "./return-scan-text";
 import type { ReturnScanResult } from "@intrusionshield/sterile-processing";
@@ -20,6 +21,7 @@ const empty = () => ({
   reference: "",
   note: "",
   discrepancy: false,
+  receivedIds: [] as string[],
   contentsChecked: false,
   confirmed: false,
   action: "quarantine" as "quarantine" | "reprocess",
@@ -45,6 +47,7 @@ export function ReturnWorkspace({
 }) {
   const t = labels(language),
     p = returnLabels(language),
+    partial = partialReturnLabels(language),
     [selected, setSelected] = useState<string | null>(initialRecordId ?? null),
     [rows, setRows] = useState<Page<ReturnSummary> | null>(null),
     [detail, setDetail] = useState<ReturnRecord | null>(null),
@@ -59,7 +62,7 @@ export function ReturnWorkspace({
     [error, setError] = useState<unknown>(null),
     [notice, setNotice] = useState(false),
     [form, setForm] = useState<{
-      kind: "create" | "dispose";
+      kind: "create" | "dispose" | "recover";
       requestId: string;
       version: number;
     } | null>(null),
@@ -138,7 +141,7 @@ export function ReturnWorkspace({
       action();
     }
   }
-  function begin(kind: "create" | "dispose") {
+  function begin(kind: "create" | "dispose" | "recover") {
     guard(() => {
       setPast(null);
       setNotice(false);
@@ -189,8 +192,7 @@ export function ReturnWorkspace({
     try {
       let r: ReturnRecord;
       if (form.kind === "create") {
-        if (!session.canReturn || !fields.contentsChecked || fields.discrepancy)
-          return;
+        if (!session.canReturn || !fields.contentsChecked) return;
         const d = sources.find((x) => x.id === fields.distributionId);
         if (!d) return;
         const receipt = {
@@ -206,17 +208,49 @@ export function ReturnWorkspace({
           contentsChecked: true,
           confirmed: true,
         };
-        r = scanContext
-          ? await api.createScannedReturn(
-              session,
-              {
-                ...receipt,
-                identifier: scanContext.identifier,
-                receivedInstrumentIds: scanContext.manifest.map((i) => i.id),
-              },
-              ac.signal,
-            )
-          : await api.createReturn(session, receipt, ac.signal);
+        if (scanContext && fields.discrepancy) {
+          const { contentsChecked, ...observed } = receipt;
+          r = await api.createPartialReturn(
+            session,
+            {
+              ...observed,
+              identifier: scanContext.identifier,
+              receivedInstrumentIds: fields.receivedIds,
+              reason: fields.reason,
+              observedConfirmed: true,
+            },
+            ac.signal,
+          );
+        } else
+          r = scanContext
+            ? await api.createScannedReturn(
+                session,
+                {
+                  ...receipt,
+                  identifier: scanContext.identifier,
+                  receivedInstrumentIds: scanContext.manifest.map((i) => i.id),
+                },
+                ac.signal,
+              )
+            : await api.createReturn(session, receipt, ac.signal);
+      } else if (form.kind === "recover") {
+        if (!session.canReturn || !selected || !fields.receivedIds.length)
+          return;
+        r = await api.recoverMissingReturn(
+          session,
+          selected,
+          {
+            requestId: form.requestId,
+            version: form.version,
+            receivedInstrumentIds: fields.receivedIds,
+            location: fields.location,
+            custodian: fields.custodian,
+            reference: fields.reference,
+            note: fields.note,
+            confirmed: true,
+          },
+          ac.signal,
+        );
       } else {
         if (!session.canDisposeReturn || !selected) return;
         r = await api.disposeReturn(
@@ -385,7 +419,13 @@ export function ReturnWorkspace({
           }}
         >
           <div className="panel-heading">
-            <h2>{form.kind === "create" ? p.create : p.dispose}</h2>
+            <h2>
+              {form.kind === "create"
+                ? p.create
+                : form.kind === "recover"
+                  ? partial.recover
+                  : p.dispose}
+            </h2>
             <button
               type="button"
               disabled={busy}
@@ -416,17 +456,50 @@ export function ReturnWorkspace({
                     onChange={(e) =>
                       patch({
                         discrepancy: e.target.checked,
+                        receivedIds: [],
                         contentsChecked: false,
                         confirmed: false,
                       })
                     }
                   />
-                  {returnScanLabels(language).discrepancy}
+                  {partial.mode}
                 </label>
                 {fields.discrepancy && (
-                  <p className="alert" role="alert">
-                    {returnScanLabels(language).blocked}
-                  </p>
+                  <section>
+                    <p className="alert" role="alert">
+                      {partial.blocked}
+                    </p>
+                    <p>{partial.help}</p>
+                    {scanContext.manifest.map((i) => (
+                      <label className="check" key={i.id}>
+                        <input
+                          type="checkbox"
+                          checked={fields.receivedIds.includes(i.id)}
+                          onChange={(e) =>
+                            patch({
+                              receivedIds: e.target.checked
+                                ? [...fields.receivedIds, i.id]
+                                : fields.receivedIds.filter(
+                                    (id) => id !== i.id,
+                                  ),
+                              contentsChecked: false,
+                              confirmed: false,
+                            })
+                          }
+                        />
+                        {partial.received}: {i.code}
+                      </label>
+                    ))}
+                    <label>
+                      {partial.reason}
+                      <input
+                        required
+                        maxLength={500}
+                        value={fields.reason}
+                        onChange={(e) => patch({ reason: e.target.value })}
+                      />
+                    </label>
+                  </section>
                 )}
               </section>
             )}
@@ -497,6 +570,50 @@ export function ReturnWorkspace({
                     </label>
                   ))}
                 </>
+              ) : form.kind === "recover" ? (
+                <>
+                  <p>{partial.blocked}</p>
+                  {detail?.reconciliation?.manifest
+                    .filter((i) =>
+                      detail.reconciliation!.missingInstrumentIds.includes(
+                        i.id,
+                      ),
+                    )
+                    .map((i) => (
+                      <label className="check" key={i.id}>
+                        <input
+                          type="checkbox"
+                          checked={fields.receivedIds.includes(i.id)}
+                          onChange={(e) =>
+                            patch({
+                              receivedIds: e.target.checked
+                                ? [...fields.receivedIds, i.id]
+                                : fields.receivedIds.filter(
+                                    (id) => id !== i.id,
+                                  ),
+                              confirmed: false,
+                            })
+                          }
+                        />
+                        {partial.received}: {i.code}
+                      </label>
+                    ))}
+                  {(
+                    ["location", "custodian", "reference", "note"] as const
+                  ).map((k) => (
+                    <label key={k}>
+                      {p[k]}
+                      <input
+                        required={k !== "note"}
+                        maxLength={k === "note" ? 500 : 200}
+                        value={fields[k]}
+                        onChange={(e) =>
+                          patch({ [k]: e.target.value, confirmed: false })
+                        }
+                      />
+                    </label>
+                  ))}
+                </>
               ) : (
                 <>
                   <p>{p.reprocessHelp}</p>
@@ -549,11 +666,10 @@ export function ReturnWorkspace({
               <label className="check">
                 <input
                   type="checkbox"
-                  disabled={fields.discrepancy}
                   checked={fields.contentsChecked}
                   onChange={(e) => patch({ contentsChecked: e.target.checked })}
                 />
-                {p.contents}
+                {fields.discrepancy ? partial.confirm : p.contents}
               </label>
             )}
             <label className="check">
@@ -562,7 +678,11 @@ export function ReturnWorkspace({
                 checked={fields.confirmed}
                 onChange={(e) => patch({ confirmed: e.target.checked })}
               />
-              {form.kind === "create" ? p.confirm : p.confirmDisposition}
+              {form.kind === "create"
+                ? p.confirm
+                : form.kind === "recover"
+                  ? partial.confirmRecovery
+                  : p.confirmDisposition}
             </label>
             <button
               className="primary"
@@ -570,14 +690,24 @@ export function ReturnWorkspace({
                 busy ||
                 !fields.confirmed ||
                 (form.kind === "create" &&
-                  (!fields.contentsChecked || fields.discrepancy))
+                  (!fields.contentsChecked ||
+                    (fields.discrepancy &&
+                      (!scanContext ||
+                        !fields.reason.trim() ||
+                        fields.receivedIds.length >=
+                          scanContext.manifest.length)))) ||
+                (form.kind === "recover" && !fields.receivedIds.length)
               }
             >
               {saving
                 ? t.saving
                 : form.kind === "create"
-                  ? p.save
-                  : p.saveDisposition}
+                  ? fields.discrepancy
+                    ? partial.save
+                    : p.save
+                  : form.kind === "recover"
+                    ? partial.saveRecovery
+                    : p.saveDisposition}
             </button>
           </fieldset>
         </form>
@@ -591,6 +721,11 @@ export function ReturnWorkspace({
               {session.canDisposeReturn && !past && r.state === "returned" && (
                 <button disabled={busy} onClick={() => begin("dispose")}>
                   {p.dispose}
+                </button>
+              )}
+              {session.canReturn && !past && r.state === "discrepancy" && (
+                <button disabled={busy} onClick={() => begin("recover")}>
+                  {partial.recover}
                 </button>
               )}
               {past && (
@@ -635,9 +770,79 @@ export function ReturnWorkspace({
               </>
             )}
           </section>
+          {r.reconciliation && (
+            <section className="panel">
+              <h2>{partial.title}</h2>
+              <p
+                className={
+                  r.reconciliation.missingInstrumentIds.length
+                    ? "alert"
+                    : "readonly-note"
+                }
+              >
+                {r.reconciliation.missingInstrumentIds.length
+                  ? partial.blocked
+                  : partial.complete}
+              </p>
+              <p>
+                {partial.reason}: {r.reconciliation.reason}
+              </p>
+              {(["received", "missing"] as const).map((kind) => {
+                const ids =
+                  kind === "received"
+                    ? r.reconciliation!.receivedInstrumentIds
+                    : r.reconciliation!.missingInstrumentIds;
+                return (
+                  <section key={kind}>
+                    <h3>
+                      {partial[kind]}: {ids.length}
+                    </h3>
+                    {!ids.length ? (
+                      <p>{partial.none}</p>
+                    ) : (
+                      <ul>
+                        {r
+                          .reconciliation!.manifest.filter((i) =>
+                            ids.includes(i.id),
+                          )
+                          .map((i) => (
+                            <li key={i.id}>
+                              {i.code} · {i.instrumentTypeName}
+                            </li>
+                          ))}
+                      </ul>
+                    )}
+                  </section>
+                );
+              })}
+              {!!r.reconciliation.recoveries.length && (
+                <>
+                  <h3>{partial.recoveryHistory}</h3>
+                  {r.reconciliation.recoveries.map((receipt, n) => (
+                    <p key={n}>
+                      {date(receipt.at)} · {actor(receipt.actorId)} ·{" "}
+                      {receipt.location} · {receipt.custodian} ·{" "}
+                      {receipt.reference} · {receipt.note} ·{" "}
+                      {receipt.instrumentIds
+                        .map(
+                          (id) =>
+                            r.reconciliation!.manifest.find((i) => i.id === id)
+                              ?.code,
+                        )
+                        .join(", ")}
+                    </p>
+                  ))}
+                </>
+              )}
+            </section>
+          )}
           {r.scanReceipt && (
             <section className="panel">
-              <h2>{returnScanLabels(language).recorded}</h2>
+              <h2>
+                {r.reconciliation
+                  ? partial.origin
+                  : returnScanLabels(language).recorded}
+              </h2>
               <p>{r.scanReceipt.identifier}</p>
               <ul>
                 {r.scanReceipt.contents.map((i) => (
@@ -680,8 +885,14 @@ export function ReturnWorkspace({
             <h2>{p.history}</h2>
             {history?.items.map((e) => (
               <p key={e.id}>
-                {e.action === "package-returned" ? p.create : p.dispose} ·{" "}
-                {actor(e.actorId)} · {date(e.at)} · {p.version} {e.version}{" "}
+                {e.action === "package-returned"
+                  ? p.create
+                  : e.action === "return-discrepancy-recorded"
+                    ? partial.save
+                    : e.action === "return-missing-received"
+                      ? partial.recover
+                      : p.dispose}{" "}
+                · {actor(e.actorId)} · {date(e.at)} · {p.version} {e.version}{" "}
                 <button disabled={busy} onClick={() => void version(e.version)}>
                   {p.version} {e.version}
                 </button>

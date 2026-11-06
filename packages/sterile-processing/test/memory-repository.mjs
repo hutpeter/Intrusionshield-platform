@@ -115,7 +115,11 @@ export class MemoryRepository {
               ),
             (p) => p.packages.length,
           ],
-          returns: [s.returns, (p) => p.state === "returned", () => 1],
+          returns: [
+            s.returns,
+            (p) => ["returned", "discrepancy"].includes(p.state),
+            () => 1,
+          ],
           recall: [
             s.recalls,
             (p) => p.state === "open" || pending(p),
@@ -229,7 +233,7 @@ export class MemoryRepository {
           .reverse()
           .slice((page - 1) * 50, (page - 1) * 50 + 51)
           .map((x) => {
-            const { issue, scanReceipt, ...summary } = x;
+            const { issue, scanReceipt, reconciliation, ...summary } = x;
             return structuredClone(summary);
           }),
       insertReturn: async (x) => {

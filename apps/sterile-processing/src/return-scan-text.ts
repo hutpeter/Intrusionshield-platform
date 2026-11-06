@@ -9,7 +9,7 @@ const en = {
   manifest: "Original package contents",
   discrepancy: "Contents are missing or do not match the original package.",
   blocked:
-    "Contents discrepancy — return not saved. Do not confirm complete contents. Follow the discrepancy/quarantine procedure; partial-return recording is a later workflow.",
+    "Contents discrepancy — select the expected instruments actually received and save a confirmed discrepancy. The package remains blocked.",
   recall:
     "A recall applies. Recording return does not lift the hold or authorize reprocessing.",
   recorded: "Internal identifier and returned contents recorded",
@@ -31,7 +31,7 @@ const es: typeof en = {
   manifest: "Contenido original del paquete",
   discrepancy: "Falta contenido o no coincide con el paquete original.",
   blocked:
-    "Discrepancia de contenido — devolución sin guardar. No confirme contenido completo. Siga el procedimiento de discrepancia/cuarentena; el registro parcial requiere un flujo posterior.",
+    "Discrepancia de contenido — seleccione los instrumentos esperados realmente recibidos y guarde una discrepancia confirmada. El paquete sigue bloqueado.",
   recall:
     "Existe una retirada. Registrar la devolución no levanta la retención ni autoriza reprocesamiento.",
   recorded: "Identificador interno y contenido devuelto registrados",
@@ -53,7 +53,7 @@ const fr: typeof en = {
   manifest: "Contenu original de l’emballage",
   discrepancy: "Contenu manquant ou différent de l’emballage original.",
   blocked:
-    "Écart de contenu — retour non enregistré. Ne confirmez pas un contenu complet. Suivez la procédure d’écart/quarantaine ; les retours partiels exigent un futur workflow.",
+    "Écart de contenu — sélectionnez les instruments attendus réellement reçus et enregistrez un écart confirmé. Le paquet reste bloqué.",
   recall:
     "Un rappel s’applique. Enregistrer le retour ne lève pas le blocage et n’autorise pas le retraitement.",
   recorded: "Identifiant interne et contenu retourné enregistrés",

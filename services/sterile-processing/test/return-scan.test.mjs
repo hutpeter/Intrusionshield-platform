@@ -208,3 +208,188 @@ test("SQLite scanned return evidence persists and late audit failure rolls back 
     r.id,
   );
 });
+const partialBody = (scan) => {
+  const { contentsChecked, ...b } = scannedReturn(scan, {
+    receivedInstrumentIds: [],
+  });
+  return {
+    ...b,
+    reason: "Expected instrument missing",
+    observedConfirmed: true,
+  };
+};
+const recoveryBody = (scan) => ({
+  requestId: randomUUID(),
+  version: 1,
+  receivedInstrumentIds: scan.manifest.map((i) => i.id),
+  location: "RECOVERED-QUARANTINE",
+  custodian: "RECOVERER",
+  reference: "RECOVERY-REF",
+  note: "Fictional late receipt",
+  confirmed: true,
+});
+test("partial receipt API persists a blocked discrepancy; only operator later receipt enables reviewer disposition", async (t) => {
+  const f = await httpFixture(t),
+    scan = await (
+      await f.call("/preview/return-scan-example", { requestId: randomUUID() })
+    ).json(),
+    b = partialBody(scan),
+    path = f.base + "/returns/partial";
+  for (const role of ["reviewer", "viewer"]) {
+    await f.login(role);
+    assert.equal((await f.call(path, b)).status, 403);
+  }
+  await f.login("operator");
+  assert.equal(
+    (await f.call(path, b, { "x-sterile-csrf": "bad" })).status,
+    403,
+  );
+  assert.equal((await f.call(path + "?extra=1", b)).status, 400);
+  assert.equal(
+    (await f.call(path, { ...b, contentsChecked: true })).status,
+    400,
+  );
+  assert.equal(
+    (
+      await f.call(
+        f.base.replace(f.session.facilityId, randomUUID()) + "/returns/partial",
+        b,
+      )
+    ).status,
+    404,
+  );
+  const response = await f.call(path, b);
+  assert.equal(response.status, 201);
+  const r = await response.json();
+  assert.equal(r.state, "discrepancy");
+  assert.equal(r.reconciliation.missingInstrumentIds.length, 1);
+  assert.equal(r.reconciliation.receivedInstrumentIds.length, 0);
+  assert.deepEqual(await (await f.call(path, b)).json(), r);
+  assert.equal(
+    (await (await f.call(f.base + "/packages/" + r.packageId)).json()).returned
+      .state,
+    "discrepancy",
+  );
+  const list = await (await f.call(f.base + "/returns")).json();
+  assert.equal("reconciliation" in list.items[0], false);
+  const dash = await (
+    await f.call(f.base + "/dashboard/queues/returns")
+  ).json();
+  assert.equal(dash.queue.total, 1);
+  assert.equal(dash.queue.items[0].state, "discrepancy");
+  await f.login("reviewer");
+  const dispose = {
+    requestId: randomUUID(),
+    version: 1,
+    action: "reprocess",
+    reason: "Demo",
+    reference: "REF",
+    episodeCode: "NEW",
+    confirmed: true,
+  };
+  const denied = await f.call(
+    f.base + "/returns/" + r.id + "/dispose",
+    dispose,
+  );
+  assert.equal(denied.status, 409);
+  assert.equal((await denied.json()).error, "RETURN_BLOCKED");
+  const recoverPath = f.base + "/returns/" + r.id + "/receive-missing",
+    rb = recoveryBody(scan);
+  for (const role of ["reviewer", "viewer"]) {
+    await f.login(role);
+    assert.equal((await f.call(recoverPath, rb)).status, 403);
+  }
+  await f.login("operator");
+  assert.equal(
+    (await f.call(recoverPath, rb, { "x-sterile-csrf": "bad" })).status,
+    403,
+  );
+  assert.equal(
+    (await f.call(recoverPath, { ...rb, actorId: randomUUID() })).status,
+    400,
+  );
+  const recovered = await f.call(recoverPath, rb);
+  assert.equal(recovered.status, 200);
+  const full = await recovered.json();
+  assert.equal(full.state, "returned");
+  assert.equal(full.disposition, null);
+  assert.equal(full.episodeId, null);
+  assert.equal(full.reconciliation.recoveries[0].reference, rb.reference);
+  assert.equal(
+    (await (await f.call(f.base + "/returns/" + r.id + "/versions/1")).json())
+      .state,
+    "discrepancy",
+  );
+  const issue = await (
+    await f.call(f.base + "/distribution/" + scan.issue.id)
+  ).json();
+  assert.equal(issue.state, "issued");
+  assert.equal(issue.version, scan.issue.version);
+  await f.login("reviewer");
+  assert.equal(
+    (
+      await f.call(f.base + "/returns/" + r.id + "/dispose", {
+        ...dispose,
+        version: 2,
+      })
+    ).status,
+    200,
+  );
+});
+test("SQLite partial and later receipt survive reopen and audit failure rolls back reconciliation and retry", async (t) => {
+  const dir = mkdtempSync(join(tmpdir(), "sterile-partial-")),
+    file = join(dir, "registry.sqlite");
+  let repo = new PreviewSqliteRepository(file);
+  t.after(() => {
+    repo.close();
+    rmSync(dir, { recursive: true, force: true });
+  });
+  const s = {
+      tenantId: randomUUID(),
+      facilityId: randomUUID(),
+      actorId: randomUUID(),
+    },
+    reviewer = { ...s, actorId: randomUUID() },
+    { prepareReturnScanExample } =
+      await import("../dist/development/return-scan-example.js"),
+    scan = await prepareReturnScanExample(repo, s, reviewer, randomUUID());
+  const broken = {
+    transaction: (scope, work) =>
+      repo.transaction(scope, (tx) =>
+        work({
+          ...tx,
+          appendAudit: async () => {
+            throw Error("audit unavailable");
+          },
+        }),
+      ),
+  };
+  const b = partialBody(scan);
+  await assert.rejects(
+    new ReturnRegistry(broken).createPartial(s, b),
+    /audit unavailable/,
+  );
+  assert.equal((await new ReturnRegistry(repo).list(s)).items.length, 0);
+  const r = await new ReturnRegistry(repo).createPartial(s, b);
+  repo.close();
+  repo = new PreviewSqliteRepository(file);
+  assert.deepEqual(await new ReturnRegistry(repo).get(s, r.id), r);
+  const rb = recoveryBody(scan);
+  await assert.rejects(
+    new ReturnRegistry(broken).recoverMissing(s, r.id, rb),
+    /audit unavailable/,
+  );
+  assert.deepEqual(await new ReturnRegistry(repo).get(s, r.id), r);
+  const full = await new ReturnRegistry(repo).recoverMissing(s, r.id, rb);
+  repo.close();
+  repo = new PreviewSqliteRepository(file);
+  assert.deepEqual(await new ReturnRegistry(repo).get(s, r.id), full);
+  assert.deepEqual(
+    await new ReturnRegistry(repo).recoverMissing(s, r.id, rb),
+    full,
+  );
+  assert.equal(
+    (await new ReturnRegistry(repo).get(s, r.id, 1)).state,
+    "discrepancy",
+  );
+});

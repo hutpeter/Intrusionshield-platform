@@ -867,3 +867,35 @@ test("dashboard queue paging refuses wrong page, scope, workspace and over-count
     );
   }
 });
+test("partial return and later receipt use separate CSRF-protected routes and scoped responses", async (t) => {
+  const requests = [];
+  let value = {
+    tenantId: session.tenantId,
+    facilityId: session.facilityId,
+    id: "return",
+  };
+  fake(t, async (path, options) => {
+    requests.push({ path, options });
+    return response(value);
+  });
+  await api.createPartialReturn(
+    session,
+    { reason: "Missing", observedConfirmed: true },
+    signal(),
+  );
+  await api.recoverMissingReturn(session, "return", { version: 1 }, signal());
+  assert.ok(requests[0].path.endsWith("/returns/partial"));
+  assert.ok(requests[1].path.endsWith("/returns/return/receive-missing"));
+  assert.ok(
+    requests.every(
+      (r) =>
+        r.options.headers["x-sterile-csrf"] === session.csrf &&
+        r.options.method === "POST",
+    ),
+  );
+  value = { ...value, facilityId: "foreign" };
+  await assert.rejects(
+    () => api.createPartialReturn(session, {}, signal()),
+    (e) => e instanceof ApiError,
+  );
+});

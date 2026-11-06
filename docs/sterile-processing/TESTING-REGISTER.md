@@ -51,7 +51,22 @@ A successful developer check never implies that the owner performed it.
 
 | 2b12333 | Issued-package lookup, manifest reconciliation and confirmed complete return with frozen identifier | 284 scoped tests, builds and targeted browser verification | U-RETSCAN-01 passed November 6, 2026 | Owner exceptions/disposition, hardware, persistent partial returns and operational acceptance deferred |
 
-## Current owner check — dashboard queue paging
+## Current owner check — partial-return discrepancy
+
+**U-PARTRETURN-01 pending:** follow [PARTIAL-RETURNS.md](PARTIAL-RETURNS.md): prepare a
+fictional return scan example, simulate scan, select missing expected instruments, leave
+the example member unreceived, enter reason, tick both confirmations and Save discrepancy.
+Expect Return discrepancy — blocked, Missing instruments: 1, Received instruments: 0,
+original issue retained and no Record disposition. This is the only requested new check.
+
+Developer November 6, 2026: 303 scoped tests (162 domain, 109 service, 32 web), builds
+and browser shortage/save/refresh/later-receipt/history checks passed. Owner acceptance
+is not inferred. M-PARTRETURN-01 later recovery/disposition/recall/concurrency/error/history
+and M-PARTRETURN-02 physical/large-list/language/layout/production acceptance are deferred.
+Dashboard initial check and Next paging retain their recorded passes; owner Previous
+remains unconfirmed/deferred. U-TRACE-01 remains pending; RSP-ISS-001 remains parked.
+
+## Previous owner check — dashboard queue paging
 
 **U-DASHPAGE-01 Next passed November 6, 2026; owner Previous check unconfirmed:** Dashboard → Prepare fictional queue paging example once →
 Cleaning awaiting work → Next. Confirm Page 2 has different codes; Previous returns

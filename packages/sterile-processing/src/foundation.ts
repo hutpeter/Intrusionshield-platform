@@ -83,6 +83,8 @@ export interface SterileAuditEvent {
     | "maintenance-assessed"
     | "maintenance-repaired"
     | "maintenance-authorized"
+    | "return-discrepancy-recorded"
+    | "return-missing-received"
     | "package-returned"
     | "return-disposition"
     | "recall-cleared-for-reprocessing"

@@ -28,7 +28,11 @@ const body = (a, extra = {}) => ({
   confirmed: true,
   ...extra,
 });
-async function fixture({ legacy = false, draft = false } = {}) {
+async function fixture({
+  legacy = false,
+  draft = false,
+  memberCount = 1,
+} = {}) {
   const repo = new MemoryRepository(),
     s = {
       tenantId: randomUUID(),
@@ -52,6 +56,16 @@ async function fixture({ legacy = false, draft = false } = {}) {
     instrumentTypeId: type.id,
     serialNumber: "1",
   });
+  const members = [i];
+  for (let n = 2; n <= memberCount; n++)
+    members.push(
+      await ir.register(s, {
+        requestId: randomUUID(),
+        code: "INS-" + n,
+        instrumentTypeId: type.id,
+        serialNumber: String(n),
+      }),
+    );
   let e;
   if (!legacy) {
     e = await pr.receive(s, {
@@ -61,7 +75,7 @@ async function fixture({ legacy = false, draft = false } = {}) {
       custodian: "Demo",
       condition: "Demo",
       discrepancies: "",
-      instrumentIds: [i.id],
+      instrumentIds: members.map((i) => i.id),
       confirmed: true,
     });
     await pr.start(s, e.id, {
@@ -88,23 +102,21 @@ async function fixture({ legacy = false, draft = false } = {}) {
       procedureVersion: "1",
       evidence: "INSP-EVID",
       confirmed: true,
-      items: [
-        {
-          instrumentId: i.id,
-          clean: true,
-          dry: true,
-          intact: true,
-          functional: true,
-          note: "",
-        },
-      ],
+      items: members.map((i) => ({
+        instrumentId: i.id,
+        clean: true,
+        dry: true,
+        intact: true,
+        functional: true,
+        note: "",
+      })),
     });
   }
   const d = await tr.createDefinition(s, {
     requestId: randomUUID(),
     code: "DEF-1",
     name: "Demo tray",
-    requirements: [{ instrumentTypeId: type.id, quantity: 1 }],
+    requirements: [{ instrumentTypeId: type.id, quantity: memberCount }],
   });
   let a = await tr.createAssembly(s, {
     requestId: randomUUID(),
@@ -115,7 +127,7 @@ async function fixture({ legacy = false, draft = false } = {}) {
   a = await tr.updateContents(s, a.id, {
     requestId: randomUUID(),
     version: 1,
-    instrumentIds: [i.id],
+    instrumentIds: members.map((i) => i.id),
   });
   if (!draft)
     a = await tr.transition(s, a.id, {
@@ -242,8 +254,8 @@ async function anotherPackage(f) {
   });
   return f.pk.pack(f.s, body(a, { code: "PACK-" + code }));
 }
-async function reviewedFixture(outcome = "passed") {
-  const f = await fixture(),
+async function reviewedFixture(outcome = "passed", memberCount = 1) {
+  const f = await fixture({ memberCount }),
     l = await f.cy.create(f.s, loadBody(f.packageRecord));
   await f.cy.start(f.s, l.id, cycleStart(1));
   const done = await f.cy.finish(
@@ -273,8 +285,8 @@ const reviewBody = (l, extra = {}) => ({
   confirmed: true,
   ...extra,
 });
-async function distributionFixture(decision = "release") {
-  const f = await reviewedFixture(),
+async function distributionFixture(decision = "release", memberCount = 1) {
+  const f = await reviewedFixture("passed", memberCount),
     r = await f.rr.decide(f.reviewer, reviewBody(f.l, { decision }));
   return { ...f, r, dr: new DistributionRegistry(f.repo) };
 }
@@ -325,8 +337,8 @@ const disposeBody = (extra = {}) => ({
   confirmed: true,
   ...extra,
 });
-async function issuedFixture() {
-  const f = await distributionFixture(),
+async function issuedFixture(memberCount = 1) {
+  const f = await distributionFixture("release", memberCount),
     stored = await f.dr.store(f.s, storeBody(f)),
     d = await f.dr.issue(f.s, stored.id, issueBody(1));
   return { ...f, d, rt: new ReturnRegistry(f.repo) };
@@ -442,4 +454,201 @@ test("late audit rollback and competing scanned returns preserve one complete re
   ]);
   assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
   assert.equal(f.repo.state.returns.length, 1);
+});
+
+const partialBody = (f, received = []) => {
+  const { contentsChecked, ...b } = scannedBody(f, {
+    receivedInstrumentIds: received,
+  });
+  return {
+    ...b,
+    reason: "One or more expected instruments missing",
+    observedConfirmed: true,
+  };
+};
+const recoveryBody = (ids, extra = {}) => ({
+  requestId: randomUUID(),
+  version: 1,
+  receivedInstrumentIds: ids,
+  location: "QUARANTINE-B",
+  custodian: "DEMO-RECOVERER",
+  reference: "RECOVERY-REF",
+  note: "Late receipt",
+  confirmed: true,
+  ...extra,
+});
+test("partial return freezes actual received/missing members, issue and reservations; later receipts enable only disposition", async () => {
+  const f = await issuedFixture(3),
+    ids = f.a.instruments.map((i) => i.id),
+    original = structuredClone(f.repo.state.distributions),
+    assignments = structuredClone(f.repo.state.assignments),
+    input = partialBody(f, [ids[0]]);
+  const r = await f.rt.createPartial(f.s, input);
+  assert.equal(r.state, "discrepancy");
+  assert.deepEqual(r.reconciliation.receivedInstrumentIds, [ids[0]]);
+  assert.deepEqual(r.reconciliation.missingInstrumentIds, ids.slice(1));
+  assert.equal(r.episodeId, null);
+  assert.equal(r.disposition, null);
+  assert.deepEqual(f.repo.state.distributions, original);
+  assert.deepEqual(f.repo.state.assignments, assignments);
+  assert.deepEqual(await f.rt.createPartial(f.s, input), r);
+  await fail(f.rt.dispose(f.reviewer, r.id, disposeBody()), "RETURN_BLOCKED");
+  await fail(f.rt.scan(f.s, token(f)), "RETURN_BLOCKED");
+  await fail(
+    f.pr.receive(f.s, {
+      requestId: randomUUID(),
+      code: "BYPASS",
+      source: "Demo",
+      custodian: "Demo",
+      condition: "Used",
+      discrepancies: "",
+      instrumentIds: [ids[1]],
+      confirmed: true,
+    }),
+    "INSTRUMENT_ASSIGNED",
+  );
+  const firstInput = recoveryBody([ids[1]]),
+    first = await f.rt.recoverMissing(f.s, r.id, firstInput);
+  assert.equal(first.state, "discrepancy");
+  assert.equal(first.reconciliation.missingInstrumentIds.length, 1);
+  assert.deepEqual(await f.rt.recoverMissing(f.s, r.id, firstInput), first);
+  await fail(
+    f.rt.recoverMissing(f.s, r.id, recoveryBody([ids[1]], { version: 2 })),
+    "RETURN_CONTENTS_MISMATCH",
+  );
+  await fail(
+    f.rt.recoverMissing(f.s, r.id, recoveryBody([ids[2]])),
+    "CONFLICT",
+  );
+  const last = await f.rt.recoverMissing(
+    f.s,
+    r.id,
+    recoveryBody([ids[2]], { version: 2 }),
+  );
+  assert.equal(last.state, "returned");
+  assert.deepEqual(last.reconciliation.missingInstrumentIds, []);
+  assert.equal(last.reconciliation.recoveries.length, 2);
+  assert.equal(last.episodeId, null);
+  assert.equal(last.disposition, null);
+  assert.deepEqual(
+    (await f.rt.get(f.s, r.id, 1)).reconciliation.missingInstrumentIds,
+    ids.slice(1),
+  );
+  const done = await f.rt.dispose(
+    f.reviewer,
+    r.id,
+    disposeBody({ version: 3 }),
+  );
+  assert.equal(done.state, "reprocessing");
+  assert.equal((await f.pr.get(f.s, done.episodeId)).instruments.length, 3);
+  assert.deepEqual(f.repo.state.distributions, original);
+});
+test("partial inputs reject complete, foreign, duplicate and unconfirmed declarations without writes", async () => {
+  const f = await issuedFixture(2),
+    ids = f.a.instruments.map((i) => i.id),
+    before = structuredClone(f.repo.state);
+  for (const patch of [
+    { receivedInstrumentIds: ids },
+    { receivedInstrumentIds: [randomUUID()] },
+    { receivedInstrumentIds: [ids[0], ids[0]] },
+    { reason: "" },
+    { observedConfirmed: false },
+    { confirmed: false },
+    { identifier: token(f).replace(/V1$/, "V2") },
+  ]) {
+    await assert.rejects(
+      f.rt.createPartial(f.s, { ...partialBody(f, [ids[0]]), ...patch }),
+    );
+    assert.deepEqual(f.repo.state, before);
+  }
+  await fail(
+    f.rt.createPartial({ ...f.s, facilityId: randomUUID() }, partialBody(f)),
+    "NOT_FOUND",
+  );
+  const r = await f.rt.createPartial(f.s, partialBody(f));
+  for (const patch of [
+    { receivedInstrumentIds: [] },
+    { receivedInstrumentIds: [randomUUID()] },
+    { receivedInstrumentIds: [ids[0], ids[0]] },
+    { confirmed: false },
+    { location: "" },
+  ])
+    await assert.rejects(
+      f.rt.recoverMissing(f.s, r.id, { ...recoveryBody([ids[0]]), ...patch }),
+    );
+  await fail(
+    f.rt.recoverMissing(
+      { ...f.s, tenantId: randomUUID() },
+      r.id,
+      recoveryBody([ids[0]]),
+    ),
+    "NOT_FOUND",
+  );
+});
+test("partial/recovery audit rollback and racing receipts retain one coherent discrepancy", async () => {
+  const f = await issuedFixture(),
+    before = structuredClone(f.repo.state),
+    b = partialBody(f);
+  f.repo.failAudit = true;
+  await assert.rejects(f.rt.createPartial(f.s, b));
+  assert.deepEqual(f.repo.state, before);
+  f.repo.failAudit = false;
+  const race = await Promise.allSettled([
+    f.rt.createPartial(f.s, b),
+    f.rt.createScanned(f.s, scannedBody(f, { code: "COMPETING" })),
+  ]);
+  assert.equal(race.filter((x) => x.status === "fulfilled").length, 1);
+  const r = await f.rt.get(f.s, f.repo.state.returns[0].id),
+    saved = structuredClone(f.repo.state);
+  f.repo.failAudit = true;
+  await assert.rejects(f.rt.recoverMissing(f.s, r.id, recoveryBody([f.i.id])));
+  assert.deepEqual(f.repo.state, saved);
+  f.repo.failAudit = false;
+  const recoveries = await Promise.allSettled([
+    f.rt.recoverMissing(f.s, r.id, recoveryBody([f.i.id])),
+    f.rt.recoverMissing(f.s, r.id, recoveryBody([f.i.id])),
+  ]);
+  assert.equal(recoveries.filter((x) => x.status === "fulfilled").length, 1);
+  assert.equal((await f.rt.get(f.s, r.id)).reconciliation.recoveries.length, 1);
+});
+test("recall clearance admission cannot transfer missing instruments from a discrepancy", async () => {
+  const f = await issuedFixture(),
+    r = await f.rt.createPartial(f.s, partialBody(f));
+  const { recallAdmissionPlan } = await import("../dist/recall-readmission.js");
+  const c = {
+    ...f.s,
+    id: randomUUID(),
+    code: "RECALL",
+    state: "closed",
+    lineage: {},
+    clearance: { instrumentIds: [f.i.id] },
+    version: 1,
+  };
+  await fail(
+    f.repo.transaction(f.s, (tx) => recallAdmissionPlan(tx, f.s, c)),
+    "RETURN_BLOCKED",
+  );
+  assert.equal((await f.rt.get(f.s, r.id)).state, "discrepancy");
+});
+
+test("traceability retains discrepancy counts, missing identity, later receipt actors and historical versions", async () => {
+  const f = await issuedFixture(),
+    r = await f.rt.createPartial(f.s, partialBody(f));
+  const actor = { ...f.s, actorId: randomUUID() };
+  await f.rt.recoverMissing(actor, r.id, recoveryBody([f.i.id]));
+  const { TraceabilityRegistry } = await import("../dist/index.js"),
+    report = await new TraceabilityRegistry(f.repo).report(
+      f.s,
+      "package",
+      f.packageRecord.id,
+    );
+  const node = report.nodes.find((n) => n.kind === "return" && n.id === r.id);
+  assert.ok(node);
+  assert.equal(node.snapshots.length, 2);
+  const encoded = JSON.stringify(node);
+  assert.ok(encoded.includes("return_reconciliation"));
+  assert.ok(encoded.includes("return_missing_received"));
+  assert.ok(encoded.includes(actor.actorId));
+  assert.ok(encoded.includes("RECOVERY-REF"));
+  assert.ok(encoded.includes(f.i.id));
 });

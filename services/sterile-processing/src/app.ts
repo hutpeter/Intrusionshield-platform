@@ -142,6 +142,14 @@ export function createSterileApp(
     "/api/v1/sterile/facilities/:facilityId/returns/scanned",
     express.json({ limit: "64kb", strict: true }),
   );
+  app.use(
+    "/api/v1/sterile/facilities/:facilityId/returns/partial",
+    express.json({ limit: "64kb", strict: true }),
+  );
+  app.use(
+    "/api/v1/sterile/facilities/:facilityId/returns/:id/receive-missing",
+    express.json({ limit: "64kb", strict: true }),
+  );
   app.use(express.json({ limit: "8kb", strict: true }));
   const prefix = "/api/v1/sterile/facilities/:facilityId";
   app.use(prefix, async (req, res, next) => {
@@ -1111,6 +1119,53 @@ export function createSterileApp(
           v as unknown as Parameters<ReturnRegistry["createScanned"]>[1],
         ),
       );
+  });
+  app.post(prefix + "/returns/partial", async (req, res) => {
+    noQuery(req);
+    const v = body(req.body, [
+      "requestId",
+      "code",
+      "distributionId",
+      "distributionVersion",
+      "condition",
+      "location",
+      "custodian",
+      "reference",
+      "note",
+      "confirmed",
+      "identifier",
+      "receivedInstrumentIds",
+      "reason",
+      "observedConfirmed",
+    ]);
+    res
+      .status(201)
+      .json(
+        await returns().createPartial(
+          res.locals.scope,
+          v as unknown as Parameters<ReturnRegistry["createPartial"]>[1],
+        ),
+      );
+  });
+  app.post(prefix + "/returns/:id/receive-missing", async (req, res) => {
+    noQuery(req);
+    const v = body(req.body, [
+      "requestId",
+      "version",
+      "receivedInstrumentIds",
+      "location",
+      "custodian",
+      "reference",
+      "note",
+      "confirmed",
+    ]);
+    res.json(
+      await returns().recoverMissing(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        v as unknown as Parameters<ReturnRegistry["recoverMissing"]>[2],
+      ),
+    );
   });
   app.get(prefix + "/returns", async (req, res) =>
     res.json(await returns().list(res.locals.scope, page(req))),

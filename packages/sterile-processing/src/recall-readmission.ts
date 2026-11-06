@@ -49,6 +49,12 @@ export async function recallAdmissionPlan(
       if (p && (p.state !== "packaged" || p.assemblyVersion !== a.version))
         throw new SterileError("CONFLICT");
       if (p) {
+        const returned = await tx.findReturnByPackage(p.id);
+        if (
+          returned?.state === "discrepancy" ||
+          returned?.reconciliation?.missingInstrumentIds.length
+        )
+          throw new SterileError("RETURN_BLOCKED");
         const load = await tx.findPackageLoad(p.id);
         if (load?.state === "running") activeCycles.add(load.loadCode);
       }

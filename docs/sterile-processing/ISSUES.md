@@ -61,7 +61,7 @@ Keep test execution status in [TESTING-REGISTER.md](TESTING-REGISTER.md).
   block the old package. Reviewer disposition can retain quarantine or atomically
   transfer unchanged, registered, non-damaged and non-recalled instruments to a new
   receiving episode. Quarantine retains reservations. No automatic restock exists.
-- **Remaining scope:** Partial returns/missing instruments, explicit use/procedure
+- **Remaining scope:** Unexpected/mismatched returns and shortage corrections, explicit use/procedure
   records, damage repair, quarantine clearance, corrections, approved unopened-return
   handling and production policy. Recall blocks deny the current reprocessing shortcut;
   cross-episode recall propagation is tracked separately in RSP-ISS-004.
@@ -203,17 +203,19 @@ U-RETSCAN-01 passed November 6, 2026; broader manual/physical acceptance remains
 
 ## RSP-ISS-008 — Persistent partial and mismatched return reconciliation
 
-- **Status:** Deferred; pre-save discrepancy stop supplied in scanned return form.
-- **Current boundary:** Only complete-package returns can be saved. A missing/mismatch
-  flag disables complete receipt and Save; exact manifest membership is also checked
-  server-side. This flag is unsaved form state, not a shortage case or new quarantine event.
-- **Remaining work:** Persistent discrepancy/partial receipt records, actual received/
-  missing/unexpected member reconciliation, later recovery, actor/competency policy,
-  package/instrument custody and recall interaction, disposition/reprocessing rules,
-  correction history and operational/clinical acceptance. Original issue must remain
-  immutable and no unavailable member may silently return to stock.
-- **Testing:** Broader owner and physical discrepancy acceptance remains deferred under
-  M-RETSCAN-01–03. Independent cleaner/inspector separation stays under RSP-ISS-001.
+- **Status:** Expected-member shortages and later receipt implemented in the local
+  preview November 6, 2026; owner U-PARTRETURN-01 pending.
+- **Delivered:** Original manifest/issue retained; explicit actual received subset;
+  derived missing set; saved blocked discrepancy; all reservations retained; operator
+  later receipts with actor/time/location/reference and immutable versions. Once fully
+  accounted, separate reviewer disposition remains required. No partial reprocessing or
+  automatic restock. Recall admission rejects unresolved discrepancies.
+- **Remaining work:** Unexpected instruments/mismatched identity custody, incorrect
+  receipt corrections, permanently missing/discard policies, partial-member processing,
+  physical reconciliation, verified identity/competency and clinical/production acceptance.
+- **Testing:** 303 scoped tests/builds and targeted browser checks passed. Owner initial
+  shortage U-PARTRETURN-01 pending; M-PARTRETURN-01–02 broader checks deferred. See
+  [PARTIAL-RETURNS.md](PARTIAL-RETURNS.md). RSP-ISS-001 stays parked.
 
 ## RSP-ISS-009 — Production dashboard scale and operational acceptance
 

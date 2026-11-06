@@ -2,6 +2,21 @@ import type { AssemblyInstrument } from "./tray-types.js";
 import type { RecallBlock } from "./recall-types.js";
 import type { DistributionRecord } from "./distribution-types.js";
 export interface ReturnRecord {
+  reconciliation?: {
+    manifest: AssemblyInstrument[];
+    receivedInstrumentIds: string[];
+    missingInstrumentIds: string[];
+    reason: string;
+    recoveries: {
+      instrumentIds: string[];
+      location: string;
+      custodian: string;
+      reference: string;
+      note: string;
+      actorId: string;
+      at: string;
+    }[];
+  };
   scanReceipt?: { identifier: string; contents: AssemblyInstrument[] };
   id: string;
   tenantId: string;
@@ -16,7 +31,7 @@ export interface ReturnRecord {
   custodian: string;
   reference: string;
   note: string;
-  state: "returned" | "quarantined" | "reprocessing";
+  state: "discrepancy" | "returned" | "quarantined" | "reprocessing";
   disposition: {
     action: "quarantine" | "reprocess";
     reason: string;
@@ -31,7 +46,10 @@ export interface ReturnRecord {
   updatedAt: string;
   receivedBy: string;
 }
-export type ReturnSummary = Omit<ReturnRecord, "issue" | "scanReceipt">;
+export type ReturnSummary = Omit<
+  ReturnRecord,
+  "issue" | "scanReceipt" | "reconciliation"
+>;
 export type ReturnStatus = Pick<
   ReturnRecord,
   "id" | "code" | "state" | "episodeId" | "episodeCode"
@@ -77,4 +95,22 @@ export interface ReturnScanResult {
   issue: DistributionRecord;
   manifest: AssemblyInstrument[];
   recall: RecallBlock | null;
+}
+
+export interface PartialReturnInput extends Omit<
+  ScannedReturnInput,
+  "contentsChecked"
+> {
+  reason: string;
+  observedConfirmed: boolean;
+}
+export interface ReturnRecoveryInput {
+  requestId: string;
+  version: number;
+  receivedInstrumentIds: string[];
+  location: string;
+  custodian: string;
+  reference: string;
+  note: string;
+  confirmed: boolean;
 }

@@ -6,7 +6,7 @@ const en = {
   load: "Original load",
   review: "Original review",
   intro:
-    "Record complete-package returns and preserve their original issue history.",
+    "Record returns, reconcile missing instruments and preserve original issue history.",
   create: "Record return",
   example: "Prepare fictional return example",
   save: "Save return",
@@ -23,6 +23,7 @@ const en = {
   note: "Observation (optional)",
   contents: "I confirm all instruments in this package have been received.",
   confirm: "I confirm this return; the package will remain unavailable.",
+  discrepancy: "Return discrepancy — blocked",
   returned: "Returned — awaiting disposition",
   quarantined: "Quarantined — unavailable",
   reprocessing: "Reprocessing — original package blocked",
@@ -39,7 +40,7 @@ const en = {
   empty: "No returns yet.",
   saved: "Return record saved.",
   boundary:
-    "Fictional demonstration. No patient data. All returns remain unavailable; unopened returns are not automatically restocked. Complete contents must be received. Partial or missing contents require a later discrepancy workflow.",
+    "Fictional demonstration. No patient data. All returns remain unavailable; unopened returns are not automatically restocked. Missing expected contents can be recorded as a blocked discrepancy through package scanning. All expected instruments must be received before disposition.",
   roles:
     "Demo operator records returns; Demo reviewer authorizes disposition; Demo auditor reads only.",
   origin: "Original issue (historical)",
@@ -60,7 +61,8 @@ const es: Text = {
   destination: "Destino original",
   load: "Carga original",
   review: "Revisión original",
-  intro: "Registre devoluciones completas y conserve la entrega original.",
+  intro:
+    "Registre devoluciones, concilie faltantes y conserve la entrega original.",
   create: "Registrar devolución",
   example: "Preparar ejemplo ficticio de devolución",
   save: "Guardar devolución",
@@ -77,6 +79,7 @@ const es: Text = {
   note: "Observación (opcional)",
   contents: "Confirmo la recepción de todos los instrumentos de este paquete.",
   confirm: "Confirmo esta devolución; el paquete permanecerá no disponible.",
+  discrepancy: "Discrepancia de devolución — bloqueado",
   returned: "Devuelto — disposición pendiente",
   quarantined: "En cuarentena — no disponible",
   reprocessing: "Reprocesamiento — paquete original bloqueado",
@@ -93,7 +96,7 @@ const es: Text = {
   empty: "Aún no hay devoluciones.",
   saved: "Devolución guardada.",
   boundary:
-    "Demostración ficticia. Sin datos de pacientes. Ninguna devolución restaura existencias automáticamente. Debe recibirse todo el contenido; faltantes y devoluciones parciales requieren un flujo posterior.",
+    "Demostración ficticia. Sin datos de pacientes. Ninguna devolución restaura existencias automáticamente. Los faltantes esperados pueden registrarse como discrepancia bloqueada mediante escaneo del paquete. Debe recibirse todo el contenido antes de la disposición.",
   roles:
     "Operador demo registra devoluciones; Revisor demo autoriza disposición; Auditor demo solo consulta.",
   origin: "Entrega original (histórica)",
@@ -113,7 +116,8 @@ const fr: Text = {
   destination: "Destination initiale",
   load: "Charge initiale",
   review: "Révision initiale",
-  intro: "Enregistrez les retours complets et conservez la remise initiale.",
+  intro:
+    "Enregistrez les retours, rapprochez les manquants et conservez la remise initiale.",
   create: "Enregistrer un retour",
   example: "Préparer un exemple fictif de retour",
   save: "Enregistrer le retour",
@@ -130,6 +134,7 @@ const fr: Text = {
   note: "Observation (facultative)",
   contents: "Je confirme la réception de tous les instruments du paquet.",
   confirm: "Je confirme ce retour ; le paquet reste indisponible.",
+  discrepancy: "Écart de retour — bloqué",
   returned: "Retourné — disposition en attente",
   quarantined: "En quarantaine — indisponible",
   reprocessing: "Retraitement — paquet initial bloqué",
@@ -146,7 +151,7 @@ const fr: Text = {
   empty: "Aucun retour.",
   saved: "Retour enregistré.",
   boundary:
-    "Démonstration fictive. Aucune donnée patient. Aucun retour ne rétablit automatiquement le stock. Le contenu complet doit être reçu ; les manquants nécessitent un flux ultérieur.",
+    "Démonstration fictive. Aucune donnée patient. Aucun retour ne rétablit automatiquement le stock. Les manquants attendus peuvent être enregistrés comme écart bloqué via le scan du paquet. Le contenu complet doit être reçu avant disposition.",
   roles:
     "Opérateur démo enregistre les retours ; Réviseur démo autorise la disposition ; Auditeur démo consulte.",
   origin: "Remise initiale (historique)",

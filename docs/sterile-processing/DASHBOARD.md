@@ -13,7 +13,7 @@ workflow controls. Open workspace opens its normal module list, without a queue 
 | Assembly | Draft tray assemblies |
 | Loading | Packaged records with active package custody, no load assignment, return or recall block |
 | Release | Passed loads awaiting review without a final release/rejection; held reviews remain pending |
-| Returns | Returned packages awaiting disposition |
+| Returns | Returned packages awaiting reconciliation or disposition, including blocked shortages |
 | Recall | Open cases or cases with instrument restrictions awaiting receiving admission |
 | Maintenance | Instruments in maintenance state |
 
