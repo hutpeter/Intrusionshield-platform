@@ -41,7 +41,26 @@ A successful developer check never implies that the owner performed it.
 
 | 4a6814b | Stable internal identifier, vector Data Matrix label and current scoped lookup | 243 scoped tests, builds, independent symbol decoding and developer browser print/Enter/lookup check | U-SCAN-01 passed November 5, 2026 | Physical scanners/printers/DPM and operational scan-assisted actions deferred |
 
-| Tray scanning increment (this commit) | Confirmed single-instrument scan into draft with type/quantity/hold gates and atomic reservation | 252 scoped tests, builds and developer browser count/duplicate/Enter/audit check | U-TRAYSCAN-01 passed November 6, 2026 | Physical scanners and owner exception/full workflow acceptance deferred |
+| de3a3a2 | Confirmed single-instrument scan into draft with type/quantity/hold gates and atomic reservation | 252 scoped tests, builds and developer browser count/duplicate/Enter/audit check | U-TRAYSCAN-01 passed November 6, 2026 | Physical scanners and owner exception/full workflow acceptance deferred |
+
+| Receiving scanning increment (this commit) | Stage scanned members then confirm receipt with current holds and frozen identifier provenance | 260 scoped tests, builds and developer browser staging/Enter/confirmation/hold/refresh check | U-RECSCAN-01 pending | Hardware, owner exception and complete operational acceptance deferred |
+
+## Current single owner check — receiving scan
+
+**U-RECSCAN-01 pending:** follow [RECEIVING-SCANNING.md](RECEIVING-SCANNING.md): Demo
+operator → Receiving and cleaning → Prepare fictional receiving scan example → Simulate
+receiving scan → confirm receipt → Save receipt. Expected Received episode, matching
+member and Internal identifiers recorded at receiving. Only this new aspect is requested.
+
+**Developer passed November 6, 2026:** 260 scoped tests (137 domain, 98 service/SQLite/
+HTTP, 25 web API/export/symbol), scoped builds and browser no-early-receipt/staging,
+confirmation-reset/duplicate/Enter-safety/confirmed-save/provenance/hold/refresh check.
+Tests cover validated token/member correspondence, post-scan restrictions, mixed lists,
+cleaning/inspection linkage, scope/roles/CSRF/strict bodies, retries, competing SQLite
+connections, reopen and late audit rollback. Developer results do not establish owner
+or physical acceptance. M-RECSCAN-01 owner exception/mixed-list/history, M-RECSCAN-02
+hardware/Windows/ES/FR/mobile/limits and M-RECSCAN-03 full operational/production acceptance
+remain deferred. RSP-ISS-001 stays parked; RSP-ISS-007 tracks remaining scan scope.
 
 ## Completed owner check — tray scanning
 

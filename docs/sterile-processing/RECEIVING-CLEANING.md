@@ -134,3 +134,9 @@ historical versions, browser refresh, English/French labels, mobile overflow,
 auditor access and session-loss clearing. A full launcher stop/start retained the
 episode, both attempts, failed historical version and instrument hold. Windows
 validation of this new workflow remains the owner's next step.
+
+## Internal identifier scanning
+
+[RECEIVING-SCANNING.md](RECEIVING-SCANNING.md) adds scan-assisted form membership and
+explicit scanned receipt confirmation with current custody/recall rechecks and saved
+identifier provenance. Cleaning and inspection continue from the same fresh episode.

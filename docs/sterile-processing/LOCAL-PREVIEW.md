@@ -254,3 +254,8 @@ Run `pnpm install --frozen-lockfile` for the new encoder dependency, then see
 
 See [TRAY-SCANNING.md](TRAY-SCANNING.md) for a fictional eligible instrument/draft
 setup and the one confirmed scan-add check. No scanner hardware is needed.
+
+## Scanned receiving list
+
+See [RECEIVING-SCANNING.md](RECEIVING-SCANNING.md): stage a fictional scanned instrument,
+then explicitly confirm and save its receiving episode. No scanner hardware is required.

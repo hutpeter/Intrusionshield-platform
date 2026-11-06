@@ -3,6 +3,7 @@ import {
   SterileRegistryBase,
   SterileError,
   scopeOf,
+  instrumentIdFromScan,
   sterileUuid,
   codeOf,
   field,
@@ -13,6 +14,7 @@ import {
 } from "./foundation.js";
 import type {
   ProcessingEpisode,
+  ScannedReceiveInput,
   ReceiveInput,
   StartCleaningInput,
   FinishCleaningInput,
@@ -27,9 +29,38 @@ const expected = (v: number) => {
   return v;
 };
 export class ProcessingRegistry extends SterileRegistryBase {
+  async receiveScanned(
+    scope: SterileScope,
+    input: ScannedReceiveInput,
+  ): Promise<ProcessingEpisode> {
+    const { scannedIdentifiers, ...receipt } = input;
+    if (
+      !Array.isArray(scannedIdentifiers) ||
+      scannedIdentifiers.length < 1 ||
+      scannedIdentifiers.length > 100 ||
+      !Array.isArray(receipt.instrumentIds)
+    )
+      invalid();
+    const ids = scannedIdentifiers.map(instrumentIdFromScan),
+      members = receipt.instrumentIds.map(sterileUuid);
+    if (
+      new Set(ids).size !== ids.length ||
+      ids.some((id) => !members.includes(id))
+    )
+      invalid();
+    return this.receiveInternal(scope, receipt, ids);
+  }
+
   async receive(
     scope: SterileScope,
     input: ReceiveInput,
+  ): Promise<ProcessingEpisode> {
+    return this.receiveInternal(scope, input);
+  }
+  private async receiveInternal(
+    scope: SterileScope,
+    input: ReceiveInput,
+    scannedIds?: string[],
   ): Promise<ProcessingEpisode> {
     const s = scopeOf(scope),
       code = codeOf(input.code),
@@ -50,7 +81,7 @@ export class ProcessingRegistry extends SterileRegistryBase {
       s,
       input.requestId,
       "processing-received",
-      input,
+      scannedIds ? { ...input, scannedIds } : input,
       async (tx, at) => {
         if (await tx.findProcessingByCode(code))
           throw new SterileError("CONFLICT");
@@ -58,7 +89,18 @@ export class ProcessingRegistry extends SterileRegistryBase {
         for (const id of ids) {
           const i = await tx.findInstrument(id);
           if (!i) throw new SterileError("NOT_FOUND");
-          if (i.state !== "registered") throw new SterileError("CONFLICT");
+          if (i.state !== "registered")
+            throw new SterileError(scannedIds ? "SCAN_INELIGIBLE" : "CONFLICT");
+          if (scannedIds) {
+            if (await tx.findInstrumentRecallBlock(id))
+              throw new SterileError("RECALL_BLOCKED");
+            for (const recall of await tx.listInstrumentRecallCases(id))
+              if (
+                !recall.lineage ||
+                !(await tx.findRecallReadmission(recall.id, id))
+              )
+                throw new SterileError("RECALL_BLOCKED");
+          }
           if (await tx.findActiveAssignment(id))
             throw new SterileError("INSTRUMENT_ASSIGNED");
           if (await tx.findProcessingHold(id))
@@ -75,6 +117,14 @@ export class ProcessingRegistry extends SterileRegistryBase {
           });
         }
         const item: ProcessingEpisode = {
+          ...(scannedIds
+            ? {
+                receivingScans: scannedIds.map((instrumentId) => ({
+                  instrumentId,
+                  identifier: "RSP-I-" + instrumentId.toUpperCase(),
+                })),
+              }
+            : {}),
           id: randomUUID(),
           tenantId: s.tenantId,
           facilityId: s.facilityId,
@@ -101,7 +151,9 @@ export class ProcessingRegistry extends SterileRegistryBase {
           "processing-received",
           input.requestId,
           at,
-          "",
+          scannedIds
+            ? `Confirmed receiving with internal scan identifiers: ${scannedIds.length}`
+            : "",
         );
         return item;
       },

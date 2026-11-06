@@ -32,6 +32,7 @@ import type {
   LoadInput,
   CycleResultInput,
   ReceiveInput,
+  ScannedReceiveInput,
   StartCleaningInput,
   FinishCleaningInput,
   Instrument,
@@ -221,6 +222,32 @@ async function checkedMovement(
   return r;
 }
 export const api = {
+  prepareReceivingScan: (s: Session, requestId: string, signal: AbortSignal) =>
+    scoped(
+      s,
+      call<Instrument>(
+        "/preview/receiving-scan-example",
+        signal,
+        { requestId },
+        s.csrf,
+      ),
+    ),
+
+  receiveScanned: (
+    s: Session,
+    body: ScannedReceiveInput,
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<ProcessingEpisode>(
+        base(s) + "/processing/scanned-receipts",
+        signal,
+        body,
+        s.csrf,
+      ),
+    ),
+
   prepareTrayScan: async (
     s: Session,
     requestId: string,

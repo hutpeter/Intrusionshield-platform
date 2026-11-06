@@ -267,6 +267,11 @@ export class TraceabilityRegistry {
           for (const i of e.instruments)
             if (instruments.includes(i.id))
               link(row, "instrument", i.id, i.instrumentVersion, "received");
+          for (const scan of e.receivingScans ?? [])
+            fact("receiving_scan", e.createdAt, e.receivedBy, scan, [
+              "instrumentId",
+              "identifier",
+            ]);
           if (e.maintenanceSource)
             link(
               row,

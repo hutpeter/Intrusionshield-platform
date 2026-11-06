@@ -130,6 +130,10 @@ export function createSterileApp(
     "/api/v1/sterile/facilities/:facilityId/processing/:id/inspect",
     express.json({ limit: "256kb", strict: true }),
   );
+  app.use(
+    "/api/v1/sterile/facilities/:facilityId/processing/scanned-receipts",
+    express.json({ limit: "16kb", strict: true }),
+  );
   app.use(express.json({ limit: "8kb", strict: true }));
   const prefix = "/api/v1/sterile/facilities/:facilityId";
   app.use(prefix, async (req, res, next) => {
@@ -523,6 +527,28 @@ export function createSterileApp(
       ),
     ),
   );
+  app.post(prefix + "/processing/scanned-receipts", async (req, res) => {
+    noQuery(req);
+    const v = body(req.body, [
+      "requestId",
+      "code",
+      "source",
+      "custodian",
+      "condition",
+      "discrepancies",
+      "instrumentIds",
+      "scannedIdentifiers",
+      "confirmed",
+    ]);
+    res
+      .status(201)
+      .json(
+        await new ProcessingRegistry(dependencies.repository!).receiveScanned(
+          res.locals.scope,
+          v as unknown as Parameters<ProcessingRegistry["receiveScanned"]>[1],
+        ),
+      );
+  });
   app.post(prefix + "/processing", async (req, res) => {
     noQuery(req);
     const v = body(req.body, [

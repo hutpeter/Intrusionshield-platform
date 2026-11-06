@@ -155,3 +155,15 @@ are atomic. Normal completion remains separately confirmed. Developer 252 scoped
 builds and targeted browser checks passed; owner U-TRAYSCAN-01 remains pending. Physical
 scanner/printer/DPM and receiving, packaging, loading and distribution scan actions remain
 future work. See [TRAY-SCANNING.md](TRAY-SCANNING.md).
+
+### RSP-ISS-007 update — scanned receiving
+
+Receiving now stages internal identifiers in the form, rejects duplicates/current holds,
+resets confirmation when membership changes and saves only after explicit final receipt
+confirmation. The scanned save rechecks all member custody/recall gates atomically,
+creates fresh processing holds and retains identifier provenance through cleaning and
+inspection. Enter in the scanner field cannot submit the receipt. Developer 260 scoped
+tests, builds and targeted browser checks passed; owner U-RECSCAN-01 and physical/exception/
+full operational acceptance remain pending. Packaging, loading and distribution scan
+actions, DPM/UDI/GS1 and physical hardware validation remain future work. See
+[RECEIVING-SCANNING.md](RECEIVING-SCANNING.md).

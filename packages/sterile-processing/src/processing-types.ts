@@ -42,6 +42,8 @@ export interface InspectInput {
   confirmed: boolean;
 }
 export interface ProcessingEpisode {
+  /** Entered or simulated internal identifiers, not proof of a physical device scan. */
+  receivingScans?: { instrumentId: string; identifier: string }[];
   maintenanceSource?: {
     instrumentId: string;
     maintenanceId: string;
@@ -123,4 +125,8 @@ export interface FinishCleaningInput {
   evidence: string;
   note: string;
   confirmed: boolean;
+}
+
+export interface ScannedReceiveInput extends ReceiveInput {
+  scannedIdentifiers: string[];
 }

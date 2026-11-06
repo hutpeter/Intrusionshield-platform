@@ -661,3 +661,33 @@ test("tray scan command carries version, explicit placement confirmation and CSR
   const r = await api.addTrayScan(session, "assembly", input, signal());
   assert.equal(r.version, 4);
 });
+test("scanned receiving sends selected IDs and scan provenance with explicit receipt confirmation", async (t) => {
+  const input = {
+    requestId: "request",
+    code: "REC",
+    source: "Dept",
+    custodian: "Custodian",
+    condition: "Used",
+    discrepancies: "",
+    instrumentIds: ["instrument"],
+    scannedIdentifiers: ["RSP-I-INSTRUMENT"],
+    confirmed: true,
+  };
+  fake(t, async (path, options) => {
+    assert.ok(path.endsWith("/processing/scanned-receipts"));
+    assert.equal(options.headers["x-sterile-csrf"], session.csrf);
+    assert.deepEqual(JSON.parse(options.body), input);
+    return new Response(
+      JSON.stringify({
+        id: "episode",
+        tenantId: session.tenantId,
+        facilityId: session.facilityId,
+      }),
+      { status: 201 },
+    );
+  });
+  assert.equal(
+    (await api.receiveScanned(session, input, signal())).id,
+    "episode",
+  );
+});

@@ -9,7 +9,7 @@ git pull --ff-only origin feature/sterile-processing-preview
 pnpm sterile:preview
 ```
 
-After **Ready**, refresh. **U-TRAYSCAN-01 pending:**
+After **Ready**, refresh. **U-TRAYSCAN-01 passed November 6, 2026** from owner saved-contents/audit screenshot. Original check:
 
 1. Enter as **Demo operator** and open **Trays**.
 2. Click **Prepare fictional tray scan example**. It opens a new empty draft requiring
@@ -71,7 +71,7 @@ excess quantity, maintenance/retirement/processing/recall/other-tray blocks, cur
 version, facility scope, CSRF/operator-only writes, retry receipts, competing SQLite
 connections, reopen persistence and late audit rollback.
 
-Owner U-TRAYSCAN-01 remains pending. M-TRAYSCAN-01: owner exception/conflict/history and
+Owner U-TRAYSCAN-01 passed November 6, 2026. M-TRAYSCAN-01: owner exception/conflict/history and
 manual-edit interaction walkthroughs; M-TRAYSCAN-02: Windows keyboard scanner/focus,
 Spanish/French/mobile and repeated scanning; M-TRAYSCAN-03: physical placement/label
 validation and full processing-to-release acceptance. The existing physical scanner,

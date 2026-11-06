@@ -1,3 +1,5 @@
+import { ReceivingScan } from "./ReceivingScan";
+import { receivingScanLabels } from "./receiving-scan-text";
 import { maintenanceLabels } from "./maintenance-text";
 import { recallLabels } from "./recall-text";
 import { returnLabels } from "./return-text";
@@ -23,6 +25,7 @@ const empty = () => ({
   discrepancies: "",
   instrumentIds: [] as string[],
   pick: "",
+  scanned: [] as { instrumentId: string; identifier: string }[],
   method: "manual" as "manual" | "mechanical",
   procedure: "",
   procedureVersion: "",
@@ -73,18 +76,21 @@ export function ProcessingWorkspace({
     [form, setForm] = useState<Form | null>(null),
     [fields, setFields] = useState(empty),
     [discard, setDiscard] = useState<(() => void) | null>(null);
+  const [scanBusy, setScanBusy] = useState(false),
+    [scanExample, setScanExample] = useState<Instrument | null>(null);
+  const scanExampleKey = useRef(crypto.randomUUID());
   const exampleKey = useRef(crypto.randomUUID());
   const pending = useRef<AbortController | null>(null),
     inspection = useRef<AbortController | null>(null),
-    busy = blocked || saving;
+    busy = blocked || saving || scanBusy;
   useEffect(() => {
     onDirty(!!form);
     return () => onDirty(false);
   }, [form, onDirty]);
   useEffect(() => {
-    onBusy(saving);
+    onBusy(saving || scanBusy);
     return () => onBusy(false);
-  }, [saving, onBusy]);
+  }, [saving, scanBusy, onBusy]);
   useEffect(
     () => () => {
       pending.current?.abort();
@@ -130,6 +136,7 @@ export function ProcessingWorkspace({
     return () => c.abort();
   }, [session, selected, page, historyPage, nonce, onExpired]);
   function clear() {
+    setScanExample(null);
     setForm(null);
     setFields(empty());
     setDiscard(null);
@@ -173,7 +180,18 @@ export function ProcessingWorkspace({
     });
   }
   const patch = (v: Partial<ReturnType<typeof empty>>) =>
-    setFields((x) => ({ ...x, ...v }));
+    setFields((x) => ({
+      ...x,
+      ...v,
+      ...(v.instrumentIds
+        ? {
+            confirmed: false,
+            scanned: (v.scanned ?? x.scanned).filter((s) =>
+              v.instrumentIds!.includes(s.instrumentId),
+            ),
+          }
+        : {}),
+    }));
   async function save() {
     if (!form || busy || !session.canWrite || !fields.confirmed) return;
     const c = new AbortController();
@@ -182,22 +200,28 @@ export function ProcessingWorkspace({
     setError(null);
     try {
       let item: ProcessingEpisode;
-      if (form.kind === "receive")
-        item = await api.receive(
-          session,
-          {
-            requestId: form.requestId,
-            code: fields.code,
-            source: fields.source,
-            custodian: fields.custodian,
-            condition: fields.condition,
-            discrepancies: fields.discrepancies,
-            instrumentIds: fields.instrumentIds,
-            confirmed: true,
-          },
-          c.signal,
-        );
-      else if (!selected || !form.version) return;
+      if (form.kind === "receive") {
+        const receipt = {
+          requestId: form.requestId,
+          code: fields.code,
+          source: fields.source,
+          custodian: fields.custodian,
+          condition: fields.condition,
+          discrepancies: fields.discrepancies,
+          instrumentIds: fields.instrumentIds,
+          confirmed: true,
+        };
+        const scannedIdentifiers = fields.scanned
+          .filter((s) => fields.instrumentIds.includes(s.instrumentId))
+          .map((s) => s.identifier);
+        item = scannedIdentifiers.length
+          ? await api.receiveScanned(
+              session,
+              { ...receipt, scannedIdentifiers },
+              c.signal,
+            )
+          : await api.receive(session, receipt, c.signal);
+      } else if (!selected || !form.version) return;
       else if (form.kind === "start")
         item = await api.startCleaning(
           session,
@@ -367,6 +391,20 @@ export function ProcessingWorkspace({
           · {d.maintenanceSource.procedureVersion}
         </p>
       )}
+      {d.receivingScans?.length ? (
+        <section className="panel">
+          <h2>{receivingScanLabels(language).recorded}</h2>
+          <ul>
+            {d.receivingScans.map((s) => (
+              <li key={s.instrumentId}>
+                {d.instruments.find((i) => i.id === s.instrumentId)?.code ??
+                  s.instrumentId}{" "}
+                · {s.identifier}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
       {d.recallSource && (
         <p className="readonly-note">
           {recallLabels(language).code}: {d.recallSource.caseCode} ·{" "}
@@ -571,6 +609,56 @@ export function ProcessingWorkspace({
           >
             {selected ? p.back : t.reload}
           </button>
+          {session.canWrite && !selected && !form && (
+            <button
+              disabled={busy || loading}
+              onClick={async () => {
+                if (pending.current) return;
+                const c = new AbortController();
+                pending.current = c;
+                setSaving(true);
+                setError(null);
+                try {
+                  const i = await api.prepareReceivingScan(
+                    session,
+                    scanExampleKey.current,
+                    c.signal,
+                  );
+                  if (!c.signal.aborted) {
+                    scanExampleKey.current = crypto.randomUUID();
+                    setScanExample(i);
+                    setOptions((old) => [
+                      i,
+                      ...old.filter((x) => x.id !== i.id),
+                    ]);
+                    setFields({
+                      ...empty(),
+                      code: "RECSCAN-REC-" + crypto.randomUUID(),
+                      source: "DEMO-DEPARTMENT",
+                      custodian: "DEMO-CUSTODIAN",
+                      condition:
+                        "SIMULATED used instrument — fictional data only",
+                    });
+                    setForm({
+                      kind: "receive",
+                      requestId: crypto.randomUUID(),
+                    });
+                    setNotice(false);
+                  }
+                } catch (e) {
+                  if (!c.signal.aborted) {
+                    if (e instanceof ApiError && e.status === 401) onExpired();
+                    else setError(e);
+                  }
+                } finally {
+                  pending.current = null;
+                  if (!c.signal.aborted) setSaving(false);
+                }
+              }}
+            >
+              {receivingScanLabels(language).prepare}
+            </button>
+          )}
           {session.canWrite && !selected && (
             <button
               className="primary"
@@ -713,6 +801,28 @@ export function ProcessingWorkspace({
                     </label>
                   ))}
                 </div>
+                <ReceivingScan
+                  session={session}
+                  language={language}
+                  blocked={blocked || saving}
+                  ids={fields.instrumentIds}
+                  demoIdentifier={scanExample?.scanIdentifier}
+                  onBusy={setScanBusy}
+                  onExpired={onExpired}
+                  onAdd={(i) => {
+                    setOptions((old) => [
+                      i,
+                      ...old.filter((x) => x.id !== i.id),
+                    ]);
+                    patch({
+                      instrumentIds: [...fields.instrumentIds, i.id],
+                      scanned: [
+                        ...fields.scanned,
+                        { instrumentId: i.id, identifier: i.scanIdentifier! },
+                      ],
+                    });
+                  }}
+                />
                 <div className="instrument-picker">
                   <label>
                     {p.instrument}
