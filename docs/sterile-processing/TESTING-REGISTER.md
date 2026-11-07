@@ -51,9 +51,9 @@ A successful developer check never implies that the owner performed it.
 
 | 2b12333 | Issued-package lookup, manifest reconciliation and confirmed complete return with frozen identifier | 284 scoped tests, builds and targeted browser verification | U-RETSCAN-01 passed November 6, 2026 | Owner exceptions/disposition, hardware, persistent partial returns and operational acceptance deferred |
 
-## Current owner check — service threshold
+## Completed owner check — service threshold
 
-**U-SERVICE-01 pending:** Demo operator → Instruments → Prepare fictional service
+**U-SERVICE-01 passed November 7, 2026:** Demo operator → Instruments → Prepare fictional service
 threshold example. Expect Recorded cycles and service, count 1, interval 1, remaining 0,
 and Service due — new assembly and packaging blocked. See
 [SERVICE-THRESHOLDS.md](SERVICE-THRESHOLDS.md). No repair or full cycle retest is requested.
@@ -810,3 +810,9 @@ Owner screenshot November 6, 2026 confirms Return record saved, Return discrepan
 blocked, Received instruments: 0, Missing instruments: 1, saved discrepancy reason,
 original issued contents/identifier and no Record disposition action. U-PARTRETURN-01
 passed. Later receipt, disposition and broader M-PARTRETURN-01–02 remain deferred.
+
+Owner screenshot November 7, 2026 confirms recorded cycles 1, service interval 1,
+remaining 0 and **Service due — new assembly and packaging blocked**. U-SERVICE-01
+passed for the displayed fictional threshold example. Manual membership denial, policy
+changes, repair/reset and broader M-SERVICE-01–02 remain deferred; developer tests do
+not imply owner acceptance of those paths. RSP-ISS-001 remains parked.

@@ -2,7 +2,7 @@
 
 ## One owner check
 
-**U-SERVICE-01 pending:** Demo operator → Instruments → **Prepare fictional service
+**U-SERVICE-01 passed November 7, 2026:** Demo operator → Instruments → **Prepare fictional service
 threshold example**. The setup records fictional prerequisites, a reviewer fixture policy
 of one recorded cycle, and one simulated passed cycle. It opens the instrument.
 
@@ -85,9 +85,15 @@ SQLite reopening, role/CSRF/strict-body gates, retry-safe fixture and dashboard 
 Browser checks cover the due example, count/limit, operator policy restriction, persistence,
 dashboard record link and confirmed reviewer policy/approaching-warning display.
 
-U-SERVICE-01 remains pending. M-SERVICE-01: owner warning/policy editing, scanned/manual
+U-SERVICE-01 passed November 7, 2026. M-SERVICE-01: owner warning/policy editing, scanned/manual
 membership denial, repair/reset, recall/return intersections, concurrent policy/result
 changes, failures and audit walkthroughs. M-SERVICE-02: Windows/ES/FR/mobile/accessibility,
 representative multi-instrument load performance, equipment-counter reconciliation,
 manufacturer evidence and production identity/competency/operational acceptance. These
 remain deferred; RSP-ISS-001 independent inspection stays parked.
+
+Owner screenshot November 7, 2026 confirms recorded cycles 1, service interval 1,
+remaining 0 and **Service due — new assembly and packaging blocked**. U-SERVICE-01
+passed for the displayed fictional threshold example. Manual membership denial, policy
+changes, repair/reset and broader M-SERVICE-01–02 remain deferred; developer tests do
+not imply owner acceptance of those paths. RSP-ISS-001 remains parked.

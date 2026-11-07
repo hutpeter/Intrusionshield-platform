@@ -246,5 +246,11 @@ authorization resets the baseline while retaining the total and requiring fresh 
 Deferred: approved manufacturer/calendar/lifetime policies, historical imports/backfill,
 verified equipment counters, per-component service, predictive maintenance, active-custody
 repair (RSP-ISS-006), production identity/competency and operational acceptance. Developer
-310 tests/build/browser checks; owner U-SERVICE-01 pending, M-SERVICE-01–02 deferred.
+310 tests/build/browser checks; owner U-SERVICE-01 passed November 7, 2026, M-SERVICE-01–02 deferred.
 See [SERVICE-THRESHOLDS.md](SERVICE-THRESHOLDS.md). RSP-ISS-001 remains parked.
+
+Owner screenshot November 7, 2026 confirms recorded cycles 1, service interval 1,
+remaining 0 and **Service due — new assembly and packaging blocked**. U-SERVICE-01
+passed for the displayed fictional threshold example. Manual membership denial, policy
+changes, repair/reset and broader M-SERVICE-01–02 remain deferred; developer tests do
+not imply owner acceptance of those paths. RSP-ISS-001 remains parked.
