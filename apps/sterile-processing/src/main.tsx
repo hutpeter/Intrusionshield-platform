@@ -1,3 +1,5 @@
+import { LoanerWorkspace } from "./Loaners";
+import { loanerLabels } from "./loaner-text";
 import { serviceLabels } from "./service-text";
 import { Dashboard } from "./Dashboard";
 import { dashboardLabels } from "./dashboard-text";
@@ -272,6 +274,7 @@ function Workspace({
   onExpired: () => void;
 }) {
   const [tab, setTab] = useState<
+      | "loaners"
       | "dashboard"
       | "instruments"
       | "types"
@@ -289,6 +292,7 @@ function Workspace({
     [historyPage, setHistoryPage] = useState(1),
     [selected, setSelected] = useState<string | null>(null),
     [nonce, setNonce] = useState(0);
+  const [loanerTarget, setLoanerTarget] = useState<string | undefined>();
   const [dashboardTarget, setDashboardTarget] = useState<{
     workspace: DashboardWorkspace;
     id: string;
@@ -338,6 +342,7 @@ function Workspace({
     void (async () => {
       try {
         if (
+          tab === "loaners" ||
           tab === "dashboard" ||
           tab === "trays" ||
           tab === "processing" ||
@@ -432,6 +437,7 @@ function Workspace({
   }
   function navigate(
     target:
+      | "loaners"
       | "dashboard"
       | "instruments"
       | "types"
@@ -446,6 +452,7 @@ function Workspace({
       | "recalls",
   ) {
     guard(() => {
+      setLoanerTarget(undefined);
       setDashboardTarget(null);
       setSelected(null);
       setTab(target);
@@ -665,6 +672,13 @@ function Workspace({
             <span aria-hidden="true">⌕</span> {traceLabels(language).title}
           </button>
           <button
+            aria-current={tab === "loaners" ? "page" : undefined}
+            disabled={busy}
+            onClick={() => navigate("loaners")}
+          >
+            ↔ {loanerLabels(language).title}
+          </button>
+          <button
             aria-current={tab === "returns" ? "page" : undefined}
             disabled={busy}
             onClick={() => navigate("returns")}
@@ -721,7 +735,8 @@ function Workspace({
             {recallLabels(language).blocked} · {detail.recall.caseCode}
           </p>
         )}
-        {tab !== "dashboard" &&
+        {tab !== "loaners" &&
+          tab !== "dashboard" &&
           tab !== "trays" &&
           tab !== "processing" &&
           tab !== "packaging" &&
@@ -1067,6 +1082,32 @@ function Workspace({
             onBusy={setTrayBusy}
           />
         )}
+        {tab === "loaners" && (
+          <LoanerWorkspace
+            key={trayReset}
+            session={session}
+            language={language}
+            blocked={blocked}
+            onExpired={onExpired}
+            onBusy={setTrayBusy}
+            onDirty={setTrayDirty}
+            initialRecordId={loanerTarget}
+            onProcessing={(id) =>
+              guard(() => {
+                setSelected(null);
+                setDashboardTarget({ workspace: "processing", id });
+                setTab("processing");
+              })
+            }
+            onInstrument={(id) =>
+              guard(() => {
+                setSelected(id);
+                setTab("instruments");
+                setHistoryPage(1);
+              })
+            }
+          />
+        )}
         {tab === "returns" && (
           <ReturnWorkspace
             initialRecordId={
@@ -1274,6 +1315,33 @@ function Workspace({
                 disabled={busy || dirty}
               />
             </section>
+            {detail.externalOwnership && (
+              <section className="panel">
+                <h2>{loanerLabels(language).owner}</h2>
+                <p>
+                  {detail.externalOwnership.supplier} ·{" "}
+                  {detail.externalOwnership.supplierReference} ·{" "}
+                  {detail.externalOwnership.loanerCode}
+                </p>
+                <p>
+                  {detail.loanerStatus
+                    ? loanerLabels(language)[detail.loanerStatus]
+                    : loanerLabels(language).unavailable}
+                </p>
+                <button
+                  disabled={busy || dirty}
+                  onClick={() =>
+                    guard(() => {
+                      setLoanerTarget(detail.externalOwnership!.loanerId);
+                      setSelected(null);
+                      setTab("loaners");
+                    })
+                  }
+                >
+                  {loanerLabels(language).openReceipt}
+                </button>
+              </section>
+            )}
             <MaintenancePanel
               key={detail.id + ":" + trayReset}
               instrument={detail}

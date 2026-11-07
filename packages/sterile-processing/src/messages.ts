@@ -1,4 +1,6 @@
 const es = {
+  LOANER_UNAVAILABLE:
+    "Conjunto prestado no disponible. Revise contenido, procesamiento, custodia y retenciones antes de la devolución al proveedor.",
   SERVICE_DUE:
     "Instrumento con servicio vencido: no se permite un nuevo armado o empaque. Complete el mantenimiento autorizado.",
   RETURN_CONTENTS_MISMATCH:
@@ -53,6 +55,8 @@ const es = {
 };
 type Messages = Record<keyof typeof es, string>;
 const en: Messages = {
+  LOANER_UNAVAILABLE:
+    "Loaner set unavailable. Reconcile contents, processing, custody and holds before supplier hand-back.",
   SERVICE_DUE:
     "Instrument service is due: new assembly or packaging is blocked. Complete authorized maintenance.",
   RETURN_CONTENTS_MISMATCH:
@@ -107,6 +111,8 @@ const en: Messages = {
     "Service unavailable. The change has not been confirmed.",
 };
 const fr: Messages = {
+  LOANER_UNAVAILABLE:
+    "Ensemble prêté indisponible. Rapprochez contenu, traitement, garde et blocages avant remise au fournisseur.",
   SERVICE_DUE:
     "Entretien requis : nouvel assemblage ou emballage bloqué. Effectuez la maintenance autorisée.",
   RETURN_CONTENTS_MISMATCH:

@@ -83,6 +83,8 @@ CREATE TABLE IF NOT EXISTS sp_types(tenant_id TEXT NOT NULL,facility_id TEXT NOT
 CREATE TABLE IF NOT EXISTS sp_instruments(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,type_id TEXT NOT NULL,code TEXT NOT NULL,version INTEGER NOT NULL CHECK(version>0),payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,code),FOREIGN KEY(tenant_id,facility_id,type_id) REFERENCES sp_types(tenant_id,facility_id,id));
 CREATE TABLE IF NOT EXISTS sp_service_usage(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,instrument_id TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,instrument_id),FOREIGN KEY(tenant_id,facility_id,instrument_id) REFERENCES sp_instruments(tenant_id,facility_id,id));
 CREATE TABLE IF NOT EXISTS sp_service_exposures(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,instrument_id TEXT NOT NULL,load_id TEXT NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,instrument_id,load_id),FOREIGN KEY(tenant_id,facility_id,instrument_id) REFERENCES sp_instruments(tenant_id,facility_id,id));
+CREATE TABLE IF NOT EXISTS sp_loaners(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,code TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,code));
+CREATE TABLE IF NOT EXISTS sp_loaner_versions(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id,version),FOREIGN KEY(tenant_id,facility_id,id) REFERENCES sp_loaners(tenant_id,facility_id,id));
 CREATE TABLE IF NOT EXISTS sp_audit(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,entity_id TEXT NOT NULL,request_id TEXT NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,request_id));
 CREATE INDEX IF NOT EXISTS sp_audit_entity ON sp_audit(tenant_id,facility_id,entity_id);
 CREATE TABLE IF NOT EXISTS sp_receipts(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,request_id TEXT NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,request_id));
@@ -177,6 +179,67 @@ CREATE INDEX IF NOT EXISTS sp_assignment_assembly ON sp_assignments(tenant_id,fa
         return rows.map((row) => JSON.parse(row.payload) as V);
       };
       const tx: SterileTransaction = {
+        findLoaner: async (id) =>
+          read(
+            "SELECT payload FROM sp_loaners WHERE tenant_id=? AND facility_id=? AND id=?",
+            id,
+          ),
+        findLoanerByCode: async (code) =>
+          read(
+            "SELECT payload FROM sp_loaners WHERE tenant_id=? AND facility_id=? AND code=?",
+            code,
+          ),
+        listLoaners: async (page) =>
+          list<import("@intrusionshield/sterile-processing").LoanerRecord>(
+            "SELECT payload FROM sp_loaners WHERE tenant_id=? AND facility_id=? ORDER BY rowid DESC LIMIT 51 OFFSET ?",
+            page,
+          ).map((r) => {
+            const { items, handback, ...summary } = r;
+            return { ...summary, count: items.length };
+          }),
+        insertLoaner: async (item) => {
+          own(item);
+          this.db
+            .prepare("INSERT INTO sp_loaners VALUES(?,?,?,?,?,?)")
+            .run(
+              ...args,
+              item.id,
+              item.code,
+              item.version,
+              JSON.stringify(item),
+            );
+        },
+        updateLoaner: async (item, expected) => {
+          own(item);
+          if (item.version !== expected + 1)
+            throw new SterileError("INVALID_REQUEST");
+          if (
+            this.db
+              .prepare(
+                "UPDATE sp_loaners SET version=?,payload=? WHERE tenant_id=? AND facility_id=? AND id=? AND version=?",
+              )
+              .run(
+                item.version,
+                JSON.stringify(item),
+                ...args,
+                item.id,
+                expected,
+              ).changes !== 1
+          )
+            throw new SterileError("CONFLICT");
+        },
+        insertLoanerVersion: async (item) => {
+          own(item);
+          this.db
+            .prepare("INSERT INTO sp_loaner_versions VALUES(?,?,?,?,?)")
+            .run(...args, item.id, item.version, JSON.stringify(item));
+        },
+        findLoanerVersion: async (id, version) =>
+          read(
+            "SELECT payload FROM sp_loaner_versions WHERE tenant_id=? AND facility_id=? AND id=? AND version=?",
+            id,
+            version,
+          ),
         findServiceUsage: async (id) =>
           read(
             "SELECT payload FROM sp_service_usage WHERE tenant_id=? AND facility_id=? AND instrument_id=?",

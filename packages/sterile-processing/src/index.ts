@@ -197,6 +197,13 @@ export class InstrumentRegistry extends SterileRegistryBase {
             ...item,
             scanIdentifier: "RSP-I-" + item.id.toUpperCase(),
             ...(serviceUsage ? { serviceUsage } : {}),
+            ...(item.externalOwnership
+              ? {
+                  loanerStatus: (
+                    await tx.findLoaner(item.externalOwnership.loanerId)
+                  )?.state,
+                }
+              : {}),
             ...(recall ? { recall } : {}),
             ...(processingHold ? { processingHold } : {}),
             ...(activeAssembly ? { activeAssembly } : {}),
@@ -234,6 +241,13 @@ export class InstrumentRegistry extends SterileRegistryBase {
         ...item,
         scanIdentifier: "RSP-I-" + item.id.toUpperCase(),
         ...(serviceUsage ? { serviceUsage } : {}),
+        ...(item.externalOwnership
+          ? {
+              loanerStatus: (
+                await tx.findLoaner(item.externalOwnership.loanerId)
+              )?.state,
+            }
+          : {}),
         ...(recall ? { recall } : {}),
         ...(processingHold ? { processingHold } : {}),
         ...(activeAssembly ? { activeAssembly } : {}),
@@ -272,3 +286,5 @@ export * from "./maintenance.js";
 export * from "./dashboard.js";
 
 export * from "./service-usage.js";
+
+export * from "./loaners.js";

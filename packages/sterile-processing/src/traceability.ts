@@ -205,6 +205,26 @@ export class TraceabilityRegistry {
         ) => facts.push({ kind, at, actorId, fields: fields(o, keys) });
         if (row.kind === "instrument") {
           const i = r as import("./foundation.js").Instrument;
+          if (i.externalOwnership)
+            fact(
+              "loaner_ownership",
+              i.createdAt,
+              null,
+              {
+                ...i.externalOwnership,
+                loanerStatus:
+                  (await tx.findLoaner(i.externalOwnership.loanerId))?.state ??
+                  "unavailable",
+              },
+              [
+                "supplier",
+                "supplierReference",
+                "loanerCode",
+                "loanerId",
+                "loanerStatus",
+              ],
+            );
+
           const usage = row.current ? await tx.findServiceUsage(i.id) : null;
           if (usage)
             fact(
@@ -315,6 +335,14 @@ export class TraceabilityRegistry {
               link(row, "recall", c.caseId, c.version, "cleared_reprocessing");
           if (e.supersededBy)
             link(row, "processing", e.supersededBy, 1, "superseded_by");
+          if (e.loanerSource)
+            fact(
+              "loaner_receiving_source",
+              e.createdAt,
+              e.receivedBy,
+              { loanerId: e.loanerSource.id, loanerCode: e.loanerSource.code },
+              ["loanerId", "loanerCode"],
+            );
           if (e.returnSource)
             link(
               row,
@@ -568,6 +596,19 @@ export class TraceabilityRegistry {
               (
                 i.record as import("./foundation.js").Instrument
               ).maintenance?.at(-1)?.id ?? "",
+          });
+        const owner = (i.record as import("./foundation.js").Instrument)
+          .externalOwnership;
+        if (
+          owner &&
+          (await tx.findLoaner(owner.loanerId))?.state === "returned"
+        )
+          alerts.push({
+            kind: "loaner_returned",
+            entityKind: "instrument",
+            entityId: i.record.id,
+            code: traceCode(i.record),
+            reference: owner.loanerCode,
           });
         const serviceUsage = await tx.findServiceUsage(i.record.id);
         if (serviceDue(serviceUsage))

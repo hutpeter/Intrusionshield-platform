@@ -1,3 +1,4 @@
+import { assertLoanerPresent } from "./loaners.js";
 import { resetServiceBaseline } from "./service-usage.js";
 import { randomUUID } from "node:crypto";
 import {
@@ -93,6 +94,7 @@ export class MaintenanceRegistry extends SterileRegistryBase {
       async (tx, at) => {
         const old = await tx.findInstrument(key);
         if (!old) throw new SterileError("NOT_FOUND");
+        await assertLoanerPresent(tx, old);
         if (old.version !== input.version) throw new SterileError("CONFLICT");
         const entries = structuredClone(old.maintenance ?? []),
           entry = entries.at(-1);

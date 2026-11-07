@@ -48,7 +48,7 @@ export function readDashboardQueue(
     ],
     maintenance: [
       "sp_instruments",
-      `(${state}='maintenance' OR (${state}='registered' AND EXISTS(SELECT 1 FROM sp_service_usage u WHERE ${same("u")} AND u.instrument_id=p.id AND json_extract(u.payload,'$.interval') IS NOT NULL AND json_extract(u.payload,'$.totalRecorded')-json_extract(u.payload,'$.serviceBaseline')>=json_extract(u.payload,'$.interval'))))`,
+      `(${state}='maintenance' OR (${state}='registered' AND NOT EXISTS(SELECT 1 FROM sp_loaners l WHERE ${same("l")} AND l.id=json_extract(p.payload,'$.externalOwnership.loanerId') AND json_extract(l.payload,'$.state')='returned') AND EXISTS(SELECT 1 FROM sp_service_usage u WHERE ${same("u")} AND u.instrument_id=p.id AND json_extract(u.payload,'$.interval') IS NOT NULL AND json_extract(u.payload,'$.totalRecorded')-json_extract(u.payload,'$.serviceBaseline')>=json_extract(u.payload,'$.interval'))))`,
       "1",
     ],
   };

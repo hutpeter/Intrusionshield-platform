@@ -1,6 +1,6 @@
 # Ruby Sterile Processing — issues log
 
-Updated November 6, 2026. Deferred requirements are recorded here so development
+Updated November 7, 2026. Deferred requirements are recorded here so development
 can continue without losing them. Deferral is not implementation or acceptance.
 Keep test execution status in [TESTING-REGISTER.md](TESTING-REGISTER.md).
 
@@ -254,3 +254,18 @@ remaining 0 and **Service due — new assembly and packaging blocked**. U-SERVIC
 passed for the displayed fictional threshold example. Manual membership denial, policy
 changes, repair/reset and broader M-SERVICE-01–02 remain deferred; developer tests do
 not imply owner acceptance of those paths. RSP-ISS-001 remains parked.
+
+## RSP-ISS-011 — Loaner readmission, exceptions and supplier policies
+
+Initial complete-set receiving and separately confirmed supplier hand-back delivered
+November 7, 2026. Supplier ownership is distinct from hosting facility; receipt creates
+new identities and fresh processing holds atomically. Hand-back requires accounted original
+contents, passed current inspection and reconciled custody/holds. Returned supplier-owned
+items cannot silently re-enter local processing/assembly; receipt and hand-back history remain.
+
+Deferred: explicit later-visit readmission preserving instrument identity, duplicate serial/
+manufacturer identity policy, partial or unexpected arrival/hand-back, corrections, verified
+vendor master/contracts/IFU, acknowledgements, transport/cross-site work, calendar alerts and
+production competency/operational acceptance. No supplier notifications or physical receipt
+verification are performed. Developer 319 tests/build/browser checks; owner U-LOANER-01
+pending, M-LOANER-01–02 deferred. See [LOANERS.md](LOANERS.md). RSP-ISS-001 remains parked.

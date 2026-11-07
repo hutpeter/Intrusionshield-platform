@@ -1,3 +1,4 @@
+import { assertLoanerPresent } from "./loaners.js";
 import { createHash, randomUUID } from "node:crypto";
 import {
   SterileError,
@@ -36,6 +37,7 @@ export async function recallAdmissionPlan(
     const i = await tx.findInstrument(id);
     if (!i || i.state !== "registered")
       throw new SterileError("CLEARANCE_BLOCKED");
+    await assertLoanerPresent(tx, i);
     instruments.set(id, { id: i.id, code: i.code, version: i.version });
     const assignment = await tx.findActiveAssignment(id),
       hold = await tx.findProcessingHold(id);

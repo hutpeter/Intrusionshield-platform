@@ -1,5 +1,9 @@
 import type {
   TraceReport,
+  LoanerRecord,
+  LoanerSummary,
+  LoanerInput,
+  LoanerReturnInput,
   ServicePolicyInput,
   ServiceUsage,
   OperationalDashboard,
@@ -246,6 +250,53 @@ export const api = {
       s,
       call<{ tenantId: string; facilityId: string; created: number }>(
         "/preview/dashboard-paging-example",
+        signal,
+        { requestId },
+        s.csrf,
+      ),
+    ),
+  loaners: (s: Session, page: number, signal: AbortSignal) =>
+    scopedPage<LoanerSummary>(s, base(s) + "/loaners", page, signal),
+  loaner: (s: Session, id: string, signal: AbortSignal, version?: number) =>
+    scoped(
+      s,
+      call<LoanerRecord>(
+        base(s) +
+          "/loaners/" +
+          id +
+          (version === undefined ? "" : "/versions/" + version),
+        signal,
+      ),
+    ),
+  loanerHistory: (s: Session, id: string, page: number, signal: AbortSignal) =>
+    scopedPage<SterileAuditEvent>(
+      s,
+      base(s) + "/loaners/" + id + "/history",
+      page,
+      signal,
+    ),
+  receiveLoaner: (s: Session, body: LoanerInput, signal: AbortSignal) =>
+    scoped(s, call<LoanerRecord>(base(s) + "/loaners", signal, body, s.csrf)),
+  returnLoaner: (
+    s: Session,
+    id: string,
+    body: LoanerReturnInput,
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<LoanerRecord>(
+        base(s) + "/loaners/" + id + "/return",
+        signal,
+        body,
+        s.csrf,
+      ),
+    ),
+  prepareLoaner: (s: Session, requestId: string, signal: AbortSignal) =>
+    scoped(
+      s,
+      call<InstrumentType>(
+        "/preview/loaner-example",
         signal,
         { requestId },
         s.csrf,

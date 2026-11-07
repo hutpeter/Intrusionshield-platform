@@ -3,6 +3,8 @@ export class MemoryRepository {
   state = {
     serviceUsages: [],
     serviceExposures: [],
+    loaners: [],
+    loanerVersions: [],
     returns: [],
     returnVersions: [],
     recalls: [],
@@ -60,6 +62,44 @@ export class MemoryRepository {
       };
     };
     const tx = {
+      findLoaner: async (id) =>
+        s.loaners.find((x) => own(x) && x.id === id) ?? null,
+      findLoanerByCode: async (code) =>
+        s.loaners.find((x) => own(x) && x.code === code) ?? null,
+      listLoaners: async (page) =>
+        s.loaners
+          .filter(own)
+          .reverse()
+          .slice((page - 1) * 50, (page - 1) * 50 + 51)
+          .map((r) => {
+            const { items, handback, ...summary } = r;
+            return { ...summary, count: items.length };
+          }),
+      insertLoaner: async (item) => {
+        if (
+          s.loaners.some(
+            (x) => own(x) && (x.id === item.id || x.code === item.code),
+          )
+        )
+          throw Object.assign(Error("CONFLICT"), { code: "CONFLICT" });
+        s.loaners.push(structuredClone(item));
+      },
+      updateLoaner: async (item, expected) => {
+        const n = s.loaners.findIndex((x) => own(x) && x.id === item.id);
+        if (
+          n < 0 ||
+          s.loaners[n].version !== expected ||
+          item.version !== expected + 1
+        )
+          throw Object.assign(Error("CONFLICT"), { code: "CONFLICT" });
+        s.loaners[n] = structuredClone(item);
+      },
+      insertLoanerVersion: async (item) =>
+        s.loanerVersions.push(structuredClone(item)),
+      findLoanerVersion: async (id, version) =>
+        s.loanerVersions.find(
+          (x) => own(x) && x.id === id && x.version === version,
+        ) ?? null,
       findServiceUsage: async (id) =>
         s.serviceUsages.find((x) => own(x) && x.instrumentId === id) ?? null,
       saveServiceUsage: async (item, expected) => {
@@ -169,6 +209,12 @@ export class MemoryRepository {
             (p) =>
               p.state === "maintenance" ||
               (p.state === "registered" &&
+                !s.loaners.some(
+                  (l) =>
+                    own(l) &&
+                    l.id === p.externalOwnership?.loanerId &&
+                    l.state === "returned",
+                ) &&
                 s.serviceUsages.some(
                   (u) =>
                     own(u) &&

@@ -50,6 +50,14 @@ export interface InstrumentType {
 export interface Instrument {
   /** Internal lookup identifier, separate from manufacturer serial / UDI. */
   scanIdentifier?: string;
+  externalOwnership?: {
+    kind: "loaner";
+    loanerId: string;
+    loanerCode: string;
+    supplier: string;
+    supplierReference: string;
+  };
+  loanerStatus?: "received" | "returned";
   serviceUsage?: import("./service-usage.js").ServiceUsage | null;
   maintenance?: import("./maintenance.js").MaintenanceEntry[];
   recall?: RecallBlock;
@@ -84,6 +92,8 @@ export interface SterileAuditEvent {
     | "maintenance-assessed"
     | "maintenance-repaired"
     | "maintenance-authorized"
+    | "loaner-received"
+    | "loaner-returned"
     | "service-policy-configured"
     | "service-exposure-recorded"
     | "service-baseline-reset"
@@ -138,6 +148,7 @@ export type SterileRecord =
   | LoadReview
   | DistributionRecord
   | RecallRecord
+  | import("./loaners.js").LoanerRecord
   | ReturnRecord
   | import("./service-usage.js").ServiceUsage;
 export interface CommandReceipt {
@@ -167,6 +178,23 @@ export interface SterileTransaction {
     id: string,
     page: number,
   ): Promise<import("./service-usage.js").ServiceExposure[]>;
+  findLoaner(id: string): Promise<import("./loaners.js").LoanerRecord | null>;
+  findLoanerByCode(
+    code: string,
+  ): Promise<import("./loaners.js").LoanerRecord | null>;
+  listLoaners(page: number): Promise<import("./loaners.js").LoanerSummary[]>;
+  insertLoaner(value: import("./loaners.js").LoanerRecord): Promise<void>;
+  updateLoaner(
+    value: import("./loaners.js").LoanerRecord,
+    expected: number,
+  ): Promise<void>;
+  insertLoanerVersion(
+    value: import("./loaners.js").LoanerRecord,
+  ): Promise<void>;
+  findLoanerVersion(
+    id: string,
+    version: number,
+  ): Promise<import("./loaners.js").LoanerRecord | null>;
   findReturn(id: string): Promise<ReturnRecord | null>;
   findReturnByCode(code: string): Promise<ReturnRecord | null>;
   findReturnByPackage(id: string): Promise<ReturnRecord | null>;
@@ -312,6 +340,7 @@ export interface SterileRepository {
 export class SterileError extends Error {
   constructor(
     public readonly code:
+      | "LOANER_UNAVAILABLE"
       | "SERVICE_DUE"
       | "SCAN_DUPLICATE"
       | "SCAN_TYPE"

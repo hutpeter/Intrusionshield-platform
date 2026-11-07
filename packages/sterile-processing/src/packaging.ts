@@ -1,3 +1,4 @@
+import { assertLoanerPresent } from "./loaners.js";
 import { serviceDue } from "./service-usage.js";
 import { returnStatus } from "./return-types.js";
 import { distributionStatus } from "./distribution-types.js";
@@ -73,6 +74,7 @@ export class PackagingRegistry extends SterileRegistryBase {
             (await tx.findProcessingHold(snapshot.id))
           )
             throw new SterileError("PACKAGING_BLOCKED");
+          await assertLoanerPresent(tx, i!);
           if (serviceDue(await tx.findServiceUsage(snapshot.id)))
             throw new SterileError("SERVICE_DUE");
           const e = await tx.findLatestProcessing(snapshot.id),

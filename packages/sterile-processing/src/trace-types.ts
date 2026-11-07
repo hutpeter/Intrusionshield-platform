@@ -81,6 +81,7 @@ export interface TraceLink {
 }
 export interface TraceAlert {
   kind:
+    | "loaner_returned"
     | "service_due"
     | "maintenance_hold"
     | "instrument_recall"

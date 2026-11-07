@@ -1,3 +1,4 @@
+import { assertLoanerPresent } from "./loaners.js";
 import { randomUUID } from "node:crypto";
 import {
   SterileRegistryBase,
@@ -89,6 +90,7 @@ export class ProcessingRegistry extends SterileRegistryBase {
         for (const id of ids) {
           const i = await tx.findInstrument(id);
           if (!i) throw new SterileError("NOT_FOUND");
+          await assertLoanerPresent(tx, i);
           if (i.state !== "registered")
             throw new SterileError(scannedIds ? "SCAN_INELIGIBLE" : "CONFLICT");
           if (scannedIds) {

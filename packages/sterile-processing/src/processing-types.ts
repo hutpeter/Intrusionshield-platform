@@ -42,6 +42,7 @@ export interface InspectInput {
   confirmed: boolean;
 }
 export interface ProcessingEpisode {
+  loanerSource?: { id: string; code: string };
   /** Entered or simulated internal identifiers, not proof of a physical device scan. */
   receivingScans?: { instrumentId: string; identifier: string }[];
   maintenanceSource?: {

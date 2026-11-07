@@ -148,3 +148,7 @@ Recorded-cycle service tracking now separates immutable exposure facts, versione
 and service baselines from instrument identity versions. This complements the shared repair
 foundation for future Asset Management; it is not predictive maintenance or lifetime usage.
 See [SERVICE-THRESHOLDS.md](SERVICE-THRESHOLDS.md).
+
+Loaner receiving records external supplier ownership separately from facility custody.
+Fresh processing and immutable complete-set hand-back proofs preserve identity/history;
+later-visit readmission and supplier integrations remain separate work. See [LOANERS.md](LOANERS.md).

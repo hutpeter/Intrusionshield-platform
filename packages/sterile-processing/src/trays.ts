@@ -1,3 +1,4 @@
+import { assertLoanerPresent } from "./loaners.js";
 import { serviceDue } from "./service-usage.js";
 import { randomUUID } from "node:crypto";
 import {
@@ -119,6 +120,7 @@ async function items(
       throw new SterileError("PROCESSING_HOLD");
     const i = await tx.findInstrument(id);
     if (!i) throw new SterileError("NOT_FOUND");
+    await assertLoanerPresent(tx, i);
     if (serviceDue(await tx.findServiceUsage(id)))
       throw new SterileError("SERVICE_DUE");
     const assigned = await tx.findActiveAssignment(id);

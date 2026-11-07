@@ -899,3 +899,28 @@ test("partial return and later receipt use separate CSRF-protected routes and sc
     (e) => e instanceof ApiError,
   );
 });
+test("loaner lists and records reject foreign scope while receipt posts use CSRF", async (t) => {
+  let value = {
+    tenantId: session.tenantId,
+    facilityId: session.facilityId,
+    id: "loan",
+  };
+  const requests = [];
+  fake(t, async (path, options) => {
+    requests.push({ path, options });
+    return response(value);
+  });
+  await api.receiveLoaner(session, {}, signal());
+  assert.ok(requests[0].path.endsWith("/loaners"));
+  assert.equal(requests[0].options.headers["x-sterile-csrf"], session.csrf);
+  value = { ...value, facilityId: "foreign" };
+  await assert.rejects(
+    () => api.loaner(session, "loan", signal()),
+    (e) => e instanceof ApiError,
+  );
+  value = { items: [value], page: 1, hasMore: false };
+  await assert.rejects(
+    () => api.loaners(session, 1, signal()),
+    (e) => e instanceof ApiError,
+  );
+});
