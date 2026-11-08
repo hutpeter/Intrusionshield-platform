@@ -265,7 +265,7 @@ items cannot silently re-enter local processing/assembly; receipt and hand-back 
 
 Delivered November 8: explicit complete-set repeat-visit readmission preserves identities,
 supplier and service limits, creates fresh receiving holds, and retains earlier visits.
-U-LOANREADMIT-01 pending; 325 scoped tests/build/browser checks passed. See
+U-LOANREADMIT-01 passed November 8, 2026; 325 scoped tests/build/browser checks passed. See
 [LOANER-READMISSION.md](LOANER-READMISSION.md). U-LOANER-01 remains unconfirmed.
 
 Deferred: changed/partial later-visit shipments, duplicate serial/
@@ -274,3 +274,9 @@ vendor master/contracts/IFU, acknowledgements, transport/cross-site work, calend
 production competency/operational acceptance. No supplier notifications or physical receipt
 verification are performed. Developer 319 tests/build/browser checks; owner U-LOANER-01
 pending, M-LOANER-01–02 deferred. See [LOANERS.md](LOANERS.md). RSP-ISS-001 remains parked.
+
+Owner screenshot November 8, 2026 confirms Loaner record saved, Received — with
+facility, Visit 2, DEMO-SUPPLIER, one expected original-code instrument, readmission
+arrival details and a linked receiving episode. U-LOANREADMIT-01 passed for this saved
+repeat-visit example. Broader M-LOANREADMIT-01–02 remain deferred. Original U-LOANER-01
+remains unconfirmed; no retrospective pass is inferred. RSP-ISS-001 stays parked.

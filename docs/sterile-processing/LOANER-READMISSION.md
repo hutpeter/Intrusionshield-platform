@@ -2,7 +2,7 @@
 
 ## One new owner check
 
-**U-LOANREADMIT-01 pending:** as Demo operator:
+**U-LOANREADMIT-01 passed November 8, 2026:** as Demo operator:
 
 1. Open **Loaner and vendor sets** → **Prepare fictional loaner readmission example**.
 2. Review the original instrument code and prefilled new receiving details.
@@ -76,8 +76,14 @@ and retry-safe fixture setup. Browser checks cover both confirmations, Visit 2, 
 codes/IDs, new receiving link with no inherited inspection, historic hand-back, ownership
 and fresh holds after refresh with no browser errors.
 
-U-LOANREADMIT-01 remains pending. M-LOANREADMIT-01: owner multi-visit hand-back, service-due/
+U-LOANREADMIT-01 passed November 8, 2026. M-LOANREADMIT-01: owner multi-visit hand-back, service-due/
 repair/recall intersections, race/error/retry/history and source permissions. M-LOANREADMIT-02:
 physical matching, serial/UDI authenticity, mixed/partial shipments, vendor service evidence,
 Windows/ES/FR/mobile/accessibility, scale and production identity/competency/vendor-policy
 acceptance. These remain deferred. RSP-ISS-001 independent inspection stays parked.
+
+Owner screenshot November 8, 2026 confirms Loaner record saved, Received — with
+facility, Visit 2, DEMO-SUPPLIER, one expected original-code instrument, readmission
+arrival details and a linked receiving episode. U-LOANREADMIT-01 passed for this saved
+repeat-visit example. Broader M-LOANREADMIT-01–02 remain deferred. Original U-LOANER-01
+remains unconfirmed; no retrospective pass is inferred. RSP-ISS-001 stays parked.

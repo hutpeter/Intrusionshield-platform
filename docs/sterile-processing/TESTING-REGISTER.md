@@ -51,9 +51,9 @@ A successful developer check never implies that the owner performed it.
 
 | 2b12333 | Issued-package lookup, manifest reconciliation and confirmed complete return with frozen identifier | 284 scoped tests, builds and targeted browser verification | U-RETSCAN-01 passed November 6, 2026 | Owner exceptions/disposition, hardware, persistent partial returns and operational acceptance deferred |
 
-## Current owner check — repeat-visit loaner readmission
+## Completed owner check — repeat-visit loaner readmission
 
-**U-LOANREADMIT-01 pending:** Demo operator → Loaner and vendor sets → Prepare fictional
+**U-LOANREADMIT-01 passed November 8, 2026:** Demo operator → Loaner and vendor sets → Prepare fictional
 loaner readmission example → review original member/new arrival details → tick both
 confirmations → Save loaner readmission. Expect Visit 2, Received — with facility, same
 instrument code, a new linked receiving episode and saved readmission history. See
@@ -846,3 +846,9 @@ remaining 0 and **Service due — new assembly and packaging blocked**. U-SERVIC
 passed for the displayed fictional threshold example. Manual membership denial, policy
 changes, repair/reset and broader M-SERVICE-01–02 remain deferred; developer tests do
 not imply owner acceptance of those paths. RSP-ISS-001 remains parked.
+
+Owner screenshot November 8, 2026 confirms Loaner record saved, Received — with
+facility, Visit 2, DEMO-SUPPLIER, one expected original-code instrument, readmission
+arrival details and a linked receiving episode. U-LOANREADMIT-01 passed for this saved
+repeat-visit example. Broader M-LOANREADMIT-01–02 remain deferred. Original U-LOANER-01
+remains unconfirmed; no retrospective pass is inferred. RSP-ISS-001 stays parked.
