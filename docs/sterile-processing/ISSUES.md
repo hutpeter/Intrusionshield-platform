@@ -294,5 +294,9 @@ Deferred: approved manufacturer/clinical/equipment validation, mandatory control
 stage/type/facility and exception permissions, verified reviewer competency and independent
 approval policy, effective/expiry dates, attachment import/signatures, withdrawal impact on
 running/completed work, amendment/recall policies and production scale/operational acceptance.
-Developer 334 tests/build/browser checks passed; owner U-PROC-01 pending, M-PROC-01–02
+Developer 334 tests/build/browser checks passed; owner U-PROC-01 passed November 8, 2026 (owner screenshot), M-PROC-01–02
 broader checks deferred. See [PROCEDURES.md](PROCEDURES.md). RSP-ISS-001 remains parked.
+
+## Tray composition follow-up — November 8, 2026
+
+Existing versioned definitions, captured assembly requirements and server completion gates are retained. Live unsaved-content comparison now displays missing/excess/unexpected types before saving; incomplete drafts can be saved but cannot be completed. U-TRAYCHECK-01 pending; broader owner revision/exception, language/mobile, hardware and operational acceptance remain deferred as M-TRAYCHECK-01 in TESTING-REGISTER.md. RSP-ISS-001 remains parked.

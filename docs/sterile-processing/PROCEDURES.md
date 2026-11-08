@@ -2,7 +2,7 @@
 
 ## One new owner check
 
-**U-PROC-01 pending:** after updating the preview, sign out and enter as **Demo reviewer**.
+**U-PROC-01 passed November 8, 2026:** owner screenshot confirms publication, Revision 1 and Decision history. Original check: after updating the preview, sign out and enter as **Demo reviewer**.
 Open **Processing procedures** → **Prepare fictional procedure revision**. Review the
 placeholder text, click **Publish revision**, tick the confirmation, then click the form's
 **Publish revision** button. The fictional decision rationale is prefilled.
@@ -97,7 +97,7 @@ SQLite reopening and historical versions/trace facts. Browser checks cover revie
 publication/decision history, applicable operator cleaning selection, exact saved instruction
 snapshot, withdrawal removing future selection and saved text surviving refresh.
 
-U-PROC-01 remains pending. M-PROC-01: owner inspection/sterilization selection, withdrawal,
+U-PROC-01 passed November 8, 2026 (owner screenshot). M-PROC-01: owner inspection/sterilization selection, withdrawal,
 old-published/new-revision choice, mismatch/error/retry/concurrency/history/trace walkthroughs.
 M-PROC-02: instruction readability, Windows/ES/FR/mobile/accessibility, large libraries and
 physical SOP/approved-manufacturer/equipment/competency/operational acceptance. Mandatory

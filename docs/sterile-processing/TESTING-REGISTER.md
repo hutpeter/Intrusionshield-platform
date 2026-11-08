@@ -51,9 +51,19 @@ A successful developer check never implies that the owner performed it.
 
 | 2b12333 | Issued-package lookup, manifest reconciliation and confirmed complete return with frozen identifier | 284 scoped tests, builds and targeted browser verification | U-RETSCAN-01 passed November 6, 2026 | Owner exceptions/disposition, hardware, persistent partial returns and operational acceptance deferred |
 
-## Current owner check — published processing procedure
+## Current owner check — live tray composition
 
-**U-PROC-01 pending:** sign in as Demo reviewer → Processing procedures → Prepare fictional
+**U-TRAYCHECK-01 pending:** enter as Demo operator → Trays → Prepare fictional tray scan example → Edit contents. Expect **Assembly check — unsaved contents**, Missing 1 and the completion-blocked message. Cancel afterward. This is the only owner check requested for this build.
+
+Existing templates, revision snapshots, scan type/quantity gates and server completion checks were already implemented. This increment adds live assessment of unsaved manual contents, unexpected-type guidance and an explicit current-assembly completion status. No new clinical eligibility or release policy is introduced.
+
+Developer November 8, 2026: 61 scoped checks passed (17 domain tray/scan, 9 HTTP tray/scan, 35 web), scoped builds and Chromium missing/unexpected/correction/unsaved-isolation/completion-gate checks passed.
+
+M-TRAYCHECK-01 deferred: broader owner correction/excess/unexpected/revision-history, language/mobile, hardware and operational acceptance. RSP-ISS-001 remains parked.
+
+## Previous owner check — published processing procedure
+
+**U-PROC-01 passed November 8, 2026:** owner screenshot confirms Published, Revision 1, saved source/instructions/applicability and creation/publication Decision history. Original check: sign in as Demo reviewer → Processing procedures → Prepare fictional
 procedure revision → review text → Publish revision → tick confirmation → Publish revision
 in the form. Expect Published, Revision 1, saved source/text/applicability and Decision history.
 See [PROCEDURES.md](PROCEDURES.md). This is the only requested owner check for this build.

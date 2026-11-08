@@ -13,6 +13,10 @@
     "./messages": {
       "types": "./dist/messages.d.ts",
       "import": "./dist/messages.js"
+    },
+    "./assembly-assessment": {
+      "types": "./dist/assembly-assessment.d.ts",
+      "import": "./dist/assembly-assessment.js"
     }
   },
   "scripts": {

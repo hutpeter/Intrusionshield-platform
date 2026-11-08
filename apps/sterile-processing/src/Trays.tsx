@@ -1,3 +1,5 @@
+import { assessAssembly } from "@intrusionshield/sterile-processing/assembly-assessment";
+import { assemblyCheckLabels } from "./assembly-check-text";
 import { TrayScan } from "./TrayScan";
 import { trayScanLabels } from "./tray-scan-text";
 import { maintenanceLabels } from "./maintenance-text";
@@ -375,6 +377,42 @@ export function TrayWorkspace({
   }
   const patch = (v: Partial<typeof fields>) =>
     setFields((f) => ({ ...f, ...v }));
+  const checkText = assemblyCheckLabels(language);
+  const draftAssembly =
+    form?.kind === "contents"
+      ? {
+          ...form.assembly,
+          instruments: fields.instrumentIds
+            .map((id) => {
+              const i = instrumentOptions.find((item) => item.id === id);
+              const saved = form.assembly.instruments.find(
+                (item) => item.id === id,
+              );
+              return i
+                ? {
+                    id: i.id,
+                    code: i.code,
+                    instrumentTypeId: i.instrumentTypeId,
+                    instrumentTypeName:
+                      typeOptions.find((type) => type.id === i.instrumentTypeId)
+                        ?.name ?? "",
+                    serialNumber: i.serialNumber,
+                    instrumentVersion: i.version,
+                  }
+                : saved;
+            })
+            .filter(
+              (item): item is TrayAssembly["instruments"][number] => !!item,
+            ),
+        }
+      : null;
+  const unresolvedContents =
+    form?.kind === "contents" && draftAssembly
+      ? fields.instrumentIds.length !== draftAssembly.instruments.length
+      : false;
+  const draftView = draftAssembly
+    ? { assembly: draftAssembly, assessment: assessAssembly(draftAssembly) }
+    : null;
   const state = (a: TrayAssembly) =>
     a.state === "draft"
       ? t.draft
@@ -785,6 +823,29 @@ export function TrayWorkspace({
             )}
             {form.kind === "contents" && (
               <>
+                <section aria-label={checkText.preview}>
+                  <h3>{checkText.preview}</h3>
+                  <p>
+                    {checkText.frozen} {form.assembly.definitionSnapshot.code} ·{" "}
+                    {t.revision} {form.assembly.definitionRevision}
+                  </p>
+                  <p
+                    role="status"
+                    className={
+                      draftView?.assessment.complete && !unresolvedContents
+                        ? "success"
+                        : "info"
+                    }
+                  >
+                    {unresolvedContents
+                      ? checkText.unresolved
+                      : draftView?.assessment.complete
+                        ? checkText.matched
+                        : checkText.blocked}
+                  </p>
+                  {draftView && assessmentTable(draftView)}
+                  <p className="muted">{checkText.unsaved}</p>
+                </section>
                 <div className="instrument-picker">
                   <label>
                     {t.chooseInstrument}
@@ -919,6 +980,7 @@ export function TrayWorkspace({
               }
               disabled={
                 busy ||
+                (form.kind === "contents" && unresolvedContents) ||
                 (form.kind === "action" && !fields.confirmed) ||
                 (form.kind === "definition" && !typeOptions.length) ||
                 (form.kind === "assembly" && !definitionOptions.length)
@@ -1113,6 +1175,16 @@ export function TrayWorkspace({
             </div>
             {view.assembly.state === "disassembled" && (
               <p className="muted">{t.closedAssembly}</p>
+            )}
+            {view.assembly.state === "draft" && (
+              <p
+                role="status"
+                className={view.assessment.complete ? "success" : "info"}
+              >
+                {view.assessment.complete
+                  ? checkText.matched
+                  : checkText.blocked}
+              </p>
             )}
             {assessmentTable(view)}
           </section>
