@@ -1,3 +1,7 @@
+> November 8 update: explicit repeat-visit readmission now reuses the original instrument
+> identities and creates fresh processing holds. See [LOANER-READMISSION.md](LOANER-READMISSION.md).
+> U-LOANER-01 remains unconfirmed; the new check is U-LOANREADMIT-01 only.
+
 # Loaner and vendor-owned instrument sets
 
 ## One new owner check
@@ -63,7 +67,7 @@ are excluded from the operational maintenance queue. Instrument details and trac
 show supplier custody, and the original receipt version remains readable.
 
 Recipient references are not digital signatures, supplier acknowledgements, transport
-tracking or notifications. A later physical visit requires a future explicit readmission
+tracking or notifications. A later physical visit uses the explicit readmission
 workflow that preserves these identities; do not recreate an old instrument under a new
 code. Serial uniqueness across suppliers/visits and manufacturer identity have not been
 validated. Corrections, shortage arrival/hand-back, vendor master/contract approval,

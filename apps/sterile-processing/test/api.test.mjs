@@ -924,3 +924,23 @@ test("loaner lists and records reject foreign scope while receipt posts use CSRF
     (e) => e instanceof ApiError,
   );
 });
+test("loaner readmission posts to its distinct protected route and refuses foreign responses", async (t) => {
+  let value = {
+    tenantId: session.tenantId,
+    facilityId: session.facilityId,
+    id: "loan",
+  };
+  const requests = [];
+  fake(t, async (path, options) => {
+    requests.push({ path, options });
+    return response(value);
+  });
+  await api.readmitLoaner(session, "loan", {}, signal());
+  assert.ok(requests[0].path.endsWith("/loaners/loan/readmit"));
+  assert.equal(requests[0].options.headers["x-sterile-csrf"], session.csrf);
+  value = { ...value, tenantId: "foreign" };
+  await assert.rejects(
+    () => api.readmitLoaner(session, "loan", {}, signal()),
+    (e) => e instanceof ApiError,
+  );
+});

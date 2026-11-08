@@ -92,6 +92,7 @@ export interface SterileAuditEvent {
     | "maintenance-assessed"
     | "maintenance-repaired"
     | "maintenance-authorized"
+    | "loaner-readmitted"
     | "loaner-received"
     | "loaner-returned"
     | "service-policy-configured"

@@ -4,6 +4,7 @@ import type {
   LoanerSummary,
   LoanerInput,
   LoanerReturnInput,
+  LoanerReadmitInput,
   ServicePolicyInput,
   ServiceUsage,
   OperationalDashboard,
@@ -277,6 +278,35 @@ export const api = {
     ),
   receiveLoaner: (s: Session, body: LoanerInput, signal: AbortSignal) =>
     scoped(s, call<LoanerRecord>(base(s) + "/loaners", signal, body, s.csrf)),
+  readmitLoaner: (
+    s: Session,
+    id: string,
+    body: LoanerReadmitInput,
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<LoanerRecord>(
+        base(s) + "/loaners/" + id + "/readmit",
+        signal,
+        body,
+        s.csrf,
+      ),
+    ),
+  prepareLoanerReadmission: (
+    s: Session,
+    requestId: string,
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<LoanerRecord>(
+        "/preview/loaner-readmission-example",
+        signal,
+        { requestId },
+        s.csrf,
+      ),
+    ),
   returnLoaner: (
     s: Session,
     id: string,

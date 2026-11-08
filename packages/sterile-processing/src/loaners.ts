@@ -28,6 +28,8 @@ export interface LoanerInput {
   items: { code: string; instrumentTypeId: string; serialNumber: string }[];
 }
 export interface LoanerRecord {
+  visit?: number;
+  lastAdmission?: { actorId: string; at: string };
   id: string;
   tenantId: string;
   facilityId: string;
@@ -71,6 +73,20 @@ export interface LoanerReturnInput {
   instrumentIds: string[];
   recipient: string;
   reference: string;
+  note: string;
+  contentsChecked: boolean;
+  confirmed: boolean;
+}
+export interface LoanerReadmitInput {
+  requestId: string;
+  version: number;
+  instrumentIds: string[];
+  episodeCode: string;
+  dueOn: string;
+  location: string;
+  custodian: string;
+  reference: string;
+  condition: string;
   note: string;
   contentsChecked: boolean;
   confirmed: boolean;
@@ -357,13 +373,159 @@ export class LoanerRegistry extends SterileRegistryBase {
       },
     );
   }
+  async readmit(scope: SterileScope, id: string, input: LoanerReadmitInput) {
+    const s = scopeOf(scope),
+      key = sterileUuid(id),
+      episodeCode = codeOf(input.episodeCode),
+      dueOn = field(input.dueOn, 10, false),
+      location = field(input.location, 200),
+      custodian = field(input.custodian, 200),
+      reference = field(input.reference, 200),
+      condition = field(input.condition, 200),
+      note = field(input.note, 500, false);
+    if (
+      input.confirmed !== true ||
+      input.contentsChecked !== true ||
+      !Number.isSafeInteger(input.version) ||
+      input.version < 1 ||
+      !Array.isArray(input.instrumentIds) ||
+      input.instrumentIds.length > 100
+    )
+      throw new SterileError("INVALID_REQUEST");
+    if (
+      dueOn &&
+      (!/^\d{4}-\d{2}-\d{2}$/.test(dueOn) ||
+        !Number.isFinite(Date.parse(dueOn)) ||
+        new Date(dueOn).toISOString().slice(0, 10) !== dueOn)
+    )
+      throw new SterileError("INVALID_REQUEST");
+    const ids = input.instrumentIds.map(sterileUuid);
+    if (new Set(ids).size !== ids.length)
+      throw new SterileError("INVALID_REQUEST");
+    return this.command(
+      s,
+      input.requestId,
+      "loaner-readmitted",
+      { ...input, id: key },
+      async (tx, at) => {
+        const old = await tx.findLoaner(key);
+        if (!old) throw new SterileError("NOT_FOUND");
+        if (
+          old.version !== input.version ||
+          old.state !== "returned" ||
+          !old.handback
+        )
+          throw new SterileError("CONFLICT");
+        if (
+          ids.length !== old.items.length ||
+          old.items.some((i) => !ids.includes(i.id))
+        )
+          throw new SterileError("LOANER_UNAVAILABLE");
+        if (await tx.findProcessingByCode(episodeCode))
+          throw new SterileError("CONFLICT");
+        const members: ProcessingEpisode["instruments"] = [];
+        for (const member of old.items) {
+          const i = await tx.findInstrument(member.id);
+          if (
+            !i ||
+            i.state !== "registered" ||
+            i.externalOwnership?.loanerId !== old.id
+          )
+            throw new SterileError("LOANER_UNAVAILABLE");
+          if (
+            (await tx.findActiveAssignment(i.id)) ||
+            (await tx.findProcessingHold(i.id)) ||
+            (await tx.findInstrumentRecallBlock(i.id))
+          )
+            throw new SterileError("LOANER_UNAVAILABLE");
+          for (const c of await tx.listInstrumentRecallCases(i.id))
+            if (!c.lineage || !(await tx.findRecallReadmission(c.id, i.id)))
+              throw new SterileError("RECALL_BLOCKED");
+          const type = await tx.findType(i.instrumentTypeId);
+          if (!type) throw new SterileError("NOT_FOUND");
+          members.push({
+            id: i.id,
+            code: i.code,
+            serialNumber: i.serialNumber,
+            instrumentTypeId: type.id,
+            instrumentTypeName: type.name,
+            instrumentVersion: i.version,
+          });
+        }
+        const visit = (old.visit ?? 1) + 1;
+        const episode: ProcessingEpisode = {
+          id: randomUUID(),
+          tenantId: s.tenantId,
+          facilityId: s.facilityId,
+          code: episodeCode,
+          source: "LOANER " + old.code + " · VISIT " + visit,
+          custodian,
+          condition,
+          discrepancies: note,
+          instruments: members,
+          state: "received",
+          attempts: [],
+          inspections: [],
+          version: 1,
+          createdAt: at,
+          updatedAt: at,
+          receivedBy: s.actorId,
+          loanerSource: { id: old.id, code: old.code, visit },
+        };
+        await tx.insertProcessing(episode);
+        await tx.reserveProcessing(episode);
+        await tx.insertProcessingVersion(episode);
+        await tx.appendAudit({
+          id: randomUUID(),
+          ...s,
+          entityId: episode.id,
+          version: 1,
+          requestId: randomUUID(),
+          correlationRequestId: sterileUuid(input.requestId),
+          at,
+          action: "processing-received",
+          reason: "Loaner readmission " + old.code,
+        });
+        const r: LoanerRecord = {
+          ...old,
+          visit,
+          lastAdmission: { actorId: s.actorId, at },
+          state: "received",
+          handback: null,
+          items: members,
+          episodeId: episode.id,
+          episodeCode,
+          location,
+          custodian,
+          reference,
+          condition,
+          note,
+          dueOn,
+          version: old.version + 1,
+          updatedAt: at,
+        };
+        await tx.updateLoaner(r, old.version);
+        await tx.insertLoanerVersion(r);
+        await this.record(
+          tx,
+          s,
+          r,
+          input.requestId,
+          at,
+          "loaner-readmitted",
+          reference,
+        );
+        return r;
+      },
+    );
+  }
   private async record(
     tx: SterileTransaction,
     s: SterileScope,
     r: LoanerRecord,
     requestId: string,
     at: string,
-    action: "loaner-received" | "loaner-returned",
+    action: "loaner-received" | "loaner-returned" | "loaner-readmitted",
     reason: string,
   ) {
     await tx.appendAudit({

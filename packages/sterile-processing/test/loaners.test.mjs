@@ -304,3 +304,148 @@ test("loaner receipt/hand-back audit errors roll back instruments, holds, versio
   assert.equal(outcomes.filter((x) => x.status === "fulfilled").length, 1);
   assert.equal((await f.l.get(f.s, r.id)).version, 2);
 });
+const readmission = (r, extra = {}) => ({
+  requestId: randomUUID(),
+  version: r.version,
+  instrumentIds: r.items.map((i) => i.id),
+  episodeCode: "LOAN-SECOND-VISIT",
+  dueOn: "2026-12-15",
+  location: "New receiving",
+  custodian: "New courier",
+  reference: "SECOND-DELIVERY",
+  condition: "Used again",
+  note: "Repeat visit",
+  contentsChecked: true,
+  confirmed: true,
+  ...extra,
+});
+async function handedback() {
+  const f = await fixture(),
+    r = await f.l.receive(f.s, body(f));
+  await inspected(f, r);
+  return { ...f, r: await f.l.returnToSupplier(f.s, r.id, returned(r)) };
+}
+test("loaner readmission reuses identities, creates fresh holds and preserves original visits and service limits", async () => {
+  const f = await handedback(),
+    identities = structuredClone(f.repo.state.instruments),
+    oldEpisode = f.r.episodeId,
+    b = readmission(f.r);
+  f.repo.state.serviceUsages.push({
+    ...f.s,
+    id: randomUUID(),
+    instrumentId: f.r.items[0].id,
+    totalRecorded: 5,
+    serviceBaseline: 0,
+    interval: 5,
+    warningBefore: 1,
+    version: 1,
+  });
+  const usage = structuredClone(f.repo.state.serviceUsages);
+  const r = await f.l.readmit({ ...f.s, actorId: randomUUID() }, f.r.id, b);
+  assert.equal(r.visit, 2);
+  assert.equal(r.version, 3);
+  assert.equal(r.state, "received");
+  assert.notEqual(r.episodeId, oldEpisode);
+  assert.deepEqual(
+    r.items.map((i) => i.id),
+    f.r.items.map((i) => i.id),
+  );
+  assert.deepEqual(f.repo.state.instruments, identities);
+  assert.deepEqual(f.repo.state.serviceUsages, usage);
+  const e = await f.p.get(f.s, r.episodeId);
+  assert.equal(e.state, "received");
+  assert.deepEqual(e.attempts, []);
+  assert.deepEqual(e.inspections, []);
+  assert.equal(e.loanerSource.visit, 2);
+  for (const i of r.items)
+    assert.equal(
+      (await f.ir.get(f.s, i.id)).processingHold.episodeId,
+      r.episodeId,
+    );
+  assert.equal((await f.l.get(f.s, r.id, 1)).state, "received");
+  assert.equal((await f.l.get(f.s, r.id, 2)).state, "returned");
+  assert.equal(
+    (await f.l.get(f.s, r.id, 2)).handback.reference,
+    f.r.handback.reference,
+  );
+  await fail(
+    f.l.returnToSupplier(f.s, r.id, returned(r)),
+    "LOANER_UNAVAILABLE",
+  );
+});
+test("readmission requires complete matching members, returned state, scope and confirmed declarations", async () => {
+  const f = await handedback();
+  const before = structuredClone(f.repo.state);
+  for (const patch of [
+    { instrumentIds: [] },
+    { instrumentIds: [randomUUID()] },
+    { instrumentIds: [f.r.items[0].id, f.r.items[0].id] },
+    { confirmed: false },
+    { contentsChecked: false },
+    { version: 1 },
+    { dueOn: "2026-02-31" },
+    { reference: "" },
+  ]) {
+    await assert.rejects(f.l.readmit(f.s, f.r.id, readmission(f.r, patch)));
+    assert.deepEqual(f.repo.state, before);
+  }
+  await fail(
+    f.l.readmit({ ...f.s, facilityId: randomUUID() }, f.r.id, readmission(f.r)),
+    "NOT_FOUND",
+  );
+  const caseId = randomUUID();
+  f.repo.state.recalls.push({
+    ...f.s,
+    id: caseId,
+    code: "RECALL",
+    version: 1,
+    state: "open",
+  });
+  f.repo.state.recallInstruments.push({
+    ...f.s,
+    recallId: caseId,
+    instrumentId: f.r.items[0].id,
+  });
+  await fail(f.l.readmit(f.s, f.r.id, readmission(f.r)), "LOANER_UNAVAILABLE");
+  f.repo.state.recalls = [];
+  f.repo.state.recallInstruments = [];
+  const r = await f.l.readmit(f.s, f.r.id, readmission(f.r));
+  await fail(f.l.readmit(f.s, r.id, readmission(r)), "CONFLICT");
+});
+test("readmission retries and races create one new episode; audit failure restores supplier-returned state", async () => {
+  const f = await handedback(),
+    b = readmission(f.r),
+    before = structuredClone(f.repo.state);
+  const broken = {
+    transaction: (scope, work) =>
+      f.repo.transaction(scope, (tx) =>
+        work({
+          ...tx,
+          appendAudit: async (event) => {
+            if (event.action === "loaner-readmitted")
+              throw Error("late audit unavailable");
+            return tx.appendAudit(event);
+          },
+        }),
+      ),
+  };
+  await assert.rejects(
+    new LoanerRegistry(broken).readmit(f.s, f.r.id, b),
+    /late audit unavailable/,
+  );
+  assert.deepEqual(f.repo.state, before);
+  const results = await Promise.allSettled([
+    f.l.readmit(f.s, f.r.id, b),
+    f.l.readmit(f.s, f.r.id, {
+      ...b,
+      requestId: randomUUID(),
+      episodeCode: "OTHER-SECOND",
+    }),
+  ]);
+  assert.equal(results.filter((x) => x.status === "fulfilled").length, 1);
+  const r = await f.l.get(f.s, f.r.id);
+  assert.deepEqual(await f.l.readmit(f.s, f.r.id, b), r);
+  assert.equal(f.repo.state.processing.length, 2);
+  assert.equal(f.repo.state.instruments.length, 2);
+  assert.equal(f.repo.state.loanerVersions.length, 3);
+});

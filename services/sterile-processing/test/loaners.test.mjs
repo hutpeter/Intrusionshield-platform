@@ -363,3 +363,135 @@ test("loaner write grant alone cannot create instruments or processing holds", a
   assert.equal(response.status, 403);
   assert.equal(transactions, 0);
 });
+const readmitBody = (r) => ({
+  requestId: randomUUID(),
+  version: r.version,
+  instrumentIds: r.items.map((i) => i.id),
+  episodeCode: "READMIT-" + randomUUID(),
+  dueOn: "",
+  location: "DEMO-NEW-RECEIVING",
+  custodian: "DEMO-COURIER",
+  reference: "SIMULATED-NEW-VISIT",
+  condition: "Used; fresh processing required",
+  note: "",
+  contentsChecked: true,
+  confirmed: true,
+});
+test("readmission API is operator/CSRF/scoped, strict and retains existing instrument identities", async (t) => {
+  const f = await httpFixture(t);
+  for (const role of ["reviewer", "viewer"]) {
+    await f.login(role);
+    assert.equal(
+      (
+        await f.call("/preview/loaner-readmission-example", {
+          requestId: randomUUID(),
+        })
+      ).status,
+      403,
+    );
+  }
+  await f.login("operator");
+  const requestId = randomUUID(),
+    setup = await f.call("/preview/loaner-readmission-example", { requestId });
+  assert.equal(setup.status, 201);
+  const r = await setup.json();
+  assert.equal(r.state, "returned");
+  assert.deepEqual(
+    await (
+      await f.call("/preview/loaner-readmission-example", { requestId })
+    ).json(),
+    r,
+  );
+  const path = f.base + "/loaners/" + r.id + "/readmit",
+    b = readmitBody(r);
+  for (const role of ["reviewer", "viewer"]) {
+    await f.login(role);
+    assert.equal((await f.call(path, b)).status, 403);
+  }
+  await f.login("operator");
+  assert.equal(
+    (await f.call(path, b, { "x-sterile-csrf": "bad" })).status,
+    403,
+  );
+  assert.equal((await f.call(path, { ...b, supplier: "CHANGED" })).status, 400);
+  assert.equal((await f.call(path, { ...b, totalRecorded: 0 })).status, 400);
+  assert.equal(
+    (await f.call(path.replace(f.session.facilityId, randomUUID()), b)).status,
+    404,
+  );
+  const result = await f.call(path, b);
+  assert.equal(result.status, 200);
+  const current = await result.json();
+  assert.equal(current.visit, 2);
+  assert.equal(current.state, "received");
+  assert.notEqual(current.episodeId, r.episodeId);
+  assert.deepEqual(
+    current.items.map((i) => i.id),
+    r.items.map((i) => i.id),
+  );
+  const e = await (
+    await f.call(f.base + "/processing/" + current.episodeId)
+  ).json();
+  assert.equal(e.state, "received");
+  assert.equal(e.attempts.length, 0);
+  assert.equal(e.inspections.length, 0);
+  assert.equal(
+    (await (await f.call(f.base + "/loaners/" + r.id + "/versions/2")).json())
+      .state,
+    "returned",
+  );
+});
+test("SQLite readmission rollback, reopen and retry retain fresh processing reservation and historic hand-back", async (t) => {
+  const dir = mkdtempSync(join(tmpdir(), "sterile-loan-readmit-")),
+    file = join(dir, "registry.sqlite");
+  let repo = new PreviewSqliteRepository(file);
+  t.after(() => {
+    repo.close();
+    rmSync(dir, { recursive: true, force: true });
+  });
+  const s = {
+      tenantId: randomUUID(),
+      facilityId: randomUUID(),
+      actorId: randomUUID(),
+    },
+    { prepareLoanerReadmissionExample } =
+      await import("../dist/development/loaner-readmission-example.js"),
+    r = await prepareLoanerReadmissionExample(repo, s, randomUUID()),
+    b = readmitBody(r),
+    broken = {
+      transaction: (scope, work) =>
+        repo.transaction(scope, (tx) =>
+          work({
+            ...tx,
+            appendAudit: async () => {
+              throw Error("audit unavailable");
+            },
+          }),
+        ),
+    };
+  await assert.rejects(
+    new LoanerRegistry(broken).readmit(s, r.id, b),
+    /audit unavailable/,
+  );
+  assert.equal((await new LoanerRegistry(repo).get(s, r.id)).state, "returned");
+  assert.equal(
+    (await new InstrumentRegistry(repo).get(s, r.items[0].id)).processingHold,
+    undefined,
+  );
+  const admitted = await new LoanerRegistry(repo).readmit(s, r.id, b);
+  repo.close();
+  repo = new PreviewSqliteRepository(file);
+  assert.deepEqual(
+    await new LoanerRegistry(repo).readmit(s, r.id, b),
+    admitted,
+  );
+  assert.equal(
+    (await new InstrumentRegistry(repo).get(s, r.items[0].id)).processingHold
+      .episodeId,
+    admitted.episodeId,
+  );
+  assert.equal(
+    (await new LoanerRegistry(repo).get(s, r.id, 2)).handback.reference,
+    r.handback.reference,
+  );
+});

@@ -439,6 +439,40 @@ export function createSterileApp(
         ),
       );
   });
+  app.post(prefix + "/loaners/:id/readmit", async (req, res) => {
+    noQuery(req);
+    if (
+      (await dependencies.authorize!(
+        res.locals.scope,
+        "sterile.core",
+        "processing:write",
+      )) !== true
+    ) {
+      res.status(403).json({ error: "FORBIDDEN" });
+      return;
+    }
+    const v = body(req.body, [
+      "requestId",
+      "version",
+      "instrumentIds",
+      "episodeCode",
+      "dueOn",
+      "location",
+      "custodian",
+      "reference",
+      "condition",
+      "note",
+      "contentsChecked",
+      "confirmed",
+    ]);
+    res.json(
+      await new LoanerRegistry(dependencies.repository!).readmit(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        v as unknown as Parameters<LoanerRegistry["readmit"]>[2],
+      ),
+    );
+  });
   app.post(prefix + "/loaners/:id/return", async (req, res) => {
     noQuery(req);
     const v = body(req.body, [

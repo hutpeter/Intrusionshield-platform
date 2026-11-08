@@ -59,7 +59,7 @@ export function LoanerWorkspace({
     [error, setError] = useState<unknown>(null),
     [notice, setNotice] = useState(false),
     [form, setForm] = useState<{
-      kind: "receive" | "return";
+      kind: "receive" | "return" | "readmit";
       requestId: string;
       version: number;
     } | null>(null),
@@ -177,9 +177,63 @@ export function LoanerWorkspace({
       if (!c.signal.aborted) setSaving(false);
     }
   }
+  function beginReadmit(r: LoanerRecord, demo = false) {
+    setValues({
+      ...empty(),
+      code: "LOAN-RECV-" + crypto.randomUUID().toUpperCase(),
+      ...(demo
+        ? {
+            location: "DEMO-LOANER-READMISSION",
+            custodian: "DEMO-COURIER",
+            reference: "SIMULATED-LOANER-READMISSION",
+            condition: "Fictional repeat visit — fresh processing required",
+            note: "Fictional readmission demonstration only",
+          }
+        : {}),
+    });
+    setNotice(false);
+    setError(null);
+    setForm({
+      kind: "readmit",
+      requestId: crypto.randomUUID(),
+      version: r.version,
+    });
+  }
+  async function readmitExample() {
+    if (busy || form) return;
+    const c = new AbortController();
+    pending.current = c;
+    setSaving(true);
+    setError(null);
+    try {
+      const r = await api.prepareLoanerReadmission(
+        session,
+        exampleKey.current,
+        c.signal,
+      );
+      if (c.signal.aborted) return;
+      setSelected(r.id);
+      setDetail(r);
+      setHistoryPage(1);
+      beginReadmit(r, true);
+      exampleKey.current = crypto.randomUUID();
+    } catch (e) {
+      if (!c.signal.aborted) failed(e);
+    } finally {
+      if (!c.signal.aborted) setSaving(false);
+    }
+  }
   async function save(e: React.FormEvent) {
     e.preventDefault();
-    if (!form || busy || !values.confirmed || !values.contentsChecked) return;
+    if (
+      !form ||
+      busy ||
+      loading ||
+      (form.kind !== "receive" && !detail) ||
+      !values.confirmed ||
+      !values.contentsChecked
+    )
+      return;
     const c = new AbortController();
     pending.current = c;
     setSaving(true);
@@ -192,21 +246,41 @@ export function LoanerWorkspace({
               { ...values, requestId: form.requestId } satisfies LoanerInput,
               c.signal,
             )
-          : await api.returnLoaner(
-              session,
-              selected!,
-              {
-                requestId: form.requestId,
-                version: form.version,
-                instrumentIds: detail!.items.map((i) => i.id),
-                recipient,
-                reference: values.reference,
-                note: values.note,
-                contentsChecked: true,
-                confirmed: true,
-              },
-              c.signal,
-            );
+          : form.kind === "readmit"
+            ? await api.readmitLoaner(
+                session,
+                selected!,
+                {
+                  requestId: form.requestId,
+                  version: form.version,
+                  instrumentIds: detail!.items.map((i) => i.id),
+                  episodeCode: values.code,
+                  dueOn: values.dueOn,
+                  location: values.location,
+                  custodian: values.custodian,
+                  reference: values.reference,
+                  condition: values.condition,
+                  note: values.note,
+                  contentsChecked: true,
+                  confirmed: true,
+                },
+                c.signal,
+              )
+            : await api.returnLoaner(
+                session,
+                selected!,
+                {
+                  requestId: form.requestId,
+                  version: form.version,
+                  instrumentIds: detail!.items.map((i) => i.id),
+                  recipient,
+                  reference: values.reference,
+                  note: values.note,
+                  contentsChecked: true,
+                  confirmed: true,
+                },
+                c.signal,
+              );
       if (!c.signal.aborted) {
         setForm(null);
         setSelected(r.id);
@@ -286,6 +360,17 @@ export function LoanerWorkspace({
             {t.example}
           </button>
         )}
+      {session.canWrite &&
+        !selected &&
+        !form &&
+        session.mode === "local-dummy-preview" && (
+          <button
+            disabled={busy || loading}
+            onClick={() => void readmitExample()}
+          >
+            {t.prepareReadmit}
+          </button>
+        )}
       {notice && (
         <p className="success" role="status">
           {t.saved}
@@ -301,13 +386,19 @@ export function LoanerWorkspace({
       {form && (
         <form className="panel edit-panel" onSubmit={save}>
           <div className="panel-heading">
-            <h2>{form.kind === "receive" ? t.receive : t.returnSet}</h2>
+            <h2>
+              {form.kind === "receive"
+                ? t.receive
+                : form.kind === "readmit"
+                  ? t.readmit
+                  : t.returnSet}
+            </h2>
             <button type="button" disabled={busy} onClick={() => setForm(null)}>
               {common.cancel}
             </button>
           </div>
-          <fieldset disabled={busy}>
-            <p>{t.newOnly}</p>
+          <fieldset disabled={busy || loading}>
+            <p>{form.kind === "readmit" ? t.readmitHelp : t.newOnly}</p>
             <div className="form-grid">
               {form.kind === "receive" ? (
                 (
@@ -334,6 +425,44 @@ export function LoanerWorkspace({
                     />
                   </label>
                 ))
+              ) : form.kind === "readmit" ? (
+                <>
+                  <p>
+                    {t.supplier}: {detail?.supplier} ·{" "}
+                    {detail?.supplierReference}
+                  </p>
+                  {(
+                    [
+                      "code",
+                      "dueOn",
+                      "location",
+                      "custodian",
+                      "reference",
+                      "condition",
+                      "note",
+                    ] as const
+                  ).map((k) => (
+                    <label key={k}>
+                      {k === "code" ? t.episodeCode : t[k]}
+                      <input
+                        type={k === "dueOn" ? "date" : "text"}
+                        required={!["dueOn", "note"].includes(k)}
+                        maxLength={
+                          k === "note" ? 500 : k === "code" ? 100 : 200
+                        }
+                        value={values[k]}
+                        onChange={(e) => patch({ [k]: e.target.value })}
+                      />
+                    </label>
+                  ))}
+                  <ul>
+                    {detail?.items.map((i) => (
+                      <li key={i.id}>
+                        {i.code} · {i.serialNumber || "—"}
+                      </li>
+                    ))}
+                  </ul>
+                </>
               ) : (
                 <>
                   <label>
@@ -466,7 +595,11 @@ export function LoanerWorkspace({
                   }))
                 }
               />
-              {form.kind === "receive" ? t.checked : t.returnChecked}
+              {form.kind === "receive"
+                ? t.checked
+                : form.kind === "readmit"
+                  ? t.readmitChecked
+                  : t.returnChecked}
             </label>
             <label className="check">
               <input
@@ -476,17 +609,25 @@ export function LoanerWorkspace({
                   setValues((v) => ({ ...v, confirmed: e.target.checked }))
                 }
               />
-              {form.kind === "receive" ? t.confirmed : t.returnConfirmed}
+              {form.kind === "receive"
+                ? t.confirmed
+                : form.kind === "readmit"
+                  ? t.readmitConfirmed
+                  : t.returnConfirmed}
             </label>
             <button
               className="primary"
-              disabled={busy || !values.contentsChecked || !values.confirmed}
+              disabled={
+                busy || loading || !values.contentsChecked || !values.confirmed
+              }
             >
               {saving
                 ? common.saving
                 : form.kind === "receive"
                   ? t.save
-                  : t.saveReturn}
+                  : form.kind === "readmit"
+                    ? t.saveReadmit
+                    : t.saveReturn}
             </button>
           </fieldset>
         </form>
@@ -513,6 +654,14 @@ export function LoanerWorkspace({
                   {t.returnSet}
                 </button>
               )}
+              {session.canWrite && !past && r.state === "returned" && (
+                <button
+                  disabled={busy || loading}
+                  onClick={() => beginReadmit(r)}
+                >
+                  {t.readmit}
+                </button>
+              )}
               {past && (
                 <button onClick={() => setPast(null)} disabled={busy}>
                   {t.current}
@@ -520,6 +669,15 @@ export function LoanerWorkspace({
               )}
             </div>
             {past && <p>{t.historical}</p>}
+            <p>
+              {t.visit}: {r.visit ?? 1}
+            </p>
+            {r.lastAdmission && (
+              <p>
+                {t.readmitted}: {date(r.lastAdmission.at)} ·{" "}
+                {r.lastAdmission.actorId}
+              </p>
+            )}
             <dl className="details-grid">
               {(
                 [
@@ -582,8 +740,12 @@ export function LoanerWorkspace({
             <h2>{t.history}</h2>
             {history?.items.map((e) => (
               <p key={e.id}>
-                {e.action === "loaner-received" ? t.receive : t.returnSet} ·{" "}
-                {date(e.at)} · {e.actorId} · {e.reason}{" "}
+                {e.action === "loaner-received"
+                  ? t.receive
+                  : e.action === "loaner-readmitted"
+                    ? t.readmitted
+                    : t.returnSet}{" "}
+                · {date(e.at)} · {e.actorId} · {e.reason}{" "}
                 <button disabled={busy} onClick={() => void version(e.version)}>
                   {common.version} {e.version}
                 </button>

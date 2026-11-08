@@ -1,6 +1,6 @@
 # Ruby Sterile Processing — issues log
 
-Updated November 7, 2026. Deferred requirements are recorded here so development
+Updated November 8, 2026. Deferred requirements are recorded here so development
 can continue without losing them. Deferral is not implementation or acceptance.
 Keep test execution status in [TESTING-REGISTER.md](TESTING-REGISTER.md).
 
@@ -263,7 +263,12 @@ new identities and fresh processing holds atomically. Hand-back requires account
 contents, passed current inspection and reconciled custody/holds. Returned supplier-owned
 items cannot silently re-enter local processing/assembly; receipt and hand-back history remain.
 
-Deferred: explicit later-visit readmission preserving instrument identity, duplicate serial/
+Delivered November 8: explicit complete-set repeat-visit readmission preserves identities,
+supplier and service limits, creates fresh receiving holds, and retains earlier visits.
+U-LOANREADMIT-01 pending; 325 scoped tests/build/browser checks passed. See
+[LOANER-READMISSION.md](LOANER-READMISSION.md). U-LOANER-01 remains unconfirmed.
+
+Deferred: changed/partial later-visit shipments, duplicate serial/
 manufacturer identity policy, partial or unexpected arrival/hand-back, corrections, verified
 vendor master/contracts/IFU, acknowledgements, transport/cross-site work, calendar alerts and
 production competency/operational acceptance. No supplier notifications or physical receipt

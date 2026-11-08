@@ -340,8 +340,12 @@ export class TraceabilityRegistry {
               "loaner_receiving_source",
               e.createdAt,
               e.receivedBy,
-              { loanerId: e.loanerSource.id, loanerCode: e.loanerSource.code },
-              ["loanerId", "loanerCode"],
+              {
+                loanerId: e.loanerSource.id,
+                loanerCode: e.loanerSource.code,
+                visit: e.loanerSource.visit ?? 1,
+              },
+              ["loanerId", "loanerCode", "visit"],
             );
           if (e.returnSource)
             link(

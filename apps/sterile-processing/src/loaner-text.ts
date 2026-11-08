@@ -1,6 +1,19 @@
 import type { Language } from "./text";
 const en = {
   title: "Loaner and vendor sets",
+  readmit: "Readmit returned loaner set",
+  prepareReadmit: "Prepare fictional loaner readmission example",
+  saveReadmit: "Save loaner readmission",
+  episodeCode: "New receiving episode code",
+  readmitChecked:
+    "I confirm all original instruments are physically present for this new visit.",
+  readmitConfirmed:
+    "I confirm this readmission; all instruments require fresh processing and existing service limits remain.",
+  readmitHelp:
+    "Reuses the original instrument identities and supplier owner. No earlier inspection, release or service reset is inherited.",
+  visit: "Visit",
+  readmitted: "Loaner readmission recorded",
+
   receive: "Receive loaner set",
   example: "Prepare fictional loaner receipt example",
   save: "Save loaner receipt",
@@ -44,13 +57,26 @@ const en = {
   boundary:
     "Manually recorded fictional demonstration. Loaner receipt creates new instrument identities and fresh cleaning holds; it does not establish sterility or release. Only complete declared sets can be received here. Supplier hand-back requires passed inspection and no active tray, processing, repair or recall holds. Recipient references are not signatures or supplier acknowledgements. Do not enter patient data.",
   newOnly:
-    "Use new instrument codes. Existing facility-owned instruments cannot be relabelled as loaners. Returning instruments on a later visit requires a future readmission workflow.",
+    "Use new instrument codes. Existing facility-owned instruments cannot be relabelled as loaners. Use Readmit returned loaner set for a later visit.",
   empty: "No loaner receipts yet.",
   historical: "Historical version",
   current: "Back to current version",
 };
 const es: typeof en = {
   title: "Conjuntos prestados y de proveedores",
+  readmit: "Readmitir conjunto devuelto",
+  prepareReadmit: "Preparar ejemplo ficticio de readmisión prestada",
+  saveReadmit: "Guardar readmisión prestada",
+  episodeCode: "Código del nuevo episodio de recepción",
+  readmitChecked:
+    "Confirmo la presencia física de todos los instrumentos originales para esta nueva visita.",
+  readmitConfirmed:
+    "Confirmo la readmisión; se requiere nuevo procesamiento y se mantienen los límites de servicio.",
+  readmitHelp:
+    "Reutiliza identidades originales y propietario. No hereda inspección, liberación ni reinicio de servicio.",
+  visit: "Visita",
+  readmitted: "Readmisión prestada registrada",
+
   receive: "Recibir conjunto prestado",
   example: "Preparar ejemplo ficticio de recepción prestada",
   save: "Guardar recepción prestada",
@@ -94,13 +120,26 @@ const es: typeof en = {
   boundary:
     "Demostración ficticia con registro manual. La recepción crea identidades nuevas y retenciones para limpieza; no acredita esterilidad ni liberación. Solo se reciben conjuntos declarados completos. La devolución requiere inspección satisfactoria y ausencia de bandejas activas o retenciones de procesamiento, reparación o retirada. Las referencias del receptor no son firmas ni acuses del proveedor. No ingrese datos de pacientes.",
   newOnly:
-    "Use códigos nuevos. No se cambia la propiedad de instrumentos existentes. Una visita posterior requiere un futuro flujo de readmisión.",
+    "Use códigos nuevos. No se cambia la propiedad de instrumentos existentes. Use la readmisión para una visita posterior.",
   empty: "Sin recepciones prestadas.",
   historical: "Versión histórica",
   current: "Volver a versión vigente",
 };
 const fr: typeof en = {
   title: "Ensembles prêtés et fournisseurs",
+  readmit: "Réadmettre un ensemble rendu",
+  prepareReadmit: "Préparer un exemple fictif de réadmission prêtée",
+  saveReadmit: "Enregistrer la réadmission prêtée",
+  episodeCode: "Code du nouvel épisode de réception",
+  readmitChecked:
+    "Je confirme la présence physique de tous les instruments d’origine pour cette nouvelle visite.",
+  readmitConfirmed:
+    "Je confirme la réadmission ; un nouveau traitement est requis et les seuils d’entretien restent applicables.",
+  readmitHelp:
+    "Réutilise les identités et propriétaire d’origine. Aucun contrôle, libération ou compteur d’entretien antérieur n’est rétabli.",
+  visit: "Visite",
+  readmitted: "Réadmission prêtée enregistrée",
+
   receive: "Recevoir un ensemble prêté",
   example: "Préparer un exemple fictif de réception prêtée",
   save: "Enregistrer la réception prêtée",
@@ -144,7 +183,7 @@ const fr: typeof en = {
   boundary:
     "Démonstration fictive avec saisie manuelle. La réception crée de nouvelles identités et retenues pour nettoyage ; elle ne prouve ni stérilité ni libération. Seuls les ensembles déclarés complets sont reçus. La remise exige une inspection satisfaisante sans plateau actif ni blocage de traitement, réparation ou rappel. Les références du destinataire ne sont ni signatures ni accusés fournisseur. Aucune donnée patient.",
   newOnly:
-    "Utilisez de nouveaux codes. Aucun changement de propriétaire d’instruments existants. Une visite ultérieure nécessite un futur flux de réadmission.",
+    "Utilisez de nouveaux codes. Aucun changement de propriétaire d’instruments existants. Utilisez la réadmission pour une visite ultérieure.",
   empty: "Aucune réception prêtée.",
   historical: "Version historique",
   current: "Retour à la version courante",

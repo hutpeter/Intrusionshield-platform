@@ -1,3 +1,4 @@
+import { prepareLoanerReadmissionExample } from "./loaner-readmission-example.js";
 import { InstrumentRegistry } from "@intrusionshield/sterile-processing";
 import { prepareServiceThresholdExample } from "./service-threshold-example.js";
 import { prepareDashboardPagingExample } from "./dashboard-paging-example.js";
@@ -630,6 +631,33 @@ export function createSterilePreview({
         },
       ),
     );
+  });
+  app.post("/preview/loaner-readmission-example", async (req, res) => {
+    const session = res.locals.session as Session;
+    if (session.role !== "operator") {
+      res
+        .status(session.role ? 403 : 401)
+        .json({ error: session.role ? "FORBIDDEN" : "UNAUTHENTICATED" });
+      return;
+    }
+    if (
+      Object.keys(req.query).length ||
+      !req.body ||
+      Array.isArray(req.body) ||
+      Object.keys(req.body).length !== 1
+    ) {
+      res.status(400).json({ error: "INVALID_REQUEST" });
+      return;
+    }
+    res
+      .status(201)
+      .json(
+        await prepareLoanerReadmissionExample(
+          repository,
+          { tenantId, facilityId, actorId: actors.operator },
+          sterileUuid(req.body.requestId),
+        ),
+      );
   });
   app.post("/preview/receiving-scan-example", async (req, res) => {
     const session = res.locals.session as Session;
