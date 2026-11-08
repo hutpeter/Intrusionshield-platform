@@ -11,6 +11,8 @@ export interface LoadPackage {
   instrumentCount: number;
 }
 export interface SterilizationLoad {
+  registeredEquipment?: import("./equipment.js").ProcessingEquipment;
+  startedEquipment?: import("./equipment.js").ProcessingEquipment;
   controlledProcedure?: import("./procedures.js").ProcedureRevision;
   review?: ReviewStatus;
   recallBlocked?: boolean;
@@ -64,6 +66,7 @@ export type LoadSummary = Pick<
   returnBlocked?: boolean;
 };
 export interface LoadInput {
+  equipmentId?: string;
   procedureRevisionId?: string;
   requestId: string;
   code: string;

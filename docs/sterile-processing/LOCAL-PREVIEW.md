@@ -285,3 +285,7 @@ Use [PROCEDURES.md](PROCEDURES.md) for the single current publication check.
 ## Package integrity and shelf-life increment
 
 See [PACKAGE-SAFETY.md](PACKAGE-SAFETY.md) for the single U-PACKSAFE-01 owner check, recorded policy/UTC expiry semantics, persistent integrity hold, dashboard alerts and deferred production-policy work. New UI packaging requires a declared policy; old records/API compatibility do not acquire inferred dates.
+
+## Registered processing equipment
+
+See [EQUIPMENT.md](EQUIPMENT.md) for U-EQUIP-01, the single owner check as **Demo reviewer**. Processing equipment registration/service is reviewer-only; operators may read/select and take equipment out of service. New mechanical/load forms use registered equipment; unknown legacy API references remain explicitly unlinked.

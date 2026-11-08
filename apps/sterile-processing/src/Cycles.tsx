@@ -1,3 +1,4 @@
+import { EquipmentPicker, EquipmentSnapshot } from "./EquipmentPicker";
 import { ProcedurePicker, ProcedureSnapshot } from "./ProcedurePicker";
 import { LoadScan } from "./LoadScan";
 import { loadScanLabels } from "./load-scan-text";
@@ -22,6 +23,7 @@ type Form = {
 };
 const empty = () => ({
   code: "",
+  equipmentId: "",
   sterilizer: "",
   method: "steam" as "steam" | "low_temperature" | "other",
   procedureRevisionId: "",
@@ -189,6 +191,7 @@ export function CycleWorkspace({
             requestId: form.requestId,
             code: fields.code,
             sterilizer: fields.sterilizer,
+            ...(fields.equipmentId ? { equipmentId: fields.equipmentId } : {}),
             method: fields.method,
             profile: fields.profile,
             profileVersion: fields.profileVersion,
@@ -347,6 +350,10 @@ export function CycleWorkspace({
   };
   const record = (d: SterilizationLoad) => (
     <>
+      <EquipmentSnapshot
+        value={d.startedEquipment ?? d.registeredEquipment}
+        language={language}
+      />
       {d.controlledProcedure && (
         <ProcedureSnapshot value={d.controlledProcedure} language={language} />
       )}
@@ -632,6 +639,8 @@ export function CycleWorkspace({
                           profile: r.code,
                           profileVersion: String(r.revision),
                           method: r.method as typeof fields.method,
+                          equipmentId: "",
+                          sterilizer: "",
                           confirmed: false,
                         }
                       : { procedureRevisionId: "", confirmed: false },
@@ -641,16 +650,14 @@ export function CycleWorkspace({
             )}
             {form.kind === "create" && (
               <div className="form-grid">
-                {(
-                  ["code", "sterilizer", "profile", "profileVersion"] as const
-                ).map((key) => (
+                {(["code", "profile", "profileVersion"] as const).map((key) => (
                   <label key={key}>
                     {p[key]}
                     <input
                       required
                       maxLength={key === "profile" ? 200 : 100}
                       pattern={
-                        key === "code" || key === "sterilizer"
+                        key === "code"
                           ? "[A-Za-z0-9][A-Za-z0-9._-]*"
                           : undefined
                       }
@@ -670,7 +677,12 @@ export function CycleWorkspace({
                     disabled={!!fields.procedureRevisionId}
                     value={fields.method}
                     onChange={(e) =>
-                      patch({ method: e.target.value as typeof fields.method })
+                      patch({
+                        method: e.target.value as typeof fields.method,
+                        equipmentId: "",
+                        sterilizer: "",
+                        confirmed: false,
+                      })
                     }
                   >
                     {(["steam", "low_temperature", "other"] as const).map(
@@ -683,6 +695,24 @@ export function CycleWorkspace({
                   </select>
                 </label>
               </div>
+            )}
+            {form.kind === "create" && (
+              <EquipmentPicker
+                session={session}
+                language={language}
+                kind="sterilizer"
+                method={fields.method}
+                value={fields.equipmentId}
+                disabled={busy}
+                onExpired={onExpired}
+                onSelect={(r) =>
+                  patch({
+                    equipmentId: r?.id ?? "",
+                    sterilizer: r?.code ?? "",
+                    confirmed: false,
+                  })
+                }
+              />
             )}
             {["create", "contents"].includes(form.kind) && (
               <>
@@ -839,6 +869,7 @@ export function CycleWorkspace({
               disabled={
                 busy ||
                 !fields.confirmed ||
+                (form.kind === "create" && !fields.equipmentId) ||
                 (["create", "contents"].includes(form.kind) &&
                   !fields.packageIds.length)
               }

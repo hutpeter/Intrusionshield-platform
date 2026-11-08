@@ -1,3 +1,4 @@
+import { resolveEquipment } from "./equipment.js";
 import { resolveProcedure } from "./procedures.js";
 import { assertLoanerPresent } from "./loaners.js";
 import { randomUUID } from "node:crypto";
@@ -190,6 +191,19 @@ export class ProcessingRegistry extends SterileRegistryBase {
           old.attempts.length >= 50
         )
           throw new SterileError("CONFLICT");
+        if (input.method === "manual" && input.equipmentId !== undefined)
+          throw new SterileError("INVALID_REQUEST");
+        const registeredEquipment =
+          input.method === "mechanical"
+            ? await resolveEquipment(
+                tx,
+                input.equipmentId,
+                "washer_disinfector",
+                input.method,
+                equipment,
+                at,
+              )
+            : undefined;
         const controlledProcedure = await resolveProcedure(
           tx,
           input.procedureRevisionId,
@@ -207,6 +221,7 @@ export class ProcessingRegistry extends SterileRegistryBase {
           attempts: [
             ...old.attempts,
             {
+              ...(registeredEquipment ? { registeredEquipment } : {}),
               ...(controlledProcedure ? { controlledProcedure } : {}),
               number: old.attempts.length + 1,
               method: input.method,

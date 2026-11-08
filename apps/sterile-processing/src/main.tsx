@@ -1,3 +1,5 @@
+import { EquipmentWorkspace } from "./Equipment";
+import { equipmentLabels } from "./equipment-text";
 import { ProcedureWorkspace } from "./Procedures";
 import { procedureLabels } from "./procedure-text";
 import { LoanerWorkspace } from "./Loaners";
@@ -276,6 +278,7 @@ function Workspace({
   onExpired: () => void;
 }) {
   const [tab, setTab] = useState<
+      | "equipment"
       | "procedures"
       | "loaners"
       | "dashboard"
@@ -345,6 +348,7 @@ function Workspace({
     void (async () => {
       try {
         if (
+          tab === "equipment" ||
           tab === "procedures" ||
           tab === "loaners" ||
           tab === "dashboard" ||
@@ -441,6 +445,7 @@ function Workspace({
   }
   function navigate(
     target:
+      | "equipment"
       | "procedures"
       | "loaners"
       | "dashboard"
@@ -677,6 +682,13 @@ function Workspace({
             <span aria-hidden="true">⌕</span> {traceLabels(language).title}
           </button>
           <button
+            aria-current={tab === "equipment" ? "page" : undefined}
+            disabled={busy}
+            onClick={() => navigate("equipment")}
+          >
+            <span aria-hidden="true">⚙</span> {equipmentLabels(language).title}
+          </button>
+          <button
             aria-current={tab === "procedures" ? "page" : undefined}
             disabled={busy}
             onClick={() => navigate("procedures")}
@@ -747,7 +759,8 @@ function Workspace({
             {recallLabels(language).blocked} · {detail.recall.caseCode}
           </p>
         )}
-        {tab !== "procedures" &&
+        {tab !== "equipment" &&
+          tab !== "procedures" &&
           tab !== "loaners" &&
           tab !== "dashboard" &&
           tab !== "trays" &&
@@ -1093,6 +1106,17 @@ function Workspace({
             blocked={blocked}
             onExpired={onExpired}
             onBusy={setTrayBusy}
+          />
+        )}
+        {tab === "equipment" && (
+          <EquipmentWorkspace
+            key={trayReset}
+            session={session}
+            language={language}
+            blocked={blocked}
+            onExpired={onExpired}
+            onBusy={setTrayBusy}
+            onDirty={setTrayDirty}
           />
         )}
         {tab === "procedures" && (

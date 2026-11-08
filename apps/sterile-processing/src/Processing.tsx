@@ -1,3 +1,4 @@
+import { EquipmentPicker, EquipmentSnapshot } from "./EquipmentPicker";
 import { ProcedurePicker, ProcedureSnapshot } from "./ProcedurePicker";
 import { ReceivingScan } from "./ReceivingScan";
 import { receivingScanLabels } from "./receiving-scan-text";
@@ -28,6 +29,7 @@ const empty = () => ({
   pick: "",
   scanned: [] as { instrumentId: string; identifier: string }[],
   method: "manual" as "manual" | "mechanical",
+  equipmentId: "",
   procedureRevisionId: "",
   procedure: "",
   procedureVersion: "",
@@ -242,6 +244,7 @@ export function ProcessingWorkspace({
               ? { procedureRevisionId: fields.procedureRevisionId }
               : {}),
             equipment: fields.equipment,
+            ...(fields.equipmentId ? { equipmentId: fields.equipmentId } : {}),
             confirmed: true,
           },
           c.signal,
@@ -565,6 +568,10 @@ export function ProcessingWorkspace({
         ) : (
           d.attempts.map((a) => (
             <article className="cleaning-attempt" key={a.number}>
+              <EquipmentSnapshot
+                value={a.registeredEquipment}
+                language={language}
+              />
               <h3>
                 {p.attempt} {a.number} · {a.outcome ? p[a.outcome] : p.cleaning}
               </h3>
@@ -939,7 +946,11 @@ export function ProcessingWorkspace({
                           procedure: r.code,
                           procedureVersion: String(r.revision),
                           ...(form.kind === "start"
-                            ? { method: r.method as "manual" | "mechanical" }
+                            ? {
+                                method: r.method as "manual" | "mechanical",
+                                equipmentId: "",
+                                equipment: "",
+                              }
                             : {}),
                           confirmed: false,
                         }
@@ -959,6 +970,9 @@ export function ProcessingWorkspace({
                     onChange={(e) =>
                       patch({
                         method: e.target.value as "manual" | "mechanical",
+                        equipmentId: "",
+                        equipment: "",
+                        confirmed: false,
                       })
                     }
                   >
@@ -966,26 +980,40 @@ export function ProcessingWorkspace({
                     <option value="mechanical">{p.mechanical}</option>
                   </select>
                 </label>
-                {(["procedure", "procedureVersion", "equipment"] as const).map(
-                  (key) => (
-                    <label key={key}>
-                      {p[key]}
-                      <input
-                        required={
-                          key !== "equipment" || fields.method === "mechanical"
-                        }
-                        maxLength={key === "procedureVersion" ? 100 : 200}
-                        disabled={
-                          !!fields.procedureRevisionId &&
-                          (key === "procedure" || key === "procedureVersion")
-                        }
-                        value={fields[key]}
-                        onChange={(e) => patch({ [key]: e.target.value })}
-                      />
-                    </label>
-                  ),
-                )}
+                {(["procedure", "procedureVersion"] as const).map((key) => (
+                  <label key={key}>
+                    {p[key]}
+                    <input
+                      required
+                      maxLength={key === "procedureVersion" ? 100 : 200}
+                      disabled={
+                        !!fields.procedureRevisionId &&
+                        (key === "procedure" || key === "procedureVersion")
+                      }
+                      value={fields[key]}
+                      onChange={(e) => patch({ [key]: e.target.value })}
+                    />
+                  </label>
+                ))}
               </div>
+            )}
+            {form.kind === "start" && fields.method === "mechanical" && (
+              <EquipmentPicker
+                session={session}
+                language={language}
+                kind="washer_disinfector"
+                method={fields.method}
+                value={fields.equipmentId}
+                disabled={busy}
+                onExpired={onExpired}
+                onSelect={(r) =>
+                  patch({
+                    equipmentId: r?.id ?? "",
+                    equipment: r?.code ?? "",
+                    confirmed: false,
+                  })
+                }
+              />
             )}
             {form.kind === "finish" && (
               <div className="form-grid">
@@ -1131,6 +1159,9 @@ export function ProcessingWorkspace({
               disabled={
                 busy ||
                 !fields.confirmed ||
+                (form.kind === "start" &&
+                  fields.method === "mechanical" &&
+                  !fields.equipmentId) ||
                 (form.kind === "receive" && !fields.instrumentIds.length)
               }
             >

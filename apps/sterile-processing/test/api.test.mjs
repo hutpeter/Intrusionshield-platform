@@ -995,3 +995,32 @@ test("integrity hold sends only the explicit confirmed report with CSRF and reje
     (e) => e.code === "SERVICE_UNAVAILABLE",
   );
 });
+
+test("equipment service keeps identity out of updates, carries CSRF and rejects a foreign machine", async (t) => {
+  const input = {
+    requestId: "request",
+    version: 1,
+    state: "in_service",
+    lastServicedAt: "2026-11-01T00:00:00.000Z",
+    serviceDueAt: "2026-12-01T00:00:00.000Z",
+    serviceReference: "SIMULATED",
+    qualificationDueAt: "2027-11-01T00:00:00.000Z",
+    qualificationReference: "SIMULATED",
+    reason: "SIMULATED",
+    confirmed: true,
+  };
+  fake(t, async (path, options) => {
+    assert.match(path, /\/equipment\/machine\/service$/);
+    assert.equal(options.headers["x-sterile-csrf"], session.csrf);
+    assert.deepEqual(JSON.parse(options.body), input);
+    return response({
+      id: "machine",
+      tenantId: session.tenantId,
+      facilityId: "foreign",
+    });
+  });
+  await assert.rejects(
+    api.serviceEquipment(session, "machine", input, signal()),
+    (e) => e.code === "SERVICE_UNAVAILABLE",
+  );
+});

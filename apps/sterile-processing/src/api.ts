@@ -271,6 +271,92 @@ export const api = {
         episodeCode: string;
       }>("/preview/procedure-example", signal, { requestId }, s.csrf),
     ),
+  equipment: (s: Session, n: number, signal: AbortSignal) =>
+    scopedPage<
+      import("@intrusionshield/sterile-processing").ProcessingEquipment
+    >(s, base(s) + "/equipment", n, signal),
+  equipmentRecord: (
+    s: Session,
+    id: string,
+    signal: AbortSignal,
+    version?: number,
+  ) =>
+    scoped(
+      s,
+      call<import("@intrusionshield/sterile-processing").ProcessingEquipment>(
+        base(s) +
+          "/equipment/" +
+          encodeURIComponent(id) +
+          (version === undefined ? "" : "/versions/" + version),
+        signal,
+      ),
+    ),
+  equipmentHistory: (s: Session, id: string, n: number, signal: AbortSignal) =>
+    scopedPage<SterileAuditEvent>(
+      s,
+      base(s) + "/equipment/" + encodeURIComponent(id) + "/history",
+      n,
+      signal,
+    ),
+  registerEquipment: (
+    s: Session,
+    body: import("@intrusionshield/sterile-processing").EquipmentInput,
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<import("@intrusionshield/sterile-processing").ProcessingEquipment>(
+        base(s) + "/equipment",
+        signal,
+        body,
+        s.csrf,
+      ),
+    ),
+  serviceEquipment: (
+    s: Session,
+    id: string,
+    body: import("@intrusionshield/sterile-processing").EquipmentServiceInput,
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<import("@intrusionshield/sterile-processing").ProcessingEquipment>(
+        base(s) + "/equipment/" + encodeURIComponent(id) + "/service",
+        signal,
+        body,
+        s.csrf,
+      ),
+    ),
+  holdEquipment: (
+    s: Session,
+    id: string,
+    body: {
+      requestId: string;
+      version: number;
+      reason: string;
+      confirmed: boolean;
+    },
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<import("@intrusionshield/sterile-processing").ProcessingEquipment>(
+        base(s) + "/equipment/" + encodeURIComponent(id) + "/hold",
+        signal,
+        body,
+        s.csrf,
+      ),
+    ),
+  async allEquipment(s: Session, signal: AbortSignal) {
+    const items: import("@intrusionshield/sterile-processing").ProcessingEquipment[] =
+      [];
+    for (let n = 1; n <= 20; n++) {
+      const p = await api.equipment(s, n, signal);
+      items.push(...p.items);
+      if (!p.hasMore) return items;
+    }
+    throw new ApiError(503, "SERVICE_UNAVAILABLE");
+  },
   procedures: (s: Session, n: number, signal: AbortSignal) =>
     scopedPage<ProcedureRevision>(s, base(s) + "/procedures", n, signal),
   availableProcedures: (

@@ -1,3 +1,4 @@
+import { resolveEquipment } from "./equipment.js";
 import { assertPackageUsable } from "./package-eligibility.js";
 import { resolveProcedure } from "./procedures.js";
 import { recordServiceExposures } from "./service-usage.js";
@@ -98,6 +99,14 @@ export class CycleRegistry extends SterileRegistryBase {
         if (await tx.findLoadByCode(code)) throw new SterileError("CONFLICT");
         const id = randomUUID(),
           packages = await members(tx, input.packageIds, id);
+        const registeredEquipment = await resolveEquipment(
+          tx,
+          input.equipmentId,
+          "sterilizer",
+          input.method,
+          sterilizer,
+          at,
+        );
         const controlledProcedure = await resolveProcedure(
           tx,
           input.procedureRevisionId,
@@ -109,6 +118,7 @@ export class CycleRegistry extends SterileRegistryBase {
         );
         const item: SterilizationLoad = {
           id,
+          ...(registeredEquipment ? { registeredEquipment } : {}),
           ...(controlledProcedure ? { controlledProcedure } : {}),
           tenantId: s.tenantId,
           facilityId: s.facilityId,
@@ -270,6 +280,14 @@ export class CycleRegistry extends SterileRegistryBase {
         if (!old) throw new SterileError("NOT_FOUND");
         if (old.version !== version || old.state !== "draft")
           throw new SterileError("CONFLICT");
+        const startedEquipment = await resolveEquipment(
+          tx,
+          old.registeredEquipment?.id,
+          "sterilizer",
+          old.method,
+          old.sterilizer,
+          at,
+        );
         const fresh = await members(
           tx,
           old.packages.map((p) => p.id),
@@ -296,6 +314,7 @@ export class CycleRegistry extends SterileRegistryBase {
           ...old,
           version: version + 1,
           updatedAt: at,
+          ...(startedEquipment ? { startedEquipment } : {}),
           state: "running",
           startedAt: at,
           startedBy: s.actorId,

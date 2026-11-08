@@ -22,6 +22,8 @@ export class MemoryRepository {
     loadVersions: [],
     loadAssignments: [],
     machineCycles: [],
+    equipment: [],
+    equipmentVersions: [],
     packages: [],
     packageIntegrity: [],
     packageVersions: [],
@@ -816,6 +818,50 @@ export class MemoryRepository {
           loadId: l.id,
         });
       },
+      findEquipment: async (id) =>
+        read(s.equipment.find((x) => own(x) && x.id === id)),
+      findEquipmentByCode: async (code) =>
+        read(s.equipment.find((x) => own(x) && x.code === code)),
+      listEquipment: async (page) =>
+        s.equipment
+          .filter(own)
+          .slice()
+          .reverse()
+          .slice((page - 1) * 50, (page - 1) * 50 + 51)
+          .map((x) => structuredClone(x)),
+      insertEquipment: async (item) => {
+        if (
+          !own(item) ||
+          s.equipment.some(
+            (x) => own(x) && (x.id === item.id || x.code === item.code),
+          )
+        )
+          throw Error("constraint");
+        s.equipment.push(structuredClone(item));
+      },
+      updateEquipment: async (item, expected) => {
+        const n = s.equipment.findIndex(
+          (x) => own(x) && x.id === item.id && x.version === expected,
+        );
+        if (!own(item) || n < 0) throw Error("constraint");
+        s.equipment[n] = structuredClone(item);
+      },
+      insertEquipmentVersion: async (item) => {
+        if (
+          !own(item) ||
+          s.equipmentVersions.some(
+            (x) => own(x) && x.id === item.id && x.version === item.version,
+          )
+        )
+          throw Error("constraint");
+        s.equipmentVersions.push(structuredClone(item));
+      },
+      findEquipmentVersion: async (id, version) =>
+        read(
+          s.equipmentVersions.find(
+            (x) => own(x) && x.id === id && x.version === version,
+          ),
+        ),
       findPackageIntegrity: async (id) =>
         read(s.packageIntegrity.find((x) => own(x) && x.packageId === id)),
       insertPackageIntegrity: async (item) => {

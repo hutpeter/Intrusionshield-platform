@@ -1,4 +1,6 @@
 const es = {
+  EQUIPMENT_BLOCKED:
+    "Equipo fuera de servicio, vencido o incompatible. Revise el servicio, la cualificación y el método antes de iniciar.",
   PACKAGE_EXPIRED:
     "El paquete ha caducado según la política registrada. No se permite esta operación.",
   PACKAGE_INTEGRITY_BLOCKED:
@@ -61,6 +63,8 @@ const es = {
 };
 type Messages = Record<keyof typeof es, string>;
 const en: Messages = {
+  EQUIPMENT_BLOCKED:
+    "Equipment is out of service, overdue or incompatible. Review service, qualification and method before starting.",
   PACKAGE_EXPIRED:
     "The package has expired under its recorded policy. This operation is blocked.",
   PACKAGE_INTEGRITY_BLOCKED:
@@ -123,6 +127,8 @@ const en: Messages = {
     "Service unavailable. The change has not been confirmed.",
 };
 const fr: Messages = {
+  EQUIPMENT_BLOCKED:
+    "Équipement hors service, échéance dépassée ou incompatible. Vérifiez entretien, qualification et méthode avant de démarrer.",
   PACKAGE_EXPIRED:
     "Le paquet est périmé selon sa politique enregistrée. Cette opération est bloquée.",
   PACKAGE_INTEGRITY_BLOCKED:

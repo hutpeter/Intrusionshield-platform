@@ -51,9 +51,17 @@ A successful developer check never implies that the owner performed it.
 
 | 2b12333 | Issued-package lookup, manifest reconciliation and confirmed complete return with frozen identifier | 284 scoped tests, builds and targeted browser verification | U-RETSCAN-01 passed November 6, 2026 | Owner exceptions/disposition, hardware, persistent partial returns and operational acceptance deferred |
 
-## Current owner check — package shelf-life policy
+## Current owner check — registered processing equipment
 
-**U-PACKSAFE-01 pending:** enter as Demo operator → Packaging and labels → Prepare fictional packaging example → review the prefilled event-related policy/reference/revision → tick closure, contents and packaging confirmation → Save packaging. Expect the saved Package integrity and shelf life panel and recorded policy. This is the only owner check for this build. See [PACKAGE-SAFETY.md](PACKAGE-SAFETY.md).
+**U-EQUIP-01 pending:** sign out and enter as **Demo reviewer** → Processing equipment → Prepare fictional equipment example → review the prefilled machine/dates/references → tick equipment confirmation → Save equipment record. Expect In service — recorded dates current and Equipment history. This is the only requested owner check. See [EQUIPMENT.md](EQUIPMENT.md).
+
+Developer November 8, 2026: 352 scoped tests passed (191 domain, 124 HTTP/SQLite, 37 web), scoped builds and Chromium reviewer registration/hold/restore, operator washer/load selectors, frozen machine revisions, late-start block and reload checks passed. Exact service/qualification deadline, wrong-kind, code-only legacy, source-read authorization, optimistic conflicts, rollback and SQLite reopen are developer-verified.
+
+M-EQUIP-01 broader owner machine-selection/service/overdue/method/history/language/mobile and M-EQUIP-02 site/clinical/manufacturer/production/operational work deferred. U-PACKSAFE-01, U-TRAYCHECK-01 and U-PROC-01 have owner screenshot passes. Original U-LOANER-01 and U-TRACE-01 remain unconfirmed. RSP-ISS-001 remains parked.
+
+## Previous owner check — package shelf-life policy
+
+**U-PACKSAFE-01 passed November 8, 2026:** owner screenshot confirms saved package, Event-related policy, SIMULATED-FACILITY-SHELF-LIFE reference and DEMO-1 revision. Original check: enter as Demo operator → Packaging and labels → Prepare fictional packaging example → review the prefilled event-related policy/reference/revision → tick closure, contents and packaging confirmation → Save packaging. Expect the saved Package integrity and shelf life panel and recorded policy. This is the only owner check for this build. See [PACKAGE-SAFETY.md](PACKAGE-SAFETY.md).
 
 Developer November 8, 2026: 343 scoped tests verified (186 domain, 121 HTTP/SQLite, 36 web), builds and Chromium policy/UTC-warning/explicit-hold/dashboard/reload checks passed. Final load-policy snapshots also passed the 26 domain cycle/distribution and 21 HTTP/SQLite packaging/distribution/dashboard checks; the browser verified the frozen release label and its current damage block.
 

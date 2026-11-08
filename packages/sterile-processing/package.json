@@ -21,6 +21,10 @@
     "./package-safety": {
       "types": "./dist/package-safety.d.ts",
       "import": "./dist/package-safety.js"
+    },
+    "./equipment-status": {
+      "types": "./dist/equipment-status.d.ts",
+      "import": "./dist/equipment-status.js"
     }
   },
   "scripts": {

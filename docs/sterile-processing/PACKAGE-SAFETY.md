@@ -2,7 +2,7 @@
 
 ## One owner check
 
-U-PACKSAFE-01 pending: enter the updated preview as **Demo operator** → **Packaging and labels** → **Prepare fictional packaging example**. The existing example now prefills **Shelf-life policy: Event-related**, **Facility policy reference: SIMULATED-FACILITY-SHELF-LIFE**, **Policy revision: DEMO-1**. Review and tick the closure, contents and packaging confirmation boxes, then **Save packaging**. Expect the saved **Package integrity and shelf life** panel with the event-related policy and reference. This is the only owner check requested. It does not accept real policy or validate clinical suitability.
+U-PACKSAFE-01 passed November 8, 2026 (owner screenshot confirms saved event-related policy, reference and revision). Original check: enter the updated preview as **Demo operator** → **Packaging and labels** → **Prepare fictional packaging example**. The existing example now prefills **Shelf-life policy: Event-related**, **Facility policy reference: SIMULATED-FACILITY-SHELF-LIFE**, **Policy revision: DEMO-1**. Review and tick the closure, contents and packaging confirmation boxes, then **Save packaging**. Expect the saved **Package integrity and shelf life** panel with the event-related policy and reference. This is the only owner check requested. It does not accept real policy or validate clinical suitability.
 
 ## Recorded policy
 

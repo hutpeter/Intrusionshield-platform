@@ -292,3 +292,6 @@ export * from "./loaners.js";
 export * from "./procedures.js";
 
 export * from "./package-safety.js";
+
+export * from "./equipment.js";
+export * from "./equipment-status.js";

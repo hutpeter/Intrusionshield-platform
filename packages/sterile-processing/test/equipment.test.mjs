@@ -1,0 +1,265 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
+import {
+  EquipmentRegistry,
+  InstrumentRegistry,
+  ProcessingRegistry,
+  equipmentStatus,
+  TraceabilityRegistry,
+} from "../dist/index.js";
+import { MemoryRepository } from "./memory-repository.mjs";
+const scope = () => ({
+  tenantId: randomUUID(),
+  facilityId: randomUUID(),
+  actorId: randomUUID(),
+});
+export const equipmentBody = (extra = {}) => ({
+  requestId: randomUUID(),
+  code: "STER-DEMO",
+  name: "Demo machine",
+  kind: "sterilizer",
+  methods: ["steam"],
+  manufacturer: "DEMO",
+  model: "DEMO",
+  serialNumber: "DEMO-1",
+  location: "DEMO-AREA",
+  state: "in_service",
+  lastServicedAt: new Date(Date.now() - 86400000).toISOString(),
+  serviceDueAt: new Date(Date.now() + 30 * 86400000).toISOString(),
+  serviceReference: "SIMULATED-SERVICE",
+  qualificationDueAt: new Date(Date.now() + 365 * 86400000).toISOString(),
+  qualificationReference: "SIMULATED-QUALIFICATION",
+  reason: "SIMULATED setup",
+  confirmed: true,
+  ...extra,
+});
+const serviceBody = (r, extra = {}) => ({
+  requestId: randomUUID(),
+  version: r.version,
+  state: r.state,
+  lastServicedAt: r.lastServicedAt,
+  serviceDueAt: r.serviceDueAt,
+  serviceReference: r.serviceReference,
+  qualificationDueAt: r.qualificationDueAt,
+  qualificationReference: r.qualificationReference,
+  reason: "SIMULATED service decision",
+  confirmed: true,
+  ...extra,
+});
+const fail = (p, code) => assert.rejects(p, (e) => e.code === code);
+test("equipment identity and service history are versioned, scoped and retry-safe", async () => {
+  const repo = new MemoryRepository(),
+    s = scope(),
+    er = new EquipmentRegistry(repo),
+    input = equipmentBody(),
+    r = await er.register(s, input);
+  assert.deepEqual(await er.register(s, input), r);
+  const held = await er.hold(s, r.id, {
+    requestId: randomUUID(),
+    version: 1,
+    reason: "SIMULATED fault",
+    confirmed: true,
+  });
+  assert.equal(held.state, "out_of_service");
+  assert.equal((await er.get(s, r.id, 1)).state, "in_service");
+  const restored = await er.recordService(
+    s,
+    r.id,
+    serviceBody(held, {
+      state: "in_service",
+      serviceReference: "SIMULATED-REPAIR",
+    }),
+  );
+  assert.equal(restored.version, 3);
+  assert.equal(restored.serialNumber, r.serialNumber);
+  assert.equal((await er.history(s, r.id)).items.length, 3);
+  await fail(er.recordService(s, r.id, serviceBody(r)), "CONFLICT");
+  for (const foreign of [
+    { ...s, facilityId: randomUUID() },
+    { ...s, tenantId: randomUUID() },
+  ]) {
+    assert.equal((await er.list(foreign)).items.length, 0);
+    await fail(er.get(foreign, r.id, 1), "NOT_FOUND");
+    await fail(
+      er.hold(foreign, r.id, {
+        requestId: randomUUID(),
+        version: 3,
+        reason: "SIMULATED",
+        confirmed: true,
+      }),
+      "NOT_FOUND",
+    );
+  }
+});
+test("equipment audit failures roll back service, immutable versions and idempotency receipts", async () => {
+  const repo = new MemoryRepository(),
+    s = scope(),
+    er = new EquipmentRegistry(repo),
+    r = await er.register(s, equipmentBody());
+  const input = serviceBody(r, { state: "out_of_service" });
+  repo.failAudit = true;
+  await assert.rejects(er.recordService(s, r.id, input));
+  assert.equal((await er.get(s, r.id)).version, 1);
+  await fail(er.get(s, r.id, 2), "NOT_FOUND");
+  repo.failAudit = false;
+  const next = await er.recordService(s, r.id, input);
+  assert.equal(next.version, 2);
+  assert.deepEqual(await er.recordService(s, r.id, input), next);
+  const results = await Promise.allSettled([
+    er.recordService(s, r.id, serviceBody(next)),
+    er.recordService(s, r.id, serviceBody(next)),
+  ]);
+  assert.equal(results.filter((r) => r.status === "fulfilled").length, 1);
+});
+test("equipment validates dates, declared methods and explicit confirmation, with exact due boundaries", async (t) => {
+  const now = Date.now();
+  t.mock.timers.enable({ apis: ["Date"], now });
+  const repo = new MemoryRepository(),
+    s = scope(),
+    er = new EquipmentRegistry(repo);
+  for (const extra of [
+    { confirmed: false },
+    { methods: [] },
+    { kind: "washer_disinfector", methods: ["steam"] },
+    { methods: ["steam", "steam"] },
+    { lastServicedAt: new Date(now + 1).toISOString() },
+    { serviceDueAt: new Date(now).toISOString() },
+    { qualificationDueAt: new Date(now).toISOString() },
+    { serviceDueAt: "2026-02-30T00:00:00.000Z" },
+  ])
+    await assert.rejects(er.register(s, equipmentBody(extra)));
+  const r = await er.register(s, equipmentBody());
+  assert.equal(equipmentStatus(r, Date.parse(r.serviceDueAt) - 1), "ready");
+  assert.equal(
+    equipmentStatus(r, Date.parse(r.serviceDueAt)),
+    "service_overdue",
+  );
+  assert.equal(
+    equipmentStatus(
+      { ...r, qualificationDueAt: new Date(now).toISOString() },
+      now,
+    ),
+    "qualification_overdue",
+  );
+});
+test("mechanical cleaning freezes the selected washer and blocks wrong, overdue, held and code-only bypasses", async (t) => {
+  const now = Date.now();
+  t.mock.timers.enable({ apis: ["Date"], now });
+  const repo = new MemoryRepository(),
+    s = scope(),
+    er = new EquipmentRegistry(repo),
+    ir = new InstrumentRegistry(repo),
+    pr = new ProcessingRegistry(repo);
+  const type = await ir.createType(s, {
+    requestId: randomUUID(),
+    code: "TYPE",
+    name: "Demo",
+    manufacturer: "",
+    model: "",
+  });
+  async function receipt() {
+    const i = await ir.register(s, {
+      requestId: randomUUID(),
+      code: "I-" + randomUUID(),
+      instrumentTypeId: type.id,
+      serialNumber: "",
+    });
+    return pr.receive(s, {
+      requestId: randomUUID(),
+      code: "REC-" + randomUUID(),
+      source: "DEMO",
+      custodian: "DEMO",
+      condition: "DEMO",
+      discrepancies: "",
+      instrumentIds: [i.id],
+      confirmed: true,
+    });
+  }
+  const e = await receipt(),
+    washer = await er.register(
+      s,
+      equipmentBody({
+        code: "WASHER",
+        kind: "washer_disinfector",
+        methods: [],
+      }),
+    );
+  const start = {
+    requestId: randomUUID(),
+    version: 1,
+    method: "mechanical",
+    equipment: washer.code,
+    equipmentId: washer.id,
+    procedure: "SIMULATED",
+    procedureVersion: "1",
+    confirmed: true,
+  };
+  const started = await pr.start(s, e.id, start);
+  assert.deepEqual(started.attempts[0].registeredEquipment, washer);
+  await er.hold(s, washer.id, {
+    requestId: randomUUID(),
+    version: 1,
+    reason: "SIMULATED fault",
+    confirmed: true,
+  });
+  const e2 = await receipt();
+  await fail(
+    pr.start(s, e2.id, { ...start, requestId: randomUUID() }),
+    "EQUIPMENT_BLOCKED",
+  );
+  const { equipmentId, ...legacy } = start;
+  await fail(
+    pr.start(s, e2.id, { ...legacy, requestId: randomUUID() }),
+    "EQUIPMENT_BLOCKED",
+  );
+  const finished = await pr.finish(s, e.id, {
+    requestId: randomUUID(),
+    version: 2,
+    outcome: "passed",
+    evidence: "SIMULATED",
+    note: "Outcome recorded after equipment hold",
+    confirmed: true,
+  });
+  assert.deepEqual(finished.attempts[0].registeredEquipment, washer);
+  const trace = await new TraceabilityRegistry(repo).report(
+    s,
+    "instrument",
+    finished.instruments[0].id,
+  );
+  assert.ok(
+    trace.nodes
+      .flatMap((n) => n.snapshots)
+      .flatMap((s) => s.facts)
+      .some((f) => f.kind === "equipment_start"),
+  );
+  const wrong = await er.register(s, equipmentBody({ code: "WRONG-KIND" }));
+  await fail(
+    pr.start(s, e2.id, {
+      ...start,
+      requestId: randomUUID(),
+      equipmentId: wrong.id,
+      equipment: wrong.code,
+    }),
+    "EQUIPMENT_BLOCKED",
+  );
+  const due = await er.register(
+    s,
+    equipmentBody({
+      code: "DUE-WASHER",
+      kind: "washer_disinfector",
+      methods: [],
+      serviceDueAt: new Date(now + 10000).toISOString(),
+    }),
+  );
+  t.mock.timers.setTime(now + 10000);
+  await fail(
+    pr.start(s, e2.id, {
+      ...start,
+      requestId: randomUUID(),
+      equipmentId: due.id,
+      equipment: due.code,
+    }),
+    "EQUIPMENT_BLOCKED",
+  );
+});

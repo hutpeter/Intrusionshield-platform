@@ -121,6 +121,9 @@ export interface SterileAuditEvent {
     | "cycle-started"
     | "cycle-recorded"
     | "load-cancelled"
+    | "equipment-registered"
+    | "equipment-service-recorded"
+    | "equipment-held"
     | "package-integrity-held"
     | "package-created"
     | "package-voided"
@@ -144,6 +147,7 @@ export interface SterileAuditEvent {
 }
 export type SterileRecord =
   | InstrumentType
+  | import("./equipment.js").ProcessingEquipment
   | import("./procedures.js").ProcedureRevision
   | Instrument
   | TrayDefinition
@@ -293,6 +297,29 @@ export interface SterileTransaction {
     reference: string,
   ): Promise<string | null>;
   reserveMachineCycle(item: SterilizationLoad): Promise<void>;
+  findEquipment(
+    id: string,
+  ): Promise<import("./equipment.js").ProcessingEquipment | null>;
+  findEquipmentByCode(
+    code: string,
+  ): Promise<import("./equipment.js").ProcessingEquipment | null>;
+  listEquipment(
+    page: number,
+  ): Promise<import("./equipment.js").ProcessingEquipment[]>;
+  insertEquipment(
+    item: import("./equipment.js").ProcessingEquipment,
+  ): Promise<void>;
+  updateEquipment(
+    item: import("./equipment.js").ProcessingEquipment,
+    expected: number,
+  ): Promise<void>;
+  insertEquipmentVersion(
+    item: import("./equipment.js").ProcessingEquipment,
+  ): Promise<void>;
+  findEquipmentVersion(
+    id: string,
+    version: number,
+  ): Promise<import("./equipment.js").ProcessingEquipment | null>;
   findPackageIntegrity(
     id: string,
   ): Promise<import("./package-safety.js").PackageIntegrityHold | null>;
@@ -377,6 +404,7 @@ export interface SterileRepository {
 export class SterileError extends Error {
   constructor(
     public readonly code:
+      | "EQUIPMENT_BLOCKED"
       | "PACKAGE_EXPIRED"
       | "PACKAGE_INTEGRITY_BLOCKED"
       | "PROCEDURE_BLOCKED"

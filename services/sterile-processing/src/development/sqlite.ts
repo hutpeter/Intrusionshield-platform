@@ -98,6 +98,8 @@ CREATE TABLE IF NOT EXISTS sp_assignments(tenant_id TEXT NOT NULL,facility_id TE
 CREATE TABLE IF NOT EXISTS sp_processing(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,code TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,code));
 CREATE TABLE IF NOT EXISTS sp_processing_versions(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id,version),FOREIGN KEY(tenant_id,facility_id,id) REFERENCES sp_processing(tenant_id,facility_id,id));
 CREATE TABLE IF NOT EXISTS sp_processing_holds(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,instrument_id TEXT NOT NULL,episode_id TEXT NOT NULL,PRIMARY KEY(tenant_id,facility_id,instrument_id),FOREIGN KEY(tenant_id,facility_id,instrument_id) REFERENCES sp_instruments(tenant_id,facility_id,id),FOREIGN KEY(tenant_id,facility_id,episode_id) REFERENCES sp_processing(tenant_id,facility_id,id));
+CREATE TABLE IF NOT EXISTS sp_equipment(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,code TEXT NOT NULL,version INTEGER NOT NULL CHECK(version>0),payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,code));
+CREATE TABLE IF NOT EXISTS sp_equipment_versions(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id,version),FOREIGN KEY(tenant_id,facility_id,id) REFERENCES sp_equipment(tenant_id,facility_id,id));
 CREATE TABLE IF NOT EXISTS sp_packages(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,code TEXT NOT NULL,assembly_id TEXT NOT NULL,version INTEGER NOT NULL CHECK(version>0),payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,code),FOREIGN KEY(tenant_id,facility_id,assembly_id) REFERENCES sp_assemblies(tenant_id,facility_id,id));
 CREATE TABLE IF NOT EXISTS sp_package_integrity(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,package_id TEXT NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,package_id),FOREIGN KEY(tenant_id,facility_id,package_id) REFERENCES sp_packages(tenant_id,facility_id,id));
 CREATE TABLE IF NOT EXISTS sp_package_versions(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id,version),FOREIGN KEY(tenant_id,facility_id,id) REFERENCES sp_packages(tenant_id,facility_id,id));
@@ -914,6 +916,68 @@ CREATE INDEX IF NOT EXISTS sp_assignment_assembly ON sp_assignments(tenant_id,fa
             .prepare("INSERT INTO sp_machine_cycles VALUES(?,?,?,?,?)")
             .run(...args, item.sterilizer, item.cycleReference, item.id);
         },
+        findEquipment: async (id) =>
+          read<
+            import("@intrusionshield/sterile-processing").ProcessingEquipment
+          >(
+            "SELECT payload FROM sp_equipment WHERE tenant_id=? AND facility_id=? AND id=?",
+            id,
+          ),
+        findEquipmentByCode: async (code) =>
+          read<
+            import("@intrusionshield/sterile-processing").ProcessingEquipment
+          >(
+            "SELECT payload FROM sp_equipment WHERE tenant_id=? AND facility_id=? AND code=?",
+            code,
+          ),
+        listEquipment: async (page) =>
+          list<
+            import("@intrusionshield/sterile-processing").ProcessingEquipment
+          >(
+            "SELECT payload FROM sp_equipment WHERE tenant_id=? AND facility_id=? ORDER BY rowid DESC LIMIT 51 OFFSET ?",
+            page,
+          ),
+        insertEquipment: async (item) => {
+          own(item);
+          this.db
+            .prepare("INSERT INTO sp_equipment VALUES(?,?,?,?,?,?)")
+            .run(
+              ...args,
+              item.id,
+              item.code,
+              item.version,
+              JSON.stringify(item),
+            );
+        },
+        updateEquipment: async (item, expected) => {
+          own(item);
+          const r = this.db
+            .prepare(
+              "UPDATE sp_equipment SET version=?,payload=? WHERE tenant_id=? AND facility_id=? AND id=? AND version=?",
+            )
+            .run(
+              item.version,
+              JSON.stringify(item),
+              ...args,
+              item.id,
+              expected,
+            );
+          if (r.changes !== 1) throw new SterileError("CONFLICT");
+        },
+        insertEquipmentVersion: async (item) => {
+          own(item);
+          this.db
+            .prepare("INSERT INTO sp_equipment_versions VALUES(?,?,?,?,?)")
+            .run(...args, item.id, item.version, JSON.stringify(item));
+        },
+        findEquipmentVersion: async (id, version) =>
+          read<
+            import("@intrusionshield/sterile-processing").ProcessingEquipment
+          >(
+            "SELECT payload FROM sp_equipment_versions WHERE tenant_id=? AND facility_id=? AND id=? AND version=?",
+            id,
+            version,
+          ),
         findPackageIntegrity: async (id) =>
           read<
             import("@intrusionshield/sterile-processing").PackageIntegrityHold

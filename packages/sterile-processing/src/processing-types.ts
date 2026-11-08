@@ -1,5 +1,6 @@
 import type { AssemblyInstrument } from "./tray-types.js";
 export interface CleaningAttempt {
+  registeredEquipment?: import("./equipment.js").ProcessingEquipment;
   controlledProcedure?: import("./procedures.js").ProcedureRevision;
   number: number;
   method: "manual" | "mechanical";
@@ -114,6 +115,7 @@ export interface ReceiveInput {
   confirmed: boolean;
 }
 export interface StartCleaningInput {
+  equipmentId?: string;
   procedureRevisionId?: string;
   requestId: string;
   version: number;

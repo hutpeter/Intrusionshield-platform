@@ -651,3 +651,63 @@ test("sterilization procedure freezes applicability on draft and withdrawal bloc
   await fail(f.cy.start(f.s, l.id, cycleStart(1)), "PROCEDURE_BLOCKED");
   assert.deepEqual((await f.cy.get(f.s, l.id)).controlledProcedure, p);
 });
+
+test("registered sterilizer is rechecked at start, current start revision is frozen, and running result remains recordable", async (t) => {
+  const now = Date.now();
+  t.mock.timers.enable({ apis: ["Date"], now });
+  const f = await fixture();
+  const { EquipmentRegistry } = await import("../dist/index.js"),
+    er = new EquipmentRegistry(f.repo);
+  const machine = await er.register(f.s, {
+    requestId: randomUUID(),
+    code: "REGISTERED-STER",
+    name: "Demo",
+    kind: "sterilizer",
+    methods: ["steam"],
+    manufacturer: "DEMO",
+    model: "DEMO",
+    serialNumber: "DEMO",
+    location: "DEMO",
+    state: "in_service",
+    lastServicedAt: new Date(now - 1000).toISOString(),
+    serviceDueAt: new Date(now + 10000).toISOString(),
+    serviceReference: "SIMULATED",
+    qualificationDueAt: new Date(now + 20000).toISOString(),
+    qualificationReference: "SIMULATED",
+    reason: "SIMULATED",
+    confirmed: true,
+  });
+  const draft = await f.cy.create(
+    f.s,
+    loadBody(f.packageRecord, {
+      sterilizer: machine.code,
+      equipmentId: machine.id,
+    }),
+  );
+  assert.deepEqual(draft.registeredEquipment, machine);
+  await er.hold(f.s, machine.id, {
+    requestId: randomUUID(),
+    version: 1,
+    reason: "SIMULATED fault",
+    confirmed: true,
+  });
+  await fail(f.cy.start(f.s, draft.id, cycleStart(1)), "EQUIPMENT_BLOCKED");
+  const restored = await er.recordService(f.s, machine.id, {
+    requestId: randomUUID(),
+    version: 2,
+    state: "in_service",
+    lastServicedAt: machine.lastServicedAt,
+    serviceDueAt: machine.serviceDueAt,
+    serviceReference: "SIMULATED-REPAIR",
+    qualificationDueAt: machine.qualificationDueAt,
+    qualificationReference: "SIMULATED",
+    reason: "SIMULATED return to service",
+    confirmed: true,
+  });
+  const running = await f.cy.start(f.s, draft.id, cycleStart(1));
+  assert.deepEqual(running.registeredEquipment, machine);
+  assert.deepEqual(running.startedEquipment, restored);
+  t.mock.timers.setTime(now + 10000);
+  const finished = await f.cy.finish(f.s, draft.id, result(2));
+  assert.deepEqual(finished.startedEquipment, restored);
+});

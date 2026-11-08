@@ -204,6 +204,43 @@ export class TraceabilityRegistry {
           o: object,
           keys: string[],
         ) => facts.push({ kind, at, actorId, fields: fields(o, keys) });
+        const equipmentFact = (
+          kind: string,
+          machine: import("./equipment.js").ProcessingEquipment,
+          at: string,
+          actorId: string,
+        ) =>
+          fact(
+            kind,
+            at,
+            actorId,
+            {
+              equipmentId: machine.id,
+              equipmentCode: machine.code,
+              equipmentName: machine.name,
+              equipmentVersion: machine.version,
+              equipmentState: machine.state,
+              equipmentKind: machine.kind,
+              serialNumber: machine.serialNumber,
+              serviceDueAt: machine.serviceDueAt,
+              serviceReference: machine.serviceReference,
+              qualificationDueAt: machine.qualificationDueAt,
+              qualificationReference: machine.qualificationReference,
+            },
+            [
+              "equipmentId",
+              "equipmentCode",
+              "equipmentName",
+              "equipmentVersion",
+              "equipmentState",
+              "equipmentKind",
+              "serialNumber",
+              "serviceDueAt",
+              "serviceReference",
+              "qualificationDueAt",
+              "qualificationReference",
+            ],
+          );
         if (row.kind === "instrument") {
           const i = r as import("./foundation.js").Instrument;
           if (i.externalOwnership)
@@ -315,6 +352,14 @@ export class TraceabilityRegistry {
         }
         if (row.kind === "processing") {
           const e = r as ProcessingEpisode;
+          for (const a of e.attempts)
+            if (a.registeredEquipment)
+              equipmentFact(
+                "equipment_start",
+                a.registeredEquipment,
+                a.startedAt,
+                a.startedBy,
+              );
           for (const a of e.attempts)
             if (a.controlledProcedure)
               fact(
@@ -497,6 +542,20 @@ export class TraceabilityRegistry {
         }
         if (row.kind === "load") {
           const l = r as SterilizationLoad;
+          if (l.registeredEquipment)
+            equipmentFact(
+              "equipment_draft",
+              l.registeredEquipment,
+              l.createdAt,
+              l.createdBy,
+            );
+          if (l.startedEquipment)
+            equipmentFact(
+              "equipment_start",
+              l.startedEquipment,
+              l.startedAt!,
+              l.startedBy!,
+            );
           if (l.controlledProcedure)
             fact(
               "controlled_procedure",

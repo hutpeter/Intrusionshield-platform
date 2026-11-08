@@ -915,6 +915,7 @@ export function createSterilePreview({
         fixtureGrants.has("core.authentication") &&
         fixtureGrants.has("core.authorization") &&
         ((scope.actorId === actors.operator &&
+          permission !== "equipment:write" &&
           permission !== "procedures:publish" &&
           permission !== "maintenance:authorize" &&
           permission !== "release:write" &&
@@ -924,6 +925,8 @@ export function createSterilePreview({
           (scope.actorId === actors.viewer && permission.endsWith(":read")) ||
           (scope.actorId === actors.reviewer &&
             (permission.endsWith(":read") ||
+              permission === "equipment:write" ||
+              permission === "equipment:hold" ||
               permission === "procedures:write" ||
               permission === "procedures:publish" ||
               permission === "maintenance:authorize" ||
