@@ -314,6 +314,65 @@ export class TraceabilityRegistry {
         }
         if (row.kind === "processing") {
           const e = r as ProcessingEpisode;
+          for (const a of e.attempts)
+            if (a.controlledProcedure)
+              fact(
+                "controlled_procedure",
+                a.startedAt,
+                a.startedBy,
+                {
+                  procedureId: a.controlledProcedure.id,
+                  procedureCode: a.controlledProcedure.code,
+                  procedureRevision: a.controlledProcedure.revision,
+                  procedureRecordVersion: a.controlledProcedure.version,
+                  procedureStage: a.controlledProcedure.stage,
+                  procedureSource: a.controlledProcedure.source,
+                  procedureInstructions: a.controlledProcedure.instructions,
+                  publishedAt: a.controlledProcedure.publishedAt,
+                  publishedBy: a.controlledProcedure.publishedBy,
+                },
+                [
+                  "procedureId",
+                  "procedureCode",
+                  "procedureRevision",
+                  "procedureRecordVersion",
+                  "procedureStage",
+                  "procedureSource",
+                  "procedureInstructions",
+                  "publishedAt",
+                  "publishedBy",
+                ],
+              );
+          for (const a of e.inspections ?? [])
+            if (a.controlledProcedure)
+              fact(
+                "controlled_procedure",
+                a.at,
+                a.actorId,
+                {
+                  procedureId: a.controlledProcedure.id,
+                  procedureCode: a.controlledProcedure.code,
+                  procedureRevision: a.controlledProcedure.revision,
+                  procedureRecordVersion: a.controlledProcedure.version,
+                  procedureStage: a.controlledProcedure.stage,
+                  procedureSource: a.controlledProcedure.source,
+                  procedureInstructions: a.controlledProcedure.instructions,
+                  publishedAt: a.controlledProcedure.publishedAt,
+                  publishedBy: a.controlledProcedure.publishedBy,
+                },
+                [
+                  "procedureId",
+                  "procedureCode",
+                  "procedureRevision",
+                  "procedureRecordVersion",
+                  "procedureStage",
+                  "procedureSource",
+                  "procedureInstructions",
+                  "publishedAt",
+                  "publishedBy",
+                ],
+              );
+
           for (const i of e.instruments)
             if (instruments.includes(i.id))
               link(row, "instrument", i.id, i.instrumentVersion, "received");
@@ -418,6 +477,35 @@ export class TraceabilityRegistry {
         }
         if (row.kind === "load") {
           const l = r as SterilizationLoad;
+          if (l.controlledProcedure)
+            fact(
+              "controlled_procedure",
+              l.startedAt ?? l.createdAt,
+              l.startedBy ?? l.createdBy,
+              {
+                procedureId: l.controlledProcedure.id,
+                procedureCode: l.controlledProcedure.code,
+                procedureRevision: l.controlledProcedure.revision,
+                procedureRecordVersion: l.controlledProcedure.version,
+                procedureStage: l.controlledProcedure.stage,
+                procedureSource: l.controlledProcedure.source,
+                procedureInstructions: l.controlledProcedure.instructions,
+                publishedAt: l.controlledProcedure.publishedAt,
+                publishedBy: l.controlledProcedure.publishedBy,
+              },
+              [
+                "procedureId",
+                "procedureCode",
+                "procedureRevision",
+                "procedureRecordVersion",
+                "procedureStage",
+                "procedureSource",
+                "procedureInstructions",
+                "publishedAt",
+                "publishedBy",
+              ],
+            );
+
           for (const p of l.packages)
             if (packageIds.includes(p.id))
               link(row, "package", p.id, p.version, "load_member");

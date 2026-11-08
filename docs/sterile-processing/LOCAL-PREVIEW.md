@@ -277,3 +277,7 @@ reconciliation, explicit complete-return confirmation and the one fictional owne
 
 The initial signed-in page is now **Operational dashboard**. Use its queue links to open
 current records, or the sidebar for normal module lists. See [DASHBOARD.md](DASHBOARD.md).
+
+**Processing procedures** is available in the sidebar. Demo operator can create drafts and
+select published revisions; Demo reviewer can publish/withdraw; Demo auditor reads only.
+Use [PROCEDURES.md](PROCEDURES.md) for the single current publication check.

@@ -612,3 +612,42 @@ test("service policy validation, scope, stale updates and audit failure retain c
   assert.equal(r.filter((x) => x.status === "fulfilled").length, 1);
   assert.equal((await u.get(f.s, f.i.id)).usage.totalRecorded, 1);
 });
+test("sterilization procedure freezes applicability on draft and withdrawal blocks future cycle start", async () => {
+  const { ProcedureRegistry } = await import("../dist/index.js"),
+    f = await fixture(),
+    registry = new ProcedureRegistry(f.repo),
+    d = await registry.draft(f.s, {
+      requestId: randomUUID(),
+      code: "STER-PROFILE",
+      title: "Fictional steam profile",
+      stage: "sterilization",
+      method: "steam",
+      instructions: "FICTIONAL — no machine parameters",
+      source: "DEMO",
+      instrumentTypeIds: [f.i.instrumentTypeId],
+      confirmed: true,
+    }),
+    p = await registry.transition(f.s, d.id, "publish", {
+      requestId: randomUUID(),
+      version: 1,
+      reason: "Demo",
+      confirmed: true,
+    });
+  const l = await f.cy.create(
+    f.s,
+    loadBody(f.packageRecord, {
+      profile: p.code,
+      profileVersion: String(p.revision),
+      procedureRevisionId: p.id,
+    }),
+  );
+  assert.deepEqual(l.controlledProcedure, p);
+  await registry.transition(f.s, p.id, "withdraw", {
+    requestId: randomUUID(),
+    version: 2,
+    reason: "Demo withdrawal",
+    confirmed: true,
+  });
+  await fail(f.cy.start(f.s, l.id, cycleStart(1)), "PROCEDURE_BLOCKED");
+  assert.deepEqual((await f.cy.get(f.s, l.id)).controlledProcedure, p);
+});

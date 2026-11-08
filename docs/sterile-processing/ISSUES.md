@@ -280,3 +280,19 @@ facility, Visit 2, DEMO-SUPPLIER, one expected original-code instrument, readmis
 arrival details and a linked receiving episode. U-LOANREADMIT-01 passed for this saved
 repeat-visit example. Broader M-LOANREADMIT-01–02 remain deferred. Original U-LOANER-01
 remains unconfirmed; no retrospective pass is inferred. RSP-ISS-001 stays parked.
+
+## RSP-ISS-012 — Controlled procedure approval and mandatory-use policies
+
+Versioned cleaning/inspection/sterilization library and optional workflow links delivered
+November 8, 2026. Draft content is immutable; reviewer publication/withdrawal is versioned
+and audited. Workflow writes validate publication, method/stage/type applicability and
+freeze instructions. Cycle start rechecks controlled profiles. Historical text remains
+unchanged by later withdrawals. Manual references retain their existing, explicitly
+uncontrolled path; no institution-wide mandatory SOP enforcement is implemented.
+
+Deferred: approved manufacturer/clinical/equipment validation, mandatory controlled use by
+stage/type/facility and exception permissions, verified reviewer competency and independent
+approval policy, effective/expiry dates, attachment import/signatures, withdrawal impact on
+running/completed work, amendment/recall policies and production scale/operational acceptance.
+Developer 334 tests/build/browser checks passed; owner U-PROC-01 pending, M-PROC-01–02
+broader checks deferred. See [PROCEDURES.md](PROCEDURES.md). RSP-ISS-001 remains parked.

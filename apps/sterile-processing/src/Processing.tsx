@@ -1,3 +1,4 @@
+import { ProcedurePicker, ProcedureSnapshot } from "./ProcedurePicker";
 import { ReceivingScan } from "./ReceivingScan";
 import { receivingScanLabels } from "./receiving-scan-text";
 import { maintenanceLabels } from "./maintenance-text";
@@ -27,6 +28,7 @@ const empty = () => ({
   pick: "",
   scanned: [] as { instrumentId: string; identifier: string }[],
   method: "manual" as "manual" | "mechanical",
+  procedureRevisionId: "",
   procedure: "",
   procedureVersion: "",
   equipment: "",
@@ -236,6 +238,9 @@ export function ProcessingWorkspace({
             method: fields.method,
             procedure: fields.procedure,
             procedureVersion: fields.procedureVersion,
+            ...(fields.procedureRevisionId
+              ? { procedureRevisionId: fields.procedureRevisionId }
+              : {}),
             equipment: fields.equipment,
             confirmed: true,
           },
@@ -258,6 +263,9 @@ export function ProcessingWorkspace({
             version: form.version,
             procedure: fields.procedure,
             procedureVersion: fields.procedureVersion,
+            ...(fields.procedureRevisionId
+              ? { procedureRevisionId: fields.procedureRevisionId }
+              : {}),
             evidence: fields.evidence,
             confirmed: true,
             items: fields.checks.map((row) => ({
@@ -388,6 +396,24 @@ export function ProcessingWorkspace({
   );
   const episode = (d: ProcessingEpisode) => (
     <>
+      {d.attempts
+        .filter((a) => a.controlledProcedure)
+        .map((a) => (
+          <ProcedureSnapshot
+            key={"clean-" + a.number}
+            value={a.controlledProcedure!}
+            language={language}
+          />
+        ))}
+      {d.inspections
+        ?.filter((a) => a.controlledProcedure)
+        .map((a) => (
+          <ProcedureSnapshot
+            key={"inspect-" + a.number}
+            value={a.controlledProcedure!}
+            language={language}
+          />
+        ))}
       {d.maintenanceSource && (
         <p className="readonly-note">
           {maintenanceLabels(language).title} ·{" "}
@@ -897,12 +923,38 @@ export function ProcessingWorkspace({
                 </ul>
               </>
             )}
+            {(form.kind === "start" || form.kind === "inspect") && (
+              <ProcedurePicker
+                session={session}
+                language={language}
+                stage={form.kind === "start" ? "cleaning" : "inspection"}
+                value={fields.procedureRevisionId}
+                types={detail?.instruments.map((i) => i.instrumentTypeId)}
+                disabled={busy}
+                onSelect={(r) =>
+                  patch(
+                    r
+                      ? {
+                          procedureRevisionId: r.id,
+                          procedure: r.code,
+                          procedureVersion: String(r.revision),
+                          ...(form.kind === "start"
+                            ? { method: r.method as "manual" | "mechanical" }
+                            : {}),
+                          confirmed: false,
+                        }
+                      : { procedureRevisionId: "", confirmed: false },
+                  )
+                }
+              />
+            )}
             {form.kind === "start" && (
               <div className="form-grid">
                 <label>
                   {p.method}
                   <select
                     aria-label={p.method}
+                    disabled={!!fields.procedureRevisionId}
                     value={fields.method}
                     onChange={(e) =>
                       patch({
@@ -923,6 +975,10 @@ export function ProcessingWorkspace({
                           key !== "equipment" || fields.method === "mechanical"
                         }
                         maxLength={key === "procedureVersion" ? 100 : 200}
+                        disabled={
+                          !!fields.procedureRevisionId &&
+                          (key === "procedure" || key === "procedureVersion")
+                        }
                         value={fields[key]}
                         onChange={(e) => patch({ [key]: e.target.value })}
                       />
@@ -981,6 +1037,10 @@ export function ProcessingWorkspace({
                               : key === "evidence"
                                 ? 500
                                 : 200
+                          }
+                          disabled={
+                            !!fields.procedureRevisionId &&
+                            (key === "procedure" || key === "procedureVersion")
                           }
                           value={fields[key]}
                           onChange={(e) => patch({ [key]: e.target.value })}

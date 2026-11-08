@@ -1,4 +1,6 @@
 const es = {
+  PROCEDURE_BLOCKED:
+    "La revisión no está publicada o no corresponde a la etapa, método o tipos de instrumental. Revise su selección.",
   LOANER_UNAVAILABLE:
     "Conjunto prestado no disponible. Revise contenido, procesamiento, custodia y retenciones antes de la devolución al proveedor.",
   SERVICE_DUE:
@@ -55,6 +57,8 @@ const es = {
 };
 type Messages = Record<keyof typeof es, string>;
 const en: Messages = {
+  PROCEDURE_BLOCKED:
+    "The revision is unpublished, withdrawn or does not match this stage, method or instrument types. Review the selection.",
   LOANER_UNAVAILABLE:
     "Loaner set unavailable. Reconcile contents, processing, custody and holds before supplier hand-back.",
   SERVICE_DUE:
@@ -111,6 +115,8 @@ const en: Messages = {
     "Service unavailable. The change has not been confirmed.",
 };
 const fr: Messages = {
+  PROCEDURE_BLOCKED:
+    "Révision non publiée, retirée ou incompatible avec l’étape, méthode ou types d’instruments. Vérifiez la sélection.",
   LOANER_UNAVAILABLE:
     "Ensemble prêté indisponible. Rapprochez contenu, traitement, garde et blocages avant remise au fournisseur.",
   SERVICE_DUE:

@@ -1,3 +1,4 @@
+import { ProcedurePicker, ProcedureSnapshot } from "./ProcedurePicker";
 import { LoadScan } from "./LoadScan";
 import { loadScanLabels } from "./load-scan-text";
 import { returnLabels } from "./return-text";
@@ -23,6 +24,7 @@ const empty = () => ({
   code: "",
   sterilizer: "",
   method: "steam" as "steam" | "low_temperature" | "other",
+  procedureRevisionId: "",
   profile: "",
   profileVersion: "",
   packageIds: [] as string[],
@@ -190,6 +192,9 @@ export function CycleWorkspace({
             method: fields.method,
             profile: fields.profile,
             profileVersion: fields.profileVersion,
+            ...(fields.procedureRevisionId
+              ? { procedureRevisionId: fields.procedureRevisionId }
+              : {}),
             packageIds: fields.packageIds,
             confirmed: true,
           },
@@ -342,6 +347,9 @@ export function CycleWorkspace({
   };
   const record = (d: SterilizationLoad) => (
     <>
+      {d.controlledProcedure && (
+        <ProcedureSnapshot value={d.controlledProcedure} language={language} />
+      )}
       <section className="panel">
         {d.returnBlocked && (
           <p className="alert">{returnLabels(language).blocked}</p>
@@ -610,6 +618,28 @@ export function CycleWorkspace({
           </div>
           <fieldset disabled={busy}>
             {form.kind === "create" && (
+              <ProcedurePicker
+                session={session}
+                language={language}
+                stage="sterilization"
+                value={fields.procedureRevisionId}
+                disabled={busy}
+                onSelect={(r) =>
+                  patch(
+                    r
+                      ? {
+                          procedureRevisionId: r.id,
+                          profile: r.code,
+                          profileVersion: String(r.revision),
+                          method: r.method as typeof fields.method,
+                          confirmed: false,
+                        }
+                      : { procedureRevisionId: "", confirmed: false },
+                  )
+                }
+              />
+            )}
+            {form.kind === "create" && (
               <div className="form-grid">
                 {(
                   ["code", "sterilizer", "profile", "profileVersion"] as const
@@ -624,6 +654,10 @@ export function CycleWorkspace({
                           ? "[A-Za-z0-9][A-Za-z0-9._-]*"
                           : undefined
                       }
+                      disabled={
+                        !!fields.procedureRevisionId &&
+                        (key === "profile" || key === "profileVersion")
+                      }
                       value={fields[key]}
                       onChange={(e) => patch({ [key]: e.target.value })}
                     />
@@ -633,6 +667,7 @@ export function CycleWorkspace({
                   {p.method}
                   <select
                     aria-label={p.method}
+                    disabled={!!fields.procedureRevisionId}
                     value={fields.method}
                     onChange={(e) =>
                       patch({ method: e.target.value as typeof fields.method })

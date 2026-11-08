@@ -1,5 +1,9 @@
 import type {
   TraceReport,
+  ProcedureRevision,
+  ProcedureStage,
+  ProcedureDraftInput,
+  ProcedureTransitionInput,
   LoanerRecord,
   LoanerSummary,
   LoanerInput,
@@ -253,6 +257,65 @@ export const api = {
         "/preview/dashboard-paging-example",
         signal,
         { requestId },
+        s.csrf,
+      ),
+    ),
+  procedureExample: (s: Session, requestId: string, signal: AbortSignal) =>
+    scoped(
+      s,
+      call<{
+        tenantId: string;
+        facilityId: string;
+        revision: ProcedureRevision;
+        episodeId: string;
+        episodeCode: string;
+      }>("/preview/procedure-example", signal, { requestId }, s.csrf),
+    ),
+  procedures: (s: Session, n: number, signal: AbortSignal) =>
+    scopedPage<ProcedureRevision>(s, base(s) + "/procedures", n, signal),
+  availableProcedures: (
+    s: Session,
+    stage: ProcedureStage,
+    n: number,
+    signal: AbortSignal,
+  ) =>
+    scopedPage<ProcedureRevision>(
+      s,
+      base(s) + "/procedures/available/" + stage,
+      n,
+      signal,
+    ),
+  procedureHistory: (s: Session, id: string, n: number, signal: AbortSignal) =>
+    scopedPage<SterileAuditEvent>(
+      s,
+      base(s) + "/procedures/" + id + "/history",
+      n,
+      signal,
+    ),
+  procedure: (s: Session, id: string, signal: AbortSignal) =>
+    scoped(s, call<ProcedureRevision>(base(s) + "/procedures/" + id, signal)),
+  draftProcedure: (
+    s: Session,
+    body: ProcedureDraftInput,
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<ProcedureRevision>(base(s) + "/procedures", signal, body, s.csrf),
+    ),
+  transitionProcedure: (
+    s: Session,
+    id: string,
+    action: "publish" | "withdraw",
+    body: ProcedureTransitionInput,
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<ProcedureRevision>(
+        base(s) + "/procedures/" + id + "/" + action,
+        signal,
+        body,
         s.csrf,
       ),
     ),

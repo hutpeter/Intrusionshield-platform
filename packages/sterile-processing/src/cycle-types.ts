@@ -10,6 +10,7 @@ export interface LoadPackage {
   instrumentCount: number;
 }
 export interface SterilizationLoad {
+  controlledProcedure?: import("./procedures.js").ProcedureRevision;
   review?: ReviewStatus;
   recallBlocked?: boolean;
   returnBlocked?: boolean;
@@ -62,6 +63,7 @@ export type LoadSummary = Pick<
   returnBlocked?: boolean;
 };
 export interface LoadInput {
+  procedureRevisionId?: string;
   requestId: string;
   code: string;
   sterilizer: string;

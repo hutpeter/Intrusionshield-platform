@@ -1,5 +1,6 @@
 import type { AssemblyInstrument } from "./tray-types.js";
 export interface CleaningAttempt {
+  controlledProcedure?: import("./procedures.js").ProcedureRevision;
   number: number;
   method: "manual" | "mechanical";
   procedure: string;
@@ -22,6 +23,7 @@ export interface InspectionItem {
   note: string;
 }
 export interface InspectionRecord {
+  controlledProcedure?: import("./procedures.js").ProcedureRevision;
   number: number;
   cleaningAttempt: number;
   procedure: string;
@@ -33,6 +35,7 @@ export interface InspectionRecord {
   actorId: string;
 }
 export interface InspectInput {
+  procedureRevisionId?: string;
   requestId: string;
   version: number;
   procedure: string;
@@ -111,6 +114,7 @@ export interface ReceiveInput {
   confirmed: boolean;
 }
 export interface StartCleaningInput {
+  procedureRevisionId?: string;
   requestId: string;
   version: number;
   method: "manual" | "mechanical";

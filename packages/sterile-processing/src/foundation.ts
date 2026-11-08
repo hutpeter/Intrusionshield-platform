@@ -92,6 +92,9 @@ export interface SterileAuditEvent {
     | "maintenance-assessed"
     | "maintenance-repaired"
     | "maintenance-authorized"
+    | "procedure-drafted"
+    | "procedure-published"
+    | "procedure-withdrawn"
     | "loaner-readmitted"
     | "loaner-received"
     | "loaner-returned"
@@ -140,6 +143,7 @@ export interface SterileAuditEvent {
 }
 export type SterileRecord =
   | InstrumentType
+  | import("./procedures.js").ProcedureRevision
   | Instrument
   | TrayDefinition
   | TrayAssembly
@@ -179,6 +183,30 @@ export interface SterileTransaction {
     id: string,
     page: number,
   ): Promise<import("./service-usage.js").ServiceExposure[]>;
+  findProcedure(
+    id: string,
+  ): Promise<import("./procedures.js").ProcedureRevision | null>;
+  latestProcedure(
+    code: string,
+  ): Promise<import("./procedures.js").ProcedureRevision | null>;
+  listProcedures(
+    page: number,
+    stage?: import("./procedures.js").ProcedureStage,
+  ): Promise<import("./procedures.js").ProcedureRevision[]>;
+  insertProcedure(
+    value: import("./procedures.js").ProcedureRevision,
+  ): Promise<void>;
+  updateProcedure(
+    value: import("./procedures.js").ProcedureRevision,
+    expected: number,
+  ): Promise<void>;
+  insertProcedureVersion(
+    value: import("./procedures.js").ProcedureRevision,
+  ): Promise<void>;
+  findProcedureVersion(
+    id: string,
+    version: number,
+  ): Promise<import("./procedures.js").ProcedureRevision | null>;
   findLoaner(id: string): Promise<import("./loaners.js").LoanerRecord | null>;
   findLoanerByCode(
     code: string,
@@ -341,6 +369,7 @@ export interface SterileRepository {
 export class SterileError extends Error {
   constructor(
     public readonly code:
+      | "PROCEDURE_BLOCKED"
       | "LOANER_UNAVAILABLE"
       | "SERVICE_DUE"
       | "SCAN_DUPLICATE"

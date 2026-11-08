@@ -1,3 +1,4 @@
+import { resolveProcedure } from "./procedures.js";
 import { recordServiceExposures } from "./service-usage.js";
 import { reviewStatus } from "./review-types.js";
 import { randomUUID } from "node:crypto";
@@ -60,6 +61,19 @@ async function members(
   }
   return rows;
 }
+async function procedureTypes(
+  tx: SterileTransaction,
+  rows: import("./cycle-types.js").LoadPackage[],
+) {
+  const types = new Set<string>();
+  for (const row of rows) {
+    const p = await tx.findPackage(row.id);
+    if (!p) throw new SterileError("CONFLICT");
+    for (const i of p.assemblySnapshot.instruments)
+      types.add(i.instrumentTypeId);
+  }
+  return [...types];
+}
 export class CycleRegistry extends SterileRegistryBase {
   async create(scope: SterileScope, input: LoadInput) {
     const s = scopeOf(scope),
@@ -81,8 +95,18 @@ export class CycleRegistry extends SterileRegistryBase {
         if (await tx.findLoadByCode(code)) throw new SterileError("CONFLICT");
         const id = randomUUID(),
           packages = await members(tx, input.packageIds, id);
+        const controlledProcedure = await resolveProcedure(
+          tx,
+          input.procedureRevisionId,
+          "sterilization",
+          input.method,
+          input.procedureRevisionId ? await procedureTypes(tx, packages) : [],
+          profile,
+          profileVersion,
+        );
         const item: SterilizationLoad = {
           id,
+          ...(controlledProcedure ? { controlledProcedure } : {}),
           tenantId: s.tenantId,
           facilityId: s.facilityId,
           code,
@@ -255,6 +279,16 @@ export class CycleRegistry extends SterileRegistryBase {
             throw new SterileError("LOAD_BLOCKED");
         if (await tx.findMachineCycle(old.sterilizer, cycleReference))
           throw new SterileError("CONFLICT");
+        if (old.controlledProcedure)
+          await resolveProcedure(
+            tx,
+            old.controlledProcedure.id,
+            "sterilization",
+            old.method,
+            await procedureTypes(tx, fresh),
+            old.profile,
+            old.profileVersion,
+          );
         const item: SterilizationLoad = {
           ...old,
           version: version + 1,

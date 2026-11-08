@@ -1,3 +1,4 @@
+import { resolveProcedure } from "./procedures.js";
 import { assertLoanerPresent } from "./loaners.js";
 import { randomUUID } from "node:crypto";
 import {
@@ -189,6 +190,15 @@ export class ProcessingRegistry extends SterileRegistryBase {
           old.attempts.length >= 50
         )
           throw new SterileError("CONFLICT");
+        const controlledProcedure = await resolveProcedure(
+          tx,
+          input.procedureRevisionId,
+          "cleaning",
+          input.method,
+          old.instruments.map((i) => i.instrumentTypeId),
+          procedure,
+          procedureVersion,
+        );
         const item: ProcessingEpisode = {
           ...old,
           state: "cleaning",
@@ -197,6 +207,7 @@ export class ProcessingRegistry extends SterileRegistryBase {
           attempts: [
             ...old.attempts,
             {
+              ...(controlledProcedure ? { controlledProcedure } : {}),
               number: old.attempts.length + 1,
               method: input.method,
               procedure,
@@ -370,6 +381,15 @@ export class ProcessingRegistry extends SterileRegistryBase {
           for (const i of old.instruments)
             if (await tx.findInstrumentRecallBlock(i.id))
               throw new SterileError("RECALL_BLOCKED");
+        const controlledProcedure = await resolveProcedure(
+          tx,
+          input.procedureRevisionId,
+          "inspection",
+          "inspection",
+          old.instruments.map((i) => i.instrumentTypeId),
+          procedure,
+          procedureVersion,
+        );
         const item: ProcessingEpisode = {
           ...old,
           version: version + 1,
@@ -379,6 +399,7 @@ export class ProcessingRegistry extends SterileRegistryBase {
           inspections: [
             ...(old.inspections ?? []),
             {
+              ...(controlledProcedure ? { controlledProcedure } : {}),
               number: (old.inspections?.length ?? 0) + 1,
               cleaningAttempt: old.attempts.length,
               procedure,

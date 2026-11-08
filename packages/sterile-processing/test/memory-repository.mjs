@@ -3,6 +3,8 @@ export class MemoryRepository {
   state = {
     serviceUsages: [],
     serviceExposures: [],
+    procedures: [],
+    procedureVersions: [],
     loaners: [],
     loanerVersions: [],
     returns: [],
@@ -62,6 +64,42 @@ export class MemoryRepository {
       };
     };
     const tx = {
+      findProcedure: async (id) =>
+        s.procedures.find((r) => own(r) && r.id === id) ?? null,
+      latestProcedure: async (code) =>
+        s.procedures
+          .filter((r) => own(r) && r.code === code)
+          .sort((a, b) => b.revision - a.revision)[0] ?? null,
+      listProcedures: async (page, stage) =>
+        s.procedures
+          .filter(
+            (r) =>
+              own(r) &&
+              (!stage || (r.stage === stage && r.state === "published")),
+          )
+          .reverse()
+          .slice((page - 1) * 50, (page - 1) * 50 + 51),
+      insertProcedure: async (r) => {
+        if (
+          s.procedures.some(
+            (x) => own(x) && x.code === r.code && x.revision === r.revision,
+          )
+        )
+          throw Object.assign(Error("CONFLICT"), { code: "CONFLICT" });
+        s.procedures.push(structuredClone(r));
+      },
+      updateProcedure: async (r, expected) => {
+        const n = s.procedures.findIndex((x) => own(x) && x.id === r.id);
+        if (n < 0 || s.procedures[n].version !== expected)
+          throw Object.assign(Error("CONFLICT"), { code: "CONFLICT" });
+        s.procedures[n] = structuredClone(r);
+      },
+      insertProcedureVersion: async (r) =>
+        s.procedureVersions.push(structuredClone(r)),
+      findProcedureVersion: async (id, version) =>
+        s.procedureVersions.find(
+          (r) => own(r) && r.id === id && r.version === version,
+        ) ?? null,
       findLoaner: async (id) =>
         s.loaners.find((x) => own(x) && x.id === id) ?? null,
       findLoanerByCode: async (code) =>

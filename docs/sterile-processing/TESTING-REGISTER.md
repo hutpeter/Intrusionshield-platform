@@ -51,6 +51,20 @@ A successful developer check never implies that the owner performed it.
 
 | 2b12333 | Issued-package lookup, manifest reconciliation and confirmed complete return with frozen identifier | 284 scoped tests, builds and targeted browser verification | U-RETSCAN-01 passed November 6, 2026 | Owner exceptions/disposition, hardware, persistent partial returns and operational acceptance deferred |
 
+## Current owner check — published processing procedure
+
+**U-PROC-01 pending:** sign in as Demo reviewer → Processing procedures → Prepare fictional
+procedure revision → review text → Publish revision → tick confirmation → Publish revision
+in the form. Expect Published, Revision 1, saved source/text/applicability and Decision history.
+See [PROCEDURES.md](PROCEDURES.md). This is the only requested owner check for this build.
+
+Developer November 8, 2026: 334 scoped tests (180 domain, 119 service, 35 web), builds
+and browser publication/cleaning-selection/frozen-snapshot/withdrawal/refresh checks passed.
+M-PROC-01 broader stage/withdrawal/revision/error/history and M-PROC-02 physical/language/
+layout/scale/production policy checks remain deferred. Manual-reference compatibility is
+retained, not evidence of mandatory SOP enforcement. U-LOANREADMIT-01 remains passed;
+U-LOANER-01 and U-TRACE-01 remain unconfirmed/pending. RSP-ISS-001 stays parked.
+
 ## Completed owner check — repeat-visit loaner readmission
 
 **U-LOANREADMIT-01 passed November 8, 2026:** Demo operator → Loaner and vendor sets → Prepare fictional

@@ -944,3 +944,27 @@ test("loaner readmission posts to its distinct protected route and refuses forei
     (e) => e instanceof ApiError,
   );
 });
+test("procedure publishing uses protected route and source lists refuse foreign revisions", async (t) => {
+  let value = {
+    tenantId: session.tenantId,
+    facilityId: session.facilityId,
+    id: "revision",
+  };
+  const requests = [];
+  fake(t, async (path, options) => {
+    requests.push({ path, options });
+    return response(value);
+  });
+  await api.transitionProcedure(session, "revision", "publish", {}, signal());
+  assert.ok(requests[0].path.endsWith("/procedures/revision/publish"));
+  assert.equal(requests[0].options.headers["x-sterile-csrf"], session.csrf);
+  value = {
+    items: [{ ...value, facilityId: "foreign" }],
+    page: 1,
+    hasMore: false,
+  };
+  await assert.rejects(
+    () => api.availableProcedures(session, "cleaning", 1, signal()),
+    (e) => e instanceof ApiError,
+  );
+});

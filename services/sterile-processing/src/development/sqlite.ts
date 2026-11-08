@@ -85,6 +85,8 @@ CREATE TABLE IF NOT EXISTS sp_service_usage(tenant_id TEXT NOT NULL,facility_id 
 CREATE TABLE IF NOT EXISTS sp_service_exposures(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,instrument_id TEXT NOT NULL,load_id TEXT NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,instrument_id,load_id),FOREIGN KEY(tenant_id,facility_id,instrument_id) REFERENCES sp_instruments(tenant_id,facility_id,id));
 CREATE TABLE IF NOT EXISTS sp_loaners(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,code TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,code));
 CREATE TABLE IF NOT EXISTS sp_loaner_versions(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id,version),FOREIGN KEY(tenant_id,facility_id,id) REFERENCES sp_loaners(tenant_id,facility_id,id));
+CREATE TABLE IF NOT EXISTS sp_procedures(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,code TEXT NOT NULL,revision INTEGER NOT NULL,stage TEXT NOT NULL,state TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,code,revision));
+CREATE TABLE IF NOT EXISTS sp_procedure_versions(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id,version),FOREIGN KEY(tenant_id,facility_id,id) REFERENCES sp_procedures(tenant_id,facility_id,id));
 CREATE TABLE IF NOT EXISTS sp_audit(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,entity_id TEXT NOT NULL,request_id TEXT NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,request_id));
 CREATE INDEX IF NOT EXISTS sp_audit_entity ON sp_audit(tenant_id,facility_id,entity_id);
 CREATE TABLE IF NOT EXISTS sp_receipts(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,request_id TEXT NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,request_id));
@@ -179,6 +181,72 @@ CREATE INDEX IF NOT EXISTS sp_assignment_assembly ON sp_assignments(tenant_id,fa
         return rows.map((row) => JSON.parse(row.payload) as V);
       };
       const tx: SterileTransaction = {
+        findProcedure: async (id) =>
+          read(
+            "SELECT payload FROM sp_procedures WHERE tenant_id=? AND facility_id=? AND id=?",
+            id,
+          ),
+        latestProcedure: async (code) =>
+          read(
+            "SELECT payload FROM sp_procedures WHERE tenant_id=? AND facility_id=? AND code=? ORDER BY revision DESC LIMIT 1",
+            code,
+          ),
+        listProcedures: async (page, stage) =>
+          this.db
+            .prepare(
+              "SELECT payload FROM sp_procedures WHERE tenant_id=? AND facility_id=?" +
+                (stage ? " AND stage=? AND state='published'" : "") +
+                " ORDER BY rowid DESC LIMIT 51 OFFSET ?",
+            )
+            .all(...args, ...(stage ? [stage] : []), (page - 1) * 50)
+            .map((row) => JSON.parse((row as { payload: string }).payload)),
+        insertProcedure: async (r) => {
+          own(r);
+          this.db
+            .prepare("INSERT INTO sp_procedures VALUES(?,?,?,?,?,?,?,?,?)")
+            .run(
+              ...args,
+              r.id,
+              r.code,
+              r.revision,
+              r.stage,
+              r.state,
+              r.version,
+              JSON.stringify(r),
+            );
+        },
+        updateProcedure: async (r, expected) => {
+          own(r);
+          if (r.version !== expected + 1)
+            throw new SterileError("INVALID_REQUEST");
+          if (
+            this.db
+              .prepare(
+                "UPDATE sp_procedures SET state=?,version=?,payload=? WHERE tenant_id=? AND facility_id=? AND id=? AND version=?",
+              )
+              .run(
+                r.state,
+                r.version,
+                JSON.stringify(r),
+                ...args,
+                r.id,
+                expected,
+              ).changes !== 1
+          )
+            throw new SterileError("CONFLICT");
+        },
+        insertProcedureVersion: async (r) => {
+          own(r);
+          this.db
+            .prepare("INSERT INTO sp_procedure_versions VALUES(?,?,?,?,?)")
+            .run(...args, r.id, r.version, JSON.stringify(r));
+        },
+        findProcedureVersion: async (id, version) =>
+          read(
+            "SELECT payload FROM sp_procedure_versions WHERE tenant_id=? AND facility_id=? AND id=? AND version=?",
+            id,
+            version,
+          ),
         findLoaner: async (id) =>
           read(
             "SELECT payload FROM sp_loaners WHERE tenant_id=? AND facility_id=? AND id=?",

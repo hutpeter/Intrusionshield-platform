@@ -288,3 +288,5 @@ export * from "./dashboard.js";
 export * from "./service-usage.js";
 
 export * from "./loaners.js";
+
+export * from "./procedures.js";
