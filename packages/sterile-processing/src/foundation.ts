@@ -121,6 +121,8 @@ export interface SterileAuditEvent {
     | "cycle-started"
     | "cycle-recorded"
     | "load-cancelled"
+    | "equipment-incident-recorded"
+    | "equipment-incident-recall-created"
     | "equipment-registered"
     | "equipment-service-recorded"
     | "equipment-held"
@@ -147,6 +149,7 @@ export interface SterileAuditEvent {
 }
 export type SterileRecord =
   | InstrumentType
+  | import("./equipment-incidents.js").EquipmentIncident
   | import("./equipment.js").ProcessingEquipment
   | import("./procedures.js").ProcedureRevision
   | Instrument
@@ -297,6 +300,40 @@ export interface SterileTransaction {
     reference: string,
   ): Promise<string | null>;
   reserveMachineCycle(item: SterilizationLoad): Promise<void>;
+  equipmentExposureCandidates(
+    id: string,
+    code: string,
+    from: string,
+    to: string,
+  ): Promise<{ processing: ProcessingEpisode[]; loads: SterilizationLoad[] }>;
+  equipmentIncidentPackages(
+    episodeIds: string[],
+    packageIds: string[],
+  ): Promise<SterilePackage[]>;
+  findEquipmentIncident(
+    id: string,
+  ): Promise<import("./equipment-incidents.js").EquipmentIncident | null>;
+  findEquipmentIncidentByCode(
+    code: string,
+  ): Promise<import("./equipment-incidents.js").EquipmentIncident | null>;
+  listEquipmentIncidents(
+    equipmentId: string,
+    page: number,
+  ): Promise<import("./equipment-incidents.js").EquipmentIncident[]>;
+  insertEquipmentIncident(
+    item: import("./equipment-incidents.js").EquipmentIncident,
+  ): Promise<void>;
+  updateEquipmentIncident(
+    item: import("./equipment-incidents.js").EquipmentIncident,
+    expected: number,
+  ): Promise<void>;
+  insertEquipmentIncidentVersion(
+    item: import("./equipment-incidents.js").EquipmentIncident,
+  ): Promise<void>;
+  findEquipmentIncidentVersion(
+    id: string,
+    version: number,
+  ): Promise<import("./equipment-incidents.js").EquipmentIncident | null>;
   findEquipment(
     id: string,
   ): Promise<import("./equipment.js").ProcessingEquipment | null>;
@@ -404,6 +441,7 @@ export interface SterileRepository {
 export class SterileError extends Error {
   constructor(
     public readonly code:
+      | "INCIDENT_LIMIT"
       | "EQUIPMENT_BLOCKED"
       | "PACKAGE_EXPIRED"
       | "PACKAGE_INTEGRITY_BLOCKED"

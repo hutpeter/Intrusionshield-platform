@@ -2,6 +2,7 @@ import express from "express";
 import {
   InstrumentRegistry,
   EquipmentRegistry,
+  EquipmentIncidentRegistry,
   LoanerRegistry,
   ProcedureRegistry,
   ServiceUsageRegistry,
@@ -37,6 +38,8 @@ export interface SterileDependencies {
     scope: SterileScope,
     capability: "sterile.core",
     permission:
+      | "equipment-incidents:read"
+      | "equipment-incidents:write"
       | "equipment:read"
       | "equipment:write"
       | "equipment:hold"
@@ -199,69 +202,76 @@ export function createSterileApp(
           ? "maintenance:authorize"
           : req.path === "/dashboard" || req.path.startsWith("/dashboard/")
             ? "dashboard:read"
-            : req.path.startsWith("/equipment")
+            : req.path.startsWith("/equipment-incidents") ||
+                /^\/equipment\/[^/]+\/(incident-impact|incidents)$/.test(
+                  req.path,
+                )
               ? readOnly
-                ? "equipment:read"
-                : req.path.endsWith("/hold")
-                  ? "equipment:hold"
-                  : "equipment:write"
-              : req.path.startsWith("/procedures")
+                ? "equipment-incidents:read"
+                : "equipment-incidents:write"
+              : req.path.startsWith("/equipment")
                 ? readOnly
-                  ? "procedures:read"
-                  : req.path.endsWith("/publish") ||
-                      req.path.endsWith("/withdraw")
-                    ? "procedures:publish"
-                    : "procedures:write"
-                : req.path.startsWith("/loaners")
+                  ? "equipment:read"
+                  : req.path.endsWith("/hold")
+                    ? "equipment:hold"
+                    : "equipment:write"
+                : req.path.startsWith("/procedures")
                   ? readOnly
-                    ? "loaners:read"
-                    : "loaners:write"
-                  : req.path.startsWith("/traceability")
-                    ? "traceability:read"
-                    : req.path.startsWith("/returns")
-                      ? readOnly
-                        ? "returns:read"
-                        : req.path.endsWith("/dispose")
-                          ? "returns:dispose"
-                          : "returns:write"
-                      : req.path.startsWith("/recalls")
+                    ? "procedures:read"
+                    : req.path.endsWith("/publish") ||
+                        req.path.endsWith("/withdraw")
+                      ? "procedures:publish"
+                      : "procedures:write"
+                  : req.path.startsWith("/loaners")
+                    ? readOnly
+                      ? "loaners:read"
+                      : "loaners:write"
+                    : req.path.startsWith("/traceability")
+                      ? "traceability:read"
+                      : req.path.startsWith("/returns")
                         ? readOnly
-                          ? "recall:read"
-                          : req.path.endsWith("/clear")
-                            ? "recall:clear"
-                            : req.path.endsWith("/admit")
-                              ? "recall:admit"
-                              : req.path.endsWith("/recover")
-                                ? "recall:recover"
-                                : "recall:write"
-                        : req.path.startsWith("/distribution")
+                          ? "returns:read"
+                          : req.path.endsWith("/dispose")
+                            ? "returns:dispose"
+                            : "returns:write"
+                        : req.path.startsWith("/recalls")
                           ? readOnly
-                            ? "distribution:read"
-                            : "distribution:write"
-                          : req.path.startsWith("/reviews")
+                            ? "recall:read"
+                            : req.path.endsWith("/clear")
+                              ? "recall:clear"
+                              : req.path.endsWith("/admit")
+                                ? "recall:admit"
+                                : req.path.endsWith("/recover")
+                                  ? "recall:recover"
+                                  : "recall:write"
+                          : req.path.startsWith("/distribution")
                             ? readOnly
-                              ? "release:read"
-                              : "release:write"
-                            : req.path.startsWith("/loads")
+                              ? "distribution:read"
+                              : "distribution:write"
+                            : req.path.startsWith("/reviews")
                               ? readOnly
-                                ? "cycles:read"
-                                : "cycles:write"
-                              : req.path.startsWith("/packages") ||
-                                  req.path === "/package-scan"
+                                ? "release:read"
+                                : "release:write"
+                              : req.path.startsWith("/loads")
                                 ? readOnly
-                                  ? "packaging:read"
-                                  : "packaging:write"
-                                : req.path.startsWith("/processing")
+                                  ? "cycles:read"
+                                  : "cycles:write"
+                                : req.path.startsWith("/packages") ||
+                                    req.path === "/package-scan"
                                   ? readOnly
-                                    ? "processing:read"
-                                    : "processing:write"
-                                  : req.path.startsWith("/tray-")
+                                    ? "packaging:read"
+                                    : "packaging:write"
+                                  : req.path.startsWith("/processing")
                                     ? readOnly
-                                      ? "trays:read"
-                                      : "trays:write"
-                                    : readOnly
-                                      ? "instruments:read"
-                                      : "instruments:write";
+                                      ? "processing:read"
+                                      : "processing:write"
+                                    : req.path.startsWith("/tray-")
+                                      ? readOnly
+                                        ? "trays:read"
+                                        : "trays:write"
+                                      : readOnly
+                                        ? "instruments:read"
+                                        : "instruments:write";
       if (
         (await dependencies.authorize!(scope, "sterile.core", permission)) !==
         true
@@ -391,6 +401,148 @@ export function createSterileApp(
         v as unknown as Parameters<ServiceUsageRegistry["configure"]>[2],
       ),
     );
+  });
+  const incidents = () =>
+    new EquipmentIncidentRegistry(dependencies.repository!);
+  async function incidentSources(res: express.Response, recall = false) {
+    for (const permission of [
+      "equipment:read",
+      "processing:read",
+      "cycles:read",
+      "packaging:read",
+      "distribution:read",
+      "instruments:read",
+      "recall:read",
+      ...(recall ? ["recall:write" as const] : []),
+    ] as const) {
+      if (
+        (await dependencies.authorize!(
+          res.locals.scope,
+          "sterile.core",
+          permission,
+        )) !== true
+      ) {
+        res.status(403).json({ error: "FORBIDDEN" });
+        return false;
+      }
+    }
+    return true;
+  }
+  app.get(prefix + "/equipment/:id/incident-impact", async (req, res) => {
+    if (!(await incidentSources(res))) return;
+    if (
+      Object.keys(req.query).some((k) => !["from", "to"].includes(k)) ||
+      typeof req.query.from !== "string" ||
+      typeof req.query.to !== "string"
+    )
+      throw new SterileError("INVALID_REQUEST");
+    res.json(
+      await incidents().preview(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        req.query.from,
+        req.query.to,
+      ),
+    );
+  });
+  app.get(prefix + "/equipment/:id/incidents", async (req, res) => {
+    if (!(await incidentSources(res))) return;
+    res.json(
+      await incidents().list(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        page(req),
+      ),
+    );
+  });
+  app.get(prefix + "/equipment-incidents/:id", async (req, res) => {
+    noQuery(req);
+    if (!(await incidentSources(res))) return;
+    res.json(
+      await incidents().get(res.locals.scope, sterileUuid(req.params.id)),
+    );
+  });
+  app.get(
+    prefix + "/equipment-incidents/:id/versions/:version",
+    async (req, res) => {
+      noQuery(req);
+      if (!(await incidentSources(res))) return;
+      if (!/^[1-9]\d{0,8}$/.test(String(req.params.version)))
+        throw new SterileError("INVALID_REQUEST");
+      res.json(
+        await incidents().get(
+          res.locals.scope,
+          sterileUuid(req.params.id),
+          Number(req.params.version),
+        ),
+      );
+    },
+  );
+  app.post(prefix + "/equipment-incidents", async (req, res) => {
+    noQuery(req);
+    if (!(await incidentSources(res))) return;
+    const v = body(req.body, [
+      "requestId",
+      "code",
+      "equipmentId",
+      "from",
+      "to",
+      "impactHash",
+      "reason",
+      "reference",
+      "confirmed",
+    ]);
+    res
+      .status(201)
+      .json(
+        await incidents().create(
+          res.locals.scope,
+          v as unknown as Parameters<EquipmentIncidentRegistry["create"]>[1],
+        ),
+      );
+  });
+  app.get(
+    prefix + "/equipment-incidents/:id/recall-impact",
+    async (req, res) => {
+      if (!(await incidentSources(res))) return;
+      if (
+        Object.keys(req.query).length !== 1 ||
+        typeof req.query.packageId !== "string"
+      )
+        throw new SterileError("INVALID_REQUEST");
+      res.json(
+        await incidents().recallPreview(
+          res.locals.scope,
+          sterileUuid(req.params.id),
+          sterileUuid(req.query.packageId),
+        ),
+      );
+    },
+  );
+  app.post(prefix + "/equipment-incidents/:id/recalls", async (req, res) => {
+    noQuery(req);
+    if (!(await incidentSources(res, true))) return;
+    const v = body(req.body, [
+      "requestId",
+      "version",
+      "packageId",
+      "impactHash",
+      "code",
+      "reason",
+      "reference",
+      "confirmed",
+    ]);
+    res
+      .status(201)
+      .json(
+        await incidents().createRecall(
+          res.locals.scope,
+          sterileUuid(req.params.id),
+          v as unknown as Parameters<
+            EquipmentIncidentRegistry["createRecall"]
+          >[2],
+        ),
+      );
   });
   const equipmentRegistry = () =>
     new EquipmentRegistry(dependencies.repository!);
@@ -1924,6 +2076,7 @@ export function createSterileApp(
           ? {
               SCAN_DUPLICATE: 409,
               SCAN_TYPE: 409,
+              INCIDENT_LIMIT: 409,
               EQUIPMENT_BLOCKED: 409,
               PACKAGE_EXPIRED: 409,
               PACKAGE_INTEGRITY_BLOCKED: 409,

@@ -263,3 +263,160 @@ test("mechanical cleaning freezes the selected washer and blocks wrong, overdue,
     "EQUIPMENT_BLOCKED",
   );
 });
+
+test("washer incident packages follow the exact cleaning attempt in inspection proof, excluding later successful manual re-cleaning", async (t) => {
+  const now = Date.now();
+  t.mock.timers.enable({ apis: ["Date"], now });
+  const repo = new MemoryRepository(),
+    s = scope(),
+    { TrayRegistry, PackagingRegistry, EquipmentIncidentRegistry } =
+      await import("../dist/index.js"),
+    er = new EquipmentRegistry(repo),
+    ir = new InstrumentRegistry(repo),
+    pr = new ProcessingRegistry(repo),
+    tr = new TrayRegistry(repo),
+    pk = new PackagingRegistry(repo),
+    inc = new EquipmentIncidentRegistry(repo),
+    washer = await er.register(
+      s,
+      equipmentBody({
+        code: "WASHER-INCIDENT",
+        kind: "washer_disinfector",
+        methods: [],
+      }),
+    ),
+    type = await ir.createType(s, {
+      requestId: randomUUID(),
+      code: "WASH-TYPE",
+      name: "Demo",
+      manufacturer: "",
+      model: "",
+    });
+  async function pack(retry) {
+    const key = randomUUID(),
+      i = await ir.register(s, {
+        requestId: randomUUID(),
+        code: "I-" + key,
+        instrumentTypeId: type.id,
+        serialNumber: "",
+      });
+    let e = await pr.receive(s, {
+      requestId: randomUUID(),
+      code: "REC-" + key,
+      source: "DEMO",
+      custodian: "DEMO",
+      condition: "DEMO",
+      discrepancies: "",
+      instrumentIds: [i.id],
+      confirmed: true,
+    });
+    e = await pr.start(s, e.id, {
+      requestId: randomUUID(),
+      version: e.version,
+      method: "mechanical",
+      equipment: washer.code,
+      equipmentId: washer.id,
+      procedure: "SIMULATED",
+      procedureVersion: "1",
+      confirmed: true,
+    });
+    e = await pr.finish(s, e.id, {
+      requestId: randomUUID(),
+      version: e.version,
+      outcome: retry ? "failed" : "passed",
+      evidence: "SIMULATED",
+      note: retry ? "SIMULATED failure" : "",
+      confirmed: true,
+    });
+    if (retry) {
+      e = await pr.start(s, e.id, {
+        requestId: randomUUID(),
+        version: e.version,
+        method: "manual",
+        equipment: "",
+        procedure: "SIMULATED",
+        procedureVersion: "1",
+        confirmed: true,
+      });
+      e = await pr.finish(s, e.id, {
+        requestId: randomUUID(),
+        version: e.version,
+        outcome: "passed",
+        evidence: "SIMULATED",
+        note: "",
+        confirmed: true,
+      });
+    }
+    e = await pr.inspect(s, e.id, {
+      requestId: randomUUID(),
+      version: e.version,
+      procedure: "SIMULATED",
+      procedureVersion: "1",
+      evidence: "SIMULATED",
+      items: [
+        {
+          instrumentId: i.id,
+          clean: true,
+          dry: true,
+          intact: true,
+          functional: true,
+          note: "",
+        },
+      ],
+      confirmed: true,
+    });
+    const d = await tr.createDefinition(s, {
+      requestId: randomUUID(),
+      code: "DEF-" + key,
+      name: "Demo",
+      requirements: [{ instrumentTypeId: type.id, quantity: 1 }],
+    });
+    let a = await tr.createAssembly(s, {
+      requestId: randomUUID(),
+      code: "ARM-" + key,
+      definitionId: d.id,
+      definitionVersion: 1,
+    });
+    a = await tr.updateContents(s, a.id, {
+      requestId: randomUUID(),
+      version: a.version,
+      instrumentIds: [i.id],
+    });
+    a = await tr.transition(s, a.id, {
+      requestId: randomUUID(),
+      version: a.version,
+      action: "complete",
+      reason: "",
+      confirmed: true,
+    });
+    return pk.pack(s, {
+      requestId: randomUUID(),
+      code: "PK-" + key,
+      assemblyId: a.id,
+      assemblyVersion: a.version,
+      material: "DEMO",
+      materialLot: "DEMO",
+      procedure: "DEMO",
+      procedureVersion: "1",
+      sealChecked: true,
+      contentsChecked: true,
+      confirmed: true,
+    });
+  }
+  const recleaned = await pack(true),
+    exposed = await pack(false);
+  t.mock.timers.setTime(now + 1);
+  const impact = await inc.preview(
+    s,
+    washer.id,
+    new Date(now - 1).toISOString(),
+    new Date(now + 1).toISOString(),
+  );
+  assert.equal(impact.exposures.length, 2);
+  assert.deepEqual(
+    impact.targets.map((p) => p.id),
+    [exposed.id],
+  );
+  assert.ok(!impact.targets.some((p) => p.id === recleaned.id));
+  assert.equal(impact.targets[0].cleaning[0].attempt, 1);
+});

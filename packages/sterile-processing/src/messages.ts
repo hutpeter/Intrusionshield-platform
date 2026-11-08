@@ -1,4 +1,6 @@
 const es = {
+  INCIDENT_LIMIT:
+    "El alcance supera el límite de esta vista previa. Reduzca el período; no se ha guardado una evaluación parcial.",
   EQUIPMENT_BLOCKED:
     "Equipo fuera de servicio, vencido o incompatible. Revise el servicio, la cualificación y el método antes de iniciar.",
   PACKAGE_EXPIRED:
@@ -63,6 +65,8 @@ const es = {
 };
 type Messages = Record<keyof typeof es, string>;
 const en: Messages = {
+  INCIDENT_LIMIT:
+    "The impact exceeds this preview’s limit. Narrow the period; no partial assessment has been saved.",
   EQUIPMENT_BLOCKED:
     "Equipment is out of service, overdue or incompatible. Review service, qualification and method before starting.",
   PACKAGE_EXPIRED:
@@ -127,6 +131,8 @@ const en: Messages = {
     "Service unavailable. The change has not been confirmed.",
 };
 const fr: Messages = {
+  INCIDENT_LIMIT:
+    "L’impact dépasse la limite de cet aperçu. Réduisez la période ; aucune évaluation partielle n’a été enregistrée.",
   EQUIPMENT_BLOCKED:
     "Équipement hors service, échéance dépassée ou incompatible. Vérifiez entretien, qualification et méthode avant de démarrer.",
   PACKAGE_EXPIRED:

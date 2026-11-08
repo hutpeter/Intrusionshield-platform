@@ -13,6 +13,7 @@ export async function prepareCycleExample(
   repository: SterileRepository,
   scope: SterileScope,
   requestId: string,
+  machine?: { id: string; code: string },
 ) {
   assertSterilePreviewEnvironment();
   const key = sterileUuid(requestId);
@@ -63,7 +64,8 @@ export async function prepareCycleExample(
     const l = await cycles.create(scope, {
       requestId: step("load"),
       code: "DEMO-LOAD-" + key,
-      sterilizer: "STER-DEMO-1",
+      sterilizer: machine?.code ?? "STER-DEMO-1",
+      ...(machine ? { equipmentId: machine.id } : {}),
       method: "steam",
       profile: "SIMULATED-PROFILE",
       profileVersion: "DEMO-1",

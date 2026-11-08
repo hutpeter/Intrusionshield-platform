@@ -22,6 +22,8 @@ export class MemoryRepository {
     loadVersions: [],
     loadAssignments: [],
     machineCycles: [],
+    equipmentIncidents: [],
+    equipmentIncidentVersions: [],
     equipment: [],
     equipmentVersions: [],
     packages: [],
@@ -818,6 +820,97 @@ export class MemoryRepository {
           loadId: l.id,
         });
       },
+      equipmentExposureCandidates: async (id, code, from, to) => {
+        const overlap = (start, end) =>
+          Date.parse(start) < Date.parse(to) &&
+          (end === null || Date.parse(end) >= Date.parse(from));
+        return {
+          processing: s.processing
+            .filter(
+              (p) =>
+                own(p) &&
+                p.attempts.some(
+                  (a) =>
+                    a.method === "mechanical" &&
+                    (a.registeredEquipment?.id === id ||
+                      (!a.registeredEquipment &&
+                        a.equipment.toUpperCase() === code)) &&
+                    overlap(a.startedAt, a.finishedAt),
+                ),
+            )
+            .slice(0, 201)
+            .map((x) => structuredClone(x)),
+          loads: s.loads
+            .filter((l) => {
+              const machine = l.startedEquipment ?? l.registeredEquipment;
+              return (
+                own(l) &&
+                l.startedAt &&
+                (machine?.id === id ||
+                  (!machine && l.sterilizer.toUpperCase() === code)) &&
+                overlap(l.startedAt, l.finishedAt)
+              );
+            })
+            .slice(0, 201)
+            .map((x) => structuredClone(x)),
+        };
+      },
+      equipmentIncidentPackages: async (episodes, ids) =>
+        s.packages
+          .filter(
+            (p) =>
+              own(p) &&
+              (ids.includes(p.id) ||
+                p.inspectionProofs.some((proof) =>
+                  episodes.includes(proof.episodeId),
+                )),
+          )
+          .slice(0, 101)
+          .map((x) => structuredClone(x)),
+      findEquipmentIncident: async (id) =>
+        read(s.equipmentIncidents.find((x) => own(x) && x.id === id)),
+      findEquipmentIncidentByCode: async (code) =>
+        read(s.equipmentIncidents.find((x) => own(x) && x.code === code)),
+      listEquipmentIncidents: async (id, page) =>
+        s.equipmentIncidents
+          .filter((x) => own(x) && x.equipmentId === id)
+          .slice()
+          .reverse()
+          .slice((page - 1) * 50, (page - 1) * 50 + 51)
+          .map((x) => structuredClone(x)),
+      insertEquipmentIncident: async (item) => {
+        if (
+          !own(item) ||
+          s.equipmentIncidents.some(
+            (x) => own(x) && (x.id === item.id || x.code === item.code),
+          )
+        )
+          throw Error("constraint");
+        s.equipmentIncidents.push(structuredClone(item));
+      },
+      updateEquipmentIncident: async (item, expected) => {
+        const n = s.equipmentIncidents.findIndex(
+          (x) => own(x) && x.id === item.id && x.version === expected,
+        );
+        if (!own(item) || n < 0) throw Error("constraint");
+        s.equipmentIncidents[n] = structuredClone(item);
+      },
+      insertEquipmentIncidentVersion: async (item) => {
+        if (
+          !own(item) ||
+          s.equipmentIncidentVersions.some(
+            (x) => own(x) && x.id === item.id && x.version === item.version,
+          )
+        )
+          throw Error("constraint");
+        s.equipmentIncidentVersions.push(structuredClone(item));
+      },
+      findEquipmentIncidentVersion: async (id, version) =>
+        read(
+          s.equipmentIncidentVersions.find(
+            (x) => own(x) && x.id === id && x.version === version,
+          ),
+        ),
       findEquipment: async (id) =>
         read(s.equipment.find((x) => own(x) && x.id === id)),
       findEquipmentByCode: async (code) =>

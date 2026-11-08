@@ -328,3 +328,300 @@ test("equipment source authorization is required before a workflow can query rep
   assert.equal(r.status, 403);
   assert.equal(calls, 0);
 });
+
+async function incidentSample(f) {
+  const r = await f.call("/preview/equipment-incident-example", {
+    requestId: randomUUID(),
+  });
+  assert.equal(r.status, 201);
+  return r.json();
+}
+const incidentBody = (sample, impact) => ({
+  requestId: randomUUID(),
+  code: "INCIDENT-" + randomUUID(),
+  equipmentId: sample.equipment.id,
+  from: sample.from,
+  to: sample.to,
+  impactHash: impact.impactHash,
+  reason: "SIMULATED machine fault",
+  reference: "SIMULATED-INCIDENT",
+  confirmed: true,
+});
+const impactPath = (f, sample) =>
+  f.base +
+  "/equipment/" +
+  sample.equipment.id +
+  "/incident-impact?from=" +
+  encodeURIComponent(sample.from) +
+  "&to=" +
+  encodeURIComponent(sample.to);
+test("incident assessment and linked recall require separate reviewer confirmation, strict scope/CSRF and preserve historical provenance", async (t) => {
+  const f = await fixture(t),
+    sample = await incidentSample(f),
+    response = await f.call(impactPath(f, sample));
+  assert.equal(response.status, 200);
+  const impact = await response.json();
+  assert.equal(impact.exposures.length, 1);
+  assert.equal(impact.exposures[0].link, "registered");
+  assert.equal(impact.targets.length, 1);
+  const input = incidentBody(sample, impact);
+  assert.equal(
+    (
+      await f.call(f.base + "/equipment-incidents", input, {
+        "x-sterile-csrf": "",
+      })
+    ).status,
+    403,
+  );
+  await f.login("operator");
+  assert.equal(
+    (await f.call(f.base + "/equipment-incidents", input)).status,
+    403,
+  );
+  assert.equal(
+    (
+      await f.call("/preview/equipment-incident-example", {
+        requestId: randomUUID(),
+      })
+    ).status,
+    403,
+  );
+  await f.login("reviewer");
+  assert.equal(
+    (
+      await f.call(f.base + "/equipment-incidents", {
+        ...input,
+        confirmed: false,
+      })
+    ).status,
+    400,
+  );
+  assert.equal(
+    (await f.call(f.base + "/equipment-incidents", { ...input, extra: true }))
+      .status,
+    400,
+  );
+  assert.equal((await f.call(impactPath(f, sample) + "&extra=1")).status, 400);
+  assert.equal(
+    (
+      await f.call(
+        impactPath(f, sample).replace(f.session.facilityId, randomUUID()),
+      )
+    ).status,
+    404,
+  );
+  const saved = await f.call(f.base + "/equipment-incidents", input);
+  assert.equal(saved.status, 201);
+  const record = await saved.json();
+  assert.deepEqual(
+    await (await f.call(f.base + "/equipment-incidents", input)).json(),
+    record,
+  );
+  assert.equal(
+    (await (await f.call(f.base + "/packages/" + impact.targets[0].id)).json())
+      .recall,
+    undefined,
+  );
+  assert.equal(
+    (
+      await (
+        await f.call(
+          f.base + "/equipment/" + sample.equipment.id + "/incidents",
+        )
+      ).json()
+    ).items.length,
+    1,
+  );
+  const plan = await (
+      await f.call(
+        f.base +
+          "/equipment-incidents/" +
+          record.id +
+          "/recall-impact?packageId=" +
+          impact.targets[0].id,
+      )
+    ).json(),
+    recallInput = {
+      requestId: randomUUID(),
+      version: 1,
+      packageId: plan.sourceId,
+      impactHash: plan.impactHash,
+      code: "INCIDENT-RECALL-" + randomUUID(),
+      reason: "SIMULATED reviewer decision",
+      reference: "SIMULATED",
+      confirmed: true,
+    },
+    recallPath = f.base + "/equipment-incidents/" + record.id + "/recalls";
+  await f.login("viewer");
+  assert.equal((await f.call(recallPath, recallInput)).status, 403);
+  await f.login("reviewer");
+  assert.equal(
+    (await f.call(recallPath, { ...recallInput, confirmed: false })).status,
+    400,
+  );
+  assert.equal(
+    (await f.call(recallPath, { ...recallInput, impactHash: "0".repeat(64) }))
+      .status,
+    409,
+  );
+  const linked = await f.call(recallPath, recallInput);
+  assert.equal(linked.status, 201);
+  const result = await linked.json();
+  assert.equal(result.version, 2);
+  assert.equal(
+    (
+      await (
+        await f.call(
+          f.base + "/equipment-incidents/" + record.id + "/versions/1",
+        )
+      ).json()
+    ).recalls.length,
+    0,
+  );
+  const recall = await (
+    await f.call(f.base + "/recalls/" + result.recalls[0].id)
+  ).json();
+  assert.equal(recall.equipmentIncident.id, record.id);
+  assert.equal(recall.equipmentIncident.equipmentCode, sample.equipment.code);
+  assert.equal(
+    (await (await f.call(f.base + "/packages/" + plan.sourceId)).json()).recall
+      .caseId,
+    recall.id,
+  );
+});
+test("SQLite incident and recall association survive reopening, and a late incident audit failure rolls all recall blocks back", async (t) => {
+  const f = await fixture(t),
+    sample = await incidentSample(f),
+    { EquipmentIncidentRegistry, PackagingRegistry } =
+      await import("@intrusionshield/sterile-processing"),
+    s = {
+      tenantId: f.session.tenantId,
+      facilityId: f.session.facilityId,
+      actorId: f.session.actorId,
+    },
+    inc = new EquipmentIncidentRegistry(f.repo),
+    impact = await inc.preview(s, sample.equipment.id, sample.from, sample.to),
+    record = await inc.create(s, incidentBody(sample, impact)),
+    plan = await inc.recallPreview(s, record.id, impact.targets[0].id),
+    input = {
+      requestId: randomUUID(),
+      version: 1,
+      packageId: plan.sourceId,
+      impactHash: plan.impactHash,
+      code: "SQL-INCIDENT-RECALL",
+      reason: "SIMULATED",
+      reference: "SIMULATED",
+      confirmed: true,
+    };
+  const failing = new EquipmentIncidentRegistry({
+    transaction: (scope, work) =>
+      f.repo.transaction(scope, (tx) =>
+        work({
+          ...tx,
+          appendAudit: async (e) => {
+            if (e.action === "equipment-incident-recall-created")
+              throw Error("late incident audit");
+            return tx.appendAudit(e);
+          },
+        }),
+      ),
+  });
+  await assert.rejects(failing.createRecall(s, record.id, input));
+  assert.equal(
+    (await new PackagingRegistry(f.repo).get(s, plan.sourceId)).recall,
+    undefined,
+  );
+  assert.equal((await inc.get(s, record.id)).version, 1);
+  const linked = await inc.createRecall(s, record.id, input);
+  const reopened = new PreviewSqliteRepository(f.file);
+  try {
+    assert.deepEqual(
+      await new EquipmentIncidentRegistry(reopened).get(s, record.id),
+      linked,
+    );
+    assert.deepEqual(
+      (await new EquipmentIncidentRegistry(reopened).get(s, record.id, 1))
+        .impact,
+      impact,
+    );
+    assert.equal(
+      (await new PackagingRegistry(reopened).get(s, plan.sourceId)).recall
+        .caseId,
+      linked.recalls[0].id,
+    );
+  } finally {
+    reopened.close();
+  }
+});
+test("incident source and recall permissions are checked before any repository access", async (t) => {
+  const { createSterileApp } = await import("../dist/app.js"),
+    s = {
+      tenantId: randomUUID(),
+      facilityId: randomUUID(),
+      actorId: randomUUID(),
+    },
+    server = createServer();
+  let queries = 0,
+    denied = "processing:read";
+  server.on(
+    "request",
+    createSterileApp({
+      repository: {
+        transaction: async () => {
+          queries++;
+          throw Error("must not query");
+        },
+      },
+      authenticate: async () => ({
+        tenantId: s.tenantId,
+        actorId: s.actorId,
+        facilityIds: [s.facilityId],
+      }),
+      authorize: async (scope, cap, permission) => permission !== denied,
+    }),
+  );
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const r = await fetch(
+    "http://127.0.0.1:" +
+      server.address().port +
+      "/api/v1/sterile/facilities/" +
+      s.facilityId +
+      "/equipment/" +
+      randomUUID() +
+      "/incident-impact?from=2026-01-01T00:00:00.000Z&to=2026-01-02T00:00:00.000Z",
+    { headers: { authorization: "Bearer demo" } },
+  );
+  assert.equal(r.status, 403);
+  assert.equal(queries, 0);
+  denied = "recall:write";
+  const blocked = await fetch(
+    "http://127.0.0.1:" +
+      server.address().port +
+      "/api/v1/sterile/facilities/" +
+      s.facilityId +
+      "/equipment-incidents/" +
+      randomUUID() +
+      "/recalls",
+    {
+      method: "POST",
+      headers: {
+        authorization: "Bearer demo",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        requestId: randomUUID(),
+        version: 1,
+        packageId: randomUUID(),
+        impactHash: "0".repeat(64),
+        code: "DEMO",
+        reason: "SIMULATED",
+        reference: "SIMULATED",
+        confirmed: true,
+      }),
+    },
+  );
+  assert.equal(blocked.status, 403);
+  assert.equal(queries, 0);
+});

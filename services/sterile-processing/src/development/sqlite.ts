@@ -98,6 +98,8 @@ CREATE TABLE IF NOT EXISTS sp_assignments(tenant_id TEXT NOT NULL,facility_id TE
 CREATE TABLE IF NOT EXISTS sp_processing(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,code TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,code));
 CREATE TABLE IF NOT EXISTS sp_processing_versions(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id,version),FOREIGN KEY(tenant_id,facility_id,id) REFERENCES sp_processing(tenant_id,facility_id,id));
 CREATE TABLE IF NOT EXISTS sp_processing_holds(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,instrument_id TEXT NOT NULL,episode_id TEXT NOT NULL,PRIMARY KEY(tenant_id,facility_id,instrument_id),FOREIGN KEY(tenant_id,facility_id,instrument_id) REFERENCES sp_instruments(tenant_id,facility_id,id),FOREIGN KEY(tenant_id,facility_id,episode_id) REFERENCES sp_processing(tenant_id,facility_id,id));
+CREATE TABLE IF NOT EXISTS sp_equipment_incidents(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,code TEXT NOT NULL,equipment_id TEXT NOT NULL,version INTEGER NOT NULL CHECK(version>0),payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,code),FOREIGN KEY(tenant_id,facility_id,equipment_id) REFERENCES sp_equipment(tenant_id,facility_id,id));
+CREATE TABLE IF NOT EXISTS sp_equipment_incident_versions(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id,version),FOREIGN KEY(tenant_id,facility_id,id) REFERENCES sp_equipment_incidents(tenant_id,facility_id,id));
 CREATE TABLE IF NOT EXISTS sp_equipment(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,code TEXT NOT NULL,version INTEGER NOT NULL CHECK(version>0),payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,code));
 CREATE TABLE IF NOT EXISTS sp_equipment_versions(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id,version),FOREIGN KEY(tenant_id,facility_id,id) REFERENCES sp_equipment(tenant_id,facility_id,id));
 CREATE TABLE IF NOT EXISTS sp_packages(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,code TEXT NOT NULL,assembly_id TEXT NOT NULL,version INTEGER NOT NULL CHECK(version>0),payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,code),FOREIGN KEY(tenant_id,facility_id,assembly_id) REFERENCES sp_assemblies(tenant_id,facility_id,id));
@@ -916,6 +918,91 @@ CREATE INDEX IF NOT EXISTS sp_assignment_assembly ON sp_assignments(tenant_id,fa
             .prepare("INSERT INTO sp_machine_cycles VALUES(?,?,?,?,?)")
             .run(...args, item.sterilizer, item.cycleReference, item.id);
         },
+        equipmentExposureCandidates: async (id, code, from, to) => {
+          const processing = this.db
+            .prepare(
+              "SELECT payload FROM sp_processing p WHERE tenant_id=? AND facility_id=? AND EXISTS(SELECT 1 FROM json_each(p.payload,'$.attempts') a WHERE (json_extract(a.value,'$.registeredEquipment.id')=? OR (json_extract(a.value,'$.registeredEquipment.id') IS NULL AND upper(json_extract(a.value,'$.equipment'))=?)) AND json_extract(a.value,'$.method')='mechanical' AND julianday(json_extract(a.value,'$.startedAt'))<julianday(?) AND (json_extract(a.value,'$.finishedAt') IS NULL OR julianday(json_extract(a.value,'$.finishedAt'))>=julianday(?))) ORDER BY id LIMIT 201",
+            )
+            .all(...args, id, code, to, from)
+            .map((r) => JSON.parse((r as { payload: string }).payload));
+          const loads = this.db
+            .prepare(
+              "SELECT payload FROM sp_loads p WHERE tenant_id=? AND facility_id=? AND (coalesce(json_extract(payload,'$.startedEquipment.id'),json_extract(payload,'$.registeredEquipment.id'))=? OR (coalesce(json_extract(payload,'$.startedEquipment.id'),json_extract(payload,'$.registeredEquipment.id')) IS NULL AND upper(json_extract(payload,'$.sterilizer'))=?)) AND julianday(json_extract(payload,'$.startedAt'))<julianday(?) AND (json_extract(payload,'$.finishedAt') IS NULL OR julianday(json_extract(payload,'$.finishedAt'))>=julianday(?)) ORDER BY id LIMIT 201",
+            )
+            .all(...args, id, code, to, from)
+            .map((r) => JSON.parse((r as { payload: string }).payload));
+          return { processing, loads };
+        },
+        equipmentIncidentPackages: async (episodeIds, packageIds) =>
+          this.db
+            .prepare(
+              "SELECT payload FROM sp_packages p WHERE tenant_id=? AND facility_id=? AND (p.id IN (SELECT value FROM json_each(?)) OR EXISTS(SELECT 1 FROM json_each(p.payload,'$.inspectionProofs') proof WHERE json_extract(proof.value,'$.episodeId') IN (SELECT value FROM json_each(?)))) ORDER BY id LIMIT 101",
+            )
+            .all(
+              ...args,
+              JSON.stringify(packageIds),
+              JSON.stringify(episodeIds),
+            )
+            .map((r) => JSON.parse((r as { payload: string }).payload)),
+        findEquipmentIncident: async (id) =>
+          read<import("@intrusionshield/sterile-processing").EquipmentIncident>(
+            "SELECT payload FROM sp_equipment_incidents WHERE tenant_id=? AND facility_id=? AND id=?",
+            id,
+          ),
+        findEquipmentIncidentByCode: async (code) =>
+          read<import("@intrusionshield/sterile-processing").EquipmentIncident>(
+            "SELECT payload FROM sp_equipment_incidents WHERE tenant_id=? AND facility_id=? AND code=?",
+            code,
+          ),
+        listEquipmentIncidents: async (id, page) =>
+          this.db
+            .prepare(
+              "SELECT payload FROM sp_equipment_incidents WHERE tenant_id=? AND facility_id=? AND equipment_id=? ORDER BY rowid DESC LIMIT 51 OFFSET ?",
+            )
+            .all(...args, id, (page - 1) * 50)
+            .map((r) => JSON.parse((r as { payload: string }).payload)),
+        insertEquipmentIncident: async (item) => {
+          own(item);
+          this.db
+            .prepare("INSERT INTO sp_equipment_incidents VALUES(?,?,?,?,?,?,?)")
+            .run(
+              ...args,
+              item.id,
+              item.code,
+              item.equipmentId,
+              item.version,
+              JSON.stringify(item),
+            );
+        },
+        updateEquipmentIncident: async (item, expected) => {
+          own(item);
+          const r = this.db
+            .prepare(
+              "UPDATE sp_equipment_incidents SET version=?,payload=? WHERE tenant_id=? AND facility_id=? AND id=? AND version=?",
+            )
+            .run(
+              item.version,
+              JSON.stringify(item),
+              ...args,
+              item.id,
+              expected,
+            );
+          if (r.changes !== 1) throw new SterileError("CONFLICT");
+        },
+        insertEquipmentIncidentVersion: async (item) => {
+          own(item);
+          this.db
+            .prepare(
+              "INSERT INTO sp_equipment_incident_versions VALUES(?,?,?,?,?)",
+            )
+            .run(...args, item.id, item.version, JSON.stringify(item));
+        },
+        findEquipmentIncidentVersion: async (id, version) =>
+          read<import("@intrusionshield/sterile-processing").EquipmentIncident>(
+            "SELECT payload FROM sp_equipment_incident_versions WHERE tenant_id=? AND facility_id=? AND id=? AND version=?",
+            id,
+            version,
+          ),
         findEquipment: async (id) =>
           read<
             import("@intrusionshield/sterile-processing").ProcessingEquipment

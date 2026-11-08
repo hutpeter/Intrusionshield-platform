@@ -2,7 +2,7 @@
 
 ## One owner check
 
-**U-EQUIP-01 pending:** after updating the local preview, sign out and enter as **Demo reviewer**. Open **Processing equipment** → **Prepare fictional equipment example**. Review the prefilled fictional sterilizer and UTC service/qualification dates, tick **I confirm this equipment record and its documented service and qualification status**, then **Save equipment record**. Expect **In service — recorded dates current**, the machine's references/dates and **Equipment history**. The example only fills the form; it never registers or activates equipment before confirmation. This is the only owner check for this build. Demo operator cannot register or restore equipment.
+**U-EQUIP-01 passed November 8, 2026:** owner screenshot confirms saved Version 1, current recorded dates and registration history. Original check: after updating the local preview, sign out and enter as **Demo reviewer**. Open **Processing equipment** → **Prepare fictional equipment example**. Review the prefilled fictional sterilizer and UTC service/qualification dates, tick **I confirm this equipment record and its documented service and qualification status**, then **Save equipment record**. Expect **In service — recorded dates current**, the machine's references/dates and **Equipment history**. The example only fills the form; it never registers or activates equipment before confirmation. This is the only owner check for this build. Demo operator cannot register or restore equipment.
 
 ## Identity and recorded policy
 
@@ -45,4 +45,4 @@ Lists/history page at 50 records. Selector acquisition stops explicitly after 1,
 
 M-EQUIP-01 deferred: broader owner washer selection, methods/overdue/out-of-service, service restore, historical/trace, languages/mobile and exception walkthroughs. M-EQUIP-02 deferred: clinical/manufacturer/site qualification policy, competency, work orders, calibration attachments/telemetry, incident/recall consequences, production migrations/scale/clock/hardware and operational acceptance. RSP-ISS-001 remains parked.
 
-Developer verification November 8, 2026: 352 scoped tests (191 domain, 124 HTTP/SQLite, 37 web), builds and targeted Chromium registration/confirmation/hold/restore, washer/load selectors, frozen revision, late-outage start denial and refresh checks passed. U-EQUIP-01 remains pending until the owner reports it.
+Developer verification November 8, 2026: 352 scoped tests (191 domain, 124 HTTP/SQLite, 37 web), builds and targeted Chromium registration/confirmation/hold/restore, washer/load selectors, frozen revision, late-outage start denial and refresh checks passed. U-EQUIP-01 passed November 8, 2026 by owner screenshot; broader checks remain deferred.

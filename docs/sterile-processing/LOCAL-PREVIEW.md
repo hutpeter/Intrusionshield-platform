@@ -289,3 +289,7 @@ See [PACKAGE-SAFETY.md](PACKAGE-SAFETY.md) for the single U-PACKSAFE-01 owner ch
 ## Registered processing equipment
 
 See [EQUIPMENT.md](EQUIPMENT.md) for U-EQUIP-01, the single owner check as **Demo reviewer**. Processing equipment registration/service is reviewer-only; operators may read/select and take equipment out of service. New mechanical/load forms use registered equipment; unknown legacy API references remain explicitly unlinked.
+
+## Equipment incident assessment
+
+See [EQUIPMENT-INCIDENTS.md](EQUIPMENT-INCIDENTS.md) for the single U-EQINC-01 check as **Demo reviewer**. The fictional setup prepares recorded work; preview and incident confirmation remain explicit. Linked recalls have a separate preview/confirmation and use the existing recovery/disposition workflow.

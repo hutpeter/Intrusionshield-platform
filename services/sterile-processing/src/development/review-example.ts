@@ -12,6 +12,7 @@ export async function prepareReviewExample(
   repository: SterileRepository,
   operatorScope: SterileScope,
   requestId: string,
+  machine?: { id: string; code: string },
 ) {
   assertSterilePreviewEnvironment();
   const key = sterileUuid(requestId),
@@ -40,7 +41,7 @@ export async function prepareReviewExample(
         return work(tx);
       },
     };
-    const l = await prepareCycleExample(direct, operatorScope, child);
+    const l = await prepareCycleExample(direct, operatorScope, child, machine);
     return new CycleRegistry(direct).finish(operatorScope, l.id, {
       requestId: key,
       version: 2,

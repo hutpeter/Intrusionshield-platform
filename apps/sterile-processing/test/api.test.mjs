@@ -1024,3 +1024,49 @@ test("equipment service keeps identity out of updates, carries CSRF and rejects 
     (e) => e.code === "SERVICE_UNAVAILABLE",
   );
 });
+
+test("equipment incident assessment rejects a nested foreign machine and posts recall confirmation with CSRF", async (t) => {
+  let recall = false;
+  fake(t, async (path, options) => {
+    if (!recall)
+      return response({
+        tenantId: session.tenantId,
+        facilityId: session.facilityId,
+        equipment: {
+          id: "machine",
+          tenantId: session.tenantId,
+          facilityId: "foreign",
+        },
+        exposures: [],
+        targets: [],
+        impactHash: "hash",
+      });
+    assert.match(path, /equipment-incidents\/incident\/recalls$/);
+    assert.equal(options.headers["x-sterile-csrf"], session.csrf);
+    assert.equal(JSON.parse(options.body).confirmed, true);
+    return response({ tenantId: session.tenantId, facilityId: "foreign" });
+  });
+  await assert.rejects(
+    api.equipmentIncidentImpact(session, "machine", "from", "to", signal()),
+    (e) => e.code === "SERVICE_UNAVAILABLE",
+  );
+  recall = true;
+  await assert.rejects(
+    api.createIncidentRecall(
+      session,
+      "incident",
+      {
+        requestId: "request",
+        version: 1,
+        packageId: "package",
+        impactHash: "hash",
+        code: "DEMO",
+        reason: "SIMULATED",
+        reference: "SIMULATED",
+        confirmed: true,
+      },
+      signal(),
+    ),
+    (e) => e.code === "SERVICE_UNAVAILABLE",
+  );
+});

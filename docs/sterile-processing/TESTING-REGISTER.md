@@ -51,9 +51,17 @@ A successful developer check never implies that the owner performed it.
 
 | 2b12333 | Issued-package lookup, manifest reconciliation and confirmed complete return with frozen identifier | 284 scoped tests, builds and targeted browser verification | U-RETSCAN-01 passed November 6, 2026 | Owner exceptions/disposition, hardware, persistent partial returns and operational acceptance deferred |
 
-## Current owner check — registered processing equipment
+## Current owner check — equipment incident assessment
 
-**U-EQUIP-01 pending:** sign out and enter as **Demo reviewer** → Processing equipment → Prepare fictional equipment example → review the prefilled machine/dates/references → tick equipment confirmation → Save equipment record. Expect In service — recorded dates current and Equipment history. This is the only requested owner check. See [EQUIPMENT.md](EQUIPMENT.md).
+**U-EQINC-01 pending:** sign in as **Demo reviewer** → Processing equipment (Back to equipment if necessary) → Prepare fictional equipment incident example → Preview affected work → review one processing record and one directly linked package → tick assessment confirmation → Record incident assessment. Expect Incident recorded — review required and Linked recalls: 0. This is the only requested owner check; linked recall is developer-verified. See [EQUIPMENT-INCIDENTS.md](EQUIPMENT-INCIDENTS.md).
+
+Developer November 8, 2026: 360 scoped tests verified (195 domain, 127 HTTP/SQLite, 38 web), builds and Chromium read-only preview/assessment confirmation/no automatic hold/separate recall confirmation/source association/navigation/reload checks passed. Registered and legacy periods, exact washer cleaning-attempt proof, stale work hashes, scope/limits, source and recall permissions, CSRF, whole-action audit rollback and SQLite reopen are developer-verified.
+
+M-EQINC-01 broader owner exposure/recall/history/language/mobile and M-EQINC-02 clinical/completeness/production/operational work deferred. U-EQUIP-01, U-PACKSAFE-01, U-TRAYCHECK-01 and U-PROC-01 passed by owner screenshots. Original U-LOANER-01 and U-TRACE-01 remain unconfirmed. RSP-ISS-001 remains parked.
+
+## Previous owner check — registered processing equipment
+
+**U-EQUIP-01 passed November 8, 2026:** owner screenshot confirms Version 1, In service — recorded dates current, service/qualification references and Equipment registered history. Original check: sign out and enter as **Demo reviewer** → Processing equipment → Prepare fictional equipment example → review the prefilled machine/dates/references → tick equipment confirmation → Save equipment record. Expect In service — recorded dates current and Equipment history. This is the only requested owner check. See [EQUIPMENT.md](EQUIPMENT.md).
 
 Developer November 8, 2026: 352 scoped tests passed (191 domain, 124 HTTP/SQLite, 37 web), scoped builds and Chromium reviewer registration/hold/restore, operator washer/load selectors, frozen machine revisions, late-start block and reload checks passed. Exact service/qualification deadline, wrong-kind, code-only legacy, source-read authorization, optimistic conflicts, rollback and SQLite reopen are developer-verified.
 

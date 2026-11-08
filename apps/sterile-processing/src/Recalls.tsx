@@ -1,3 +1,4 @@
+import { incidentLabels } from "./incident-text";
 import { RecallClearancePanel } from "./RecallClearance";
 import { clearanceLabels } from "./clearance-text";
 import { useEffect, useRef, useState } from "react";
@@ -760,6 +761,18 @@ export function RecallWorkspace({
               {t.next}
             </button>
           </div>
+        </section>
+      )}
+      {!loading && shown?.equipmentIncident && (
+        <section className="panel">
+          <h2>{incidentLabels(language).title}</h2>
+          <p>
+            {shown.equipmentIncident.code} ·{" "}
+            {shown.equipmentIncident.equipmentCode}
+          </p>
+          <p>
+            {shown.equipmentIncident.from} — {shown.equipmentIncident.to}
+          </p>
         </section>
       )}
       {!loading && shown && (

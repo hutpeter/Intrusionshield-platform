@@ -295,3 +295,5 @@ export * from "./package-safety.js";
 
 export * from "./equipment.js";
 export * from "./equipment-status.js";
+
+export * from "./equipment-incidents.js";

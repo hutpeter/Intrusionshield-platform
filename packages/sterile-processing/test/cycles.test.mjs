@@ -711,3 +711,210 @@ test("registered sterilizer is rechecked at start, current start revision is fro
   const finished = await f.cy.finish(f.s, draft.id, result(2));
   assert.deepEqual(finished.startedEquipment, restored);
 });
+
+const machineInput = (code, extra = {}) => ({
+  requestId: randomUUID(),
+  code,
+  name: "Demo incident machine",
+  kind: "sterilizer",
+  methods: ["steam"],
+  manufacturer: "DEMO",
+  model: "DEMO",
+  serialNumber: "FICTITIOUS",
+  location: "DEMO",
+  state: "in_service",
+  lastServicedAt: new Date(Date.now() - 86400000).toISOString(),
+  serviceDueAt: new Date(Date.now() + 30 * 86400000).toISOString(),
+  serviceReference: "SIMULATED",
+  qualificationDueAt: new Date(Date.now() + 365 * 86400000).toISOString(),
+  qualificationReference: "SIMULATED",
+  reason: "SIMULATED",
+  confirmed: true,
+  ...extra,
+});
+const incidentInput = (impact, extra = {}) => ({
+  requestId: randomUUID(),
+  equipmentId: impact.equipment.id,
+  code: "INCIDENT-" + randomUUID(),
+  from: impact.from,
+  to: impact.to,
+  impactHash: impact.impactHash,
+  reason: "SIMULATED incident",
+  reference: "SIMULATED-EVIDENCE",
+  confirmed: true,
+  ...extra,
+});
+test("equipment incident captures registered work overlap, detects stale evidence and preserves the original assessment", async (t) => {
+  const now = Date.now();
+  t.mock.timers.enable({ apis: ["Date"], now });
+  const f = await fixture(),
+    { EquipmentRegistry, EquipmentIncidentRegistry } =
+      await import("../dist/index.js"),
+    er = new EquipmentRegistry(f.repo),
+    inc = new EquipmentIncidentRegistry(f.repo),
+    machine = await er.register(f.s, machineInput("INCIDENT-STER"));
+  const l = await f.cy.create(
+    f.s,
+    loadBody(f.packageRecord, {
+      sterilizer: machine.code,
+      equipmentId: machine.id,
+    }),
+  );
+  await f.cy.start(f.s, l.id, cycleStart(1));
+  t.mock.timers.setTime(now + 1000);
+  const from = new Date(now).toISOString(),
+    to = new Date(now + 1000).toISOString(),
+    preview = await inc.preview(f.s, machine.id, from, to);
+  assert.equal(preview.exposures.length, 1);
+  assert.equal(preview.exposures[0].link, "registered");
+  assert.equal(preview.targets[0].id, f.packageRecord.id);
+  assert.equal(f.repo.state.equipmentIncidents.length, 0);
+  assert.equal(f.repo.state.recallBlocks.length, 0);
+  await f.cy.finish(f.s, l.id, result(2));
+  await fail(inc.create(f.s, incidentInput(preview)), "CONFLICT");
+  const fresh = await inc.preview(f.s, machine.id, from, to),
+    input = incidentInput(fresh),
+    record = await inc.create(f.s, input);
+  assert.deepEqual(await inc.create(f.s, input), record);
+  assert.equal(record.recalls.length, 0);
+  await er.hold(f.s, machine.id, {
+    requestId: randomUUID(),
+    version: 1,
+    reason: "SIMULATED",
+    confirmed: true,
+  });
+  assert.deepEqual((await inc.get(f.s, record.id)).impact, fresh);
+  assert.equal((await inc.get(f.s, record.id, 1)).impact.equipment.version, 1);
+  assert.equal((await inc.list(f.s, machine.id)).items.length, 1);
+  t.mock.timers.setTime(now + 2000);
+  assert.equal(
+    (await inc.preview(f.s, machine.id, to, new Date(now + 2000).toISOString()))
+      .exposures.length,
+    1,
+  );
+  t.mock.timers.setTime(now + 3000);
+  assert.equal(
+    (
+      await inc.preview(
+        f.s,
+        machine.id,
+        new Date(now + 1001).toISOString(),
+        new Date(now + 3000).toISOString(),
+      )
+    ).exposures.length,
+    0,
+  );
+});
+test("equipment incident exact legacy code is labeled and cross-scope or oversized assessments fail without writes", async (t) => {
+  const now = Date.now();
+  t.mock.timers.enable({ apis: ["Date"], now });
+  const f = await fixture(),
+    { EquipmentRegistry, EquipmentIncidentRegistry } =
+      await import("../dist/index.js"),
+    er = new EquipmentRegistry(f.repo),
+    inc = new EquipmentIncidentRegistry(f.repo);
+  const l = await f.cy.create(
+    f.s,
+    loadBody(f.packageRecord, { sterilizer: "LEGACY-INCIDENT-STER" }),
+  );
+  await f.cy.start(f.s, l.id, cycleStart(1));
+  await f.cy.finish(f.s, l.id, result(2));
+  const machine = await er.register(f.s, machineInput("LEGACY-INCIDENT-STER"));
+  t.mock.timers.setTime(now + 1000);
+  const from = new Date(now - 1000).toISOString(),
+    to = new Date(now + 1000).toISOString(),
+    preview = await inc.preview(f.s, machine.id, from, to);
+  assert.equal(preview.exposures[0].link, "legacy_code");
+  assert.equal(preview.exposures[0].equipmentVersion, null);
+  const r = await inc.create(f.s, incidentInput(preview));
+  for (const s of [
+    { ...f.s, tenantId: randomUUID() },
+    { ...f.s, facilityId: randomUUID() },
+  ]) {
+    await fail(inc.get(s, r.id), "NOT_FOUND");
+    await fail(inc.preview(s, machine.id, from, to), "NOT_FOUND");
+    await fail(inc.recallPreview(s, r.id, f.packageRecord.id), "NOT_FOUND");
+  }
+  const oversized = new EquipmentIncidentRegistry({
+    transaction: (s, work) =>
+      f.repo.transaction(s, (tx) =>
+        work({
+          ...tx,
+          equipmentExposureCandidates: async () => ({
+            processing: Array(201).fill({}),
+            loads: [],
+          }),
+        }),
+      ),
+  });
+  await fail(oversized.preview(f.s, machine.id, from, to), "INCIDENT_LIMIT");
+  assert.equal(f.repo.state.equipmentIncidents.length, 1);
+  await fail(inc.preview(f.s, machine.id, to, from), "INVALID_REQUEST");
+});
+test("linked equipment recall is atomic with incident audit, keeps source provenance and cannot be duplicated", async (t) => {
+  const now = Date.now();
+  t.mock.timers.enable({ apis: ["Date"], now });
+  const f = await fixture(),
+    { EquipmentRegistry, EquipmentIncidentRegistry, RecallRegistry } =
+      await import("../dist/index.js"),
+    er = new EquipmentRegistry(f.repo),
+    inc = new EquipmentIncidentRegistry(f.repo),
+    machine = await er.register(f.s, machineInput("LINKED-STER"));
+  const l = await f.cy.create(
+    f.s,
+    loadBody(f.packageRecord, {
+      sterilizer: machine.code,
+      equipmentId: machine.id,
+    }),
+  );
+  await f.cy.start(f.s, l.id, cycleStart(1));
+  await f.cy.finish(f.s, l.id, result(2));
+  t.mock.timers.setTime(now + 1000);
+  const impact = await inc.preview(
+      f.s,
+      machine.id,
+      new Date(now - 1).toISOString(),
+      new Date(now + 1000).toISOString(),
+    ),
+    record = await inc.create(f.s, incidentInput(impact)),
+    plan = await inc.recallPreview(f.s, record.id, f.packageRecord.id),
+    input = {
+      requestId: randomUUID(),
+      version: 1,
+      packageId: f.packageRecord.id,
+      impactHash: plan.impactHash,
+      code: "LINKED-RECALL",
+      reason: "SIMULATED decision",
+      reference: "SIMULATED",
+      confirmed: true,
+    };
+  const failing = new EquipmentIncidentRegistry({
+    transaction: (s, work) =>
+      f.repo.transaction(s, (tx) =>
+        work({
+          ...tx,
+          appendAudit: async (e) => {
+            if (e.action === "equipment-incident-recall-created")
+              throw Error("late incident audit");
+            return tx.appendAudit(e);
+          },
+        }),
+      ),
+  });
+  await assert.rejects(failing.createRecall(f.s, record.id, input));
+  assert.equal(f.repo.state.recalls.length, 0);
+  assert.equal(f.repo.state.recallBlocks.length, 0);
+  assert.equal((await inc.get(f.s, record.id)).version, 1);
+  const saved = await inc.createRecall(f.s, record.id, input);
+  assert.equal(saved.version, 2);
+  assert.deepEqual(await inc.createRecall(f.s, record.id, input), saved);
+  const recall = await new RecallRegistry(f.repo).get(f.s, saved.recalls[0].id);
+  assert.equal(recall.equipmentIncident.id, record.id);
+  assert.equal(recall.equipmentIncident.equipmentId, machine.id);
+  assert.equal(
+    (await f.pk.get(f.s, f.packageRecord.id)).recall.caseId,
+    recall.id,
+  );
+  assert.equal((await inc.get(f.s, record.id, 1)).recalls.length, 0);
+  await fail(inc.recallPreview(f.s, record.id, f.packageRecord.id), "CONFLICT");
+});

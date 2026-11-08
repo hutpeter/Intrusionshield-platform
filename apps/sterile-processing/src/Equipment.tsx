@@ -1,3 +1,5 @@
+import { EquipmentIncidents } from "./EquipmentIncidents";
+import { incidentLabels } from "./incident-text";
 import { useEffect, useRef, useState } from "react";
 import type {
   ProcessingEquipment,
@@ -33,6 +35,7 @@ export function EquipmentWorkspace({
   onExpired,
   onDirty,
   onBusy,
+  onRecall,
 }: {
   session: Session;
   language: Language;
@@ -40,6 +43,7 @@ export function EquipmentWorkspace({
   onExpired: () => void;
   onDirty: (v: boolean) => void;
   onBusy: (v: boolean) => void;
+  onRecall: (id: string) => void;
 }) {
   const t = equipmentLabels(language),
     c = labels(language),
@@ -61,19 +65,31 @@ export function EquipmentWorkspace({
     } | null>(null),
     [fields, setFields] = useState(empty),
     pending = useRef<AbortController | null>(null);
-  const busy = blocked || saving,
+  const [incidentDirty, setIncidentDirty] = useState(false),
+    [incidentBusy, setIncidentBusy] = useState(false),
+    [exampleWindow, setExampleWindow] = useState<{
+      equipmentId: string;
+      from: string;
+      to: string;
+    } | null>(null);
+  const incidentExampleRequest = useRef(crypto.randomUUID());
+  const busy = blocked || saving || incidentDirty || incidentBusy,
     canManage = !!session.canReview,
     canHold = session.canWrite || canManage;
+  useEffect(() => {
+    if (detail && exampleWindow?.equipmentId === detail.id)
+      setExampleWindow(null);
+  }, [detail, exampleWindow]);
   const fail = (e: unknown) =>
     e instanceof ApiError && e.status === 401 ? onExpired() : setError(e);
   useEffect(() => {
-    onDirty(!!form);
+    onDirty(!!form || incidentDirty);
     return () => onDirty(false);
-  }, [form, onDirty]);
+  }, [form, incidentDirty, onDirty]);
   useEffect(() => {
-    onBusy(saving);
+    onBusy(saving || incidentBusy);
     return () => onBusy(false);
-  }, [saving, onBusy]);
+  }, [saving, incidentBusy, onBusy]);
   useEffect(() => () => pending.current?.abort(), []);
   useEffect(() => {
     const a = new AbortController();
@@ -322,9 +338,48 @@ export function EquipmentWorkspace({
                 {t.register}
               </button>
               {session.mode === "local-dummy-preview" && (
-                <button disabled={busy || loading || !!form} onClick={example}>
-                  {t.example}
-                </button>
+                <>
+                  <button
+                    disabled={busy || loading || !!form}
+                    onClick={example}
+                  >
+                    {t.example}
+                  </button>
+                  <button
+                    disabled={busy || loading || !!form}
+                    onClick={async () => {
+                      if (pending.current) return;
+                      const a = new AbortController();
+                      pending.current = a;
+                      setSaving(true);
+                      setError(null);
+                      try {
+                        const sample = await api.prepareEquipmentIncident(
+                          session,
+                          incidentExampleRequest.current,
+                          a.signal,
+                        );
+                        if (!a.signal.aborted) {
+                          incidentExampleRequest.current = crypto.randomUUID();
+                          setExampleWindow({
+                            equipmentId: sample.equipment.id,
+                            from: sample.from,
+                            to: sample.to,
+                          });
+                          setSelected(sample.equipment.id);
+                          setNonce((n) => n + 1);
+                        }
+                      } catch (e) {
+                        if (!a.signal.aborted) fail(e);
+                      } finally {
+                        pending.current = null;
+                        if (!a.signal.aborted) setSaving(false);
+                      }
+                    }}
+                  >
+                    {incidentLabels(language).example}
+                  </button>
+                </>
               )}
             </>
           )}
@@ -585,6 +640,22 @@ export function EquipmentWorkspace({
         <button disabled={busy} onClick={() => setPast(null)}>
           {c.backCurrent}
         </button>
+      )}
+      {!loading && detail && !past && (
+        <EquipmentIncidents
+          key={detail.id}
+          equipment={detail}
+          session={session}
+          language={language}
+          blocked={blocked || saving || !!form}
+          onExpired={onExpired}
+          onDirty={setIncidentDirty}
+          onBusy={setIncidentBusy}
+          onRecall={onRecall}
+          exampleWindow={
+            exampleWindow?.equipmentId === detail.id ? exampleWindow : undefined
+          }
+        />
       )}
       {!loading && history && (
         <section className="panel history">

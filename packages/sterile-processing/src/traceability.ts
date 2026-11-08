@@ -693,6 +693,14 @@ export class TraceabilityRegistry {
         }
         if (row.kind === "recall") {
           const recall = r as RecallRecord;
+          if (recall.equipmentIncident)
+            fact(
+              "equipment_incident",
+              recall.createdAt,
+              recall.createdBy,
+              recall.equipmentIncident,
+              ["id", "code", "equipmentId", "equipmentCode", "from", "to"],
+            );
           scalar.push({ key: "packageCount", value: recall.items.length });
           if (recall.clearance)
             fact(

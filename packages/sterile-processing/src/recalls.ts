@@ -28,7 +28,11 @@ const versionOf = (v: number) => {
   return v;
 };
 export class RecallRegistry extends SterileRegistryBase {
-  async create(scope: SterileScope, input: RecallInput) {
+  async create(
+    scope: SterileScope,
+    input: RecallInput,
+    equipmentIncidentId?: string,
+  ) {
     const s = scopeOf(scope),
       code = codeOf(input.code),
       sourceId = sterileUuid(input.sourceId),
@@ -44,7 +48,12 @@ export class RecallRegistry extends SterileRegistryBase {
       s,
       input.requestId,
       "recall-created",
-      input,
+      {
+        ...input,
+        ...(equipmentIncidentId
+          ? { equipmentIncidentId: sterileUuid(equipmentIncidentId) }
+          : {}),
+      },
       async (tx, at) => {
         if (await tx.findRecallByCode(code)) throw new SterileError("CONFLICT");
         const impact = await recallImpact(tx, s, {
@@ -62,7 +71,29 @@ export class RecallRegistry extends SterileRegistryBase {
           throw new SterileError("CONFLICT");
         const items = impact.items,
           sourceCode = impact.sourceCode;
+        const incident = equipmentIncidentId
+          ? await tx.findEquipmentIncident(sterileUuid(equipmentIncidentId))
+          : null;
+        if (
+          equipmentIncidentId &&
+          (!incident ||
+            input.sourceKind !== "package" ||
+            !incident.impact.targets.some((p) => p.id === sourceId))
+        )
+          throw new SterileError("INVALID_REQUEST");
         const record: RecallRecord = {
+          ...(incident
+            ? {
+                equipmentIncident: {
+                  id: incident.id,
+                  code: incident.code,
+                  equipmentId: incident.equipmentId,
+                  equipmentCode: incident.impact.equipment.code,
+                  from: incident.impact.from,
+                  to: incident.impact.to,
+                },
+              }
+            : {}),
           id: randomUUID(),
           tenantId: s.tenantId,
           facilityId: s.facilityId,

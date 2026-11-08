@@ -31,6 +31,14 @@ export interface RecallItem {
   } | null;
 }
 export interface RecallRecord {
+  equipmentIncident?: {
+    id: string;
+    code: string;
+    equipmentId: string;
+    equipmentCode: string;
+    from: string;
+    to: string;
+  };
   clearance?: RecallClearance;
   admissions?: RecallReadmission[];
   readmission?: {

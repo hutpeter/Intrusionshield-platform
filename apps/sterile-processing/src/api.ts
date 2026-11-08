@@ -245,6 +245,36 @@ export interface DistributionScanResult {
   package: PackageSummary;
   distribution: DistributionRecord | null;
 }
+async function checkedIncidentImpact(
+  s: Session,
+  promise: Promise<
+    import("@intrusionshield/sterile-processing").EquipmentIncidentImpact
+  >,
+) {
+  const r = await scoped(s, promise);
+  if (
+    !r.equipment ||
+    r.equipment.tenantId !== s.tenantId ||
+    r.equipment.facilityId !== s.facilityId ||
+    !Array.isArray(r.exposures) ||
+    !Array.isArray(r.targets) ||
+    typeof r.impactHash !== "string"
+  )
+    throw new ApiError(503, "SERVICE_UNAVAILABLE");
+  return r;
+}
+async function checkedIncident(
+  s: Session,
+  promise: Promise<
+    import("@intrusionshield/sterile-processing").EquipmentIncident
+  >,
+) {
+  const r = await scoped(s, promise);
+  await checkedIncidentImpact(s, Promise.resolve(r.impact));
+  if (r.equipmentId !== r.impact.equipment.id || !Array.isArray(r.recalls))
+    throw new ApiError(503, "SERVICE_UNAVAILABLE");
+  return r;
+}
 export const api = {
   prepareDashboardPaging: (
     s: Session,
@@ -271,6 +301,129 @@ export const api = {
         episodeCode: string;
       }>("/preview/procedure-example", signal, { requestId }, s.csrf),
     ),
+  equipmentIncidentImpact: (
+    s: Session,
+    id: string,
+    from: string,
+    to: string,
+    signal: AbortSignal,
+  ) =>
+    checkedIncidentImpact(
+      s,
+      call<
+        import("@intrusionshield/sterile-processing").EquipmentIncidentImpact
+      >(
+        base(s) +
+          "/equipment/" +
+          encodeURIComponent(id) +
+          "/incident-impact?from=" +
+          encodeURIComponent(from) +
+          "&to=" +
+          encodeURIComponent(to),
+        signal,
+      ),
+    ),
+  async equipmentIncidents(
+    s: Session,
+    id: string,
+    n: number,
+    signal: AbortSignal,
+  ) {
+    const page = await scopedPage<
+      import("@intrusionshield/sterile-processing").EquipmentIncident
+    >(
+      s,
+      base(s) + "/equipment/" + encodeURIComponent(id) + "/incidents",
+      n,
+      signal,
+    );
+    for (const r of page.items) await checkedIncident(s, Promise.resolve(r));
+    return page;
+  },
+  equipmentIncident: (
+    s: Session,
+    id: string,
+    signal: AbortSignal,
+    version?: number,
+  ) =>
+    checkedIncident(
+      s,
+      call<import("@intrusionshield/sterile-processing").EquipmentIncident>(
+        base(s) +
+          "/equipment-incidents/" +
+          encodeURIComponent(id) +
+          (version === undefined ? "" : "/versions/" + version),
+        signal,
+      ),
+    ),
+  createEquipmentIncident: (
+    s: Session,
+    body: import("@intrusionshield/sterile-processing").EquipmentIncidentInput,
+    signal: AbortSignal,
+  ) =>
+    checkedIncident(
+      s,
+      call<import("@intrusionshield/sterile-processing").EquipmentIncident>(
+        base(s) + "/equipment-incidents",
+        signal,
+        body,
+        s.csrf,
+      ),
+    ),
+  incidentRecallImpact: (
+    s: Session,
+    id: string,
+    packageId: string,
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<RecallImpact>(
+        base(s) +
+          "/equipment-incidents/" +
+          encodeURIComponent(id) +
+          "/recall-impact?packageId=" +
+          encodeURIComponent(packageId),
+        signal,
+      ),
+    ),
+  createIncidentRecall: (
+    s: Session,
+    id: string,
+    body: {
+      requestId: string;
+      version: number;
+      packageId: string;
+      impactHash: string;
+      code: string;
+      reason: string;
+      reference: string;
+      confirmed: boolean;
+    },
+    signal: AbortSignal,
+  ) =>
+    checkedIncident(
+      s,
+      call<import("@intrusionshield/sterile-processing").EquipmentIncident>(
+        base(s) + "/equipment-incidents/" + encodeURIComponent(id) + "/recalls",
+        signal,
+        body,
+        s.csrf,
+      ),
+    ),
+  async prepareEquipmentIncident(
+    s: Session,
+    requestId: string,
+    signal: AbortSignal,
+  ) {
+    const r = await call<{
+      equipment: import("@intrusionshield/sterile-processing").ProcessingEquipment;
+      from: string;
+      to: string;
+    }>("/preview/equipment-incident-example", signal, { requestId }, s.csrf);
+    await scoped(s, Promise.resolve(r.equipment));
+    return r;
+  },
   equipment: (s: Session, n: number, signal: AbortSignal) =>
     scopedPage<
       import("@intrusionshield/sterile-processing").ProcessingEquipment
