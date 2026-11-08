@@ -1,5 +1,6 @@
 import type { ReviewStatus } from "./review-types.js";
 export interface LoadPackage {
+  shelfLife?: import("./package-safety.js").ShelfLifePolicy;
   assemblyCode?: string;
   trayName?: string;
   id: string;

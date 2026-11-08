@@ -23,6 +23,7 @@ export class MemoryRepository {
     loadAssignments: [],
     machineCycles: [],
     packages: [],
+    packageIntegrity: [],
     packageVersions: [],
     packageAssignments: [],
     processing: [],
@@ -211,6 +212,9 @@ export class MemoryRepository {
             s.packages,
             (p) =>
               p.state === "packaged" &&
+              !s.packageIntegrity.some((h) => own(h) && h.packageId === p.id) &&
+              (p.shelfLife?.mode !== "time_based" ||
+                Date.parse(p.shelfLife.expiresAt) > Date.now()) &&
               s.packageAssignments.some(
                 (a) => own(a) && a.packageId === p.id,
               ) &&
@@ -241,6 +245,21 @@ export class MemoryRepository {
             s.recalls,
             (p) => p.state === "open" || pending(p),
             (p) => p.items.length,
+          ],
+          packageAlerts: [
+            s.packages,
+            (p) =>
+              p.state === "packaged" &&
+              !s.returns.some((r) => own(r) && r.packageId === p.id) &&
+              (s.packageIntegrity.some((h) => own(h) && h.packageId === p.id) ||
+                (p.shelfLife?.mode === "time_based" &&
+                  Date.parse(p.shelfLife.expiresAt) <=
+                    Date.now() + p.shelfLife.warningDays * 86400000 &&
+                  !s.distribution.some(
+                    (d) =>
+                      own(d) && d.packageId === p.id && d.state === "issued",
+                  ))),
+            (p) => p.assemblySnapshot.instruments.length,
           ],
           maintenance: [
             s.instruments,
@@ -797,6 +816,18 @@ export class MemoryRepository {
           loadId: l.id,
         });
       },
+      findPackageIntegrity: async (id) =>
+        read(s.packageIntegrity.find((x) => own(x) && x.packageId === id)),
+      insertPackageIntegrity: async (item) => {
+        if (
+          !own(item) ||
+          s.packageIntegrity.some(
+            (x) => own(x) && x.packageId === item.packageId,
+          )
+        )
+          throw Error("constraint");
+        s.packageIntegrity.push(structuredClone(item));
+      },
       findPackage: async (id) =>
         read(s.packages.find((x) => own(x) && x.id === id)),
       findPackageByCode: async (code) =>
@@ -816,6 +847,7 @@ export class MemoryRepository {
             state: x.state,
             version: x.version,
             createdAt: x.createdAt,
+            ...(x.shelfLife ? { shelfLife: x.shelfLife } : {}),
             trayName: x.assemblySnapshot.definitionSnapshot.name,
             instrumentCount: x.assemblySnapshot.instruments.length,
           })),

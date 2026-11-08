@@ -99,6 +99,7 @@ CREATE TABLE IF NOT EXISTS sp_processing(tenant_id TEXT NOT NULL,facility_id TEX
 CREATE TABLE IF NOT EXISTS sp_processing_versions(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id,version),FOREIGN KEY(tenant_id,facility_id,id) REFERENCES sp_processing(tenant_id,facility_id,id));
 CREATE TABLE IF NOT EXISTS sp_processing_holds(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,instrument_id TEXT NOT NULL,episode_id TEXT NOT NULL,PRIMARY KEY(tenant_id,facility_id,instrument_id),FOREIGN KEY(tenant_id,facility_id,instrument_id) REFERENCES sp_instruments(tenant_id,facility_id,id),FOREIGN KEY(tenant_id,facility_id,episode_id) REFERENCES sp_processing(tenant_id,facility_id,id));
 CREATE TABLE IF NOT EXISTS sp_packages(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,code TEXT NOT NULL,assembly_id TEXT NOT NULL,version INTEGER NOT NULL CHECK(version>0),payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,code),FOREIGN KEY(tenant_id,facility_id,assembly_id) REFERENCES sp_assemblies(tenant_id,facility_id,id));
+CREATE TABLE IF NOT EXISTS sp_package_integrity(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,package_id TEXT NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,package_id),FOREIGN KEY(tenant_id,facility_id,package_id) REFERENCES sp_packages(tenant_id,facility_id,id));
 CREATE TABLE IF NOT EXISTS sp_package_versions(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id,version),FOREIGN KEY(tenant_id,facility_id,id) REFERENCES sp_packages(tenant_id,facility_id,id));
 CREATE TABLE IF NOT EXISTS sp_package_assignments(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,assembly_id TEXT NOT NULL,package_id TEXT NOT NULL,PRIMARY KEY(tenant_id,facility_id,assembly_id),FOREIGN KEY(tenant_id,facility_id,assembly_id) REFERENCES sp_assemblies(tenant_id,facility_id,id),FOREIGN KEY(tenant_id,facility_id,package_id) REFERENCES sp_packages(tenant_id,facility_id,id));
 CREATE TABLE IF NOT EXISTS sp_loads(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,code TEXT NOT NULL,version INTEGER NOT NULL CHECK(version>0),state TEXT NOT NULL CHECK(state IN ('draft','running','awaiting_review','failed','aborted','cancelled')),payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,code));
@@ -913,6 +914,19 @@ CREATE INDEX IF NOT EXISTS sp_assignment_assembly ON sp_assignments(tenant_id,fa
             .prepare("INSERT INTO sp_machine_cycles VALUES(?,?,?,?,?)")
             .run(...args, item.sterilizer, item.cycleReference, item.id);
         },
+        findPackageIntegrity: async (id) =>
+          read<
+            import("@intrusionshield/sterile-processing").PackageIntegrityHold
+          >(
+            "SELECT payload FROM sp_package_integrity WHERE tenant_id=? AND facility_id=? AND package_id=?",
+            id,
+          ),
+        insertPackageIntegrity: async (item) => {
+          own(item);
+          this.db
+            .prepare("INSERT INTO sp_package_integrity VALUES(?,?,?,?)")
+            .run(...args, item.packageId, JSON.stringify(item));
+        },
         findPackage: async (id) =>
           read<SterilePackage>(
             "SELECT payload FROM sp_packages WHERE tenant_id=? AND facility_id=? AND id=?",
@@ -925,7 +939,7 @@ CREATE INDEX IF NOT EXISTS sp_assignment_assembly ON sp_assignments(tenant_id,fa
           ),
         listPackages: async (page) =>
           list<PackageSummary>(
-            "SELECT json_object('id',id,'tenantId',tenant_id,'facilityId',facility_id,'code',code,'assemblyId',assembly_id,'state',json_extract(payload,'$.state'),'version',version,'createdAt',json_extract(payload,'$.createdAt'),'trayName',json_extract(payload,'$.assemblySnapshot.definitionSnapshot.name'),'instrumentCount',json_array_length(payload,'$.assemblySnapshot.instruments')) AS payload FROM sp_packages WHERE tenant_id=? AND facility_id=? ORDER BY rowid DESC LIMIT 51 OFFSET ?",
+            "SELECT json_object('id',id,'tenantId',tenant_id,'facilityId',facility_id,'code',code,'assemblyId',assembly_id,'state',json_extract(payload,'$.state'),'version',version,'createdAt',json_extract(payload,'$.createdAt'),'shelfLife',json_extract(payload,'$.shelfLife'),'trayName',json_extract(payload,'$.assemblySnapshot.definitionSnapshot.name'),'instrumentCount',json_array_length(payload,'$.assemblySnapshot.instruments')) AS payload FROM sp_packages WHERE tenant_id=? AND facility_id=? ORDER BY rowid DESC LIMIT 51 OFFSET ?",
             page,
           ),
         insertPackage: async (item) => {

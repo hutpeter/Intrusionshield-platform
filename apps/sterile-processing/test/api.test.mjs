@@ -784,6 +784,7 @@ test("dashboard rejects a mismatched workspace or hidden queue count instead of 
       "returns",
       "recall",
       "maintenance",
+      "packageAlerts",
     ],
     workspaces = [
       "processing",
@@ -794,6 +795,7 @@ test("dashboard rejects a mismatched workspace or hidden queue count instead of 
       "returns",
       "recalls",
       "instruments",
+      "packaging",
     ];
   const queues = ids.map((id, n) => ({
     id,
@@ -966,5 +968,30 @@ test("procedure publishing uses protected route and source lists refuse foreign 
   await assert.rejects(
     () => api.availableProcedures(session, "cleaning", 1, signal()),
     (e) => e instanceof ApiError,
+  );
+});
+
+test("integrity hold sends only the explicit confirmed report with CSRF and rejects foreign scope", async (t) => {
+  const input = {
+    requestId: "request",
+    packageVersion: 1,
+    reason: "SIMULATED torn wrap",
+    evidence: "SIMULATED",
+    location: "DEMO-HOLD",
+    confirmed: true,
+  };
+  fake(t, async (path, options) => {
+    assert.match(path, /\/packages\/package\/integrity-hold$/);
+    assert.equal(options.headers["x-sterile-csrf"], session.csrf);
+    assert.deepEqual(JSON.parse(options.body), input);
+    return response({
+      id: "hold",
+      tenantId: session.tenantId,
+      facilityId: "foreign",
+    });
+  });
+  await assert.rejects(
+    api.holdPackageIntegrity(session, "package", input, signal()),
+    (e) => e.code === "SERVICE_UNAVAILABLE",
   );
 });

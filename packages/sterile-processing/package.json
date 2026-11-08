@@ -17,6 +17,10 @@
     "./assembly-assessment": {
       "types": "./dist/assembly-assessment.d.ts",
       "import": "./dist/assembly-assessment.js"
+    },
+    "./package-safety": {
+      "types": "./dist/package-safety.d.ts",
+      "import": "./dist/package-safety.js"
     }
   },
   "scripts": {

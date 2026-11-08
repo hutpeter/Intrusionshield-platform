@@ -290,6 +290,7 @@ export function createSterileApp(
     returns: "returns:read",
     recall: "recall:read",
     maintenance: "instruments:read",
+    packageAlerts: "packaging:read",
   } as const;
   app.get(prefix + "/dashboard", async (req, res) => {
     noQuery(req);
@@ -1070,25 +1071,49 @@ export function createSterileApp(
   );
   app.post(prefix + "/packages", async (req, res) => {
     noQuery(req);
-    const v = body(req.body, [
-      "requestId",
-      "code",
-      "assemblyId",
-      "assemblyVersion",
-      "material",
-      "materialLot",
-      "procedure",
-      "procedureVersion",
-      "sealChecked",
-      "contentsChecked",
-      "confirmed",
-    ]);
+    const v = body(
+      req.body,
+      [
+        "requestId",
+        "code",
+        "assemblyId",
+        "assemblyVersion",
+        "material",
+        "materialLot",
+        "procedure",
+        "procedureVersion",
+        "sealChecked",
+        "contentsChecked",
+        "confirmed",
+      ],
+      ["shelfLife"],
+    );
     res
       .status(201)
       .json(
         await packaging().pack(
           res.locals.scope,
           v as unknown as Parameters<PackagingRegistry["pack"]>[1],
+        ),
+      );
+  });
+  app.post(prefix + "/packages/:id/integrity-hold", async (req, res) => {
+    noQuery(req);
+    const v = body(req.body, [
+      "requestId",
+      "packageVersion",
+      "reason",
+      "evidence",
+      "location",
+      "confirmed",
+    ]);
+    res
+      .status(201)
+      .json(
+        await packaging().holdIntegrity(
+          res.locals.scope,
+          sterileUuid(req.params.id),
+          v as unknown as Parameters<PackagingRegistry["holdIntegrity"]>[2],
         ),
       );
   });
@@ -1781,6 +1806,8 @@ export function createSterileApp(
           ? {
               SCAN_DUPLICATE: 409,
               SCAN_TYPE: 409,
+              PACKAGE_EXPIRED: 409,
+              PACKAGE_INTEGRITY_BLOCKED: 409,
               PROCEDURE_BLOCKED: 409,
               LOANER_UNAVAILABLE: 409,
               SERVICE_DUE: 409,

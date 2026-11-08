@@ -1,3 +1,4 @@
+import { packageSafetyLabels } from "./package-safety-text";
 import { returnLabels } from "./return-text";
 import { recallLabels } from "./recall-text";
 import { useEffect, useRef, useState } from "react";
@@ -326,6 +327,7 @@ export function ReviewWorkspace({
       const current = await api.review(session, record.id, ac.signal);
       if (ac.signal.aborted) return;
       if (
+        current.packageSafetyBlocked ||
         current.recallBlocked ||
         current.returnBlocked ||
         current.state !== "released" ||
@@ -406,6 +408,7 @@ export function ReviewWorkspace({
               </button>
             )}
           {record?.state === "released" &&
+            !record.packageSafetyBlocked &&
             !record.recallBlocked &&
             !record.returnBlocked &&
             !past && (
@@ -438,6 +441,9 @@ export function ReviewWorkspace({
         ))}
       </div>
       <p className="readonly-note">{p.boundary}</p>
+      {record?.packageSafetyBlocked && (
+        <p className="alert">{packageSafetyLabels(language).blocked}</p>
+      )}
       {record?.returnBlocked && (
         <p className="alert">{returnLabels(language).blocked}</p>
       )}
@@ -846,6 +852,7 @@ export function ReviewWorkspace({
           )}
           {label &&
             record?.state === "released" &&
+            !record.packageSafetyBlocked &&
             !record.recallBlocked &&
             !record.returnBlocked &&
             !past &&
@@ -883,6 +890,21 @@ export function ReviewWorkspace({
                   <p>Ruby · {session.facilityName ?? t.facility}</p>
                   <h2>{pkg.code}</h2>
                   <p>{pkg.trayName ?? pkg.assemblyCode}</p>
+                  <p>
+                    {packageSafetyLabels(language).mode}:{" "}
+                    {pkg.shelfLife
+                      ? packageSafetyLabels(language)[pkg.shelfLife.mode]
+                      : packageSafetyLabels(language).not_recorded}
+                  </p>
+                  {pkg.shelfLife && (
+                    <p>
+                      {packageSafetyLabels(language).reference}:{" "}
+                      {pkg.shelfLife.reference} · {pkg.shelfLife.revision}
+                      {pkg.shelfLife.expiresAt
+                        ? ` · ${packageSafetyLabels(language).expiry}: ${pkg.shelfLife.expiresAt}`
+                        : ""}
+                    </p>
+                  )}
                   <p>
                     {p.load}: {record.loadSnapshot.code} · {record.loadVersion}
                   </p>

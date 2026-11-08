@@ -299,4 +299,8 @@ broader checks deferred. See [PROCEDURES.md](PROCEDURES.md). RSP-ISS-001 remains
 
 ## Tray composition follow-up — November 8, 2026
 
-Existing versioned definitions, captured assembly requirements and server completion gates are retained. Live unsaved-content comparison now displays missing/excess/unexpected types before saving; incomplete drafts can be saved but cannot be completed. U-TRAYCHECK-01 pending; broader owner revision/exception, language/mobile, hardware and operational acceptance remain deferred as M-TRAYCHECK-01 in TESTING-REGISTER.md. RSP-ISS-001 remains parked.
+Existing versioned definitions, captured assembly requirements and server completion gates are retained. Live unsaved-content comparison now displays missing/excess/unexpected types before saving; incomplete drafts can be saved but cannot be completed. U-TRAYCHECK-01 passed November 8, 2026 (owner screenshot); broader owner revision/exception, language/mobile, hardware and operational acceptance remain deferred as M-TRAYCHECK-01 in TESTING-REGISTER.md. RSP-ISS-001 remains parked.
+
+## RSP-ISS-013 — Package integrity and shelf-life production policy
+
+Initial preview delivers frozen per-package facility-policy references, explicit UTC expiry/event-related mode, recorded immutable integrity holds, current load/release/distribution gates, dashboard alerts and retained labels/history. This is not centrally approved policy configuration. Legacy API/records remain explicitly unspecified; mandatory enforcement/remediation, approved durations/clinical suitability, policy publication, competency, exceptions, incident correction/multiple incidents/attachments, physical quarantine/notifications/label destruction, post-cycle failure handling, production migrations/clock/scale and operational validation remain deferred. U-PACKSAFE-01 pending, M-PACKSAFE-01–02 deferred. See [PACKAGE-SAFETY.md](PACKAGE-SAFETY.md). RSP-ISS-001 remains parked.

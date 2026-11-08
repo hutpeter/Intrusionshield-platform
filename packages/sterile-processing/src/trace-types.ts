@@ -81,6 +81,8 @@ export interface TraceLink {
 }
 export interface TraceAlert {
   kind:
+    | "package_expired"
+    | "package_integrity_hold"
     | "loaner_returned"
     | "service_due"
     | "maintenance_hold"

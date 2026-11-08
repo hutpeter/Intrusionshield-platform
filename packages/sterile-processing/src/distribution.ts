@@ -1,3 +1,4 @@
+import { assertPackageUsable } from "./package-eligibility.js";
 import { reviewStatus } from "./review-types.js";
 import { returnStatus } from "./return-types.js";
 import { randomUUID } from "node:crypto";
@@ -30,6 +31,7 @@ async function release(
   packageVersion: number,
   reviewId: string,
   reviewVersion: number,
+  at?: string,
 ) {
   if (await tx.findReturnByPackage(packageId))
     throw new SterileError("RETURN_BLOCKED");
@@ -37,6 +39,7 @@ async function release(
     throw new SterileError("RECALL_BLOCKED");
   const p = await tx.findPackage(packageId);
   if (!p) throw new SterileError("NOT_FOUND");
+  await assertPackageUsable(tx, p, at);
   const active = await tx.findPackageLoad(packageId);
   if (p.state !== "packaged" || p.version !== packageVersion || !active)
     throw new SterileError("DISTRIBUTION_BLOCKED");
@@ -107,6 +110,7 @@ export class DistributionRegistry extends SterileRegistryBase {
           trayName: checked.p.assemblySnapshot.definitionSnapshot.name,
           instrumentCount: checked.p.assemblySnapshot.instruments.length,
           scanIdentifier: `RSP-P-${checked.p.id.toUpperCase()}-V${checked.p.version}`,
+          ...(checked.p.shelfLife ? { shelfLife: checked.p.shelfLife } : {}),
           activeLoad: { ...active, review: reviewStatus(r) },
         },
         distribution,
@@ -137,6 +141,7 @@ export class DistributionRegistry extends SterileRegistryBase {
           packageVersion,
           reviewId,
           reviewVersion,
+          at,
         );
         const item: DistributionRecord = {
           id: randomUUID(),
@@ -231,6 +236,7 @@ export class DistributionRegistry extends SterileRegistryBase {
           old.packageVersion,
           old.reviewId,
           old.reviewVersion,
+          at,
         );
         const item: DistributionRecord = {
           ...old,
@@ -297,6 +303,7 @@ export class DistributionRegistry extends SterileRegistryBase {
           old.packageVersion,
           old.reviewId,
           old.reviewVersion,
+          at,
         );
         const item: DistributionRecord = {
           ...old,
@@ -366,10 +373,14 @@ export class DistributionRegistry extends SterileRegistryBase {
       const rows = await tx.listDistribution(p);
       const items = await Promise.all(
         rows.slice(0, 50).map(async (row) => {
+          const p = await tx.findPackage(row.packageId),
+            integrityHold = await tx.findPackageIntegrity(row.packageId);
           const recall = await tx.findRecallBlock(row.packageId);
           const returned = await tx.findReturnByPackage(row.packageId);
           return {
             ...row,
+            ...(p?.shelfLife ? { shelfLife: p.shelfLife } : {}),
+            ...(integrityHold ? { integrityHold } : {}),
             ...(returned ? { returned: returnStatus(returned) } : {}),
             ...(recall ? { recall } : {}),
           };
@@ -388,6 +399,12 @@ export class DistributionRegistry extends SterileRegistryBase {
           ? await tx.findDistribution(key)
           : await tx.findDistributionVersion(key, version);
       if (!item) throw new SterileError("NOT_FOUND");
+      const p =
+        version === undefined ? await tx.findPackage(item.packageId) : null;
+      const integrityHold =
+        version === undefined
+          ? await tx.findPackageIntegrity(item.packageId)
+          : null;
       const recall =
         version === undefined ? await tx.findRecallBlock(item.packageId) : null;
       const returned =
@@ -396,6 +413,8 @@ export class DistributionRegistry extends SterileRegistryBase {
           : null;
       return {
         ...item,
+        ...(p?.shelfLife ? { shelfLife: p.shelfLife } : {}),
+        ...(integrityHold ? { integrityHold } : {}),
         ...(returned ? { returned: returnStatus(returned) } : {}),
         ...(recall ? { recall } : {}),
       };

@@ -281,3 +281,7 @@ current records, or the sidebar for normal module lists. See [DASHBOARD.md](DASH
 **Processing procedures** is available in the sidebar. Demo operator can create drafts and
 select published revisions; Demo reviewer can publish/withdraw; Demo auditor reads only.
 Use [PROCEDURES.md](PROCEDURES.md) for the single current publication check.
+
+## Package integrity and shelf-life increment
+
+See [PACKAGE-SAFETY.md](PACKAGE-SAFETY.md) for the single U-PACKSAFE-01 owner check, recorded policy/UTC expiry semantics, persistent integrity hold, dashboard alerts and deferred production-policy work. New UI packaging requires a declared policy; old records/API compatibility do not acquire inferred dates.

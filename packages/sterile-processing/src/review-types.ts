@@ -13,6 +13,7 @@ export interface ReviewDecision {
   requestId: string;
 }
 export interface LoadReview {
+  packageSafetyBlocked?: boolean;
   recallBlocked?: boolean;
   returnBlocked?: boolean;
   id: string;

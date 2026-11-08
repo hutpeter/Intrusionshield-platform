@@ -32,7 +32,7 @@ export function readDashboardQueue(
     ],
     loading: [
       "sp_packages",
-      `${state}='packaged' AND EXISTS(SELECT 1 FROM sp_package_assignments a WHERE ${same("a")} AND a.package_id=p.id) AND NOT EXISTS(SELECT 1 FROM sp_load_assignments a WHERE ${same("a")} AND a.package_id=p.id) AND NOT EXISTS(SELECT 1 FROM sp_returns a WHERE ${same("a")} AND a.package_id=p.id) AND NOT EXISTS(SELECT 1 FROM sp_recall_blocks a WHERE ${same("a")} AND a.package_id=p.id)`,
+      `${state}='packaged' AND NOT EXISTS(SELECT 1 FROM sp_package_integrity h WHERE ${same("h")} AND h.package_id=p.id) AND (json_extract(p.payload,'$.shelfLife.mode') IS NULL OR json_extract(p.payload,'$.shelfLife.mode')!='time_based' OR julianday(json_extract(p.payload,'$.shelfLife.expiresAt'))>julianday('now')) AND EXISTS(SELECT 1 FROM sp_package_assignments a WHERE ${same("a")} AND a.package_id=p.id) AND NOT EXISTS(SELECT 1 FROM sp_load_assignments a WHERE ${same("a")} AND a.package_id=p.id) AND NOT EXISTS(SELECT 1 FROM sp_returns a WHERE ${same("a")} AND a.package_id=p.id) AND NOT EXISTS(SELECT 1 FROM sp_recall_blocks a WHERE ${same("a")} AND a.package_id=p.id)`,
       "json_array_length(p.payload,'$.assemblySnapshot.instruments')",
     ],
     release: [
@@ -45,6 +45,11 @@ export function readDashboardQueue(
       "sp_recalls",
       `(${state}='open' OR ${pending})`,
       "json_array_length(p.payload,'$.items')",
+    ],
+    packageAlerts: [
+      "sp_packages",
+      `${state}='packaged' AND NOT EXISTS(SELECT 1 FROM sp_returns r WHERE ${same("r")} AND r.package_id=p.id) AND (EXISTS(SELECT 1 FROM sp_package_integrity h WHERE ${same("h")} AND h.package_id=p.id) OR (json_extract(p.payload,'$.shelfLife.mode')='time_based' AND julianday(json_extract(p.payload,'$.shelfLife.expiresAt')) <= julianday('now')+json_extract(p.payload,'$.shelfLife.warningDays') AND NOT EXISTS(SELECT 1 FROM sp_distribution d WHERE ${same("d")} AND d.package_id=p.id AND json_extract(d.payload,'$.state')='issued')))`,
+      "json_array_length(p.payload,'$.assemblySnapshot.instruments')",
     ],
     maintenance: [
       "sp_instruments",

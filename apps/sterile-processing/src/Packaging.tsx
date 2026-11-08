@@ -1,3 +1,6 @@
+import { PackageSafety } from "./PackageSafety";
+import { packageSafetyLabels } from "./package-safety-text";
+import { shelfLifeState } from "@intrusionshield/sterile-processing/package-safety";
 import { DataMatrix } from "./DataMatrix";
 import { loadScanLabels } from "./load-scan-text";
 import { returnLabels } from "./return-text";
@@ -16,6 +19,13 @@ import { api, ApiError, type Session, type Page } from "./api";
 import { labels, type Language } from "./text";
 import { packagingLabels } from "./packaging-text";
 const empty = () => ({
+  shelfMode: "" as "" | "event_related" | "time_based",
+  policyReference: "",
+  policyRevision: "",
+  expiresAt: "",
+  warningDays: "7",
+  evidence: "",
+  location: "",
   code: "",
   assemblyId: "",
   material: "",
@@ -47,6 +57,7 @@ export function PackagingWorkspace({
   const [symbolReady, setSymbolReady] = useState(false);
   const t = labels(language),
     p = packagingLabels(language),
+    q = packageSafetyLabels(language),
     [selected, setSelected] = useState<string | null>(initialRecordId ?? null),
     [rows, setRows] = useState<Page<PackageSummary> | null>(null),
     [detail, setDetail] = useState<SterilePackage | null>(null),
@@ -57,7 +68,7 @@ export function PackagingWorkspace({
     [historyPage, setHistoryPage] = useState(1),
     [nonce, setNonce] = useState(0),
     [form, setForm] = useState<{
-      kind: "pack" | "void";
+      kind: "pack" | "void" | "integrity";
       requestId: string;
       version?: number;
     } | null>(null),
@@ -148,7 +159,7 @@ export function PackagingWorkspace({
       action();
     }
   }
-  function begin(kind: "pack" | "void") {
+  function begin(kind: "pack" | "void" | "integrity") {
     guard(() => {
       setError(null);
       setNotice(false);
@@ -187,9 +198,35 @@ export function PackagingWorkspace({
             sealChecked: fields.sealChecked,
             contentsChecked: fields.contentsChecked,
             confirmed: true,
+            shelfLife: {
+              mode: fields.shelfMode as "event_related" | "time_based",
+              reference: fields.policyReference,
+              revision: fields.policyRevision,
+              expiresAt:
+                fields.shelfMode === "time_based"
+                  ? new Date(fields.expiresAt + "Z").toISOString()
+                  : null,
+              warningDays: Number(fields.warningDays),
+            },
           },
           c.signal,
         );
+      } else if (form.kind === "integrity") {
+        if (!selected || !form.version) return;
+        await api.holdPackageIntegrity(
+          session,
+          selected,
+          {
+            requestId: form.requestId,
+            packageVersion: form.version,
+            reason: fields.reason,
+            evidence: fields.evidence,
+            location: fields.location,
+            confirmed: true,
+          },
+          c.signal,
+        );
+        x = await api.package(session, selected, c.signal);
       } else {
         if (!selected || !form.version) return;
         x = await api.voidPackage(
@@ -249,6 +286,9 @@ export function PackagingWorkspace({
         materialLot: "DEMO-LOT-1",
         procedure: "PACK-DEMO",
         procedureVersion: "1",
+        shelfMode: "event_related",
+        policyReference: "SIMULATED-FACILITY-SHELF-LIFE",
+        policyRevision: "DEMO-1",
       });
       exampleKey.current = crypto.randomUUID();
     } catch (e) {
@@ -297,6 +337,8 @@ export function PackagingWorkspace({
       const current = await api.package(session, detail.id, c.signal);
       if (c.signal.aborted) return;
       if (
+        current.integrityHold ||
+        shelfLifeState(current.shelfLife) === "expired" ||
         current.recall ||
         current.returned ||
         current.state !== "packaged" ||
@@ -405,6 +447,12 @@ export function PackagingWorkspace({
         </dl>
         {d.state === "voided" && <p>{p.voidHelp}</p>}
       </section>
+      <PackageSafety
+        policy={d.shelfLife}
+        hold={d.integrityHold}
+        language={language}
+        date={date}
+      />
       <section className="panel">
         <h2>{p.items}</h2>
         <div className="table-scroll">
@@ -498,6 +546,17 @@ export function PackagingWorkspace({
               {p.newPackage}
             </button>
           )}
+          {session.canWrite &&
+            detail?.state === "packaged" &&
+            !detail.integrityHold &&
+            !past && (
+              <button
+                disabled={busy || !!form}
+                onClick={() => begin("integrity")}
+              >
+                {q.report}
+              </button>
+            )}
           {detail && !past && detail.state === "packaged" && (
             <>
               <button
@@ -561,7 +620,13 @@ export function PackagingWorkspace({
           }}
         >
           <div className="panel-heading">
-            <h2>{form.kind === "pack" ? p.newPackage : p.void}</h2>
+            <h2>
+              {form.kind === "pack"
+                ? p.newPackage
+                : form.kind === "integrity"
+                  ? q.report
+                  : p.void}
+            </h2>
             <button
               type="button"
               disabled={busy}
@@ -617,6 +682,77 @@ export function PackagingWorkspace({
                     </label>
                   ))}
                 </div>
+                <h3>{q.title}</h3>
+                <p>{q.policyHelp}</p>
+                <div className="form-grid">
+                  <label>
+                    {q.mode}
+                    <select
+                      aria-label={q.mode}
+                      required
+                      value={fields.shelfMode}
+                      onChange={(e) =>
+                        patch({
+                          shelfMode: e.target.value as typeof fields.shelfMode,
+                          expiresAt: "",
+                        })
+                      }
+                    >
+                      <option value="">{q.choose}</option>
+                      <option value="event_related">{q.event_related}</option>
+                      <option value="time_based">{q.time_based}</option>
+                    </select>
+                  </label>
+                  <label>
+                    {q.reference}
+                    <input
+                      required
+                      maxLength={200}
+                      value={fields.policyReference}
+                      onChange={(e) =>
+                        patch({ policyReference: e.target.value })
+                      }
+                    />
+                  </label>
+                  <label>
+                    {q.revision}
+                    <input
+                      required
+                      maxLength={100}
+                      value={fields.policyRevision}
+                      onChange={(e) =>
+                        patch({ policyRevision: e.target.value })
+                      }
+                    />
+                  </label>
+                  {fields.shelfMode === "time_based" && (
+                    <>
+                      <label>
+                        {q.expiry}
+                        <input
+                          type="datetime-local"
+                          required
+                          value={fields.expiresAt}
+                          onChange={(e) => patch({ expiresAt: e.target.value })}
+                        />
+                      </label>
+                      <label>
+                        {q.warning}
+                        <input
+                          type="number"
+                          required
+                          min={1}
+                          max={365}
+                          step={1}
+                          value={fields.warningDays}
+                          onChange={(e) =>
+                            patch({ warningDays: e.target.value })
+                          }
+                        />
+                      </label>
+                    </>
+                  )}
+                </div>
                 <label className="check">
                   <input
                     type="checkbox"
@@ -637,6 +773,37 @@ export function PackagingWorkspace({
                 </label>
                 {!options.length && <p>{p.noAssemblies}</p>}
               </>
+            ) : form.kind === "integrity" ? (
+              <>
+                <p>{q.holdHelp}</p>
+                <label>
+                  {q.reason}
+                  <input
+                    required
+                    maxLength={500}
+                    value={fields.reason}
+                    onChange={(e) => patch({ reason: e.target.value })}
+                  />
+                </label>
+                <label>
+                  {q.evidence}
+                  <input
+                    required
+                    maxLength={200}
+                    value={fields.evidence}
+                    onChange={(e) => patch({ evidence: e.target.value })}
+                  />
+                </label>
+                <label>
+                  {q.location}
+                  <input
+                    required
+                    maxLength={200}
+                    value={fields.location}
+                    onChange={(e) => patch({ location: e.target.value })}
+                  />
+                </label>
+              </>
             ) : (
               <label>
                 {p.reason}
@@ -654,7 +821,11 @@ export function PackagingWorkspace({
                 checked={fields.confirmed}
                 onChange={(e) => patch({ confirmed: e.target.checked })}
               />
-              {form.kind === "pack" ? p.confirm : p.confirmVoid}
+              {form.kind === "pack"
+                ? p.confirm
+                : form.kind === "integrity"
+                  ? q.confirm
+                  : p.confirmVoid}
             </label>
           </fieldset>
           <div className="form-footer">
@@ -664,10 +835,18 @@ export function PackagingWorkspace({
                 busy ||
                 !fields.confirmed ||
                 (form.kind === "pack" &&
-                  (!fields.sealChecked || !fields.contentsChecked))
+                  (!fields.sealChecked ||
+                    !fields.contentsChecked ||
+                    !fields.shelfMode))
               }
             >
-              {busy ? t.saving : form.kind === "pack" ? p.save : p.saveVoid}
+              {busy
+                ? t.saving
+                : form.kind === "pack"
+                  ? p.save
+                  : form.kind === "integrity"
+                    ? q.save
+                    : p.saveVoid}
             </button>
           </div>
         </form>
@@ -694,7 +873,14 @@ export function PackagingWorkspace({
                   <tr key={d.id}>
                     <td>{d.code}</td>
                     <td>{d.trayName}</td>
-                    <td>{p[d.state]}</td>
+                    <td>
+                      {p[d.state]}
+                      <small>
+                        {d.integrityHold
+                          ? q.hold
+                          : q[shelfLifeState(d.shelfLife)]}
+                      </small>
+                    </td>
                     <td>
                       <button
                         disabled={busy}
@@ -754,6 +940,8 @@ export function PackagingWorkspace({
               <div className="panel-heading">
                 <h2>{p.label}</h2>
                 {session.canWrite &&
+                  !detail.integrityHold &&
+                  shelfLifeState(detail.shelfLife) !== "expired" &&
                   !detail.recall &&
                   !detail.returned &&
                   detail.activeLoad?.review?.state !== "released" && (
@@ -788,6 +976,19 @@ export function PackagingWorkspace({
                   {p.packedOn}: {date(detail.createdAt)}
                 </p>
                 <p>
+                  {q.mode}:{" "}
+                  {detail.shelfLife ? q[detail.shelfLife.mode] : q.not_recorded}
+                </p>
+                {detail.shelfLife && (
+                  <p>
+                    {q.reference}: {detail.shelfLife.reference} ·{" "}
+                    {detail.shelfLife.revision}
+                    {detail.shelfLife.expiresAt
+                      ? ` · ${q.expiry}: ${detail.shelfLife.expiresAt}`
+                      : ""}
+                  </p>
+                )}
+                <p>
                   {p.packedBy}: {actor(detail.packedBy)}
                 </p>
                 <DataMatrix
@@ -818,7 +1019,9 @@ export function PackagingWorkspace({
                       <strong>
                         {h.action === "package-created"
                           ? p.created
-                          : p.voidAction}
+                          : h.action === "package-integrity-held"
+                            ? q.action
+                            : p.voidAction}
                       </strong>
                       <time dateTime={h.at}>{date(h.at)}</time>
                       <small>

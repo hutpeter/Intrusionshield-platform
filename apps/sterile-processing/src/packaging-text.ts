@@ -21,7 +21,7 @@ const es = {
   packaged: "Empacado — no estéril",
   voided: "Anulado — no utilizar",
   boundary:
-    "Demostración local. El empaque no equivale a esterilización ni liberación clínica. No se calcula una fecha de caducidad.",
+    "Demostración local. El empaque no equivale a esterilización ni liberación clínica. La caducidad se registra según la política del centro; no se calcula automáticamente.",
   label: "Ver etiqueta",
   closeLabel: "Cerrar etiqueta",
   print: "Imprimir etiqueta",
@@ -80,7 +80,7 @@ const en: Text = {
   packaged: "Packaged — not sterile",
   voided: "Voided — do not use",
   boundary:
-    "Local demonstration. Packaging does not represent sterilization or clinical release. No expiry date is calculated.",
+    "Local demonstration. Packaging does not represent sterilization or clinical release. Expiry is recorded from facility policy; it is not calculated automatically.",
   label: "View label",
   closeLabel: "Close label",
   print: "Print label",
@@ -139,7 +139,7 @@ const fr: Text = {
   packaged: "Emballé — non stérile",
   voided: "Annulé — ne pas utiliser",
   boundary:
-    "Démonstration locale. L’emballage ne vaut ni stérilisation ni libération clinique. Aucune date de péremption n’est calculée.",
+    "Démonstration locale. L’emballage ne vaut ni stérilisation ni libération clinique. La péremption est saisie selon la politique de l’établissement ; elle n’est pas calculée automatiquement.",
   label: "Voir l’étiquette",
   closeLabel: "Fermer l’étiquette",
   print: "Imprimer l’étiquette",

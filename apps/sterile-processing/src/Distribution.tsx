@@ -1,3 +1,5 @@
+import { PackageSafety } from "./PackageSafety";
+import { shelfLifeState } from "@intrusionshield/sterile-processing/package-safety";
 import { DistributionScan } from "./DistributionScan";
 import { distributionScanLabels } from "./distribution-scan-text";
 import { returnLabels } from "./return-text";
@@ -338,6 +340,8 @@ export function DistributionWorkspace({
           )}
           {session.canWrite &&
             detail?.state === "stored" &&
+            !detail.integrityHold &&
+            shelfLifeState(detail.shelfLife) !== "expired" &&
             !detail.recall &&
             !detail.returned &&
             !past && (
@@ -357,6 +361,14 @@ export function DistributionWorkspace({
         </div>
       </div>
       <p className="readonly-note">{p.boundary}</p>
+      {detail && !past && (
+        <PackageSafety
+          policy={detail.shelfLife}
+          hold={detail.integrityHold}
+          language={language}
+          date={date}
+        />
+      )}
       {detail?.returned && (
         <p className="alert">
           {returnLabels(language).blocked} · {detail.returned.code}

@@ -121,6 +121,7 @@ export interface SterileAuditEvent {
     | "cycle-started"
     | "cycle-recorded"
     | "load-cancelled"
+    | "package-integrity-held"
     | "package-created"
     | "package-voided"
     | "inspection-recorded"
@@ -149,6 +150,7 @@ export type SterileRecord =
   | TrayAssembly
   | ProcessingEpisode
   | SterilePackage
+  | import("./package-safety.js").PackageIntegrityHold
   | SterilizationLoad
   | LoadReview
   | DistributionRecord
@@ -291,6 +293,12 @@ export interface SterileTransaction {
     reference: string,
   ): Promise<string | null>;
   reserveMachineCycle(item: SterilizationLoad): Promise<void>;
+  findPackageIntegrity(
+    id: string,
+  ): Promise<import("./package-safety.js").PackageIntegrityHold | null>;
+  insertPackageIntegrity(
+    item: import("./package-safety.js").PackageIntegrityHold,
+  ): Promise<void>;
   findPackage(id: string): Promise<SterilePackage | null>;
   findPackageByCode(code: string): Promise<SterilePackage | null>;
   listPackages(page: number): Promise<PackageSummary[]>;
@@ -369,6 +377,8 @@ export interface SterileRepository {
 export class SterileError extends Error {
   constructor(
     public readonly code:
+      | "PACKAGE_EXPIRED"
+      | "PACKAGE_INTEGRITY_BLOCKED"
       | "PROCEDURE_BLOCKED"
       | "LOANER_UNAVAILABLE"
       | "SERVICE_DUE"

@@ -417,6 +417,7 @@ export const api = {
       returns: "returns",
       recall: "recalls",
       maintenance: "instruments",
+      packageAlerts: "packaging",
     };
     const q = r.queue;
     if (
@@ -456,6 +457,7 @@ export const api = {
       "returns",
       "recall",
       "maintenance",
+      "packageAlerts",
     ];
     const workspaces = {
       cleaning: "processing",
@@ -466,13 +468,14 @@ export const api = {
       returns: "returns",
       recall: "recalls",
       maintenance: "instruments",
+      packageAlerts: "packaging",
     };
     if (
       r.limit !== 12 ||
       !Number.isFinite(Date.parse(r.generatedAt)) ||
       !Array.isArray(r.queues) ||
-      r.queues.length !== 8 ||
-      new Set(r.queues.map((q) => q.id)).size !== 8 ||
+      r.queues.length !== 9 ||
+      new Set(r.queues.map((q) => q.id)).size !== 9 ||
       r.queues.some(
         (q) =>
           !ids.includes(q.id) ||
@@ -1298,6 +1301,28 @@ export const api = {
     checkedPackage(
       s,
       call<SterilePackage>(base(s) + "/packages", signal, body, s.csrf),
+    ),
+  holdPackageIntegrity: (
+    s: Session,
+    id: string,
+    body: {
+      requestId: string;
+      packageVersion: number;
+      reason: string;
+      evidence: string;
+      location: string;
+      confirmed: boolean;
+    },
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<import("@intrusionshield/sterile-processing").PackageIntegrityHold>(
+        base(s) + "/packages/" + encodeURIComponent(id) + "/integrity-hold",
+        signal,
+        body,
+        s.csrf,
+      ),
     ),
   voidPackage: (
     s: Session,

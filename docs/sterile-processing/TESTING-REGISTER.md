@@ -51,9 +51,17 @@ A successful developer check never implies that the owner performed it.
 
 | 2b12333 | Issued-package lookup, manifest reconciliation and confirmed complete return with frozen identifier | 284 scoped tests, builds and targeted browser verification | U-RETSCAN-01 passed November 6, 2026 | Owner exceptions/disposition, hardware, persistent partial returns and operational acceptance deferred |
 
-## Current owner check — live tray composition
+## Current owner check — package shelf-life policy
 
-**U-TRAYCHECK-01 pending:** enter as Demo operator → Trays → Prepare fictional tray scan example → Edit contents. Expect **Assembly check — unsaved contents**, Missing 1 and the completion-blocked message. Cancel afterward. This is the only owner check requested for this build.
+**U-PACKSAFE-01 pending:** enter as Demo operator → Packaging and labels → Prepare fictional packaging example → review the prefilled event-related policy/reference/revision → tick closure, contents and packaging confirmation → Save packaging. Expect the saved Package integrity and shelf life panel and recorded policy. This is the only owner check for this build. See [PACKAGE-SAFETY.md](PACKAGE-SAFETY.md).
+
+Developer November 8, 2026: 343 scoped tests verified (186 domain, 121 HTTP/SQLite, 36 web), builds and Chromium policy/UTC-warning/explicit-hold/dashboard/reload checks passed. Final load-policy snapshots also passed the 26 domain cycle/distribution and 21 HTTP/SQLite packaging/distribution/dashboard checks; the browser verified the frozen release label and its current damage block.
+
+M-PACKSAFE-01 broader owner expiry/incident/return/repack/language/mobile and M-PACKSAFE-02 clinical/site-policy/production/hardware/operational checks deferred. U-TRAYCHECK-01 and U-PROC-01 are passed by owner screenshots; original U-LOANER-01 and U-TRACE-01 remain unconfirmed. RSP-ISS-001 stays parked.
+
+## Previous owner check — live tray composition
+
+**U-TRAYCHECK-01 passed November 8, 2026:** owner screenshot confirms the unsaved assessment, Required 1, Assigned 0, Missing 1, Excess 0, completion-blocked guidance and disabled completion. Original check: enter as Demo operator → Trays → Prepare fictional tray scan example → Edit contents. Expect **Assembly check — unsaved contents**, Missing 1 and the completion-blocked message. Cancel afterward. This is the only owner check requested for this build.
 
 Existing templates, revision snapshots, scan type/quantity gates and server completion checks were already implemented. This increment adds live assessment of unsaved manual contents, unexpected-type guidance and an explicit current-assembly completion status. No new clinical eligibility or release policy is introduced.
 

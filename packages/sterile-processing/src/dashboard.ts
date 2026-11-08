@@ -13,6 +13,7 @@ export const dashboardQueueIds = [
   "returns",
   "recall",
   "maintenance",
+  "packageAlerts",
 ] as const;
 export type DashboardQueueId = (typeof dashboardQueueIds)[number];
 export type DashboardWorkspace =
@@ -33,6 +34,7 @@ export const dashboardWorkspaces: Record<DashboardQueueId, DashboardWorkspace> =
     returns: "returns",
     recall: "recalls",
     maintenance: "instruments",
+    packageAlerts: "packaging",
   };
 export interface DashboardRow {
   id: string;

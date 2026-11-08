@@ -1,3 +1,7 @@
+import type {
+  ShelfLifePolicy,
+  PackageIntegrityHold,
+} from "./package-safety.js";
 import type { ReturnStatus } from "./return-types.js";
 import type { RecallBlock } from "./recall-types.js";
 import type { DistributionStatus } from "./distribution-types.js";
@@ -19,6 +23,8 @@ export interface InspectionProof {
   checks: InspectionItem;
 }
 export interface SterilePackage {
+  shelfLife?: ShelfLifePolicy;
+  integrityHold?: PackageIntegrityHold;
   scanIdentifier?: string;
   recall?: RecallBlock;
   returned?: ReturnStatus;
@@ -58,6 +64,8 @@ export type PackageSummary = Pick<
   | "createdAt"
 > & {
   scanIdentifier?: string;
+  shelfLife?: ShelfLifePolicy;
+  integrityHold?: PackageIntegrityHold;
   trayName: string;
   instrumentCount: number;
   activeLoad?: PackageLoad;
@@ -66,6 +74,7 @@ export type PackageSummary = Pick<
   returned?: ReturnStatus;
 };
 export interface PackageInput {
+  shelfLife?: ShelfLifePolicy;
   requestId: string;
   code: string;
   assemblyId: string;

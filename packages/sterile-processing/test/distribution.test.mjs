@@ -26,7 +26,7 @@ const body = (a, extra = {}) => ({
   confirmed: true,
   ...extra,
 });
-async function fixture({ legacy = false, draft = false } = {}) {
+async function fixture({ legacy = false, draft = false, shelfLife } = {}) {
   const repo = new MemoryRepository(),
     s = {
       tenantId: randomUUID(),
@@ -123,7 +123,10 @@ async function fixture({ legacy = false, draft = false } = {}) {
       confirmed: true,
       reason: "",
     });
-  const packageRecord = await pk.pack(s, body(a));
+  const packageRecord = await pk.pack(
+    s,
+    body(a, shelfLife ? { shelfLife } : {}),
+  );
   return {
     repo,
     s,
@@ -240,8 +243,8 @@ async function anotherPackage(f) {
   });
   return f.pk.pack(f.s, body(a, { code: "PACK-" + code }));
 }
-async function reviewedFixture(outcome = "passed") {
-  const f = await fixture(),
+async function reviewedFixture(outcome = "passed", options) {
+  const f = await fixture(options),
     l = await f.cy.create(f.s, loadBody(f.packageRecord));
   await f.cy.start(f.s, l.id, cycleStart(1));
   const done = await f.cy.finish(
@@ -271,8 +274,8 @@ const reviewBody = (l, extra = {}) => ({
   confirmed: true,
   ...extra,
 });
-async function distributionFixture(decision = "release") {
-  const f = await reviewedFixture(),
+async function distributionFixture(decision = "release", options) {
+  const f = await reviewedFixture("passed", options),
     r = await f.rr.decide(f.reviewer, reviewBody(f.l, { decision }));
   return { ...f, r, dr: new DistributionRegistry(f.repo) };
 }
@@ -474,4 +477,215 @@ test("concurrent storage and issue each accept only one claim and one physical-p
     ]);
   assert.equal(issues.filter((x) => x.status === "fulfilled").length, 1);
   assert.equal((await f.dr.get(f.s, d.id)).events.length, 2);
+});
+
+const shelfPolicy = (expiresAt = null) => ({
+  mode: expiresAt ? "time_based" : "event_related",
+  reference: "SIMULATED-FACILITY-POLICY",
+  revision: "DEMO-1",
+  expiresAt,
+  warningDays: 7,
+});
+const holdBody = (p) => ({
+  requestId: randomUUID(),
+  packageVersion: p.version,
+  reason: "SIMULATED torn wrap",
+  evidence: "SIMULATED-INTEGRITY-PHOTO",
+  location: "DEMO-QUARANTINE",
+  confirmed: true,
+});
+test("frozen shelf-life supports event-related policy and expiry boundary blocks storage, transfer, issue and scan", async (t) => {
+  const start = Date.now();
+  t.mock.timers.enable({ apis: ["Date"], now: start });
+  const expiresAt = new Date(start + 86400000).toISOString();
+  const f = await distributionFixture("release", {
+    shelfLife: shelfPolicy(expiresAt),
+  });
+  const d = await f.dr.store(f.s, storeBody(f));
+  assert.deepEqual(f.packageRecord.shelfLife, shelfPolicy(expiresAt));
+  assert.deepEqual(f.l.packages[0].shelfLife, f.packageRecord.shelfLife);
+  assert.deepEqual(
+    f.r.loadSnapshot.packages[0].shelfLife,
+    f.packageRecord.shelfLife,
+  );
+  t.mock.timers.setTime(start + 86400000);
+  await fail(f.dr.issue(f.s, d.id, issueBody(1)), "PACKAGE_EXPIRED");
+  await fail(
+    f.dr.transfer(f.s, d.id, {
+      requestId: randomUUID(),
+      version: 1,
+      location: "OTHER",
+      reference: "DEMO",
+      reason: "DEMO",
+      integrityChecked: true,
+      confirmed: true,
+    }),
+    "PACKAGE_EXPIRED",
+  );
+  await fail(
+    f.dr.scan(f.s, `RSP-P-${f.packageRecord.id}-V1`),
+    "PACKAGE_EXPIRED",
+  );
+  assert.equal((await f.dr.get(f.s, d.id)).state, "stored");
+  assert.equal(
+    (await f.pk.get(f.s, f.packageRecord.id, 1)).shelfLife.expiresAt,
+    expiresAt,
+  );
+  const event = await distributionFixture("release", {
+    shelfLife: shelfPolicy(),
+  });
+  t.mock.timers.setTime(start + 365 * 86400000);
+  const stored = await event.dr.store(event.s, storeBody(event));
+  assert.equal(
+    (await event.dr.issue(event.s, stored.id, issueBody(1))).state,
+    "issued",
+  );
+});
+test("expiry blocks new load and reviewer release without preventing held/rejected review evidence", async (t) => {
+  const now = Date.now();
+  t.mock.timers.enable({ apis: ["Date"], now });
+  const f = await reviewedFixture("passed", {
+    shelfLife: shelfPolicy(new Date(now + 10000).toISOString()),
+  });
+  t.mock.timers.setTime(now + 10000);
+  await fail(f.rr.decide(f.reviewer, reviewBody(f.l)), "PACKAGE_EXPIRED");
+  assert.equal(
+    (await f.rr.decide(f.reviewer, reviewBody(f.l, { decision: "hold" })))
+      .state,
+    "held",
+  );
+  const g = await fixture({
+    shelfLife: shelfPolicy(new Date(now + 20000).toISOString()),
+  });
+  t.mock.timers.setTime(now + 20000);
+  await fail(g.cy.create(g.s, loadBody(g.packageRecord)), "PACKAGE_EXPIRED");
+});
+test("integrity hold is persistent, scoped, idempotent and atomic; package identifiers/history remain unchanged", async () => {
+  const f = await distributionFixture(),
+    d = await f.dr.store(f.s, storeBody(f)),
+    input = holdBody(f.packageRecord),
+    id = f.packageRecord.id;
+  f.repo.failAudit = true;
+  await assert.rejects(f.pk.holdIntegrity(f.s, id, input));
+  assert.equal((await f.pk.get(f.s, id)).integrityHold, undefined);
+  f.repo.failAudit = false;
+  const held = await f.pk.holdIntegrity(f.s, id, input);
+  assert.deepEqual(await f.pk.holdIntegrity(f.s, id, input), held);
+  await fail(
+    f.pk.holdIntegrity(f.s, id, { ...input, requestId: randomUUID() }),
+    "CONFLICT",
+  );
+  await fail(
+    f.pk.holdIntegrity({ ...f.s, facilityId: randomUUID() }, id, input),
+    "NOT_FOUND",
+  );
+  await fail(f.dr.issue(f.s, d.id, issueBody(1)), "PACKAGE_INTEGRITY_BLOCKED");
+  const current = await f.pk.get(f.s, id),
+    historical = await f.pk.get(f.s, id, 1);
+  assert.equal(current.integrityHold.reason, input.reason);
+  assert.equal(current.version, 1);
+  assert.equal(current.scanIdentifier, historical.scanIdentifier);
+  assert.equal(historical.integrityHold, undefined);
+  const { DashboardRegistry, TraceabilityRegistry } =
+    await import("../dist/index.js");
+  const dashboard = await new DashboardRegistry(f.repo).queue(
+    f.s,
+    "packageAlerts",
+  );
+  assert.equal(dashboard.queue.total, 1);
+  const trace = await new TraceabilityRegistry(f.repo).report(
+    f.s,
+    "package",
+    id,
+  );
+  assert.ok(trace.alerts.some((a) => a.kind === "package_integrity_hold"));
+});
+test("rejects invalid policy modes/dates/references and unconfirmed or stale integrity reports", async () => {
+  const f = await fixture();
+  await f.pk.void(f.s, f.packageRecord.id, {
+    requestId: randomUUID(),
+    version: 1,
+    reason: "Test new policy validation",
+    confirmed: true,
+  });
+  for (const shelfLife of [
+    null,
+    { ...shelfPolicy(), reference: "" },
+    { ...shelfPolicy(), mode: "forever" },
+    {
+      ...shelfPolicy(),
+      expiresAt: new Date(Date.now() + 86400000).toISOString(),
+    },
+    { ...shelfPolicy(), warningDays: 0 },
+    { ...shelfPolicy(), extra: true },
+    shelfPolicy("2026-02-30T00:00:00.000Z"),
+    shelfPolicy(new Date(0).toISOString()),
+  ]) {
+    await fail(
+      f.pk.pack(
+        f.s,
+        body(f.a, { code: "NEW", requestId: randomUUID(), shelfLife }),
+      ),
+      "INVALID_REQUEST",
+    );
+  }
+  const p = await f.pk.pack(
+    f.s,
+    body(f.a, { code: "NEW", shelfLife: shelfPolicy() }),
+  );
+  await fail(
+    f.pk.holdIntegrity(f.s, p.id, { ...holdBody(p), confirmed: false }),
+    "INVALID_REQUEST",
+  );
+  await fail(
+    f.pk.holdIntegrity(f.s, p.id, { ...holdBody(p), packageVersion: 9 }),
+    "CONFLICT",
+  );
+});
+
+test("expiry is rechecked at cycle start, while integrity incidents during a running cycle preserve result evidence", async (t) => {
+  const now = Date.now();
+  t.mock.timers.enable({ apis: ["Date"], now });
+  const f = await fixture({
+      shelfLife: shelfPolicy(new Date(now + 10000).toISOString()),
+    }),
+    load = await f.cy.create(f.s, loadBody(f.packageRecord));
+  t.mock.timers.setTime(now + 10000);
+  await fail(f.cy.start(f.s, load.id, cycleStart(1)), "PACKAGE_EXPIRED");
+  assert.equal((await f.cy.get(f.s, load.id)).state, "draft");
+  const g = await fixture(),
+    running = await g.cy.create(g.s, loadBody(g.packageRecord));
+  await g.cy.start(g.s, running.id, cycleStart(1));
+  await g.pk.holdIntegrity(g.s, g.packageRecord.id, holdBody(g.packageRecord));
+  assert.equal(
+    (await g.cy.finish(g.s, running.id, result(2))).state,
+    "awaiting_review",
+  );
+  await fail(
+    new ReviewRegistry(g.repo).decide(
+      { ...g.s, actorId: randomUUID() },
+      reviewBody(await g.cy.get(g.s, running.id)),
+    ),
+    "PACKAGE_INTEGRITY_BLOCKED",
+  );
+});
+test("issued compromised packages retain return scan and original custody provenance", async () => {
+  const f = await distributionFixture(),
+    d = await f.dr.store(f.s, storeBody(f));
+  const issued = await f.dr.issue(f.s, d.id, issueBody(1));
+  await f.pk.holdIntegrity(f.s, f.packageRecord.id, holdBody(f.packageRecord));
+  const { ReturnRegistry, shelfLifeState } = await import("../dist/index.js");
+  const scan = await new ReturnRegistry(f.repo).scan(
+    f.s,
+    `RSP-P-${f.packageRecord.id}-V1`,
+  );
+  assert.equal(scan.issue.id, issued.id);
+  assert.equal(scan.manifest[0].id, f.i.id);
+  const now = Date.now(),
+    policy = shelfPolicy(new Date(now + 7 * 86400000).toISOString());
+  assert.equal(shelfLifeState(policy, now), "approaching");
+  assert.equal(shelfLifeState(policy, now - 1), "within_date");
+  assert.equal(shelfLifeState(policy, now + 7 * 86400000), "expired");
+  assert.equal(shelfLifeState(undefined, now), "not_recorded");
+  assert.equal(shelfLifeState(shelfPolicy(), now + 1e12), "event_related");
 });

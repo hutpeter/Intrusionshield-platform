@@ -27,6 +27,7 @@ const en = {
   returns: "Returns awaiting reconciliation or disposition",
   recall: "Recall actions outstanding",
   maintenance: "Instruments requiring maintenance or service",
+  packageAlerts: "Package integrity and expiry alerts",
 };
 const es: typeof en = {
   title: "Panel operativo",
@@ -56,6 +57,7 @@ const es: typeof en = {
   returns: "Devoluciones pendientes de conciliación o disposición",
   recall: "Acciones de retirada pendientes",
   maintenance: "Instrumentos retenidos por mantenimiento",
+  packageAlerts: "Alertas de integridad y caducidad de paquetes",
 };
 const fr: typeof en = {
   title: "Tableau opérationnel",
@@ -85,6 +87,7 @@ const fr: typeof en = {
   returns: "Retours en attente de rapprochement ou de disposition",
   recall: "Actions de rappel en attente",
   maintenance: "Instruments bloqués pour maintenance",
+  packageAlerts: "Alertes d’intégrité et de péremption des paquets",
 };
 export const dashboardLabels = (l: Language) =>
   l === "es" ? es : l === "fr" ? fr : en;

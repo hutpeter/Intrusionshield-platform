@@ -1,3 +1,7 @@
+import type {
+  ShelfLifePolicy,
+  PackageIntegrityHold,
+} from "./package-safety.js";
 import { assertLoanerPresent } from "./loaners.js";
 import { serviceDue } from "./service-usage.js";
 import { returnStatus } from "./return-types.js";
@@ -26,6 +30,53 @@ const versionOf = (n: number) => {
     throw new SterileError("INVALID_REQUEST");
   return n;
 };
+function shelfLifePolicy(
+  value: ShelfLifePolicy | undefined,
+  at: string,
+): ShelfLifePolicy | undefined {
+  if (value === undefined) return undefined; // Older clients/records remain explicitly unspecified.
+  if (
+    !value ||
+    typeof value !== "object" ||
+    Array.isArray(value) ||
+    Object.keys(value).length !== 5 ||
+    Object.keys(value).some(
+      (k) =>
+        !["mode", "reference", "revision", "expiresAt", "warningDays"].includes(
+          k,
+        ),
+    )
+  )
+    throw new SterileError("INVALID_REQUEST");
+  const reference = field(value.reference, 200),
+    revision = field(value.revision, 100);
+  if (
+    !["event_related", "time_based"].includes(value.mode) ||
+    !Number.isSafeInteger(value.warningDays) ||
+    value.warningDays < 1 ||
+    value.warningDays > 365
+  )
+    throw new SterileError("INVALID_REQUEST");
+  if (value.mode === "event_related") {
+    if (value.expiresAt !== null) throw new SterileError("INVALID_REQUEST");
+  } else {
+    const date =
+      typeof value.expiresAt === "string" ? Date.parse(value.expiresAt) : NaN;
+    if (
+      !Number.isFinite(date) ||
+      new Date(date).toISOString() !== value.expiresAt ||
+      date <= Date.parse(at)
+    )
+      throw new SterileError("INVALID_REQUEST");
+  }
+  return {
+    mode: value.mode,
+    reference,
+    revision,
+    expiresAt: value.expiresAt,
+    warningDays: value.warningDays,
+  };
+}
 export class PackagingRegistry extends SterileRegistryBase {
   async pack(scope: SterileScope, input: PackageInput) {
     const s = scopeOf(scope),
@@ -112,7 +163,9 @@ export class PackagingRegistry extends SterileRegistryBase {
             checks: check,
           });
         }
+        const shelfLife = shelfLifePolicy(input.shelfLife, at);
         const item: SterilePackage = {
+          ...(shelfLife ? { shelfLife } : {}),
           id: randomUUID(),
           tenantId: s.tenantId,
           facilityId: s.facilityId,
@@ -146,6 +199,67 @@ export class PackagingRegistry extends SterileRegistryBase {
           "package-created",
           "",
         );
+        return item;
+      },
+    );
+  }
+  async holdIntegrity(
+    scope: SterileScope,
+    id: string,
+    input: {
+      requestId: string;
+      packageVersion: number;
+      reason: string;
+      evidence: string;
+      location: string;
+      confirmed: boolean;
+    },
+  ): Promise<PackageIntegrityHold> {
+    const s = scopeOf(scope),
+      key = sterileUuid(id),
+      version = versionOf(input.packageVersion),
+      reason = field(input.reason, 500),
+      evidence = field(input.evidence, 200),
+      location = field(input.location, 200);
+    if (input.confirmed !== true) throw new SterileError("INVALID_REQUEST");
+    return this.command(
+      s,
+      input.requestId,
+      "package-integrity-held",
+      { id: key, version, reason, evidence, location },
+      async (tx, at) => {
+        const p = await tx.findPackage(key);
+        if (!p) throw new SterileError("NOT_FOUND");
+        if (
+          p.version !== version ||
+          p.state !== "packaged" ||
+          (await tx.findPackageIntegrity(key))
+        )
+          throw new SterileError("CONFLICT");
+        const item: PackageIntegrityHold = {
+          id: randomUUID(),
+          tenantId: s.tenantId,
+          facilityId: s.facilityId,
+          packageId: key,
+          packageVersion: version,
+          version: 1,
+          reason,
+          evidence,
+          location,
+          at,
+          actorId: s.actorId,
+        };
+        await tx.insertPackageIntegrity(item);
+        await tx.appendAudit({
+          id: randomUUID(),
+          ...s,
+          entityId: key,
+          version,
+          requestId: sterileUuid(input.requestId),
+          at,
+          action: "package-integrity-held",
+          reason: `${reason} · ${evidence} · ${location}`,
+        });
         return item;
       },
     );
@@ -238,12 +352,14 @@ export class PackagingRegistry extends SterileRegistryBase {
       const rows = await tx.listPackages(p);
       const items = await Promise.all(
         rows.slice(0, 50).map(async (row) => {
+          const integrityHold = await tx.findPackageIntegrity(row.id);
           const returned = await tx.findReturnByPackage(row.id);
           const recall = await tx.findRecallBlock(row.id);
           const distribution = await tx.findDistributionByPackage(row.id);
           const activeLoad = await tx.findPackageLoad(row.id);
           return {
             ...row,
+            ...(integrityHold ? { integrityHold } : {}),
             scanIdentifier: `RSP-P-${row.id.toUpperCase()}-V${row.version}`,
             ...(returned ? { returned: returnStatus(returned) } : {}),
             ...(recall ? { recall } : {}),
@@ -267,6 +383,8 @@ export class PackagingRegistry extends SterileRegistryBase {
           ? await tx.findPackage(key)
           : await tx.findPackageVersion(key, version);
       if (!item) throw new SterileError("NOT_FOUND");
+      const integrityHold =
+        version === undefined ? await tx.findPackageIntegrity(key) : null;
       const activeLoad =
         version === undefined ? await tx.findPackageLoad(key) : null;
       const recall =
@@ -277,6 +395,7 @@ export class PackagingRegistry extends SterileRegistryBase {
         version === undefined ? await tx.findReturnByPackage(key) : null;
       return {
         ...item,
+        ...(integrityHold ? { integrityHold } : {}),
         scanIdentifier: `RSP-P-${item.id.toUpperCase()}-V${item.version}`,
         ...(returned ? { returned: returnStatus(returned) } : {}),
         ...(recall ? { recall } : {}),

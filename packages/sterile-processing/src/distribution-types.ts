@@ -15,6 +15,8 @@ export interface PackageMovement {
   requestId: string;
 }
 export interface DistributionRecord {
+  shelfLife?: import("./package-safety.js").ShelfLifePolicy;
+  integrityHold?: import("./package-safety.js").PackageIntegrityHold;
   recall?: RecallBlock;
   returned?: ReturnStatus;
   id: string;

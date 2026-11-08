@@ -359,3 +359,79 @@ test("fictional packaging prerequisite setup is idempotent, CSRF-protected and r
   await assert.rejects(g.preparePackagingExample(broken, g.s, randomUUID()));
   assert.deepEqual(await new InstrumentRegistry(g.repo).list(g.s), before);
 });
+
+test("HTTP freezes policy and records protected integrity hold without altering original package history", async (t) => {
+  const f = await httpFixture(t),
+    a = await example(f);
+  const policy = {
+    mode: "time_based",
+    reference: "SIMULATED-POLICY",
+    revision: "DEMO-1",
+    expiresAt: new Date(Date.now() + 86400000).toISOString(),
+    warningDays: 7,
+  };
+  const r = await f.call(
+    f.base + "/packages",
+    packBody(a, { shelfLife: policy }),
+  );
+  assert.equal(r.status, 201);
+  const p = await r.json();
+  assert.deepEqual(p.shelfLife, policy);
+  const input = {
+      requestId: randomUUID(),
+      packageVersion: 1,
+      reason: "SIMULATED torn wrap",
+      evidence: "SIMULATED-PHOTO",
+      location: "DEMO-HOLD",
+      confirmed: true,
+    },
+    path = f.base + "/packages/" + p.id + "/integrity-hold";
+  assert.equal(
+    (await f.call(path, input, { "x-sterile-csrf": "" })).status,
+    403,
+  );
+  await f.login("viewer");
+  assert.equal((await f.call(path, input)).status, 403);
+  await f.login("operator");
+  assert.equal((await f.call(path, { ...input, extra: true })).status, 400);
+  assert.equal(
+    (await f.call(path, { ...input, confirmed: false })).status,
+    400,
+  );
+  assert.equal(
+    (await f.call(path.replace(f.session.facilityId, randomUUID()), input))
+      .status,
+    404,
+  );
+  const saved = await f.call(path, input);
+  assert.equal(saved.status, 201);
+  const hold = await saved.json();
+  assert.deepEqual(await (await f.call(path, input)).json(), hold);
+  const current = await (await f.call(f.base + "/packages/" + p.id)).json(),
+    past = await (
+      await f.call(f.base + "/packages/" + p.id + "/versions/1")
+    ).json();
+  assert.deepEqual(current.integrityHold, hold);
+  assert.equal(current.version, 1);
+  assert.equal(current.scanIdentifier, past.scanIdentifier);
+  assert.equal(past.integrityHold, undefined);
+  const dashboard = await (
+    await f.call(f.base + "/dashboard/queues/packageAlerts")
+  ).json();
+  assert.equal(dashboard.queue.total, 1);
+  assert.equal(
+    (
+      await f.call(f.base + "/loads", {
+        requestId: randomUUID(),
+        code: "LOAD-HELD",
+        sterilizer: "STER-DEMO",
+        method: "steam",
+        profile: "DEMO",
+        profileVersion: "1",
+        packageIds: [p.id],
+        confirmed: true,
+      })
+    ).status,
+    409,
+  );
+});

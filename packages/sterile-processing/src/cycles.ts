@@ -1,3 +1,4 @@
+import { assertPackageUsable } from "./package-eligibility.js";
 import { resolveProcedure } from "./procedures.js";
 import { recordServiceExposures } from "./service-usage.js";
 import { reviewStatus } from "./review-types.js";
@@ -43,12 +44,14 @@ async function members(
     if (await tx.findRecallBlock(id)) throw new SterileError("RECALL_BLOCKED");
     const p = await tx.findPackage(id);
     if (!p) throw new SterileError("NOT_FOUND");
+    await assertPackageUsable(tx, p);
     const active = await tx.findPackageLoad(id);
     if (p.state !== "packaged" || (active && active.loadId !== loadId))
       throw new SterileError("LOAD_BLOCKED");
     const reservation = await tx.findActivePackage(p.assemblyId);
     if (reservation?.packageId !== p.id) throw new SterileError("LOAD_BLOCKED");
     rows.push({
+      ...(p.shelfLife ? { shelfLife: structuredClone(p.shelfLife) } : {}),
       id: p.id,
       code: p.code,
       version: p.version,

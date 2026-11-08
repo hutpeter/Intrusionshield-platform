@@ -1,3 +1,5 @@
+import { shelfLifeState } from "./package-safety.js";
+import { assertPackageUsable } from "./package-eligibility.js";
 import { randomUUID } from "node:crypto";
 import {
   SterileRegistryBase,
@@ -94,6 +96,8 @@ export class ReviewRegistry extends SterileRegistryBase {
             held?.loadId !== loadId
           )
             throw new SterileError("REVIEW_BLOCKED");
+          if (input.decision === "release")
+            await assertPackageUsable(tx, p, at);
         }
         if (
           input.decision === "release" &&
@@ -216,8 +220,20 @@ export class ReviewRegistry extends SterileRegistryBase {
               ),
             )
           : [];
+      let packageSafetyBlocked = false;
+      if (version === undefined)
+        for (const member of record.loadSnapshot.packages) {
+          const p = await tx.findPackage(member.id);
+          if (
+            !p ||
+            (await tx.findPackageIntegrity(member.id)) ||
+            shelfLifeState(p.shelfLife) === "expired"
+          )
+            packageSafetyBlocked = true;
+        }
       return {
         ...record,
+        ...(packageSafetyBlocked ? { packageSafetyBlocked: true } : {}),
         ...(blocks.some(Boolean) ? { recallBlocked: true } : {}),
         ...(returns.some(Boolean) ? { returnBlocked: true } : {}),
       };

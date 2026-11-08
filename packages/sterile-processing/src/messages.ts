@@ -1,4 +1,8 @@
 const es = {
+  PACKAGE_EXPIRED:
+    "El paquete ha caducado según la política registrada. No se permite esta operación.",
+  PACKAGE_INTEGRITY_BLOCKED:
+    "Integridad comprometida: el paquete está bloqueado. Revise la evidencia y su disposición.",
   PROCEDURE_BLOCKED:
     "La revisión no está publicada o no corresponde a la etapa, método o tipos de instrumental. Revise su selección.",
   LOANER_UNAVAILABLE:
@@ -57,6 +61,10 @@ const es = {
 };
 type Messages = Record<keyof typeof es, string>;
 const en: Messages = {
+  PACKAGE_EXPIRED:
+    "The package has expired under its recorded policy. This operation is blocked.",
+  PACKAGE_INTEGRITY_BLOCKED:
+    "Package integrity is compromised. Review the hold evidence and disposition.",
   PROCEDURE_BLOCKED:
     "The revision is unpublished, withdrawn or does not match this stage, method or instrument types. Review the selection.",
   LOANER_UNAVAILABLE:
@@ -115,6 +123,10 @@ const en: Messages = {
     "Service unavailable. The change has not been confirmed.",
 };
 const fr: Messages = {
+  PACKAGE_EXPIRED:
+    "Le paquet est périmé selon sa politique enregistrée. Cette opération est bloquée.",
+  PACKAGE_INTEGRITY_BLOCKED:
+    "Intégrité compromise : le paquet est bloqué. Consultez les preuves et la disposition.",
   PROCEDURE_BLOCKED:
     "Révision non publiée, retirée ou incompatible avec l’étape, méthode ou types d’instruments. Vérifiez la sélection.",
   LOANER_UNAVAILABLE:

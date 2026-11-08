@@ -1,3 +1,4 @@
+import { shelfLifeState } from "./package-safety.js";
 import { serviceDue } from "./service-usage.js";
 import {
   SterileError,
@@ -458,6 +459,25 @@ export class TraceabilityRegistry {
         }
         if (row.kind === "package") {
           const p = r as SterilePackage;
+          if (p.shelfLife)
+            fact("package_shelf_life", p.createdAt, p.packedBy, p.shelfLife, [
+              "mode",
+              "reference",
+              "revision",
+              "expiresAt",
+              "warningDays",
+            ]);
+          const integrity = row.current
+            ? await tx.findPackageIntegrity(p.id)
+            : null;
+          if (integrity)
+            fact(
+              "package_integrity_hold",
+              integrity.at,
+              integrity.actorId,
+              integrity,
+              ["reason", "evidence", "location", "packageVersion"],
+            );
           link(
             row,
             "assembly",
@@ -742,6 +762,25 @@ export class TraceabilityRegistry {
           });
       }
       for (const p of by("package").filter((r) => r.current)) {
+        const hold = await tx.findPackageIntegrity(p.record.id);
+        if (hold)
+          alerts.push({
+            kind: "package_integrity_hold",
+            entityKind: "package",
+            entityId: p.record.id,
+            code: traceCode(p.record),
+            reference: hold.reason,
+          });
+        if (
+          shelfLifeState((p.record as SterilePackage).shelfLife) === "expired"
+        )
+          alerts.push({
+            kind: "package_expired",
+            entityKind: "package",
+            entityId: p.record.id,
+            code: traceCode(p.record),
+            reference: (p.record as SterilePackage).shelfLife!.expiresAt!,
+          });
         const recall = await tx.findRecallBlock(p.record.id),
           ret = await tx.findReturnByPackage(p.record.id);
         if (recall)

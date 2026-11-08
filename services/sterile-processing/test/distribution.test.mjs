@@ -395,3 +395,69 @@ test("staged fictional setup retries resume safely after final-storage audit fai
     d,
   );
 });
+
+test("SQLite integrity hold survives reopen and blocks release and distribution while preserving source versions", async (t) => {
+  const f = await sqlFixture(t),
+    pk = new PackagingRegistry(f.repo),
+    id = f.l.packages[0].id;
+  const r = await new ReviewRegistry(f.repo).decide(f.reviewer, {
+    requestId: randomUUID(),
+    loadId: f.l.id,
+    loadVersion: f.l.version,
+    reviewVersion: 0,
+    decision: "release",
+    reason: "SIMULATED review",
+    reference: "SIMULATED",
+    cycleChecked: true,
+    indicatorsChecked: true,
+    packagesChecked: true,
+    profileChecked: true,
+    confirmed: true,
+  });
+  const d = await new DistributionRegistry(f.repo).store(f.s, store(f, r));
+  const held = await pk.holdIntegrity(f.s, id, {
+    requestId: randomUUID(),
+    packageVersion: 1,
+    reason: "SIMULATED wet wrap",
+    evidence: "SIMULATED-EVIDENCE",
+    location: "DEMO-HOLD",
+    confirmed: true,
+  });
+  const reopened = new PreviewSqliteRepository(f.file);
+  try {
+    assert.deepEqual(
+      (await new PackagingRegistry(reopened).get(f.s, id)).integrityHold,
+      held,
+    );
+    assert.equal(
+      (await new PackagingRegistry(reopened).get(f.s, id, 1)).integrityHold,
+      undefined,
+    );
+    await assert.rejects(
+      new DistributionRegistry(reopened).issue(f.s, d.id, issue(1)),
+      { code: "PACKAGE_INTEGRITY_BLOCKED" },
+    );
+    assert.equal(
+      (await new ReviewRegistry(reopened).get(f.s, r.id)).packageSafetyBlocked,
+      true,
+    );
+    const { DashboardRegistry } =
+      await import("@intrusionshield/sterile-processing");
+    assert.equal(
+      (await new DashboardRegistry(reopened).queue(f.s, "packageAlerts")).queue
+        .total,
+      1,
+    );
+    assert.equal(
+      (
+        await new DashboardRegistry(reopened).queue(
+          { ...f.s, facilityId: randomUUID() },
+          "packageAlerts",
+        )
+      ).queue.total,
+      0,
+    );
+  } finally {
+    reopened.close();
+  }
+});
