@@ -514,6 +514,19 @@ export function createSterileApp(
       v as unknown as Parameters<EquipmentIncidentRegistry["recordFinding"]>[2],
     ));
   });
+  app.post(prefix + "/equipment-incidents/:id/instrument-holds", async (req, res) => {
+    noQuery(req);
+    if (!(await incidentSources(res, true))) return;
+    const v = body(req.body, [
+      "requestId", "version", "instrumentId", "instrumentVersion",
+      "reason", "confirmed",
+    ]);
+    res.status(201).json(await incidents().holdInstrument(
+      res.locals.scope,
+      sterileUuid(req.params.id),
+      v as unknown as Parameters<EquipmentIncidentRegistry["holdInstrument"]>[2],
+    ));
+  });
   app.get(
     prefix + "/equipment-incidents/:id/recall-impact",
     async (req, res) => {
