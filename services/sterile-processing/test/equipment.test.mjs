@@ -625,3 +625,41 @@ test("incident source and recall permissions are checked before any repository a
   assert.equal(blocked.status, 403);
   assert.equal(queries, 0);
 });
+
+test("incident findings API enforces reviewer permission, CSRF, scope, versions and strict fields", async (t) => {
+  const f = await fixture(t),
+    sample = await incidentSample(f),
+    impact = await (await f.call(impactPath(f, sample))).json(),
+    response = await f.call(f.base + "/equipment-incidents", incidentBody(sample, impact));
+  assert.equal(response.status, 201);
+  const incident = await response.json();
+  const path = f.base + "/equipment-incidents/" + incident.id + "/findings";
+  const input = {
+    requestId: randomUUID(), version: incident.version,
+    finding: "SIMULATED equipment investigation", reference: "SIMULATED-EVIDENCE",
+    instrumentIds: [], packageIds: [impact.targets[0].id], confirmed: true,
+  };
+  assert.equal((await f.call(path, input, { "x-sterile-csrf": "" })).status, 403);
+  await f.login("viewer");
+  assert.equal((await f.call(path, input)).status, 403);
+  await f.login("operator");
+  assert.equal((await f.call(path, input)).status, 403);
+  await f.login("reviewer");
+  assert.equal((await f.call(path, { ...input, extra: true })).status, 400);
+  assert.equal((await f.call(path, { ...input, confirmed: false })).status, 400);
+  assert.equal((await f.call(path, { ...input, instrumentIds: [randomUUID()] })).status, 400);
+  const created = await f.call(path, input);
+  assert.equal(created.status, 201);
+  const updated = await created.json();
+  assert.equal(updated.version, 2);
+  assert.equal(updated.findings.length, 1);
+  assert.deepEqual(updated.findings[0].packageIds, input.packageIds);
+  assert.equal((await f.call(path, input)).status, 201);
+  assert.equal((await f.call(path, { ...input, requestId: randomUUID() })).status, 409);
+  const original = await (await f.call(
+    f.base + "/equipment-incidents/" + incident.id + "/versions/1")).json();
+  assert.equal(original.findings.length, 0);
+  const other = f.base.replace(f.session.facilityId, randomUUID()) +
+    "/equipment-incidents/" + incident.id + "/findings";
+  assert.equal((await f.call(other, { ...input, requestId: randomUUID(), version: 2 })).status, 404);
+});
