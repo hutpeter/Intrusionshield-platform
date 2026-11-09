@@ -415,6 +415,31 @@ export const api = {
         s.csrf,
       ),
     ),
+  releaseIncidentInstrument: (
+    s: Session, id: string,
+    body: {
+      requestId: string; version: number; instrumentId: string;
+      instrumentVersion: number; reason: string; reference: string;
+      confirmed: boolean;
+    }, signal: AbortSignal,
+  ) => checkedIncident(s,
+    call<import("@intrusionshield/sterile-processing").EquipmentIncident>(
+      base(s) + "/equipment-incidents/" + encodeURIComponent(id) + "/instrument-releases",
+      signal, body, s.csrf,
+    ),
+  ),
+  closeEquipmentIncident: (
+    s: Session, id: string,
+    body: {
+      requestId: string; version: number; reason: string;
+      reference: string; confirmed: boolean;
+    }, signal: AbortSignal,
+  ) => checkedIncident(s,
+    call<import("@intrusionshield/sterile-processing").EquipmentIncident>(
+      base(s) + "/equipment-incidents/" + encodeURIComponent(id) + "/closure",
+      signal, body, s.csrf,
+    ),
+  ),
   incidentRecallImpact: (
     s: Session,
     id: string,
