@@ -59,6 +59,14 @@ export interface EquipmentIncidentImpact {
   unpackagedInstrumentIds: string[];
   impactHash: string;
 }
+export interface IncidentFinding {
+  at: string;
+  actorId: string;
+  reference: string;
+  finding: string;
+  instrumentIds: string[];
+  packageIds: string[];
+}
 export interface EquipmentIncident {
   id: string;
   tenantId: string;
@@ -69,6 +77,8 @@ export interface EquipmentIncident {
   reason: string;
   reference: string;
   recalls: { id: string; code: string; packageId: string; at: string }[];
+  /** Append-only investigation findings; absent on older records. */
+  findings?: IncidentFinding[];
   version: number;
   createdAt: string;
   createdBy: string;
@@ -318,6 +328,7 @@ export class EquipmentIncidentRegistry extends SterileRegistryBase {
           reason,
           reference,
           recalls: [],
+          findings: [],
           version: 1,
           createdAt: at,
           createdBy: s.actorId,
@@ -341,7 +352,7 @@ export class EquipmentIncidentRegistry extends SterileRegistryBase {
     s: SterileScope,
     r: EquipmentIncident,
     requestId: string,
-    action: "equipment-incident-recorded" | "equipment-incident-recall-created",
+    action: "equipment-incident-recorded" | "equipment-incident-recall-created" | "equipment-incident-finding-recorded",
     reason: string,
   ) {
     await tx.insertEquipmentIncidentVersion(r);
@@ -382,6 +393,50 @@ export class EquipmentIncidentRegistry extends SterileRegistryBase {
       if (!r) throw new SterileError("NOT_FOUND");
       return r;
     });
+  }
+  /** Records investigation evidence only; does not hold, release, recall or close work. */
+  async recordFinding(scope: SterileScope, id: string, input: {
+    requestId: string;
+    version: number;
+    finding: string;
+    reference: string;
+    instrumentIds: string[];
+    packageIds: string[];
+    confirmed: boolean;
+  }) {
+    const s = scopeOf(scope), key = sterileUuid(id),
+      finding = field(input.finding, 2000),
+      reference = field(input.reference, 200);
+    if (input.confirmed !== true ||
+        !Number.isSafeInteger(input.version) || input.version < 1 ||
+        !Array.isArray(input.instrumentIds) ||
+        !Array.isArray(input.packageIds) ||
+        input.instrumentIds.length + input.packageIds.length > 500)
+      invalid();
+    const instrumentIds = [...new Set(input.instrumentIds.map(sterileUuid))].sort(),
+      packageIds = [...new Set(input.packageIds.map(sterileUuid))].sort();
+    return this.command(s, input.requestId, "equipment-incident-finding-recorded",
+      { id: key, ...input, instrumentIds, packageIds }, async (tx, at) => {
+        const old = await tx.findEquipmentIncident(key);
+        if (!old) throw new SterileError("NOT_FOUND");
+        if (old.version !== input.version) throw new SterileError("CONFLICT");
+        const knownInstruments = new Set(old.impact.exposures.flatMap(e => e.instrumentIds));
+        const knownPackages = new Set(old.impact.targets.map(p => p.id));
+        if (instrumentIds.some(i => !knownInstruments.has(i)) ||
+            packageIds.some(p => !knownPackages.has(p)))
+          throw new SterileError("INVALID_REQUEST");
+        const record: EquipmentIncident = {
+          ...old,
+          findings: [...(old.findings ?? []), {
+            at, actorId: s.actorId, reference, finding, instrumentIds, packageIds,
+          }],
+          version: old.version + 1, updatedAt: at,
+        };
+        await tx.updateEquipmentIncident(record, old.version);
+        await this.record(tx, s, record, input.requestId,
+          "equipment-incident-finding-recorded", reference);
+        return record;
+      });
   }
   async recallPreview(
     scope: SterileScope,
