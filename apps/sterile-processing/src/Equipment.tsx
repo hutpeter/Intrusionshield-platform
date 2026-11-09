@@ -379,6 +379,38 @@ export function EquipmentWorkspace({
                   >
                     {incidentLabels(language).example}
                   </button>
+                  <button
+                    disabled={busy || loading || !!form}
+                    onClick={async () => {
+                      if (pending.current) return;
+                      const a = new AbortController();
+                      pending.current = a;
+                      setSaving(true);
+                      setError(null);
+                      try {
+                        const sample = await api.prepareUnpackagedIncident(
+                          session, incidentExampleRequest.current, a.signal,
+                        );
+                        if (!a.signal.aborted) {
+                          incidentExampleRequest.current = crypto.randomUUID();
+                          setExampleWindow({
+                            equipmentId: sample.equipment.id,
+                            from: sample.from,
+                            to: sample.to,
+                          });
+                          setSelected(sample.equipment.id);
+                          setNonce((n) => n + 1);
+                        }
+                      } catch (e) {
+                        if (!a.signal.aborted) fail(e);
+                      } finally {
+                        pending.current = null;
+                        if (!a.signal.aborted) setSaving(false);
+                      }
+                    }}
+                  >
+                    {incidentLabels(language).unpackagedExample}
+                  </button>
                 </>
               )}
             </>
