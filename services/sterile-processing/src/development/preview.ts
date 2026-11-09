@@ -1,4 +1,5 @@
 import { prepareEquipmentIncidentExample } from "./equipment-incident-example.js";
+import { prepareUnpackagedIncidentExample } from "./unpackaged-incident-example.js";
 import { prepareProcedureExample } from "./procedure-example.js";
 import { prepareLoanerReadmissionExample } from "./loaner-readmission-example.js";
 import { InstrumentRegistry } from "@intrusionshield/sterile-processing";
@@ -603,6 +604,26 @@ export function createSterilePreview({
           sterileUuid(req.body.requestId),
         ),
       );
+  });
+  app.post("/preview/unpackaged-incident-example", async (req, res) => {
+    const session = res.locals.session as Session;
+    if (session.role !== "reviewer") {
+      res.status(session.role ? 403 : 401).json({
+        error: session.role ? "FORBIDDEN" : "UNAUTHENTICATED",
+      });
+      return;
+    }
+    if (Object.keys(req.query).length || !req.body || Array.isArray(req.body) ||
+        Object.keys(req.body).length !== 1 || typeof req.body.requestId !== "string") {
+      res.status(400).json({ error: "INVALID_REQUEST" });
+      return;
+    }
+    res.status(201).json(await prepareUnpackagedIncidentExample(
+      repository,
+      { tenantId, facilityId, actorId: actors.reviewer },
+      { tenantId, facilityId, actorId: actors.operator },
+      sterileUuid(req.body.requestId),
+    ));
   });
   app.post("/preview/equipment-incident-example", async (req, res) => {
     const session = res.locals.session as Session;
