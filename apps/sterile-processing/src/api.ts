@@ -411,6 +411,17 @@ export const api = {
         s.csrf,
       ),
     ),
+  async prepareUnpackagedIncident(
+    s: Session, requestId: string, signal: AbortSignal,
+  ) {
+    const r = await call<{
+      equipment: import("@intrusionshield/sterile-processing").ProcessingEquipment;
+      from: string;
+      to: string;
+    }>("/preview/unpackaged-incident-example", signal, { requestId }, s.csrf);
+    await scoped(s, Promise.resolve(r.equipment));
+    return r;
+  },
   async prepareEquipmentIncident(
     s: Session,
     requestId: string,
