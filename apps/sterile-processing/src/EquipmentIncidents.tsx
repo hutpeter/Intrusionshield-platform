@@ -169,6 +169,13 @@ export function EquipmentIncidents({
           </tbody>
         </table>
       </div>
+      {v.unpackagedInstrumentIds?.length > 0 && (
+        <section className="info" role="status">
+          <h3>{t.unpackaged}: {v.unpackagedInstrumentIds.length}</h3>
+          <p>{t.unpackagedNote}</p>
+          <ul>{v.unpackagedInstrumentIds.map((id) => <li key={id}><code>{id}</code></li>)}</ul>
+        </section>
+      )}
       <h3>
         {t.packages}: {v.targets.length}
       </h3>
