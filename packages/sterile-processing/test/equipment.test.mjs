@@ -485,3 +485,55 @@ test("incident preview retains uncovered instrument when another instrument from
     [coveredId, uncoveredId].sort());
   assert.equal(mismatchedAttempt.targets.length, 0);
 });
+
+test("incident investigation findings are versioned, idempotent, scoped and audit-backed", async () => {
+  const repo = new MemoryRepository(), s = scope(),
+    { EquipmentIncidentRegistry } = await import("../dist/index.js"),
+    machine = await new EquipmentRegistry(repo).register(s,
+      equipmentBody({ code: "INVESTIGATION-WASHER", kind: "washer_disinfector", methods: [] })),
+    registry = new EquipmentIncidentRegistry(repo),
+    now = Date.now(),
+    from = new Date(now - 60000).toISOString(),
+    to = new Date(now - 1000).toISOString(),
+    impact = await registry.preview(s, machine.id, from, to),
+    incident = await registry.create(s, {
+      requestId: randomUUID(), code: "INVESTIGATION-DEMO", equipmentId: machine.id,
+      from, to, impactHash: impact.impactHash, reason: "SIMULATED review",
+      reference: "SIMULATED-REF", confirmed: true,
+    });
+  const requestId = randomUUID();
+  const input = {
+    requestId, version: incident.version, finding: "SIMULATED investigation evidence",
+    reference: "SIMULATED-FINDING-1", instrumentIds: [], packageIds: [],
+    confirmed: true,
+  };
+  const recorded = await registry.recordFinding(s, incident.id, input);
+  assert.equal(recorded.version, 2);
+  assert.equal(recorded.findings.length, 1);
+  assert.equal(recorded.findings[0].actorId, s.actorId);
+  assert.equal(recorded.findings[0].finding, input.finding);
+  assert.deepEqual(await registry.recordFinding(s, incident.id, input), recorded);
+  assert.equal((await registry.get(s, incident.id, 1)).findings.length, 0);
+  assert.equal((await registry.get(s, incident.id, 2)).findings.length, 1);
+  assert.equal(repo.state.audit.filter(a =>
+    a.entityId === incident.id && a.action === "equipment-incident-finding-recorded").length, 1);
+  await fail(registry.recordFinding(s, incident.id, {
+    ...input, requestId: randomUUID(), finding: "SIMULATED stale update",
+  }), "CONFLICT");
+  await fail(registry.recordFinding(s, incident.id, {
+    ...input, requestId: randomUUID(), version: 2,
+    instrumentIds: [randomUUID()],
+  }), "INVALID_REQUEST");
+  await fail(registry.recordFinding(s, incident.id, {
+    ...input, requestId: randomUUID(), version: 2, confirmed: false,
+  }), "INVALID_REQUEST");
+  for (const foreign of [
+    { ...s, tenantId: randomUUID() }, { ...s, facilityId: randomUUID() },
+  ]) {
+    await fail(registry.get(foreign, incident.id), "NOT_FOUND");
+    await fail(registry.recordFinding(foreign, incident.id, {
+      ...input, requestId: randomUUID(), version: 2,
+    }), "NOT_FOUND");
+  }
+  assert.equal((await registry.get(s, incident.id)).version, 2);
+});
