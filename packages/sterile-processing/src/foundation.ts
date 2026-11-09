@@ -63,7 +63,12 @@ export interface Instrument {
   recall?: RecallBlock;
   processingHold?: { episodeId: string; episodeCode: string };
   /** Incident safety block; release requires a separate authorized decision. */
-  incidentHold?: { incidentId: string; incidentCode: string; at: string; reason: string };
+  incidentHold?: {
+    incidentId: string;
+    incidentCode: string;
+    at: string;
+    reason: string;
+  };
   activeAssembly?: { assemblyId: string; assemblyCode: string };
   id: string;
   tenantId: string;
@@ -177,6 +182,10 @@ export interface CommandReceipt {
 }
 /** All methods are scoped to the transaction's tenant/facility. Writes and audit commit together. */
 export interface SterileTransaction {
+  performanceData(
+    from: string,
+    to: string,
+  ): Promise<import("./performance.js").PerformanceData>;
   dashboardQueue(
     id: import("./dashboard.js").DashboardQueueId,
     offset?: number,
@@ -447,6 +456,7 @@ export interface SterileRepository {
 export class SterileError extends Error {
   constructor(
     public readonly code:
+      | "REPORT_LIMIT"
       | "INCIDENT_LIMIT"
       | "EQUIPMENT_BLOCKED"
       | "PACKAGE_EXPIRED"

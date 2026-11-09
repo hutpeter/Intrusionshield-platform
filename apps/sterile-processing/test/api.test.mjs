@@ -1070,3 +1070,31 @@ test("equipment incident assessment rejects a nested foreign machine and posts r
     (e) => e.code === "SERVICE_UNAVAILABLE",
   );
 });
+
+test("performance refuses foreign scope and a mismatched period instead of exporting unrelated report data", async (t) => {
+  let mode = 0;
+  fake(t, async (path, options) => {
+    assert.match(path, /\/performance\?from=2026-11-01&to=2026-11-03$/);
+    assert.equal(options.method, "GET");
+    return response(
+      mode === 0
+        ? { tenantId: session.tenantId, facilityId: "foreign" }
+        : {
+            tenantId: session.tenantId,
+            facilityId: session.facilityId,
+            from: "2026-10-01",
+            to: "2026-11-03",
+            groupingTimeZone: "UTC",
+          },
+    );
+  });
+  await assert.rejects(
+    api.performance(session, "2026-11-01", "2026-11-03", signal()),
+    (e) => e.code === "SERVICE_UNAVAILABLE",
+  );
+  mode = 1;
+  await assert.rejects(
+    api.performance(session, "2026-11-01", "2026-11-03", signal()),
+    (e) => e.code === "SERVICE_UNAVAILABLE",
+  );
+});

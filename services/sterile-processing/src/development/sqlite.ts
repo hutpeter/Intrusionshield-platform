@@ -1,3 +1,4 @@
+import { readPerformanceData } from "./performance.js";
 import { readDashboardQueue } from "./dashboard.js";
 import { DatabaseSync } from "node:sqlite";
 import {
@@ -186,6 +187,8 @@ CREATE INDEX IF NOT EXISTS sp_assignment_assembly ON sp_assignments(tenant_id,fa
         return rows.map((row) => JSON.parse(row.payload) as V);
       };
       const tx: SterileTransaction = {
+        performanceData: async (from, to) =>
+          readPerformanceData(this.db, args, from, to),
         findProcedure: async (id) =>
           read(
             "SELECT payload FROM sp_procedures WHERE tenant_id=? AND facility_id=? AND id=?",

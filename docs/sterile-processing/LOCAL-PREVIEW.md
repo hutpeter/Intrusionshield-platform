@@ -293,3 +293,7 @@ See [EQUIPMENT.md](EQUIPMENT.md) for U-EQUIP-01, the single owner check as **Dem
 ## Equipment incident assessment
 
 See [EQUIPMENT-INCIDENTS.md](EQUIPMENT-INCIDENTS.md) for the single U-EQINC-01 check as **Demo reviewer**. The fictional setup prepares recorded work; preview and incident confirmation remain explicit. Linked recalls have a separate preview/confirmation and use the existing recovery/disposition workflow.
+
+## Operational performance
+
+All demo roles can open **Operational performance** and **Generate report**. See [PERFORMANCE.md](PERFORMANCE.md) for definitions, limits and the single U-PERF-01 owner check. No new fictional setup is required.

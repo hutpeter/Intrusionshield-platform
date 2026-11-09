@@ -1,3 +1,5 @@
+import { PerformanceWorkspace } from "./Performance";
+import { performanceLabels } from "./performance-text";
 import { EquipmentWorkspace } from "./Equipment";
 import { equipmentLabels } from "./equipment-text";
 import { ProcedureWorkspace } from "./Procedures";
@@ -278,6 +280,7 @@ function Workspace({
   onExpired: () => void;
 }) {
   const [tab, setTab] = useState<
+      | "performance"
       | "equipment"
       | "procedures"
       | "loaners"
@@ -348,6 +351,7 @@ function Workspace({
     void (async () => {
       try {
         if (
+          tab === "performance" ||
           tab === "equipment" ||
           tab === "procedures" ||
           tab === "loaners" ||
@@ -445,6 +449,7 @@ function Workspace({
   }
   function navigate(
     target:
+      | "performance"
       | "equipment"
       | "procedures"
       | "loaners"
@@ -682,6 +687,14 @@ function Workspace({
             <span aria-hidden="true">⌕</span> {traceLabels(language).title}
           </button>
           <button
+            aria-current={tab === "performance" ? "page" : undefined}
+            disabled={busy}
+            onClick={() => navigate("performance")}
+          >
+            <span aria-hidden="true">▥</span>{" "}
+            {performanceLabels(language).title}
+          </button>
+          <button
             aria-current={tab === "equipment" ? "page" : undefined}
             disabled={busy}
             onClick={() => navigate("equipment")}
@@ -759,7 +772,8 @@ function Workspace({
             {recallLabels(language).blocked} · {detail.recall.caseCode}
           </p>
         )}
-        {tab !== "equipment" &&
+        {tab !== "performance" &&
+          tab !== "equipment" &&
           tab !== "procedures" &&
           tab !== "loaners" &&
           tab !== "dashboard" &&
@@ -1106,6 +1120,26 @@ function Workspace({
             blocked={blocked}
             onExpired={onExpired}
             onBusy={setTrayBusy}
+          />
+        )}
+        {tab === "performance" && (
+          <PerformanceWorkspace
+            key={trayReset}
+            session={session}
+            language={language}
+            blocked={blocked}
+            onExpired={onExpired}
+            onBusy={setTrayBusy}
+            onOpen={(workspace, id) =>
+              guard(() => {
+                setDashboardTarget({ workspace, id });
+                setTab(workspace);
+                setSelected(null);
+                setPage(1);
+                setHistoryPage(1);
+                setNotice(null);
+              })
+            }
           />
         )}
         {tab === "equipment" && (

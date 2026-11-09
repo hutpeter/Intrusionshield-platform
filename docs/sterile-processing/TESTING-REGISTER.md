@@ -51,9 +51,9 @@ A successful developer check never implies that the owner performed it.
 
 | 2b12333 | Issued-package lookup, manifest reconciliation and confirmed complete return with frozen identifier | 284 scoped tests, builds and targeted browser verification | U-RETSCAN-01 passed November 6, 2026 | Owner exceptions/disposition, hardware, persistent partial returns and operational acceptance deferred |
 
-## Current owner check — equipment incident assessment
+## Previous owner check — equipment incident assessment
 
-**U-EQINC-01 pending:** sign in as **Demo reviewer** → Processing equipment (Back to equipment if necessary) → Prepare fictional equipment incident example → Preview affected work → review one processing record and one directly linked package → tick assessment confirmation → Record incident assessment. Expect Incident recorded — review required and Linked recalls: 0. This is the only requested owner check; linked recall is developer-verified. See [EQUIPMENT-INCIDENTS.md](EQUIPMENT-INCIDENTS.md).
+**U-EQINC-01 passed November 9, 2026:** owner screenshot confirms saved incident version 1, affected processing records: 1, directly linked packages: 1 and linked recalls: 0. Original check: sign in as **Demo reviewer** → Processing equipment (Back to equipment if necessary) → Prepare fictional equipment incident example → Preview affected work → review one processing record and one directly linked package → tick assessment confirmation → Record incident assessment. Expect Incident recorded — review required and Linked recalls: 0. This is the only requested owner check; linked recall is developer-verified. See [EQUIPMENT-INCIDENTS.md](EQUIPMENT-INCIDENTS.md).
 
 Developer November 8, 2026: 360 scoped tests verified (195 domain, 127 HTTP/SQLite, 38 web), builds and Chromium read-only preview/assessment confirmation/no automatic hold/separate recall confirmation/source association/navigation/reload checks passed. Registered and legacy periods, exact washer cleaning-attempt proof, stale work hashes, scope/limits, source and recall permissions, CSRF, whole-action audit rollback and SQLite reopen are developer-verified.
 
@@ -900,3 +900,9 @@ facility, Visit 2, DEMO-SUPPLIER, one expected original-code instrument, readmis
 arrival details and a linked receiving episode. U-LOANREADMIT-01 passed for this saved
 repeat-visit example. Broader M-LOANREADMIT-01–02 remain deferred. Original U-LOANER-01
 remains unconfirmed; no retrospective pass is inferred. RSP-ISS-001 stays parked.
+
+## Current owner check — operational performance
+
+**U-PERF-01 pending:** open **Operational performance** → **Generate report** using the default dates. Expect a displayed period/snapshot, seven daily UTC rows, summary cards and recorded timing tables. Counts vary with existing records. No new owner CSV check is requested. See [PERFORMANCE.md](PERFORMANCE.md).
+
+Developer November 9, 2026: 373 scoped tests passed (202 domain, 131 HTTP/SQLite, 40 web), scoped builds passed; domain event boundaries/retries/timing/interval unions, persisted scoped reads, source authorization before queries, strict dates/limits, reopen/read-only behavior and CSV formula protection verified. Chromium verifies seven days, report sections, refresh and exporting the displayed snapshot after filter edits. Production scale/calendar/hardware and broader manual/clinical acceptance deferred. U-TRACE-01 and original U-LOANER-01 remain unconfirmed; RSP-ISS-001 stays parked. This entry does not change separately recorded incident hold/release/closure acceptance.

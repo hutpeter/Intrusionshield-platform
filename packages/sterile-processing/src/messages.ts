@@ -1,4 +1,6 @@
 const es = {
+  REPORT_LIMIT:
+    "El informe supera el límite de la vista previa. Reduzca el período; no se ha devuelto un informe parcial.",
   INCIDENT_LIMIT:
     "El alcance supera el límite de esta vista previa. Reduzca el período; no se ha guardado una evaluación parcial.",
   EQUIPMENT_BLOCKED:
@@ -65,6 +67,8 @@ const es = {
 };
 type Messages = Record<keyof typeof es, string>;
 const en: Messages = {
+  REPORT_LIMIT:
+    "The report exceeds the preview limit. Narrow the period; no partial report has been returned.",
   INCIDENT_LIMIT:
     "The impact exceeds this preview’s limit. Narrow the period; no partial assessment has been saved.",
   EQUIPMENT_BLOCKED:
@@ -131,6 +135,8 @@ const en: Messages = {
     "Service unavailable. The change has not been confirmed.",
 };
 const fr: Messages = {
+  REPORT_LIMIT:
+    "Le rapport dépasse la limite de cet aperçu. Réduisez la période ; aucun rapport partiel n’a été renvoyé.",
   INCIDENT_LIMIT:
     "L’impact dépasse la limite de cet aperçu. Réduisez la période ; aucune évaluation partielle n’a été enregistrée.",
   EQUIPMENT_BLOCKED:

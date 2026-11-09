@@ -2,6 +2,7 @@ import express from "express";
 import {
   InstrumentRegistry,
   EquipmentRegistry,
+  PerformanceRegistry,
   EquipmentIncidentRegistry,
   LoanerRegistry,
   ProcedureRegistry,
@@ -38,6 +39,7 @@ export interface SterileDependencies {
     scope: SterileScope,
     capability: "sterile.core",
     permission:
+      | "reports:read"
       | "equipment-incidents:read"
       | "equipment-incidents:write"
       | "equipment:read"
@@ -202,76 +204,78 @@ export function createSterileApp(
           ? "maintenance:authorize"
           : req.path === "/dashboard" || req.path.startsWith("/dashboard/")
             ? "dashboard:read"
-            : req.path.startsWith("/equipment-incidents") ||
-                /^\/equipment\/[^/]+\/(incident-impact|incidents)$/.test(
-                  req.path,
-                )
-              ? readOnly
-                ? "equipment-incidents:read"
-                : "equipment-incidents:write"
-              : req.path.startsWith("/equipment")
+            : req.path === "/performance"
+              ? "reports:read"
+              : req.path.startsWith("/equipment-incidents") ||
+                  /^\/equipment\/[^/]+\/(incident-impact|incidents)$/.test(
+                    req.path,
+                  )
                 ? readOnly
-                  ? "equipment:read"
-                  : req.path.endsWith("/hold")
-                    ? "equipment:hold"
-                    : "equipment:write"
-                : req.path.startsWith("/procedures")
+                  ? "equipment-incidents:read"
+                  : "equipment-incidents:write"
+                : req.path.startsWith("/equipment")
                   ? readOnly
-                    ? "procedures:read"
-                    : req.path.endsWith("/publish") ||
-                        req.path.endsWith("/withdraw")
-                      ? "procedures:publish"
-                      : "procedures:write"
-                  : req.path.startsWith("/loaners")
+                    ? "equipment:read"
+                    : req.path.endsWith("/hold")
+                      ? "equipment:hold"
+                      : "equipment:write"
+                  : req.path.startsWith("/procedures")
                     ? readOnly
-                      ? "loaners:read"
-                      : "loaners:write"
-                    : req.path.startsWith("/traceability")
-                      ? "traceability:read"
-                      : req.path.startsWith("/returns")
-                        ? readOnly
-                          ? "returns:read"
-                          : req.path.endsWith("/dispose")
-                            ? "returns:dispose"
-                            : "returns:write"
-                        : req.path.startsWith("/recalls")
+                      ? "procedures:read"
+                      : req.path.endsWith("/publish") ||
+                          req.path.endsWith("/withdraw")
+                        ? "procedures:publish"
+                        : "procedures:write"
+                    : req.path.startsWith("/loaners")
+                      ? readOnly
+                        ? "loaners:read"
+                        : "loaners:write"
+                      : req.path.startsWith("/traceability")
+                        ? "traceability:read"
+                        : req.path.startsWith("/returns")
                           ? readOnly
-                            ? "recall:read"
-                            : req.path.endsWith("/clear")
-                              ? "recall:clear"
-                              : req.path.endsWith("/admit")
-                                ? "recall:admit"
-                                : req.path.endsWith("/recover")
-                                  ? "recall:recover"
-                                  : "recall:write"
-                          : req.path.startsWith("/distribution")
+                            ? "returns:read"
+                            : req.path.endsWith("/dispose")
+                              ? "returns:dispose"
+                              : "returns:write"
+                          : req.path.startsWith("/recalls")
                             ? readOnly
-                              ? "distribution:read"
-                              : "distribution:write"
-                            : req.path.startsWith("/reviews")
+                              ? "recall:read"
+                              : req.path.endsWith("/clear")
+                                ? "recall:clear"
+                                : req.path.endsWith("/admit")
+                                  ? "recall:admit"
+                                  : req.path.endsWith("/recover")
+                                    ? "recall:recover"
+                                    : "recall:write"
+                            : req.path.startsWith("/distribution")
                               ? readOnly
-                                ? "release:read"
-                                : "release:write"
-                              : req.path.startsWith("/loads")
+                                ? "distribution:read"
+                                : "distribution:write"
+                              : req.path.startsWith("/reviews")
                                 ? readOnly
-                                  ? "cycles:read"
-                                  : "cycles:write"
-                                : req.path.startsWith("/packages") ||
-                                    req.path === "/package-scan"
+                                  ? "release:read"
+                                  : "release:write"
+                                : req.path.startsWith("/loads")
                                   ? readOnly
-                                    ? "packaging:read"
-                                    : "packaging:write"
-                                  : req.path.startsWith("/processing")
+                                    ? "cycles:read"
+                                    : "cycles:write"
+                                  : req.path.startsWith("/packages") ||
+                                      req.path === "/package-scan"
                                     ? readOnly
-                                      ? "processing:read"
-                                      : "processing:write"
-                                    : req.path.startsWith("/tray-")
+                                      ? "packaging:read"
+                                      : "packaging:write"
+                                    : req.path.startsWith("/processing")
                                       ? readOnly
-                                        ? "trays:read"
-                                        : "trays:write"
-                                      : readOnly
-                                        ? "instruments:read"
-                                        : "instruments:write";
+                                        ? "processing:read"
+                                        : "processing:write"
+                                      : req.path.startsWith("/tray-")
+                                        ? readOnly
+                                          ? "trays:read"
+                                          : "trays:write"
+                                        : readOnly
+                                          ? "instruments:read"
+                                          : "instruments:write";
       if (
         (await dependencies.authorize!(scope, "sterile.core", permission)) !==
         true
@@ -402,6 +406,42 @@ export function createSterileApp(
       ),
     );
   });
+  app.get(prefix + "/performance", async (req, res) => {
+    for (const permission of [
+      "processing:read",
+      "trays:read",
+      "packaging:read",
+      "cycles:read",
+      "release:read",
+      "distribution:read",
+      "returns:read",
+      "equipment:read",
+      "instruments:read",
+    ] as const)
+      if (
+        (await dependencies.authorize!(
+          res.locals.scope,
+          "sterile.core",
+          permission,
+        )) !== true
+      ) {
+        res.status(403).json({ error: "FORBIDDEN" });
+        return;
+      }
+    if (
+      Object.keys(req.query).length !== 2 ||
+      typeof req.query.from !== "string" ||
+      typeof req.query.to !== "string"
+    )
+      throw new SterileError("INVALID_REQUEST");
+    res.json(
+      await new PerformanceRegistry(dependencies.repository!).report(
+        res.locals.scope,
+        req.query.from,
+        req.query.to,
+      ),
+    );
+  });
   const incidents = () =>
     new EquipmentIncidentRegistry(dependencies.repository!);
   async function incidentSources(res: express.Response, recall = false) {
@@ -505,50 +545,98 @@ export function createSterileApp(
     noQuery(req);
     if (!(await incidentSources(res, true))) return;
     const v = body(req.body, [
-      "requestId", "version", "finding", "reference",
-      "instrumentIds", "packageIds", "confirmed",
+      "requestId",
+      "version",
+      "finding",
+      "reference",
+      "instrumentIds",
+      "packageIds",
+      "confirmed",
     ]);
-    res.status(201).json(await incidents().recordFinding(
-      res.locals.scope,
-      sterileUuid(req.params.id),
-      v as unknown as Parameters<EquipmentIncidentRegistry["recordFinding"]>[2],
-    ));
+    res
+      .status(201)
+      .json(
+        await incidents().recordFinding(
+          res.locals.scope,
+          sterileUuid(req.params.id),
+          v as unknown as Parameters<
+            EquipmentIncidentRegistry["recordFinding"]
+          >[2],
+        ),
+      );
   });
-  app.post(prefix + "/equipment-incidents/:id/instrument-holds", async (req, res) => {
-    noQuery(req);
-    if (!(await incidentSources(res, true))) return;
-    const v = body(req.body, [
-      "requestId", "version", "instrumentId", "instrumentVersion",
-      "reason", "confirmed",
-    ]);
-    res.status(201).json(await incidents().holdInstrument(
-      res.locals.scope,
-      sterileUuid(req.params.id),
-      v as unknown as Parameters<EquipmentIncidentRegistry["holdInstrument"]>[2],
-    ));
-  });
-  app.post(prefix + "/equipment-incidents/:id/instrument-releases", async (req, res) => {
-    noQuery(req);
-    if (!(await incidentSources(res, true))) return;
-    const v = body(req.body, [
-      "requestId", "version", "instrumentId", "instrumentVersion",
-      "reason", "reference", "confirmed",
-    ]);
-    res.status(201).json(await incidents().releaseInstrument(
-      res.locals.scope, sterileUuid(req.params.id),
-      v as unknown as Parameters<EquipmentIncidentRegistry["releaseInstrument"]>[2],
-    ));
-  });
+  app.post(
+    prefix + "/equipment-incidents/:id/instrument-holds",
+    async (req, res) => {
+      noQuery(req);
+      if (!(await incidentSources(res, true))) return;
+      const v = body(req.body, [
+        "requestId",
+        "version",
+        "instrumentId",
+        "instrumentVersion",
+        "reason",
+        "confirmed",
+      ]);
+      res
+        .status(201)
+        .json(
+          await incidents().holdInstrument(
+            res.locals.scope,
+            sterileUuid(req.params.id),
+            v as unknown as Parameters<
+              EquipmentIncidentRegistry["holdInstrument"]
+            >[2],
+          ),
+        );
+    },
+  );
+  app.post(
+    prefix + "/equipment-incidents/:id/instrument-releases",
+    async (req, res) => {
+      noQuery(req);
+      if (!(await incidentSources(res, true))) return;
+      const v = body(req.body, [
+        "requestId",
+        "version",
+        "instrumentId",
+        "instrumentVersion",
+        "reason",
+        "reference",
+        "confirmed",
+      ]);
+      res
+        .status(201)
+        .json(
+          await incidents().releaseInstrument(
+            res.locals.scope,
+            sterileUuid(req.params.id),
+            v as unknown as Parameters<
+              EquipmentIncidentRegistry["releaseInstrument"]
+            >[2],
+          ),
+        );
+    },
+  );
   app.post(prefix + "/equipment-incidents/:id/closure", async (req, res) => {
     noQuery(req);
     if (!(await incidentSources(res, true))) return;
     const v = body(req.body, [
-      "requestId", "version", "reason", "reference", "confirmed",
+      "requestId",
+      "version",
+      "reason",
+      "reference",
+      "confirmed",
     ]);
-    res.status(201).json(await incidents().close(
-      res.locals.scope, sterileUuid(req.params.id),
-      v as unknown as Parameters<EquipmentIncidentRegistry["close"]>[2],
-    ));
+    res
+      .status(201)
+      .json(
+        await incidents().close(
+          res.locals.scope,
+          sterileUuid(req.params.id),
+          v as unknown as Parameters<EquipmentIncidentRegistry["close"]>[2],
+        ),
+      );
   });
   app.get(
     prefix + "/equipment-incidents/:id/recall-impact",
@@ -2125,6 +2213,7 @@ export function createSterileApp(
           ? {
               SCAN_DUPLICATE: 409,
               SCAN_TYPE: 409,
+              REPORT_LIMIT: 409,
               INCIDENT_LIMIT: 409,
               EQUIPMENT_BLOCKED: 409,
               PACKAGE_EXPIRED: 409,

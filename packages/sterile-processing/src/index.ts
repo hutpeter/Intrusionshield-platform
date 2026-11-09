@@ -297,3 +297,5 @@ export * from "./equipment.js";
 export * from "./equipment-status.js";
 
 export * from "./equipment-incidents.js";
+
+export * from "./performance.js";

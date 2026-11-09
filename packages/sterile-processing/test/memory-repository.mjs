@@ -180,6 +180,91 @@ export class MemoryRepository {
           .filter((x) => own(x) && x.instrumentId === id)
           .reverse()
           .slice((page - 1) * 50, (page - 1) * 50 + 51),
+      performanceData: async (from, to) => {
+        const inside = (at) =>
+            Date.parse(at) >= Date.parse(from) &&
+            Date.parse(at) < Date.parse(to),
+          overlap = (a, b) =>
+            Date.parse(a) < Date.parse(to) &&
+            (b === null || Date.parse(b) >= Date.parse(from)),
+          copy = (rows) => rows.map((x) => structuredClone(x));
+        return {
+          processing: copy(
+            s.processing
+              .filter(
+                (e) =>
+                  own(e) &&
+                  (inside(e.createdAt) ||
+                    e.attempts.some(
+                      (a) =>
+                        overlap(a.startedAt, a.finishedAt) ||
+                        inside(a.finishedAt),
+                    ) ||
+                    e.inspections?.some((i) => inside(i.at))),
+              )
+              .slice(0, 5001),
+          ),
+          assemblies: copy(
+            s.assemblies
+              .filter((a) => own(a) && inside(a.completedAt))
+              .slice(0, 5001),
+          ),
+          packages: copy(
+            s.packages
+              .filter((p) => own(p) && inside(p.createdAt))
+              .slice(0, 5001),
+          ),
+          loads: copy(
+            s.loads
+              .filter(
+                (l) =>
+                  own(l) &&
+                  (overlap(l.startedAt, l.finishedAt) || inside(l.finishedAt)),
+              )
+              .slice(0, 5001),
+          ),
+          reviews: copy(
+            s.reviews
+              .filter((r) => own(r) && r.decisions.some((d) => inside(d.at)))
+              .slice(0, 5001),
+          ),
+          distribution: copy(
+            s.distribution
+              .filter(
+                (r) =>
+                  own(r) &&
+                  r.events.some((e) => e.kind === "issued" && inside(e.at)),
+              )
+              .slice(0, 5001),
+          ),
+          returns: copy(
+            s.returns
+              .filter((r) => own(r) && inside(r.createdAt))
+              .slice(0, 5001),
+          ),
+          equipmentVersions: copy(
+            s.equipmentVersions
+              .filter(
+                (v) =>
+                  own(v) &&
+                  Date.parse(v.updatedAt) < Date.parse(to) &&
+                  (inside(v.updatedAt) ||
+                    v.version ===
+                      Math.max(
+                        ...s.equipmentVersions
+                          .filter(
+                            (p) =>
+                              own(p) &&
+                              p.id === v.id &&
+                              Date.parse(p.updatedAt) < Date.parse(from),
+                          )
+                          .map((p) => p.version),
+                      )),
+              )
+              .slice(0, 5001),
+          ),
+        };
+      },
       dashboardQueue: async (id, offset = 0) => {
         const pending = (r) =>
           s.recallInstruments.some(

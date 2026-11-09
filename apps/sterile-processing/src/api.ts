@@ -301,6 +301,38 @@ export const api = {
         episodeCode: string;
       }>("/preview/procedure-example", signal, { requestId }, s.csrf),
     ),
+  async performance(s: Session, from: string, to: string, signal: AbortSignal) {
+    const r = await scoped(
+      s,
+      call<import("@intrusionshield/sterile-processing").PerformanceReport>(
+        base(s) +
+          "/performance?from=" +
+          encodeURIComponent(from) +
+          "&to=" +
+          encodeURIComponent(to),
+        signal,
+      ),
+    );
+    if (
+      r.from !== from ||
+      r.to !== to ||
+      r.groupingTimeZone !== "UTC" ||
+      !Number.isFinite(Date.parse(r.generatedAt)) ||
+      !Array.isArray(r.daily) ||
+      r.daily.length < 1 ||
+      r.daily.length > 90 ||
+      !r.totals ||
+      !r.quality ||
+      !r.timing ||
+      !Array.isArray(r.types) ||
+      !Array.isArray(r.equipment) ||
+      !Array.isArray(r.oldest) ||
+      !Array.isArray(r.backlog) ||
+      !r.exclusions
+    )
+      throw new ApiError(503, "SERVICE_UNAVAILABLE");
+    return r;
+  },
   equipmentIncidentImpact: (
     s: Session,
     id: string,
@@ -387,7 +419,10 @@ export const api = {
     checkedIncident(
       s,
       call<import("@intrusionshield/sterile-processing").EquipmentIncident>(
-        base(s) + "/equipment-incidents/" + encodeURIComponent(id) + "/findings",
+        base(s) +
+          "/equipment-incidents/" +
+          encodeURIComponent(id) +
+          "/findings",
         signal,
         body,
         s.csrf,
@@ -409,37 +444,62 @@ export const api = {
     checkedIncident(
       s,
       call<import("@intrusionshield/sterile-processing").EquipmentIncident>(
-        base(s) + "/equipment-incidents/" + encodeURIComponent(id) + "/instrument-holds",
+        base(s) +
+          "/equipment-incidents/" +
+          encodeURIComponent(id) +
+          "/instrument-holds",
         signal,
         body,
         s.csrf,
       ),
     ),
   releaseIncidentInstrument: (
-    s: Session, id: string,
+    s: Session,
+    id: string,
     body: {
-      requestId: string; version: number; instrumentId: string;
-      instrumentVersion: number; reason: string; reference: string;
+      requestId: string;
+      version: number;
+      instrumentId: string;
+      instrumentVersion: number;
+      reason: string;
+      reference: string;
       confirmed: boolean;
-    }, signal: AbortSignal,
-  ) => checkedIncident(s,
-    call<import("@intrusionshield/sterile-processing").EquipmentIncident>(
-      base(s) + "/equipment-incidents/" + encodeURIComponent(id) + "/instrument-releases",
-      signal, body, s.csrf,
+    },
+    signal: AbortSignal,
+  ) =>
+    checkedIncident(
+      s,
+      call<import("@intrusionshield/sterile-processing").EquipmentIncident>(
+        base(s) +
+          "/equipment-incidents/" +
+          encodeURIComponent(id) +
+          "/instrument-releases",
+        signal,
+        body,
+        s.csrf,
+      ),
     ),
-  ),
   closeEquipmentIncident: (
-    s: Session, id: string,
+    s: Session,
+    id: string,
     body: {
-      requestId: string; version: number; reason: string;
-      reference: string; confirmed: boolean;
-    }, signal: AbortSignal,
-  ) => checkedIncident(s,
-    call<import("@intrusionshield/sterile-processing").EquipmentIncident>(
-      base(s) + "/equipment-incidents/" + encodeURIComponent(id) + "/closure",
-      signal, body, s.csrf,
+      requestId: string;
+      version: number;
+      reason: string;
+      reference: string;
+      confirmed: boolean;
+    },
+    signal: AbortSignal,
+  ) =>
+    checkedIncident(
+      s,
+      call<import("@intrusionshield/sterile-processing").EquipmentIncident>(
+        base(s) + "/equipment-incidents/" + encodeURIComponent(id) + "/closure",
+        signal,
+        body,
+        s.csrf,
+      ),
     ),
-  ),
   incidentRecallImpact: (
     s: Session,
     id: string,
@@ -482,7 +542,9 @@ export const api = {
       ),
     ),
   async prepareUnpackagedIncident(
-    s: Session, requestId: string, signal: AbortSignal,
+    s: Session,
+    requestId: string,
+    signal: AbortSignal,
   ) {
     const r = await call<{
       equipment: import("@intrusionshield/sterile-processing").ProcessingEquipment;

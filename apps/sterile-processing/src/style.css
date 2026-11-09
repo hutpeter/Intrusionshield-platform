@@ -1193,3 +1193,43 @@ td {
 .dashboard-queue li button {
   flex-shrink: 0;
 }
+
+.performance-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 18px;
+}
+.performance-cards .panel {
+  margin: 0 0 24px;
+}
+.performance-cards strong {
+  font-size: 30px;
+  color: #155e63;
+}
+.performance-cards h2 {
+  font-size: 16px;
+}
+.performance-chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 20px 0;
+  color: #254641;
+}
+.performance-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+.performance-legend span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.performance-legend i {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
