@@ -527,6 +527,29 @@ export function createSterileApp(
       v as unknown as Parameters<EquipmentIncidentRegistry["holdInstrument"]>[2],
     ));
   });
+  app.post(prefix + "/equipment-incidents/:id/instrument-releases", async (req, res) => {
+    noQuery(req);
+    if (!(await incidentSources(res, true))) return;
+    const v = body(req.body, [
+      "requestId", "version", "instrumentId", "instrumentVersion",
+      "reason", "reference", "confirmed",
+    ]);
+    res.status(201).json(await incidents().releaseInstrument(
+      res.locals.scope, sterileUuid(req.params.id),
+      v as unknown as Parameters<EquipmentIncidentRegistry["releaseInstrument"]>[2],
+    ));
+  });
+  app.post(prefix + "/equipment-incidents/:id/closure", async (req, res) => {
+    noQuery(req);
+    if (!(await incidentSources(res, true))) return;
+    const v = body(req.body, [
+      "requestId", "version", "reason", "reference", "confirmed",
+    ]);
+    res.status(201).json(await incidents().close(
+      res.locals.scope, sterileUuid(req.params.id),
+      v as unknown as Parameters<EquipmentIncidentRegistry["close"]>[2],
+    ));
+  });
   app.get(
     prefix + "/equipment-incidents/:id/recall-impact",
     async (req, res) => {
