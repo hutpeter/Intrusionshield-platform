@@ -553,6 +553,16 @@ export class EquipmentIncidentRegistry extends SterileRegistryBase {
         if (old.impact.targets.some(p =>
           !old.recalls.some(r => r.packageId === p.id)))
           throw new SterileError("CONFLICT");
+        // A recall's creation is not a disposition. Every associated case must
+        // be closed, with each affected package explicitly dispositioned.
+        for (const linked of old.recalls) {
+          const recall = await tx.findRecall(linked.id);
+          if (!recall || recall.state !== "closed" ||
+              !recall.items.length ||
+              recall.items.some(item =>
+                item.status !== "disposed" || !item.disposition))
+            throw new SterileError("CONFLICT");
+        }
         for (const instrumentId of old.impact.unpackagedInstrumentIds ?? []) {
           if (!(old.findings ?? []).some(f => f.instrumentIds.includes(instrumentId)))
             throw new SterileError("CONFLICT");
