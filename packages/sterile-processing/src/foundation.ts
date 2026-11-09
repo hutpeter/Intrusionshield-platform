@@ -62,6 +62,8 @@ export interface Instrument {
   maintenance?: import("./maintenance.js").MaintenanceEntry[];
   recall?: RecallBlock;
   processingHold?: { episodeId: string; episodeCode: string };
+  /** Incident safety block; release requires a separate authorized decision. */
+  incidentHold?: { incidentId: string; incidentCode: string; at: string; reason: string };
   activeAssembly?: { assemblyId: string; assemblyCode: string };
   id: string;
   tenantId: string;
