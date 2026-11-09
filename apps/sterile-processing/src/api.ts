@@ -207,6 +207,14 @@ async function scopedPage<T extends { tenantId: string; facilityId: string }>(
 async function checkedPackage(s: Session, promise: Promise<SterilePackage>) {
   const x = await scoped(s, promise);
   if (
+    x.consumableLots !== undefined &&
+    (!Array.isArray(x.consumableLots) ||
+      x.consumableLots.some(
+        (l) => !l || l.tenantId !== s.tenantId || l.facilityId !== s.facilityId,
+      ))
+  )
+    throw new ApiError(503, "SERVICE_UNAVAILABLE");
+  if (
     !x.assemblySnapshot ||
     x.assemblySnapshot.tenantId !== s.tenantId ||
     x.assemblySnapshot.facilityId !== s.facilityId ||
@@ -276,6 +284,49 @@ async function checkedIncident(
   return r;
 }
 export const api = {
+  consumablePackages: (
+    s: Session,
+    id: string,
+    n: number,
+    signal: AbortSignal,
+  ) =>
+    scopedPage<import("@intrusionshield/sterile-processing").ConsumableUse>(
+      s,
+      base(s) + "/consumables/" + encodeURIComponent(id) + "/packages",
+      n,
+      signal,
+    ),
+  consumables: (s: Session, n: number, signal: AbortSignal) =>
+    scopedPage<import("@intrusionshield/sterile-processing").ConsumableLot>(
+      s,
+      base(s) + "/consumables",
+      n,
+      signal,
+    ),
+  registerConsumable: (
+    s: Session,
+    body: import("@intrusionshield/sterile-processing").ConsumableInput,
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<import("@intrusionshield/sterile-processing").ConsumableLot>(
+        base(s) + "/consumables",
+        signal,
+        body,
+        s.csrf,
+      ),
+    ),
+  async allConsumables(s: Session, signal: AbortSignal) {
+    const items: import("@intrusionshield/sterile-processing").ConsumableLot[] =
+      [];
+    for (let n = 1; n <= 20; n++) {
+      const r = await api.consumables(s, n, signal);
+      items.push(...r.items);
+      if (!r.hasMore) return items;
+    }
+    throw new ApiError(409, "CONSUMABLE_LIMIT");
+  },
   prepareDashboardPaging: (
     s: Session,
     requestId: string,

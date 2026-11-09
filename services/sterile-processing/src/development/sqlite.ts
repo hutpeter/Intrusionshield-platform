@@ -86,6 +86,7 @@ CREATE TABLE IF NOT EXISTS sp_service_usage(tenant_id TEXT NOT NULL,facility_id 
 CREATE TABLE IF NOT EXISTS sp_service_exposures(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,instrument_id TEXT NOT NULL,load_id TEXT NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,instrument_id,load_id),FOREIGN KEY(tenant_id,facility_id,instrument_id) REFERENCES sp_instruments(tenant_id,facility_id,id));
 CREATE TABLE IF NOT EXISTS sp_loaners(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,code TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,code));
 CREATE TABLE IF NOT EXISTS sp_loaner_versions(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id,version),FOREIGN KEY(tenant_id,facility_id,id) REFERENCES sp_loaners(tenant_id,facility_id,id));
+CREATE TABLE IF NOT EXISTS sp_consumables(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,code TEXT NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,code));
 CREATE TABLE IF NOT EXISTS sp_procedures(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,code TEXT NOT NULL,revision INTEGER NOT NULL,stage TEXT NOT NULL,state TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,code,revision));
 CREATE TABLE IF NOT EXISTS sp_procedure_versions(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id,version),FOREIGN KEY(tenant_id,facility_id,id) REFERENCES sp_procedures(tenant_id,facility_id,id));
 CREATE TABLE IF NOT EXISTS sp_audit(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,entity_id TEXT NOT NULL,request_id TEXT NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,request_id));
@@ -1006,6 +1007,40 @@ CREATE INDEX IF NOT EXISTS sp_assignment_assembly ON sp_assignments(tenant_id,fa
             id,
             version,
           ),
+        listConsumablePackages: async (id, page) => {
+          const rows = this.db
+            .prepare(
+              "SELECT json_object('id',p.id,'tenantId',p.tenant_id,'facilityId',p.facility_id,'code',p.code,'state',json_extract(p.payload,'$.state'),'createdAt',json_extract(p.payload,'$.createdAt')) AS payload FROM sp_packages p WHERE p.tenant_id=? AND p.facility_id=? AND EXISTS(SELECT 1 FROM json_each(p.payload,'$.consumableLots') l WHERE json_extract(l.value,'$.id')=?) ORDER BY p.rowid DESC LIMIT 51 OFFSET ?",
+            )
+            .all(...args, id, (page - 1) * 50) as { payload: string }[];
+          return rows.map(
+            (x) =>
+              JSON.parse(
+                x.payload,
+              ) as import("@intrusionshield/sterile-processing").ConsumableUse,
+          );
+        },
+        findConsumable: async (id) =>
+          read<import("@intrusionshield/sterile-processing").ConsumableLot>(
+            "SELECT payload FROM sp_consumables WHERE tenant_id=? AND facility_id=? AND id=?",
+            id,
+          ),
+        findConsumableByCode: async (code) =>
+          read<import("@intrusionshield/sterile-processing").ConsumableLot>(
+            "SELECT payload FROM sp_consumables WHERE tenant_id=? AND facility_id=? AND code=?",
+            code,
+          ),
+        listConsumables: async (page) =>
+          list<import("@intrusionshield/sterile-processing").ConsumableLot>(
+            "SELECT payload FROM sp_consumables WHERE tenant_id=? AND facility_id=? ORDER BY rowid DESC LIMIT 51 OFFSET ?",
+            page,
+          ),
+        insertConsumable: async (item) => {
+          own(item);
+          this.db
+            .prepare("INSERT INTO sp_consumables VALUES(?,?,?,?,?)")
+            .run(...args, item.id, item.code, JSON.stringify(item));
+        },
         findEquipment: async (id) =>
           read<
             import("@intrusionshield/sterile-processing").ProcessingEquipment

@@ -1098,3 +1098,38 @@ test("performance refuses foreign scope and a mismatched period instead of expor
     (e) => e.code === "SERVICE_UNAVAILABLE",
   );
 });
+
+test("consumable list/use rejects foreign scope and registration uses CSRF with unchanged lot selection", async (t) => {
+  let value = {
+      items: [{ tenantId: "foreign", facilityId: session.facilityId }],
+      page: 1,
+      hasMore: false,
+    },
+    calls = [];
+  fake(t, async (path, options) => {
+    calls.push({ path, options });
+    return response(value);
+  });
+  await assert.rejects(
+    api.consumables(session, 1, signal()),
+    (e) => e.code === "SERVICE_UNAVAILABLE",
+  );
+  await assert.rejects(
+    api.consumablePackages(session, "lot", 1, signal()),
+    (e) => e.code === "SERVICE_UNAVAILABLE",
+  );
+  value = {
+    tenantId: session.tenantId,
+    facilityId: session.facilityId,
+    id: "lot",
+  };
+  const input = {
+    requestId: "request",
+    kind: "wrap",
+    lotNumber: "LOT",
+    confirmed: true,
+  };
+  await api.registerConsumable(session, input, signal());
+  assert.equal(calls.at(-1).options.headers["x-sterile-csrf"], session.csrf);
+  assert.deepEqual(JSON.parse(calls.at(-1).options.body), input);
+});

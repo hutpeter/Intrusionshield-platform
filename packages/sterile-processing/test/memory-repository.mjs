@@ -24,6 +24,7 @@ export class MemoryRepository {
     machineCycles: [],
     equipmentIncidents: [],
     equipmentIncidentVersions: [],
+    consumables: [],
     equipment: [],
     equipmentVersions: [],
     packages: [],
@@ -996,6 +997,41 @@ export class MemoryRepository {
             (x) => own(x) && x.id === id && x.version === version,
           ),
         ),
+      listConsumablePackages: async (id, page) =>
+        s.packages
+          .filter((x) => own(x) && x.consumableLots?.some((l) => l.id === id))
+          .slice()
+          .reverse()
+          .slice((page - 1) * 50, (page - 1) * 50 + 51)
+          .map((x) => ({
+            id: x.id,
+            tenantId: x.tenantId,
+            facilityId: x.facilityId,
+            code: x.code,
+            state: x.state,
+            createdAt: x.createdAt,
+          })),
+      findConsumable: async (id) =>
+        read(s.consumables.find((x) => own(x) && x.id === id)),
+      findConsumableByCode: async (code) =>
+        read(s.consumables.find((x) => own(x) && x.code === code)),
+      listConsumables: async (page) =>
+        s.consumables
+          .filter(own)
+          .slice()
+          .reverse()
+          .slice((page - 1) * 50, (page - 1) * 50 + 51)
+          .map((x) => structuredClone(x)),
+      insertConsumable: async (item) => {
+        if (
+          !own(item) ||
+          s.consumables.some(
+            (x) => own(x) && (x.id === item.id || x.code === item.code),
+          )
+        )
+          throw Error("constraint");
+        s.consumables.push(structuredClone(item));
+      },
       findEquipment: async (id) =>
         read(s.equipment.find((x) => own(x) && x.id === id)),
       findEquipmentByCode: async (code) =>

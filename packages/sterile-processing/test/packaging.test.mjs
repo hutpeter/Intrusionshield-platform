@@ -274,3 +274,129 @@ test("packaging rejects inspection recorded after the saved assembly completion"
     "2000-01-01T00:00:00.000Z";
   await fail(f.pk.pack(f.s, body(f.a)), "PACKAGING_BLOCKED");
 });
+
+const lotInput = (extra = {}) => ({
+  requestId: randomUUID(),
+  code: "LOT-" + randomUUID(),
+  kind: "wrap",
+  name: "DEMO WRAP",
+  lotNumber: "LOT-1",
+  supplier: "DEMO supplier",
+  supplierReference: "DEMO delivery",
+  expiresOn: new Date().toISOString().slice(0, 10),
+  confirmed: true,
+  ...extra,
+});
+test("consumable registration validates dates, scopes duplicate codes and retries atomically", async () => {
+  const { ConsumableRegistry } = await import("../dist/index.js"),
+    f = await fixture(),
+    r = new ConsumableRegistry(f.repo),
+    input = lotInput(),
+    lot = await r.register(f.s, input);
+  assert.deepEqual(await r.register(f.s, input), lot);
+  assert.equal(
+    f.repo.state.audit.filter((x) => x.action === "consumable-registered")
+      .length,
+    1,
+  );
+  await fail(
+    r.register(f.s, { ...input, requestId: randomUUID() }),
+    "CONFLICT",
+  );
+  for (const extra of [
+    { expiresOn: "2026-02-30" },
+    { expiresOn: "2026-1-01" },
+    { kind: "unknown" },
+    { confirmed: false },
+    { supplier: "" },
+  ])
+    await fail(r.register(f.s, lotInput(extra)), "INVALID_REQUEST");
+  assert.equal(
+    (await r.list({ ...f.s, facilityId: randomUUID() })).items.length,
+    0,
+  );
+  await fail(r.detail({ ...f.s, tenantId: randomUUID() }, lot.id), "NOT_FOUND");
+  f.repo.failAudit = true;
+  await assert.rejects(r.register(f.s, lotInput()));
+  assert.equal(f.repo.state.consumables.length, 1);
+});
+test("packaging freezes primary and indicator lots, inclusive expiry and immutable saved supplier references", async () => {
+  const { ConsumableRegistry } = await import("../dist/index.js"),
+    f = await fixture(),
+    r = new ConsumableRegistry(f.repo),
+    lot = await r.register(f.s, lotInput()),
+    indicator = await r.register(f.s, lotInput({ kind: "indicator" }));
+  const p = await f.pk.pack(
+    f.s,
+    body(f.a, { consumableLotIds: [lot.id, indicator.id] }),
+  );
+  assert.deepEqual(p.consumableLots, [lot, indicator]);
+  const { TraceabilityRegistry } = await import("../dist/index.js");
+  const traced = await new TraceabilityRegistry(f.repo).report(
+    f.s,
+    "package",
+    p.id,
+  );
+  assert.ok(
+    traced.nodes.some((n) =>
+      n.snapshots.some((s) =>
+        s.facts.some(
+          (x) =>
+            x.kind === "consumable_lot" &&
+            x.fields.some(
+              (f) =>
+                f.key === "supplierReference" &&
+                f.value === lot.supplierReference,
+            ),
+        ),
+      ),
+    ),
+  );
+  assert.equal((await r.packages(f.s, lot.id)).items[0].id, p.id);
+  await fail(
+    r.packages({ ...f.s, facilityId: randomUUID() }, lot.id),
+    "NOT_FOUND",
+  );
+  f.repo.state.consumables[0].supplier = "later catalogue change";
+  assert.equal(
+    (await f.pk.get(f.s, p.id)).consumableLots[0].supplier,
+    lot.supplier,
+  );
+  assert.equal(
+    (await f.pk.get(f.s, p.id, 1)).consumableLots[0].supplier,
+    lot.supplier,
+  );
+});
+test("packaging rejects expired, foreign, duplicate, indicator-only and mismatched lots without writing", async () => {
+  const { ConsumableRegistry } = await import("../dist/index.js"),
+    f = await fixture(),
+    r = new ConsumableRegistry(f.repo),
+    lot = await r.register(f.s, lotInput()),
+    expired = await r.register(f.s, lotInput({ expiresOn: "2020-01-01" })),
+    indicator = await r.register(f.s, lotInput({ kind: "indicator" })),
+    foreign = await r.register(
+      { ...f.s, facilityId: randomUUID() },
+      lotInput(),
+    );
+  for (const [ids, code] of [
+    [[expired.id], "CONSUMABLE_EXPIRED"],
+    [[foreign.id], "NOT_FOUND"],
+    [[lot.id, lot.id], "INVALID_REQUEST"],
+    [[indicator.id], "INVALID_REQUEST"],
+    [[], "INVALID_REQUEST"],
+  ])
+    await fail(f.pk.pack(f.s, body(f.a, { consumableLotIds: ids })), code);
+  await fail(
+    f.pk.pack(
+      f.s,
+      body(f.a, { consumableLotIds: [lot.id], materialLot: "different" }),
+    ),
+    "INVALID_REQUEST",
+  );
+  assert.equal(f.repo.state.packages.length, 0);
+  f.repo.failAudit = true;
+  await assert.rejects(
+    f.pk.pack(f.s, body(f.a, { consumableLotIds: [lot.id] })),
+  );
+  assert.equal(f.repo.state.packages.length, 0);
+});

@@ -1,5 +1,6 @@
 import express from "express";
 import {
+  ConsumableRegistry,
   InstrumentRegistry,
   EquipmentRegistry,
   PerformanceRegistry,
@@ -39,6 +40,8 @@ export interface SterileDependencies {
     scope: SterileScope,
     capability: "sterile.core",
     permission:
+      | "consumables:read"
+      | "consumables:write"
       | "reports:read"
       | "equipment-incidents:read"
       | "equipment-incidents:write"
@@ -197,10 +200,13 @@ export function createSterileApp(
         facilityId,
       };
       const readOnly = req.method === "GET" || req.method === "HEAD";
-      const permission =
-        (req.path.endsWith("/maintenance/authorize") ||
-          req.path.endsWith("/service-policy")) &&
-        !readOnly
+      const permission = req.path.startsWith("/consumables")
+        ? readOnly
+          ? "consumables:read"
+          : "consumables:write"
+        : (req.path.endsWith("/maintenance/authorize") ||
+              req.path.endsWith("/service-policy")) &&
+            !readOnly
           ? "maintenance:authorize"
           : req.path === "/dashboard" || req.path.startsWith("/dashboard/")
             ? "dashboard:read"
@@ -784,6 +790,64 @@ export function createSterileApp(
     }
     return true;
   }
+  app.get(prefix + "/consumables", async (req, res) =>
+    res.json(
+      await new ConsumableRegistry(dependencies.repository!).list(
+        res.locals.scope,
+        page(req),
+      ),
+    ),
+  );
+  app.get(prefix + "/consumables/:id/packages", async (req, res) => {
+    if (
+      (await dependencies.authorize!(
+        res.locals.scope,
+        "sterile.core",
+        "packaging:read",
+      )) !== true
+    ) {
+      res.status(403).json({ error: "FORBIDDEN" });
+      return;
+    }
+    res.json(
+      await new ConsumableRegistry(dependencies.repository!).packages(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        page(req),
+      ),
+    );
+  });
+  app.get(prefix + "/consumables/:id", async (req, res) => {
+    noQuery(req);
+    res.json(
+      await new ConsumableRegistry(dependencies.repository!).detail(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+      ),
+    );
+  });
+  app.post(prefix + "/consumables", async (req, res) => {
+    noQuery(req);
+    const v = body(req.body, [
+      "requestId",
+      "code",
+      "kind",
+      "name",
+      "lotNumber",
+      "supplier",
+      "supplierReference",
+      "expiresOn",
+      "confirmed",
+    ]);
+    res
+      .status(201)
+      .json(
+        await new ConsumableRegistry(dependencies.repository!).register(
+          res.locals.scope,
+          v as unknown as Parameters<ConsumableRegistry["register"]>[1],
+        ),
+      );
+  });
   app.get(prefix + "/procedures", async (req, res) =>
     res.json(
       await new ProcedureRegistry(dependencies.repository!).list(
@@ -1491,8 +1555,19 @@ export function createSterileApp(
         "contentsChecked",
         "confirmed",
       ],
-      ["shelfLife"],
+      ["shelfLife", "consumableLotIds"],
     );
+    if (
+      v.consumableLotIds !== undefined &&
+      (await dependencies.authorize!(
+        res.locals.scope,
+        "sterile.core",
+        "consumables:read",
+      )) !== true
+    ) {
+      res.status(403).json({ error: "FORBIDDEN" });
+      return;
+    }
     res
       .status(201)
       .json(
@@ -2213,6 +2288,7 @@ export function createSterileApp(
           ? {
               SCAN_DUPLICATE: 409,
               SCAN_TYPE: 409,
+              CONSUMABLE_EXPIRED: 409,
               REPORT_LIMIT: 409,
               INCIDENT_LIMIT: 409,
               EQUIPMENT_BLOCKED: 409,

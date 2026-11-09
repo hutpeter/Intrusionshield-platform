@@ -2,9 +2,9 @@
 
 Read-only recorded-work reporting is available from **Operational performance** for every preview role. No setup fixture is required.
 
-## One owner check: U-PERF-01 (pending)
+## One owner check: U-PERF-01 (passed November 9, 2026)
 
-After updating and restarting the preview, open **Operational performance** and click **Generate report** with the default dates. Expect a displayed period/snapshot, seven daily UTC rows, summary cards and recorded stage timing tables. Counts depend on existing records; zero counts and missing timing samples are valid. CSV export is developer-verified. This check is demonstration acceptance only.
+Owner screenshots confirm the displayed November 3–9 period, seven daily rows, summary cards and timing tables. Original check: after updating and restarting the preview, open **Operational performance** and click **Generate report** with the default dates. Expect a displayed period/snapshot, seven daily UTC rows, summary cards and recorded stage timing tables. Counts depend on existing records; zero counts and missing timing samples are valid. CSV export is developer-verified. This check is demonstration acceptance only.
 
 ## Definitions
 

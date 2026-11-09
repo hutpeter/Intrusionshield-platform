@@ -82,6 +82,8 @@ async function httpFixture(t) {
     })
   ).json();
   return {
+    repo,
+    file: join(dir, "registry.sqlite"),
     call,
     login,
     base,
@@ -434,4 +436,162 @@ test("HTTP freezes policy and records protected integrity hold without altering 
     ).status,
     409,
   );
+});
+
+test("HTTP consumable registration, CSRF, roles, strict input and scoped frozen packaging links", async (t) => {
+  const f = await httpFixture(t),
+    input = {
+      requestId: randomUUID(),
+      code: "LOT-HTTP",
+      kind: "pouch",
+      name: "DEMO WRAP",
+      lotNumber: "LOT-1",
+      supplier: "DEMO",
+      supplierReference: "DEMO receipt",
+      expiresOn: new Date(Date.now() + 86400000).toISOString().slice(0, 10),
+      confirmed: true,
+    };
+  assert.equal(
+    (await f.call(f.base + "/consumables", input, { "x-sterile-csrf": "bad" }))
+      .status,
+    403,
+  );
+  assert.equal(
+    (
+      await f.call(f.base + "/consumables", {
+        ...input,
+        tenantId: randomUUID(),
+      })
+    ).status,
+    400,
+  );
+  let response = await f.call(f.base + "/consumables", input);
+  assert.equal(response.status, 201);
+  const lot = await response.json();
+  assert.equal(
+    (await (await f.call(f.base + "/consumables?page=1")).json()).items[0].id,
+    lot.id,
+  );
+  const a = await example(f);
+  response = await f.call(
+    f.base + "/packages",
+    packBody(a, { consumableLotIds: [lot.id] }),
+  );
+  assert.equal(response.status, 201);
+  const p = await response.json();
+  assert.equal(p.consumableLots[0].supplierReference, input.supplierReference);
+  assert.equal(
+    (
+      await (
+        await f.call(f.base + "/consumables/" + lot.id + "/packages")
+      ).json()
+    ).items[0].id,
+    p.id,
+  );
+  const reopened = new PreviewSqliteRepository(f.file);
+  try {
+    const { ConsumableRegistry } =
+        await import("@intrusionshield/sterile-processing"),
+      registry = new ConsumableRegistry(reopened);
+    assert.equal(
+      (await registry.detail(f.session, lot.id)).supplierReference,
+      input.supplierReference,
+    );
+    assert.equal(
+      (await registry.packages(f.session, lot.id)).items[0].id,
+      p.id,
+    );
+  } finally {
+    reopened.close();
+  }
+
+  assert.equal(
+    (await (await f.call(f.base + "/packages/" + p.id + "/versions/1")).json())
+      .consumableLots[0].id,
+    lot.id,
+  );
+  assert.equal(
+    (
+      await f.call(
+        f.base.replace(f.session.facilityId, randomUUID()) +
+          "/consumables/" +
+          lot.id,
+      )
+    ).status,
+    404,
+  );
+  for (const role of ["viewer", "reviewer"]) {
+    await f.login(role);
+    assert.equal((await f.call(f.base + "/consumables")).status, 200);
+    assert.equal(
+      (
+        await f.call(f.base + "/consumables", {
+          ...input,
+          requestId: randomUUID(),
+          code: role,
+        })
+      ).status,
+      403,
+    );
+  }
+});
+
+test("consumable and package-use source permissions are checked before repository access", async (t) => {
+  const { createSterileApp } = await import("../dist/app.js"),
+    s = {
+      tenantId: randomUUID(),
+      facilityId: randomUUID(),
+      actorId: randomUUID(),
+    },
+    server = createServer();
+  let denied = "consumables:read",
+    queries = 0;
+  server.on(
+    "request",
+    createSterileApp({
+      repository: {
+        transaction: async () => {
+          queries++;
+          throw Error("must not query");
+        },
+      },
+      authenticate: async () => ({ ...s, facilityIds: [s.facilityId] }),
+      authorize: async (scope, cap, p) => p !== denied,
+    }),
+  );
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const root =
+    "http://127.0.0.1:" +
+    server.address().port +
+    "/api/v1/sterile/facilities/" +
+    s.facilityId;
+  for (const p of ["consumables:read", "packaging:read"]) {
+    denied = p;
+    assert.equal(
+      (
+        await fetch(root + "/consumables/" + randomUUID() + "/packages", {
+          headers: { authorization: "Bearer demo" },
+        })
+      ).status,
+      403,
+    );
+    assert.equal(queries, 0);
+  }
+  denied = "consumables:write";
+  assert.equal(
+    (
+      await fetch(root + "/consumables", {
+        method: "POST",
+        headers: {
+          authorization: "Bearer demo",
+          "content-type": "application/json",
+        },
+        body: "{}",
+      })
+    ).status,
+    403,
+  );
+  assert.equal(queries, 0);
 });

@@ -1,4 +1,8 @@
 const es = {
+  CONSUMABLE_LIMIT:
+    "El catálogo supera el límite de selección de esta vista previa (1000 lotes). No se puede continuar con el empaque.",
+  CONSUMABLE_EXPIRED:
+    "Lote de consumible caducado. Seleccione un lote vigente.",
   REPORT_LIMIT:
     "El informe supera el límite de la vista previa. Reduzca el período; no se ha devuelto un informe parcial.",
   INCIDENT_LIMIT:
@@ -67,6 +71,9 @@ const es = {
 };
 type Messages = Record<keyof typeof es, string>;
 const en: Messages = {
+  CONSUMABLE_LIMIT:
+    "The catalogue exceeds this preview’s selection limit (1000 lots). Packaging cannot continue in this preview.",
+  CONSUMABLE_EXPIRED: "Consumable lot expired. Select a current lot.",
   REPORT_LIMIT:
     "The report exceeds the preview limit. Narrow the period; no partial report has been returned.",
   INCIDENT_LIMIT:
@@ -135,6 +142,9 @@ const en: Messages = {
     "Service unavailable. The change has not been confirmed.",
 };
 const fr: Messages = {
+  CONSUMABLE_LIMIT:
+    "Le catalogue dépasse la limite de sélection de cet aperçu (1000 lots). L’emballage ne peut pas continuer.",
+  CONSUMABLE_EXPIRED: "Lot de consommable périmé. Sélectionnez un lot valide.",
   REPORT_LIMIT:
     "Le rapport dépasse la limite de cet aperçu. Réduisez la période ; aucun rapport partiel n’a été renvoyé.",
   INCIDENT_LIMIT:

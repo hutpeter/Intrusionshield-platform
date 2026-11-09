@@ -901,8 +901,16 @@ arrival details and a linked receiving episode. U-LOANREADMIT-01 passed for this
 repeat-visit example. Broader M-LOANREADMIT-01–02 remain deferred. Original U-LOANER-01
 remains unconfirmed; no retrospective pass is inferred. RSP-ISS-001 stays parked.
 
-## Current owner check — operational performance
+## Previous owner check — operational performance
 
-**U-PERF-01 pending:** open **Operational performance** → **Generate report** using the default dates. Expect a displayed period/snapshot, seven daily UTC rows, summary cards and recorded timing tables. Counts vary with existing records. No new owner CSV check is requested. See [PERFORMANCE.md](PERFORMANCE.md).
+**U-PERF-01 passed November 9, 2026:** owner screenshots show the November 3–9 period, seven daily rows, summary cards and recorded timing sample/mean/median/95th-percentile tables. Original check: open **Operational performance** → **Generate report** using the default dates. Expect a displayed period/snapshot, seven daily UTC rows, summary cards and recorded timing tables. Counts vary with existing records. No new owner CSV check is requested. See [PERFORMANCE.md](PERFORMANCE.md).
 
 Developer November 9, 2026: 373 scoped tests passed (202 domain, 131 HTTP/SQLite, 40 web), scoped builds passed; domain event boundaries/retries/timing/interval unions, persisted scoped reads, source authorization before queries, strict dates/limits, reopen/read-only behavior and CSV formula protection verified. Chromium verifies seven days, report sections, refresh and exporting the displayed snapshot after filter edits. Production scale/calendar/hardware and broader manual/clinical acceptance deferred. U-TRACE-01 and original U-LOANER-01 remain unconfirmed; RSP-ISS-001 stays parked. This entry does not change separately recorded incident hold/release/closure acceptance.
+
+## Current owner check — consumable lot registration
+
+**U-CONS-01 pending:** Demo operator → **Consumable lots** → **Prepare fictional lot example** → review → tick confirmation → **Save lot record**. Expect **Lot record saved.** and the saved lot row. This is the only requested owner check; packaging selection, frozen provenance and package-use lookup are developer-verified. See [CONSUMABLES.md](CONSUMABLES.md).
+
+Broader owner packaging/expiry exceptions, physical stock/labels, operational policies, manufacturer compatibility, production migration/scale and clinical acceptance remain deferred. U-PERF-01 passed from owner screenshots. U-TRACE-01 and original U-LOANER-01 remain unconfirmed. RSP-ISS-001 remains parked.
+
+Developer November 9, 2026: 379 scoped tests passed (205 domain, 133 HTTP/SQLite, 41 web), scoped builds and Chromium registration/packaging/frozen-provenance/use-lookup/refresh passed. No owner pass is inferred for U-CONS-01.

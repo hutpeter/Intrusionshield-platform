@@ -315,4 +315,8 @@ Initial preview delivers bounded recorded-work impact review by UTC period, exac
 
 ## Operational performance follow-up
 
-Bounded read-only recorded-work throughput, timings, retries, explicit equipment status intervals and current waiting work are available in the preview. U-PERF-01 remains pending. Production aggregation/indexes, site calendars, physical downtime/telemetry, broad manual/clinical acceptance and advanced analytics remain deferred. See [PERFORMANCE.md](PERFORMANCE.md). RSP-ISS-001 stays parked.
+Bounded read-only recorded-work throughput, timings, retries, explicit equipment status intervals and current waiting work are available in the preview. U-PERF-01 passed November 9, 2026 from owner report/timing screenshots. Production aggregation/indexes, site calendars, physical downtime/telemetry, broad manual/clinical acceptance and advanced analytics remain deferred. See [PERFORMANCE.md](PERFORMANCE.md). RSP-ISS-001 stays parked.
+
+## Consumable inventory and recall follow-up
+
+Immutable scoped consumable lot registration, inclusive UTC expiry gate at packaging, frozen package/trace provenance and paged exact-record package-use lookup are delivered in the preview. U-CONS-01 remains pending. Quantity inventory, catalogue correction/withdrawal, product compatibility, manufacturer-lot grouping, lot incidents/holds/recalls, hardware/supplier integration, alerts and production migration/index/scale/clinical acceptance remain deferred. See [CONSUMABLES.md](CONSUMABLES.md). RSP-ISS-001 stays parked.

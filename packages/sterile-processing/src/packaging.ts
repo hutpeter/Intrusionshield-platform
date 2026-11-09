@@ -1,3 +1,4 @@
+import { resolveConsumables } from "./consumables.js";
 import type {
   ShelfLifePolicy,
   PackageIntegrityHold,
@@ -164,8 +165,19 @@ export class PackagingRegistry extends SterileRegistryBase {
             checks: check,
           });
         }
+        const consumableLots = await resolveConsumables(
+          tx,
+          input.consumableLotIds,
+          at,
+        );
+        if (consumableLots) {
+          const primary = consumableLots.find((x) => x.kind !== "indicator")!;
+          if (material !== primary.name || materialLot !== primary.lotNumber)
+            throw new SterileError("INVALID_REQUEST");
+        }
         const shelfLife = shelfLifePolicy(input.shelfLife, at);
         const item: SterilePackage = {
+          ...(consumableLots ? { consumableLots } : {}),
           ...(shelfLife ? { shelfLife } : {}),
           id: randomUUID(),
           tenantId: s.tenantId,

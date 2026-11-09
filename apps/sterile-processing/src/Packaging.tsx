@@ -1,3 +1,5 @@
+import { consumableLabels } from "./consumable-text";
+import type { ConsumableLot } from "@intrusionshield/sterile-processing";
 import { PackageSafety } from "./PackageSafety";
 import { packageSafetyLabels } from "./package-safety-text";
 import { shelfLifeState } from "@intrusionshield/sterile-processing/package-safety";
@@ -30,6 +32,8 @@ const empty = () => ({
   assemblyId: "",
   material: "",
   materialLot: "",
+  primaryLotId: "",
+  indicatorLotId: "",
   procedure: "",
   procedureVersion: "",
   sealChecked: false,
@@ -55,6 +59,8 @@ export function PackagingWorkspace({
   initialRecordId?: string;
 }) {
   const [symbolReady, setSymbolReady] = useState(false);
+  const lotText = consumableLabels(language),
+    [lots, setLots] = useState<ConsumableLot[]>([]);
   const t = labels(language),
     p = packagingLabels(language),
     q = packageSafetyLabels(language),
@@ -120,11 +126,13 @@ export function PackagingWorkspace({
             setHistory(h);
           }
         } else {
-          const [r, a] = await Promise.all([
+          const [r, a, lotRows] = await Promise.all([
             api.packages(session, page, c.signal),
             api.allAssemblies(session, c.signal),
+            api.allConsumables(session, c.signal),
           ]);
           if (!c.signal.aborted) {
+            setLots(lotRows);
             setRows(r);
             setOptions(a.filter((a) => a.state === "complete"));
           }
@@ -191,8 +199,16 @@ export function PackagingWorkspace({
             code: fields.code,
             assemblyId: a.id,
             assemblyVersion: a.version,
-            material: fields.material,
-            materialLot: fields.materialLot,
+            consumableLotIds: [
+              fields.primaryLotId,
+              ...(fields.indicatorLotId ? [fields.indicatorLotId] : []),
+            ],
+            material:
+              lots.find((x) => x.id === fields.primaryLotId)?.name ??
+              fields.material,
+            materialLot:
+              lots.find((x) => x.id === fields.primaryLotId)?.lotNumber ??
+              fields.materialLot,
             procedure: fields.procedure,
             procedureVersion: fields.procedureVersion,
             sealChecked: fields.sealChecked,
@@ -416,6 +432,17 @@ export function PackagingWorkspace({
             <dt>{p.material}</dt>
             <dd>
               {d.material} · {d.materialLot}
+              {d.consumableLots?.length ? (
+                <strong>{lotText.linked}</strong>
+              ) : (
+                <small>{lotText.unlinked}</small>
+              )}
+              {d.consumableLots?.map((x) => (
+                <p key={x.id}>
+                  {x.code} · {x.name} · {lotText[x.kind]} · {x.lotNumber} ·{" "}
+                  {x.supplier} · {x.supplierReference} · {x.expiresOn}
+                </p>
+              ))}
             </dd>
           </div>
           <div>
@@ -655,32 +682,80 @@ export function PackagingWorkspace({
                       ))}
                     </select>
                   </label>
-                  {(
-                    [
-                      "code",
-                      "material",
-                      "materialLot",
-                      "procedure",
-                      "procedureVersion",
-                    ] as const
-                  ).map((key) => (
-                    <label key={key}>
-                      {p[key]}
-                      <input
-                        required
-                        maxLength={
-                          key === "material" || key === "procedure" ? 200 : 100
-                        }
-                        pattern={
-                          key === "code"
-                            ? "[A-Za-z0-9][A-Za-z0-9._-]*"
-                            : undefined
-                        }
-                        value={fields[key]}
-                        onChange={(e) => patch({ [key]: e.target.value })}
-                      />
-                    </label>
-                  ))}
+                  {(["code", "procedure", "procedureVersion"] as const).map(
+                    (key) => (
+                      <label key={key}>
+                        {p[key]}
+                        <input
+                          required
+                          maxLength={key === "procedure" ? 200 : 100}
+                          pattern={
+                            key === "code"
+                              ? "[A-Za-z0-9][A-Za-z0-9._-]*"
+                              : undefined
+                          }
+                          value={fields[key]}
+                          onChange={(e) => patch({ [key]: e.target.value })}
+                        />
+                      </label>
+                    ),
+                  )}
+                </div>
+                <div className="form-grid">
+                  <label>
+                    {lotText.primary}
+                    <select
+                      aria-label={lotText.primary}
+                      required
+                      value={fields.primaryLotId}
+                      onChange={(e) => patch({ primaryLotId: e.target.value })}
+                    >
+                      <option value="">{lotText.choose}</option>
+                      {lots
+                        .filter((x) => x.kind !== "indicator")
+                        .map((x) => (
+                          <option
+                            key={x.id}
+                            value={x.id}
+                            disabled={
+                              x.expiresOn <
+                              new Date().toISOString().slice(0, 10)
+                            }
+                          >
+                            {x.code} · {x.name} · {x.lotNumber} · {x.expiresOn}
+                            {x.expiresOn < new Date().toISOString().slice(0, 10)
+                              ? " · " + lotText.expired
+                              : ""}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
+                  <label>
+                    {lotText.optional}
+                    <select
+                      aria-label={lotText.optional}
+                      value={fields.indicatorLotId}
+                      onChange={(e) =>
+                        patch({ indicatorLotId: e.target.value })
+                      }
+                    >
+                      <option value="">—</option>
+                      {lots
+                        .filter((x) => x.kind === "indicator")
+                        .map((x) => (
+                          <option
+                            key={x.id}
+                            value={x.id}
+                            disabled={
+                              x.expiresOn <
+                              new Date().toISOString().slice(0, 10)
+                            }
+                          >
+                            {x.code} · {x.lotNumber} · {x.expiresOn}
+                          </option>
+                        ))}
+                    </select>
+                  </label>
                 </div>
                 <h3>{q.title}</h3>
                 <p>{q.policyHelp}</p>

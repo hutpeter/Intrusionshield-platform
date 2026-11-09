@@ -1,4 +1,6 @@
 import { PerformanceWorkspace } from "./Performance";
+import { ConsumablesWorkspace } from "./Consumables";
+import { consumableLabels } from "./consumable-text";
 import { performanceLabels } from "./performance-text";
 import { EquipmentWorkspace } from "./Equipment";
 import { equipmentLabels } from "./equipment-text";
@@ -280,6 +282,7 @@ function Workspace({
   onExpired: () => void;
 }) {
   const [tab, setTab] = useState<
+      | "consumables"
       | "performance"
       | "equipment"
       | "procedures"
@@ -351,6 +354,7 @@ function Workspace({
     void (async () => {
       try {
         if (
+          tab === "consumables" ||
           tab === "performance" ||
           tab === "equipment" ||
           tab === "procedures" ||
@@ -449,6 +453,7 @@ function Workspace({
   }
   function navigate(
     target:
+      | "consumables"
       | "performance"
       | "equipment"
       | "procedures"
@@ -687,6 +692,13 @@ function Workspace({
             <span aria-hidden="true">⌕</span> {traceLabels(language).title}
           </button>
           <button
+            aria-current={tab === "consumables" ? "page" : undefined}
+            disabled={busy}
+            onClick={() => navigate("consumables")}
+          >
+            {consumableLabels(language).title}
+          </button>
+          <button
             aria-current={tab === "performance" ? "page" : undefined}
             disabled={busy}
             onClick={() => navigate("performance")}
@@ -772,7 +784,8 @@ function Workspace({
             {recallLabels(language).blocked} · {detail.recall.caseCode}
           </p>
         )}
-        {tab !== "performance" &&
+        {tab !== "consumables" &&
+          tab !== "performance" &&
           tab !== "equipment" &&
           tab !== "procedures" &&
           tab !== "loaners" &&
@@ -1119,6 +1132,17 @@ function Workspace({
             language={language}
             blocked={blocked}
             onExpired={onExpired}
+            onBusy={setTrayBusy}
+          />
+        )}
+        {tab === "consumables" && (
+          <ConsumablesWorkspace
+            key={trayReset}
+            session={session}
+            language={language}
+            blocked={blocked}
+            onExpired={onExpired}
+            onDirty={setTrayDirty}
             onBusy={setTrayBusy}
           />
         )}

@@ -134,6 +134,7 @@ export interface SterileAuditEvent {
     | "equipment-incident-finding-recorded"
     | "equipment-incident-recorded"
     | "equipment-incident-recall-created"
+    | "consumable-registered"
     | "equipment-registered"
     | "equipment-service-recorded"
     | "equipment-held"
@@ -159,6 +160,7 @@ export interface SterileAuditEvent {
   reason: string;
 }
 export type SterileRecord =
+  | import("./consumables.js").ConsumableLot
   | InstrumentType
   | import("./equipment-incidents.js").EquipmentIncident
   | import("./equipment.js").ProcessingEquipment
@@ -182,6 +184,22 @@ export interface CommandReceipt {
 }
 /** All methods are scoped to the transaction's tenant/facility. Writes and audit commit together. */
 export interface SterileTransaction {
+  listConsumablePackages(
+    id: string,
+    page: number,
+  ): Promise<import("./consumables.js").ConsumableUse[]>;
+  findConsumable(
+    id: string,
+  ): Promise<import("./consumables.js").ConsumableLot | null>;
+  findConsumableByCode(
+    code: string,
+  ): Promise<import("./consumables.js").ConsumableLot | null>;
+  listConsumables(
+    page: number,
+  ): Promise<import("./consumables.js").ConsumableLot[]>;
+  insertConsumable(
+    item: import("./consumables.js").ConsumableLot,
+  ): Promise<void>;
   performanceData(
     from: string,
     to: string,
@@ -456,6 +474,7 @@ export interface SterileRepository {
 export class SterileError extends Error {
   constructor(
     public readonly code:
+      | "CONSUMABLE_EXPIRED"
       | "REPORT_LIMIT"
       | "INCIDENT_LIMIT"
       | "EQUIPMENT_BLOCKED"

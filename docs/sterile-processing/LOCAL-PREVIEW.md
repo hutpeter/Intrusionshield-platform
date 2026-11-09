@@ -297,3 +297,7 @@ See [EQUIPMENT-INCIDENTS.md](EQUIPMENT-INCIDENTS.md) for the single U-EQINC-01 c
 ## Operational performance
 
 All demo roles can open **Operational performance** and **Generate report**. See [PERFORMANCE.md](PERFORMANCE.md) for definitions, limits and the single U-PERF-01 owner check. No new fictional setup is required.
+
+## Consumable lots
+
+Enter as **Demo operator** and open **Consumable lots**. The **Prepare fictional lot example** button prefills a form; saving requires explicit confirmation. See [CONSUMABLES.md](CONSUMABLES.md) for U-CONS-01. New UI packaging now selects a registered wrap/pouch lot and optionally an indicator lot.
