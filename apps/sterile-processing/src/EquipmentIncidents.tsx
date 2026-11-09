@@ -55,6 +55,8 @@ export function EquipmentIncidents({
     })),
     [findingFields, setFindingFields] = useState({ finding: "", reference: "", confirmed: false }),
     [holdFields, setHoldFields] = useState({ instrumentId: "", reason: "", confirmed: false }),
+    [releaseFields, setReleaseFields] = useState({ instrumentId: "", reason: "", reference: "", confirmed: false }),
+    [closureFields, setClosureFields] = useState({ reason: "", reference: "", confirmed: false }),
     [recallFields, setRecallFields] = useState({
       code: "",
       reason: "",
@@ -65,7 +67,9 @@ export function EquipmentIncidents({
     request = useRef(crypto.randomUUID()),
     recallRequest = useRef(crypto.randomUUID()),
     findingRequest = useRef(crypto.randomUUID()),
-    holdRequest = useRef(crypto.randomUUID());
+    holdRequest = useRef(crypto.randomUUID()),
+    releaseRequest = useRef(crypto.randomUUID()),
+    closureRequest = useRef(crypto.randomUUID());
   const busy = blocked || saving,
     dirty = editing || !!plan,
     canWrite = !!session.canReview;
@@ -205,6 +209,7 @@ export function EquipmentIncidents({
                 <td>
                   {record &&
                     canWrite &&
+                    !record.closed &&
                     !record.recalls.some((r) => r.packageId === p.id) && (
                       <button
                         disabled={busy || !!plan}
@@ -470,7 +475,8 @@ export function EquipmentIncidents({
             {t.from}: {record.impact.from} · {t.to}: {record.impact.to}
           </p>
           {summary(record.impact)}
-          {canWrite && (record.impact.unpackagedInstrumentIds ?? []).length > 0 && (
+          {record.closed && <p className="success">Incident closed · {date(record.closed.at)} · {record.closed.reference}</p>}
+          {canWrite && !record.closed && (record.impact.unpackagedInstrumentIds ?? []).length > 0 && (
             <form className="edit-panel" onSubmit={(e) => {
               e.preventDefault();
               void run(async (a) => {
@@ -526,7 +532,7 @@ export function EquipmentIncidents({
               <p>Affected instruments: {f.instrumentIds.length} · Packages: {f.packageIds.length}</p>
             </section>
           ))}
-          {canWrite && (
+          {canWrite && !record.closed && (
             <form className="edit-panel" onSubmit={(e) => {
               e.preventDefault();
               void run(async (a) => {
@@ -565,6 +571,92 @@ export function EquipmentIncidents({
                 </label>
                 <button className="primary" disabled={busy || !!plan || !findingFields.confirmed || !findingFields.reference.trim() || !findingFields.finding.trim()}>
                   Record finding
+                </button>
+              </fieldset>
+            </form>
+          )}
+          {canWrite && !record.closed && (record.impact.unpackagedInstrumentIds ?? []).length > 0 && (
+            <form className="edit-panel" onSubmit={(e) => {
+              e.preventDefault();
+              void run(async (a) => {
+                if (!releaseFields.confirmed || !releaseFields.instrumentId) return;
+                const instrument = await api.instrument(session, releaseFields.instrumentId, a.signal);
+                if (instrument.incidentHold?.incidentId !== record.id) {
+                  setError(new Error("Instrument is not held by this incident"));
+                  return;
+                }
+                const updated = await api.releaseIncidentInstrument(session, record.id, {
+                  requestId: releaseRequest.current, version: record.version,
+                  instrumentId: instrument.id, instrumentVersion: instrument.version,
+                  reason: releaseFields.reason, reference: releaseFields.reference,
+                  confirmed: true,
+                }, a.signal);
+                if (!a.signal.aborted) {
+                  setRecord(updated);
+                  setReleaseFields({ instrumentId: "", reason: "", reference: "", confirmed: false });
+                  releaseRequest.current = crypto.randomUUID();
+                  setNonce((n) => n + 1);
+                }
+              });
+            }}>
+              <h3>Authorized incident hold release</h3>
+              <p className="readonly-note">Requires a previously recorded instrument-specific finding. Other recall and processing restrictions remain in force.</p>
+              <fieldset disabled={busy || !!plan}>
+                <label>Instrument
+                  <select required value={releaseFields.instrumentId} onChange={(e) =>
+                    setReleaseFields((v) => ({ ...v, instrumentId: e.target.value, confirmed: false }))}>
+                    <option value="">Select instrument</option>
+                    {(record.impact.unpackagedInstrumentIds ?? []).map((id) =>
+                      <option key={id} value={id}>{id}</option>)}
+                  </select>
+                </label>
+                <label>Evidence reference<input required maxLength={200} value={releaseFields.reference}
+                  onChange={(e) => setReleaseFields((v) => ({ ...v, reference: e.target.value, confirmed: false }))} /></label>
+                <label>Release rationale<textarea required maxLength={500} value={releaseFields.reason}
+                  onChange={(e) => setReleaseFields((v) => ({ ...v, reason: e.target.value, confirmed: false }))} /></label>
+                <label className="check"><input type="checkbox" checked={releaseFields.confirmed}
+                  onChange={(e) => setReleaseFields((v) => ({ ...v, confirmed: e.target.checked }))} />
+                  Confirm separate authorized review and evidence
+                </label>
+                <button className="primary" disabled={busy || !!plan || !releaseFields.confirmed ||
+                  !releaseFields.instrumentId || !releaseFields.reason.trim() || !releaseFields.reference.trim()}>
+                  Release incident hold
+                </button>
+              </fieldset>
+            </form>
+          )}
+          {canWrite && !record.closed && (
+            <form className="edit-panel" onSubmit={(e) => {
+              e.preventDefault();
+              void run(async (a) => {
+                if (!closureFields.confirmed) return;
+                const updated = await api.closeEquipmentIncident(session, record.id, {
+                  requestId: closureRequest.current, version: record.version,
+                  reason: closureFields.reason, reference: closureFields.reference,
+                  confirmed: true,
+                }, a.signal);
+                if (!a.signal.aborted) {
+                  setRecord(updated);
+                  setClosureFields({ reason: "", reference: "", confirmed: false });
+                  closureRequest.current = crypto.randomUUID();
+                  setNonce((n) => n + 1);
+                }
+              });
+            }}>
+              <h3>Close incident</h3>
+              <p className="readonly-note">Closure requires investigation findings, a recall for each directly linked package, and documented findings with no remaining holds on unpackaged instruments. Closure does not certify clinical safety.</p>
+              <fieldset disabled={busy || !!plan}>
+                <label>Closure evidence reference<input required maxLength={200} value={closureFields.reference}
+                  onChange={(e) => setClosureFields((v) => ({ ...v, reference: e.target.value, confirmed: false }))} /></label>
+                <label>Closure rationale<textarea required maxLength={500} value={closureFields.reason}
+                  onChange={(e) => setClosureFields((v) => ({ ...v, reason: e.target.value, confirmed: false }))} /></label>
+                <label className="check"><input type="checkbox" checked={closureFields.confirmed}
+                  onChange={(e) => setClosureFields((v) => ({ ...v, confirmed: e.target.checked }))} />
+                  Confirm investigation and required dispositions are complete
+                </label>
+                <button className="primary" disabled={busy || !!plan || !closureFields.confirmed ||
+                  !closureFields.reason.trim() || !closureFields.reference.trim()}>
+                  Close incident
                 </button>
               </fieldset>
             </form>
