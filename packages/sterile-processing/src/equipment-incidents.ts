@@ -352,7 +352,7 @@ export class EquipmentIncidentRegistry extends SterileRegistryBase {
     s: SterileScope,
     r: EquipmentIncident,
     requestId: string,
-    action: "equipment-incident-recorded" | "equipment-incident-recall-created" | "equipment-incident-finding-recorded",
+    action: "equipment-incident-recorded" | "equipment-incident-recall-created" | "equipment-incident-finding-recorded" | "equipment-incident-instrument-held",
     reason: string,
   ) {
     await tx.insertEquipmentIncidentVersion(r);
@@ -436,6 +436,52 @@ export class EquipmentIncidentRegistry extends SterileRegistryBase {
         await this.record(tx, s, record, input.requestId,
           "equipment-incident-finding-recorded", reference);
         return record;
+      });
+  }
+  /** Explicit incident hold; never inferred from a finding or automatically released. */
+  async holdInstrument(scope: SterileScope, id: string, input: {
+    requestId: string;
+    version: number;
+    instrumentId: string;
+    instrumentVersion: number;
+    reason: string;
+    confirmed: boolean;
+  }) {
+    const s = scopeOf(scope), key = sterileUuid(id),
+      instrumentId = sterileUuid(input.instrumentId),
+      reason = field(input.reason, 500);
+    if (input.confirmed !== true ||
+        !Number.isSafeInteger(input.version) || input.version < 1 ||
+        !Number.isSafeInteger(input.instrumentVersion) || input.instrumentVersion < 1)
+      invalid();
+    return this.command(s, input.requestId, "equipment-incident-instrument-held",
+      { id: key, ...input, instrumentId }, async (tx, at) => {
+        const old = await tx.findEquipmentIncident(key);
+        if (!old) throw new SterileError("NOT_FOUND");
+        if (old.version !== input.version) throw new SterileError("CONFLICT");
+        const exposed = old.impact.exposures.some(e => e.instrumentIds.includes(instrumentId));
+        if (!exposed) throw new SterileError("INVALID_REQUEST");
+        const instrument = await tx.findInstrument(instrumentId);
+        if (!instrument) throw new SterileError("NOT_FOUND");
+        if (instrument.version !== input.instrumentVersion ||
+            instrument.incidentHold || instrument.state === "retired")
+          throw new SterileError("CONFLICT");
+        await tx.updateInstrument({
+          ...instrument, version: instrument.version + 1, updatedAt: at,
+          incidentHold: { incidentId: old.id, incidentCode: old.code, at, reason },
+        }, instrument.version);
+        await tx.appendAudit({
+          id: randomUUID(), ...s, entityId: instrument.id,
+          version: instrument.version + 1, requestId: sterileUuid(input.requestId),
+          at, action: "equipment-incident-instrument-held", reason,
+        });
+        const updated: EquipmentIncident = {
+          ...old, version: old.version + 1, updatedAt: at,
+        };
+        await tx.updateEquipmentIncident(updated, old.version);
+        await this.record(tx, s, updated, input.requestId,
+          "equipment-incident-instrument-held", reason);
+        return updated;
       });
   }
   async recallPreview(
