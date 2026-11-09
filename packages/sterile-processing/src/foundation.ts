@@ -121,6 +121,7 @@ export interface SterileAuditEvent {
     | "cycle-started"
     | "cycle-recorded"
     | "load-cancelled"
+    | "equipment-incident-finding-recorded"
     | "equipment-incident-recorded"
     | "equipment-incident-recall-created"
     | "equipment-registered"
