@@ -370,6 +370,29 @@ export const api = {
         s.csrf,
       ),
     ),
+  recordIncidentFinding: (
+    s: Session,
+    id: string,
+    body: {
+      requestId: string;
+      version: number;
+      finding: string;
+      reference: string;
+      instrumentIds: string[];
+      packageIds: string[];
+      confirmed: boolean;
+    },
+    signal: AbortSignal,
+  ) =>
+    checkedIncident(
+      s,
+      call<import("@intrusionshield/sterile-processing").EquipmentIncident>(
+        base(s) + "/equipment-incidents/" + encodeURIComponent(id) + "/findings",
+        signal,
+        body,
+        s.csrf,
+      ),
+    ),
   incidentRecallImpact: (
     s: Session,
     id: string,
