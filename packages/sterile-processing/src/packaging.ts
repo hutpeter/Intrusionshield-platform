@@ -120,6 +120,7 @@ export class PackagingRegistry extends SterileRegistryBase {
           if (
             !i ||
             i.state !== "registered" ||
+            !!i.incidentHold ||
             i.version !== snapshot.instrumentVersion ||
             assignment?.assemblyId !== a.id ||
             (await tx.findProcessingHold(snapshot.id))
