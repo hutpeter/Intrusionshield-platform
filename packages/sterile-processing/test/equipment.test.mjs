@@ -537,3 +537,74 @@ test("incident investigation findings are versioned, idempotent, scoped and audi
   }
   assert.equal((await registry.get(s, incident.id)).version, 2);
 });
+
+test("incident instrument hold is explicit, audited, idempotent and blocks receiving", async () => {
+  const repo = new MemoryRepository(), s = scope(),
+    { EquipmentIncidentRegistry } = await import("../dist/index.js"),
+    instruments = new InstrumentRegistry(repo),
+    type = await instruments.createType(s, {
+      requestId: randomUUID(), code: "INC-HOLD-TYPE", name: "Demo instrument",
+      manufacturer: "DEMO", model: "DEMO",
+    }),
+    instrument = await instruments.register(s, {
+      requestId: randomUUID(), instrumentTypeId: type.id,
+      code: "INC-HOLD-INSTRUMENT", serialNumber: "SIMULATED-1",
+    }),
+    machine = await new EquipmentRegistry(repo).register(s,
+      equipmentBody({ code: "INC-HOLD-WASHER", kind: "washer_disinfector", methods: [] })),
+    now = Date.now(),
+    from = new Date(now - 60000).toISOString(),
+    to = new Date(now - 1000).toISOString(),
+    episodeId = randomUUID(),
+    episode = {
+      id: episodeId, code: "INC-HOLD-EPISODE", version: 2, state: "cleaned",
+      instruments: [{ id: instrument.id, code: instrument.code }],
+      attempts: [{
+        number: 1, method: "mechanical", equipment: machine.code,
+        registeredEquipment: { id: machine.id, version: machine.version },
+        startedAt: new Date(now - 30000).toISOString(),
+        finishedAt: new Date(now - 20000).toISOString(), outcome: "passed",
+      }],
+    },
+    backing = repo,
+    wrapped = {
+      transaction: (scope, fn) => backing.transaction(scope, tx =>
+        fn(Object.assign(Object.create(tx), {
+          equipmentExposureCandidates: async () => ({ processing: [episode], loads: [] }),
+          equipmentIncidentPackages: async () => [],
+        }))),
+    },
+    incidents = new EquipmentIncidentRegistry(wrapped),
+    impact = await incidents.preview(s, machine.id, from, to),
+    incident = await incidents.create(s, {
+      requestId: randomUUID(), code: "INC-HOLD-CASE", equipmentId: machine.id,
+      from, to, impactHash: impact.impactHash, reason: "SIMULATED issue",
+      reference: "SIMULATED-EVIDENCE", confirmed: true,
+    });
+  assert.deepEqual(impact.unpackagedInstrumentIds, [instrument.id]);
+  const input = {
+    requestId: randomUUID(), version: 1, instrumentId: instrument.id,
+    instrumentVersion: instrument.version, reason: "SIMULATED hold", confirmed: true,
+  };
+  const held = await incidents.holdInstrument(s, incident.id, input);
+  assert.equal(held.version, 2);
+  assert.deepEqual(await incidents.holdInstrument(s, incident.id, input), held);
+  const changed = await instruments.get(s, instrument.id);
+  assert.equal(changed.incidentHold.incidentId, incident.id);
+  assert.equal(changed.version, instrument.version + 1);
+  assert.equal((await incidents.get(s, incident.id, 1)).version, 1);
+  assert.equal(repo.state.audit.filter(a =>
+    a.entityId === instrument.id && a.action === "equipment-incident-instrument-held").length, 1);
+  await fail(incidents.holdInstrument(s, incident.id, {
+    ...input, requestId: randomUUID(), version: 2,
+  }), "CONFLICT");
+  await fail(incidents.holdInstrument(s, incident.id, {
+    ...input, requestId: randomUUID(), version: 2,
+    instrumentId: randomUUID(),
+  }), "INVALID_REQUEST");
+  await fail(new ProcessingRegistry(repo).receive(s, {
+    requestId: randomUUID(), code: "INC-HOLD-RECEIVE",
+    source: "SIMULATED", custodian: "SIMULATED", condition: "SIMULATED",
+    discrepancies: "", instrumentIds: [instrument.id], confirmed: true,
+  }), "CONFLICT");
+});
