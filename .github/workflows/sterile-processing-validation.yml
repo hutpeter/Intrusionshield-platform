@@ -1,5 +1,18 @@
 name: Sterile Processing Foundation
 on:
+  push:
+    branches:
+      - feature/sterile-processing-preview
+    paths:
+      - "apps/sterile-processing/**"
+      - "scripts/sterile-preview*.mjs"
+      - "package.json"
+      - "packages/sterile-processing/**"
+      - "services/sterile-processing/**"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - "tsconfig.json"
+      - ".github/workflows/sterile-processing-validation.yml"
   pull_request:
     paths:
       - "apps/sterile-processing/**"
