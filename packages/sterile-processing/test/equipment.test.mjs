@@ -428,3 +428,60 @@ test("washer incident packages follow the exact cleaning attempt in inspection p
     !impact.unpackagedInstrumentIds.includes(e.instrumentIds[0])));
   assert.ok(impact.impactHash.match(/^[a-f0-9]{64}$/));
 });
+
+test("incident preview retains uncovered instrument when another instrument from the same cleaning attempt is packaged", async (t) => {
+  const now = Date.now();
+  t.mock.timers.enable({ apis: ["Date"], now });
+  const backing = new MemoryRepository(), s = scope(),
+    { EquipmentIncidentRegistry } = await import("../dist/index.js"),
+    machine = await new EquipmentRegistry(backing).register(s,
+      equipmentBody({ code: "MIXED-WASHER", kind: "washer_disinfector", methods: [] })),
+    episodeId = randomUUID(), coveredId = randomUUID(),
+    uncoveredId = randomUUID(), packageId = randomUUID(),
+    from = new Date(now - 60000).toISOString(),
+    to = new Date(now).toISOString();
+  const episode = {
+    id: episodeId, code: "MIXED-CLEANING", version: 1,
+    state: "ready_for_assembly",
+    instruments: [{ id: coveredId }, { id: uncoveredId }],
+    attempts: [{
+      number: 1, method: "mechanical", equipment: machine.code,
+      registeredEquipment: { id: machine.id, version: machine.version },
+      startedAt: new Date(now - 30000).toISOString(),
+      finishedAt: new Date(now - 20000).toISOString(),
+      outcome: "passed",
+    }],
+  };
+  let proofs = [{ instrumentId: coveredId, episodeId, cleaningAttempt: 1 }];
+  const repository = {
+    transaction: (scope, fn) => backing.transaction(scope, (tx) =>
+      fn(Object.assign(Object.create(tx), {
+        equipmentExposureCandidates: async () => ({ processing: [episode], loads: [] }),
+        equipmentIncidentPackages: async () => [{
+          id: packageId, code: "PARTIAL-PACKAGE", version: 1,
+          state: "packaged", inspectionProofs: proofs,
+        }],
+        findDistributionByPackage: async () => null,
+      }))),
+  };
+  const incidents = new EquipmentIncidentRegistry(repository);
+  const impact = await incidents.preview(s, machine.id, from, to);
+  assert.equal(impact.exposures.length, 1);
+  assert.deepEqual(impact.exposures[0].instrumentIds, [coveredId, uncoveredId].sort());
+  assert.deepEqual(impact.exposures[0].packageIds, [packageId]);
+  assert.deepEqual(impact.targets.map((p) => p.id), [packageId]);
+  assert.deepEqual(impact.unpackagedInstrumentIds, [uncoveredId]);
+  const hash = impact.impactHash;
+  proofs = [
+    { instrumentId: coveredId, episodeId, cleaningAttempt: 1 },
+    { instrumentId: uncoveredId, episodeId, cleaningAttempt: 1 },
+  ];
+  const fullyCovered = await incidents.preview(s, machine.id, from, to);
+  assert.deepEqual(fullyCovered.unpackagedInstrumentIds, []);
+  assert.notEqual(fullyCovered.impactHash, hash);
+  proofs = [{ instrumentId: coveredId, episodeId, cleaningAttempt: 2 }];
+  const mismatchedAttempt = await incidents.preview(s, machine.id, from, to);
+  assert.deepEqual(mismatchedAttempt.unpackagedInstrumentIds,
+    [coveredId, uncoveredId].sort());
+  assert.equal(mismatchedAttempt.targets.length, 0);
+});
