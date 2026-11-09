@@ -83,6 +83,7 @@ async function items(
       throw new SterileError("PROCESSING_HOLD");
     const i = await tx.findInstrument(id);
     if (!i) throw new SterileError("NOT_FOUND");
+    if (i.incidentHold) throw new SterileError("CONFLICT");
     await assertLoanerPresent(tx, i);
     if (serviceDue(await tx.findServiceUsage(id)))
       throw new SterileError("SERVICE_DUE");
@@ -318,6 +319,7 @@ export class TrayRegistry extends SterileRegistryBase {
         if (old.instruments.length >= 1000) invalid();
         const i = await tx.findInstrument(instrumentId);
         if (!i) throw new SterileError("NOT_FOUND");
+        if (i.incidentHold) throw new SterileError("SCAN_INELIGIBLE");
         if (i.state !== "registered") throw new SterileError("SCAN_INELIGIBLE");
         const required = old.definitionSnapshot.requirements.find(
           (r) => r.instrumentTypeId === i.instrumentTypeId,
