@@ -55,6 +55,8 @@ export interface EquipmentIncidentImpact {
   to: string;
   exposures: EquipmentExposure[];
   targets: EquipmentIncidentTarget[];
+  /** Recorded cleaning instruments with no directly linked package in this assessment. */
+  unpackagedInstrumentIds: string[];
   impactHash: string;
 }
 export interface EquipmentIncident {
@@ -240,6 +242,12 @@ async function assess(
   }
   for (const e of exposures) e.packageIds = [...new Set(e.packageIds)].sort();
   targets.sort((a, b) => a.id.localeCompare(b.id));
+  // This is a recorded-data coverage warning, not a clinical clearance decision.
+  // Cleaning exposures can exist without any package eligible for recall.
+  const unpackagedInstrumentIds = [...new Set(
+    exposures.filter((e) => e.kind === "cleaning" && e.packageIds.length === 0)
+      .flatMap((e) => e.instrumentIds),
+  )].sort();
   const result = {
     tenantId: s.tenantId,
     facilityId: s.facilityId,
@@ -248,6 +256,7 @@ async function assess(
     to,
     exposures,
     targets,
+    unpackagedInstrumentIds,
   };
   return {
     ...result,
