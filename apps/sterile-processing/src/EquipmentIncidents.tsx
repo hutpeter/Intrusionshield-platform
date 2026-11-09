@@ -54,6 +54,7 @@ export function EquipmentIncidents({
       confirmed: false,
     })),
     [findingFields, setFindingFields] = useState({ finding: "", reference: "", confirmed: false }),
+    [holdFields, setHoldFields] = useState({ instrumentId: "", reason: "", confirmed: false }),
     [recallFields, setRecallFields] = useState({
       code: "",
       reason: "",
@@ -63,7 +64,8 @@ export function EquipmentIncidents({
     pending = useRef<AbortController | null>(null),
     request = useRef(crypto.randomUUID()),
     recallRequest = useRef(crypto.randomUUID()),
-    findingRequest = useRef(crypto.randomUUID());
+    findingRequest = useRef(crypto.randomUUID()),
+    holdRequest = useRef(crypto.randomUUID());
   const busy = blocked || saving,
     dirty = editing || !!plan,
     canWrite = !!session.canReview;
@@ -468,6 +470,54 @@ export function EquipmentIncidents({
             {t.from}: {record.impact.from} · {t.to}: {record.impact.to}
           </p>
           {summary(record.impact)}
+          {canWrite && (record.impact.unpackagedInstrumentIds ?? []).length > 0 && (
+            <form className="edit-panel" onSubmit={(e) => {
+              e.preventDefault();
+              void run(async (a) => {
+                if (!holdFields.confirmed || !holdFields.instrumentId || !holdFields.reason.trim()) return;
+                const instrument = await api.instrument(session, holdFields.instrumentId, a.signal);
+                if (instrument.incidentHold) {
+                  setError(new Error("Instrument already has an incident hold"));
+                  return;
+                }
+                const updated = await api.holdIncidentInstrument(session, record.id, {
+                  requestId: holdRequest.current, version: record.version,
+                  instrumentId: instrument.id, instrumentVersion: instrument.version,
+                  reason: holdFields.reason, confirmed: true,
+                }, a.signal);
+                if (!a.signal.aborted) {
+                  setRecord(updated);
+                  setHoldFields({ instrumentId: "", reason: "", confirmed: false });
+                  holdRequest.current = crypto.randomUUID();
+                  setNonce((n) => n + 1);
+                }
+              });
+            }}>
+              <h3>Place instrument on incident hold</h3>
+              <p className="readonly-note">Explicit reviewer action for a fictional affected instrument. This blocks receiving, tray assignment and packaging; it does not create a recall or authorize release.</p>
+              <fieldset disabled={busy || !!plan}>
+                <label>Affected unpackaged instrument
+                  <select required value={holdFields.instrumentId}
+                    onChange={(e) => setHoldFields((v) => ({ ...v, instrumentId: e.target.value, confirmed: false }))}>
+                    <option value="">Select instrument</option>
+                    {(record.impact.unpackagedInstrumentIds ?? []).map((id) =>
+                      <option key={id} value={id}>{id}</option>)}
+                  </select>
+                </label>
+                <label>Hold reason
+                  <textarea required maxLength={500} value={holdFields.reason}
+                    onChange={(e) => setHoldFields((v) => ({ ...v, reason: e.target.value, confirmed: false }))} />
+                </label>
+                <label className="check"><input type="checkbox" checked={holdFields.confirmed}
+                  onChange={(e) => setHoldFields((v) => ({ ...v, confirmed: e.target.checked }))} />
+                  Confirm this fictional instrument must be held pending separate review
+                </label>
+                <button className="danger" disabled={busy || !!plan || !holdFields.confirmed || !holdFields.instrumentId || !holdFields.reason.trim()}>
+                  Place instrument on hold
+                </button>
+              </fieldset>
+            </form>
+          )}
           <h3>Investigation findings: {record.findings?.length ?? 0}</h3>
           {(record.findings ?? []).map((f, index) => (
             <section className="info" key={index}>
