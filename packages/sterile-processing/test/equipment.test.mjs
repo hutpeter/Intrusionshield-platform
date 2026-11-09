@@ -607,12 +607,25 @@ test("incident instrument hold is explicit, audited, idempotent and blocks recei
     source: "SIMULATED", custodian: "SIMULATED", condition: "SIMULATED",
     discrepancies: "", instrumentIds: [instrument.id], confirmed: true,
   }), "CONFLICT");
+  await fail(incidents.releaseInstrument(s, incident.id, {
+    requestId: randomUUID(), version: 2, instrumentId: instrument.id,
+    instrumentVersion: changed.version, reason: "Premature release",
+    reference: "SIMULATED", confirmed: true,
+  }), "CONFLICT");
+  await fail(incidents.close(s, incident.id, {
+    requestId: randomUUID(), version: 2, reason: "Premature closure",
+    reference: "SIMULATED", confirmed: true,
+  }), "CONFLICT");
   const finding = await incidents.recordFinding(s, incident.id, {
     requestId: randomUUID(), version: 2, finding: "SIMULATED inspection completed",
     reference: "SIMULATED-REVIEW", instrumentIds: [instrument.id],
     packageIds: [], confirmed: true,
   });
   assert.equal(finding.version, 3);
+  await fail(incidents.close(s, incident.id, {
+    requestId: randomUUID(), version: 3, reason: "Hold remains active",
+    reference: "SIMULATED", confirmed: true,
+  }), "CONFLICT");
   const releaseInput = {
     requestId: randomUUID(), version: 3, instrumentId: instrument.id,
     instrumentVersion: changed.version, reason: "SIMULATED reviewed",
