@@ -244,9 +244,19 @@ async function assess(
   targets.sort((a, b) => a.id.localeCompare(b.id));
   // This is a recorded-data coverage warning, not a clinical clearance decision.
   // Cleaning exposures can exist without any package eligible for recall.
+  // Match inspection proof to each instrument, episode and cleaning attempt.
+  // A package covering one instrument must not conceal another instrument
+  // from the same affected cleaning episode.
   const unpackagedInstrumentIds = [...new Set(
-    exposures.filter((e) => e.kind === "cleaning" && e.packageIds.length === 0)
-      .flatMap((e) => e.instrumentIds),
+    exposures.filter((e) => e.kind === "cleaning").flatMap((e) =>
+      e.instrumentIds.filter((instrumentId) =>
+        !packages.some((p) => p.inspectionProofs.some((proof) =>
+          proof.instrumentId === instrumentId &&
+          proof.episodeId === e.id &&
+          proof.cleaningAttempt === e.attempt,
+        )),
+      ),
+    ),
   )].sort();
   const result = {
     tenantId: s.tenantId,
