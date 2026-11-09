@@ -473,7 +473,7 @@ export class EquipmentIncidentRegistry extends SterileRegistryBase {
         }, instrument.version);
         await tx.appendAudit({
           id: randomUUID(), ...s, entityId: instrument.id,
-          version: instrument.version + 1, requestId: sterileUuid(input.requestId),
+          version: instrument.version + 1, requestId: randomUUID(),
           at, action: "equipment-incident-instrument-held", reason,
         });
         const updated: EquipmentIncident = {
@@ -517,7 +517,7 @@ export class EquipmentIncidentRegistry extends SterileRegistryBase {
         }, instrument.version);
         await tx.appendAudit({
           id: randomUUID(), ...s, entityId: instrument.id,
-          version: instrument.version + 1, requestId: sterileUuid(input.requestId),
+          version: instrument.version + 1, requestId: randomUUID(),
           at, action: "equipment-incident-instrument-released",
           reason: reference + ": " + reason,
         });
