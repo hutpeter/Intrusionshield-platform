@@ -79,6 +79,7 @@ export interface EquipmentIncident {
   recalls: { id: string; code: string; packageId: string; at: string }[];
   /** Append-only investigation findings; absent on older records. */
   findings?: IncidentFinding[];
+  closed?: { at: string; actorId: string; reference: string; reason: string };
   version: number;
   createdAt: string;
   createdBy: string;
@@ -419,7 +420,7 @@ export class EquipmentIncidentRegistry extends SterileRegistryBase {
       { id: key, ...input, instrumentIds, packageIds }, async (tx, at) => {
         const old = await tx.findEquipmentIncident(key);
         if (!old) throw new SterileError("NOT_FOUND");
-        if (old.version !== input.version) throw new SterileError("CONFLICT");
+        if (old.version !== input.version || old.closed) throw new SterileError("CONFLICT");
         const knownInstruments = new Set(old.impact.exposures.flatMap(e => e.instrumentIds));
         const knownPackages = new Set(old.impact.targets.map(p => p.id));
         if (instrumentIds.some(i => !knownInstruments.has(i)) ||
@@ -458,7 +459,7 @@ export class EquipmentIncidentRegistry extends SterileRegistryBase {
       { id: key, ...input, instrumentId }, async (tx, at) => {
         const old = await tx.findEquipmentIncident(key);
         if (!old) throw new SterileError("NOT_FOUND");
-        if (old.version !== input.version) throw new SterileError("CONFLICT");
+        if (old.version !== input.version || old.closed) throw new SterileError("CONFLICT");
         const exposed = old.impact.exposures.some(e => e.instrumentIds.includes(instrumentId));
         if (!exposed) throw new SterileError("INVALID_REQUEST");
         const instrument = await tx.findInstrument(instrumentId);
@@ -502,7 +503,7 @@ export class EquipmentIncidentRegistry extends SterileRegistryBase {
       { id: key, ...input, instrumentId }, async (tx, at) => {
         const old = await tx.findEquipmentIncident(key);
         if (!old) throw new SterileError("NOT_FOUND");
-        if (old.version !== input.version) throw new SterileError("CONFLICT");
+        if (old.version !== input.version || old.closed) throw new SterileError("CONFLICT");
         const instrument = await tx.findInstrument(instrumentId);
         if (!instrument) throw new SterileError("NOT_FOUND");
         if (instrument.version !== input.instrumentVersion ||
@@ -526,6 +527,46 @@ export class EquipmentIncidentRegistry extends SterileRegistryBase {
         await tx.updateEquipmentIncident(updated, old.version);
         await this.record(tx, s, updated, input.requestId,
           "equipment-incident-instrument-released", reference + ": " + reason);
+        return updated;
+      });
+  }
+  /** Conservative closure gate: evidence, disposition of all directly linked packages,
+   * and no unresolved incident holds. Closure never performs clinical clearance. */
+  async close(scope: SterileScope, id: string, input: {
+    requestId: string; version: number; reason: string;
+    reference: string; confirmed: boolean;
+  }) {
+    const s = scopeOf(scope), key = sterileUuid(id),
+      reason = field(input.reason, 500),
+      reference = field(input.reference, 200);
+    if (input.confirmed !== true ||
+        !Number.isSafeInteger(input.version) || input.version < 1)
+      invalid();
+    return this.command(s, input.requestId, "equipment-incident-closed",
+      { id: key, ...input }, async (tx, at) => {
+        const old = await tx.findEquipmentIncident(key);
+        if (!old) throw new SterileError("NOT_FOUND");
+        if (old.version !== input.version || old.closed)
+          throw new SterileError("CONFLICT");
+        if (!(old.findings ?? []).length)
+          throw new SterileError("CONFLICT");
+        if (old.impact.targets.some(p =>
+          !old.recalls.some(r => r.packageId === p.id)))
+          throw new SterileError("CONFLICT");
+        for (const instrumentId of old.impact.unpackagedInstrumentIds ?? []) {
+          if (!(old.findings ?? []).some(f => f.instrumentIds.includes(instrumentId)))
+            throw new SterileError("CONFLICT");
+          const instrument = await tx.findInstrument(instrumentId);
+          if (!instrument || instrument.incidentHold?.incidentId === old.id)
+            throw new SterileError("CONFLICT");
+        }
+        const updated: EquipmentIncident = {
+          ...old, closed: { at, actorId: s.actorId, reference, reason },
+          version: old.version + 1, updatedAt: at,
+        };
+        await tx.updateEquipmentIncident(updated, old.version);
+        await this.record(tx, s, updated, input.requestId,
+          "equipment-incident-closed", reference + ": " + reason);
         return updated;
       });
   }
@@ -590,7 +631,7 @@ export class EquipmentIncidentRegistry extends SterileRegistryBase {
         const old = await tx.findEquipmentIncident(key);
         if (!old) throw new SterileError("NOT_FOUND");
         if (
-          old.version !== input.version ||
+          old.closed || old.version !== input.version ||
           !old.impact.targets.some((p) => p.id === pid) ||
           old.recalls.some((p) => p.packageId === pid)
         )
