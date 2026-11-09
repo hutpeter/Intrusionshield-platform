@@ -23,6 +23,8 @@ const en = {
   recorded: "Incident recorded — review required",
   exposures: "Affected processing records",
   packages: "Directly linked packages",
+  unpackaged: "Instruments requiring separate investigation (no package linked to their affected cleaning attempt)",
+  unpackagedNote: "These recorded instruments are not automatically held or recalled. A missing package link does not establish physical exposure or clearance. Review instrument status and custody separately.",
   registered: "Registered machine link",
   legacy_code: "Legacy code match — not a registered-machine snapshot",
   started: "Work started",
@@ -77,6 +79,8 @@ const es: typeof en = {
   recorded: "Incidente registrado — revisión requerida",
   exposures: "Registros de procesamiento afectados",
   packages: "Paquetes vinculados directamente",
+  unpackaged: "Instrumentos que requieren investigación separada (sin paquete vinculado al intento de limpieza afectado)",
+  unpackagedNote: "Estos instrumentos no se bloquean ni retiran automáticamente. La ausencia de un vínculo no demuestra exposición ni autoriza su uso. Revise su estado y custodia por separado.",
   registered: "Vínculo a equipo registrado",
   legacy_code:
     "Coincidencia de código anterior — sin instantánea de equipo registrado",
@@ -132,6 +136,8 @@ const fr: typeof en = {
   recorded: "Incident enregistré — revue requise",
   exposures: "Dossiers de traitement affectés",
   packages: "Paquets directement liés",
+  unpackaged: "Instruments nécessitant une enquête distincte (aucun paquet lié à la tentative de nettoyage affectée)",
+  unpackagedNote: "Ces instruments ne sont ni bloqués ni rappelés automatiquement. Un lien absent ne prouve ni exposition ni autorisation d’utilisation. Vérifiez leur état et leur garde séparément.",
   registered: "Lien à une machine enregistrée",
   legacy_code:
     "Correspondance d’ancien code — sans instantané de machine enregistrée",
