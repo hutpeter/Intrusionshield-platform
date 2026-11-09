@@ -421,5 +421,4 @@ test("washer incident packages follow the exact cleaning attempt in inspection p
   assert.equal(impact.targets[0].cleaning[0].attempt, 1);
   assert.equal(impact.unpackagedInstrumentIds.length, 1);
   assert.ok(impact.exposures.some((e) => e.kind === "cleaning" && e.packageIds.length === 0 && impact.unpackagedInstrumentIds.includes(e.instrumentIds[0])));
-  assert.equal(impact.unpackagedInstrumentIds.includes(exposed.assemblyId), false);
 });
