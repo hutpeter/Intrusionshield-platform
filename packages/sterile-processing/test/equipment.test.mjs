@@ -635,6 +635,19 @@ test("incident instrument hold is explicit, audited, idempotent and blocks recei
   assert.equal(released.version, 4);
   assert.deepEqual(await incidents.releaseInstrument(s, incident.id, releaseInput), released);
   assert.equal((await instruments.get(s, instrument.id)).incidentHold, undefined);
+  // Simulate an incident-linked recall that exists but has not been dispositioned.
+  const saved = structuredClone(repo.state.equipmentIncidents);
+  const current = repo.state.equipmentIncidents.find(r => r.id === incident.id);
+  const pendingRecallId = randomUUID();
+  current.recalls.push({
+    id: pendingRecallId, code: "SIMULATED-OPEN-RECALL",
+    packageId: randomUUID(), at: new Date().toISOString(),
+  });
+  await fail(incidents.close(s, incident.id, {
+    requestId: randomUUID(), version: 4, reason: "Recall still open",
+    reference: "SIMULATED", confirmed: true,
+  }), "CONFLICT");
+  repo.state.equipmentIncidents = saved;
   const closeInput = {
     requestId: randomUUID(), version: 4, reason: "SIMULATED investigation complete",
     reference: "SIMULATED-CLOSURE", confirmed: true,
