@@ -607,4 +607,35 @@ test("incident instrument hold is explicit, audited, idempotent and blocks recei
     source: "SIMULATED", custodian: "SIMULATED", condition: "SIMULATED",
     discrepancies: "", instrumentIds: [instrument.id], confirmed: true,
   }), "CONFLICT");
+  const finding = await incidents.recordFinding(s, incident.id, {
+    requestId: randomUUID(), version: 2, finding: "SIMULATED inspection completed",
+    reference: "SIMULATED-REVIEW", instrumentIds: [instrument.id],
+    packageIds: [], confirmed: true,
+  });
+  assert.equal(finding.version, 3);
+  const releaseInput = {
+    requestId: randomUUID(), version: 3, instrumentId: instrument.id,
+    instrumentVersion: changed.version, reason: "SIMULATED reviewed",
+    reference: "SIMULATED-RELEASE", confirmed: true,
+  };
+  const released = await incidents.releaseInstrument(s, incident.id, releaseInput);
+  assert.equal(released.version, 4);
+  assert.deepEqual(await incidents.releaseInstrument(s, incident.id, releaseInput), released);
+  assert.equal((await instruments.get(s, instrument.id)).incidentHold, undefined);
+  const closeInput = {
+    requestId: randomUUID(), version: 4, reason: "SIMULATED investigation complete",
+    reference: "SIMULATED-CLOSURE", confirmed: true,
+  };
+  const closed = await incidents.close(s, incident.id, closeInput);
+  assert.equal(closed.version, 5);
+  assert.equal(closed.closed.reference, "SIMULATED-CLOSURE");
+  assert.deepEqual(await incidents.close(s, incident.id, closeInput), closed);
+  await fail(incidents.recordFinding(s, incident.id, {
+    requestId: randomUUID(), version: 5, finding: "Too late",
+    reference: "LATE", instrumentIds: [], packageIds: [], confirmed: true,
+  }), "CONFLICT");
+  assert.equal((await incidents.get(s, incident.id, 4)).closed, undefined);
+  assert.equal(repo.state.audit.filter(a =>
+    a.entityId === instrument.id &&
+    a.action === "equipment-incident-instrument-released").length, 1);
 });
