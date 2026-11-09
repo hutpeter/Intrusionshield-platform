@@ -53,6 +53,7 @@ export function EquipmentIncidents({
       reference: exampleWindow ? "SIMULATED-INCIDENT-EVIDENCE" : "",
       confirmed: false,
     })),
+    [findingFields, setFindingFields] = useState({ finding: "", reference: "", confirmed: false }),
     [recallFields, setRecallFields] = useState({
       code: "",
       reason: "",
@@ -61,7 +62,8 @@ export function EquipmentIncidents({
     }),
     pending = useRef<AbortController | null>(null),
     request = useRef(crypto.randomUUID()),
-    recallRequest = useRef(crypto.randomUUID());
+    recallRequest = useRef(crypto.randomUUID()),
+    findingRequest = useRef(crypto.randomUUID());
   const busy = blocked || saving,
     dirty = editing || !!plan,
     canWrite = !!session.canReview;
@@ -466,6 +468,57 @@ export function EquipmentIncidents({
             {t.from}: {record.impact.from} · {t.to}: {record.impact.to}
           </p>
           {summary(record.impact)}
+          <h3>Investigation findings: {record.findings?.length ?? 0}</h3>
+          {(record.findings ?? []).map((f, index) => (
+            <section className="info" key={index}>
+              <p>{date(f.at)} · {f.reference}</p>
+              <p>{f.finding}</p>
+              <p>Affected instruments: {f.instrumentIds.length} · Packages: {f.packageIds.length}</p>
+            </section>
+          ))}
+          {canWrite && (
+            <form className="edit-panel" onSubmit={(e) => {
+              e.preventDefault();
+              void run(async (a) => {
+                if (!findingFields.confirmed) return;
+                const updated = await api.recordIncidentFinding(session, record.id, {
+                  requestId: findingRequest.current,
+                  version: record.version,
+                  finding: findingFields.finding,
+                  reference: findingFields.reference,
+                  instrumentIds: record.impact.unpackagedInstrumentIds ?? [],
+                  packageIds: [],
+                  confirmed: true,
+                }, a.signal);
+                if (!a.signal.aborted) {
+                  setRecord(updated);
+                  setFindingFields({ finding: "", reference: "", confirmed: false });
+                  findingRequest.current = crypto.randomUUID();
+                  setNonce((n) => n + 1);
+                }
+              });
+            }}>
+              <h3>Record investigation finding</h3>
+              <p className="readonly-note">Fictional review evidence only. This does not hold, release or clear instruments. Unlinked instruments from the incident assessment are referenced automatically.</p>
+              <fieldset disabled={busy || !!plan}>
+                <label>Evidence reference
+                  <input required maxLength={200} value={findingFields.reference}
+                    onChange={(e) => setFindingFields((f) => ({ ...f, reference: e.target.value, confirmed: false }))} />
+                </label>
+                <label>Investigation finding
+                  <textarea required maxLength={2000} value={findingFields.finding}
+                    onChange={(e) => setFindingFields((f) => ({ ...f, finding: e.target.value, confirmed: false }))} />
+                </label>
+                <label className="check"><input type="checkbox" checked={findingFields.confirmed}
+                  onChange={(e) => setFindingFields((f) => ({ ...f, confirmed: e.target.checked }))} />
+                  Confirm evidence is fictional and ready to record
+                </label>
+                <button className="primary" disabled={busy || !!plan || !findingFields.confirmed || !findingFields.reference.trim() || !findingFields.finding.trim()}>
+                  Record finding
+                </button>
+              </fieldset>
+            </form>
+          )}
           <h3>
             {t.recalls}: {record.recalls.length}
           </h3>
