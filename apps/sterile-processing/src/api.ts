@@ -344,6 +344,92 @@ function validStockCountReview(
   );
 }
 export const api = {
+  stockMovementReport: async (
+    s: Session,
+    from: string,
+    to: string,
+    signal: AbortSignal,
+  ) => {
+    const r = await scoped(
+      s,
+      call<import("@intrusionshield/sterile-processing").StockMovementReport>(
+        base(s) +
+          "/consumables/movement-report?from=" +
+          encodeURIComponent(from) +
+          "&to=" +
+          encodeURIComponent(to),
+        signal,
+      ),
+    );
+    if (
+      r.from !== from ||
+      r.to !== to ||
+      r.unit !== "each" ||
+      !Number.isFinite(Date.parse(r.generatedAt)) ||
+      !Array.isArray(r.items) ||
+      new Set(r.items.map((x) => x.id)).size !== r.items.length ||
+      r.items.some((x) => {
+        const b = x.balance;
+        return (
+          x.tenantId !== s.tenantId ||
+          x.facilityId !== s.facilityId ||
+          [
+            x.id,
+            x.lotId,
+            x.lotCode,
+            x.product,
+            x.supplier,
+            x.manufacturerLot,
+            x.actorId,
+            x.reason,
+            x.reference,
+            x.parentRequestId,
+          ].some((v) => typeof v !== "string") ||
+          ![
+            "receive",
+            "use",
+            "quarantine",
+            "discard",
+            "discard_quarantined",
+            "adjustment",
+          ].includes(x.action) ||
+          x.unit !== "each" ||
+          !Number.isSafeInteger(x.version) ||
+          x.version < 1 ||
+          !Number.isSafeInteger(x.quantity) ||
+          (x.action === "adjustment" ? x.quantity === 0 : x.quantity < 1) ||
+          !Number.isFinite(Date.parse(x.at)) ||
+          x.at < from + "T00:00:00.000Z" ||
+          x.at >= to + "T00:00:00.000Z" ||
+          x.availableDelta !==
+            (x.action === "receive" || x.action === "adjustment"
+              ? x.quantity
+              : x.action === "discard_quarantined"
+                ? 0
+                : -x.quantity) ||
+          !b ||
+          b.tenantId !== s.tenantId ||
+          b.facilityId !== s.facilityId ||
+          b.lotId !== x.lotId ||
+          b.unit !== "each" ||
+          b.version !== x.version ||
+          [b.available, b.received, b.used, b.quarantined, b.discarded].some(
+            (n) => !Number.isSafeInteger(n) || n < 0,
+          ) ||
+          !Number.isSafeInteger(b.adjustments ?? 0) ||
+          b.received + (b.adjustments ?? 0) !==
+            b.available + b.used + b.quarantined + b.discarded ||
+          (x.stockCountId !== undefined &&
+            typeof x.stockCountId !== "string") ||
+          (x.packageId !== null && typeof x.packageId !== "string") ||
+          (x.packageCode !== null && typeof x.packageCode !== "string")
+        );
+      })
+    )
+      throw new ApiError(503, "SERVICE_UNAVAILABLE");
+    return r;
+  },
+
   replenishment: async (s: Session, signal: AbortSignal) => {
     const r = await scoped(
       s,

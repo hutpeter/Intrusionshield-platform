@@ -309,3 +309,5 @@ export * from "./consumable-alerts.js";
 export * from "./stock-reconciliation.js";
 
 export * from "./replenishment.js";
+
+export * from "./stock-movement-report.js";

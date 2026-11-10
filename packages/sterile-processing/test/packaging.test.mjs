@@ -1151,3 +1151,152 @@ test("replenishment report includes every low-stock lot beyond catalogue paging 
   );
   assert.deepEqual((await registry.get(f.s)).items, report.items);
 });
+
+test("dated stock movement report preserves all actions, signed deltas, saved balances and source evidence without writes", async () => {
+  const {
+      ConsumableRegistry,
+      ConsumableStockRegistry,
+      StockReconciliationRegistry,
+      StockMovementReportRegistry,
+      consumeStock,
+    } = await import("../dist/index.js"),
+    f = await fixture(),
+    lots = new ConsumableRegistry(f.repo),
+    lot = await lots.register(f.s, lotInput()),
+    stock = new ConsumableStockRegistry(f.repo);
+  await fundLots(f, [lot], 20);
+  const pkg = { id: randomUUID(), code: "SIMULATED-PACKAGE" };
+  await f.repo.transaction(f.s, (tx) =>
+    consumeStock(
+      tx,
+      f.s,
+      [lot],
+      [{ lotId: lot.id, quantity: 2 }],
+      new Date().toISOString(),
+      randomUUID(),
+      pkg,
+    ),
+  );
+  for (const [action, version, quantity] of [
+    ["quarantine", 2, 3],
+    ["discard", 3, 1],
+    ["discard_quarantined", 4, 2],
+  ])
+    await stock.record(f.s, lot.id, action, {
+      requestId: randomUUID(),
+      version,
+      quantity,
+      reason: "SIMULATED " + action,
+      reference: "EVIDENCE",
+      confirmed: true,
+    });
+  const counts = new StockReconciliationRegistry(f.repo),
+    count = await counts.record(f.s, lot.id, {
+      requestId: randomUUID(),
+      stockVersion: 5,
+      countedAvailable: 12,
+      reason: "SIMULATED count",
+      reference: "COUNT",
+      confirmed: true,
+    });
+  await counts.decide(
+    { ...f.s, actorId: randomUUID() },
+    lot.id,
+    count.id,
+    "approve",
+    {
+      requestId: randomUUID(),
+      version: 1,
+      reason: "SIMULATED review",
+      reference: "REVIEW",
+      confirmed: true,
+    },
+  );
+  await lots.withdraw(f.s, lot.id, {
+    requestId: randomUUID(),
+    version: 1,
+    reason: "SIMULATED withdrawal",
+    reference: "NOTICE",
+    confirmed: true,
+  });
+  const before = structuredClone(f.repo.state),
+    registry = new StockMovementReportRegistry(f.repo),
+    from = new Date().toISOString().slice(0, 10),
+    to = new Date(Date.now() + 86400000).toISOString().slice(0, 10),
+    report = await registry.report(f.s, from, to);
+  assert.deepEqual(
+    report.items.map((x) => x.action),
+    [
+      "receive",
+      "use",
+      "quarantine",
+      "discard",
+      "discard_quarantined",
+      "adjustment",
+    ],
+  );
+  assert.deepEqual(
+    report.items.map((x) => x.availableDelta),
+    [20, -2, -3, -1, 0, -2],
+  );
+  assert.deepEqual(
+    report.items.map((x) => x.balance.available),
+    [20, 18, 15, 14, 14, 12],
+  );
+  assert.equal(report.items[1].packageId, pkg.id);
+  assert.equal(report.items.at(-1).stockCountId, count.id);
+  assert.equal(report.items.at(-1).quantity, -2);
+  assert.equal(report.items[0].balance.available, 20);
+  assert.deepEqual(f.repo.state, before);
+  assert.equal(
+    (await registry.report({ ...f.s, facilityId: randomUUID() }, from, to))
+      .items.length,
+    0,
+  );
+  for (const [a, b] of [
+    ["2026-02-30", "2026-03-01"],
+    [from, from],
+    ["2025-01-01", "2026-01-01"],
+    ["2099-01-01", "2099-01-02"],
+    ["invalid", to],
+  ])
+    await fail(registry.report(f.s, a, b), "INVALID_REQUEST");
+});
+test("movement report includes UTC start, excludes end, and crosses movement and lot pagination", async () => {
+  const {
+      ConsumableRegistry,
+      ConsumableStockRegistry,
+      StockMovementReportRegistry,
+    } = await import("../dist/index.js"),
+    f = await fixture(),
+    lots = new ConsumableRegistry(f.repo),
+    stock = new ConsumableStockRegistry(f.repo);
+  const lot = await lots.register(f.s, lotInput());
+  for (let version = 0; version < 53; version++)
+    await stock.record(f.s, lot.id, "receive", {
+      requestId: randomUUID(),
+      version,
+      quantity: 1,
+      reason: "SIMULATED receipt",
+      reference: "REF",
+      confirmed: true,
+    });
+  const scopeMovements = f.repo.state.consumableStockMovements.filter(
+    (x) => x.lotId === lot.id,
+  );
+  scopeMovements.forEach(
+    (x, i) =>
+      (x.at =
+        i === 52 ? "2026-11-02T00:00:00.000Z" : "2026-11-01T00:00:00.000Z"),
+  );
+  for (let i = 0; i < 51; i++) await lots.register(f.s, lotInput());
+  const r = await new StockMovementReportRegistry(f.repo).report(
+    f.s,
+    "2026-11-01",
+    "2026-11-02",
+  );
+  assert.equal(r.items.length, 52);
+  assert.equal(new Set(r.items.map((x) => x.id)).size, 52);
+  assert.equal(r.items[0].version, 1);
+  assert.equal(r.items.at(-1).version, 52);
+});

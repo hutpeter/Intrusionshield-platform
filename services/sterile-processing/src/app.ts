@@ -1,5 +1,6 @@
 import express from "express";
 import {
+  StockMovementReportRegistry,
   ReplenishmentRegistry,
   StockReconciliationRegistry,
   ConsumableAlertRegistry,
@@ -821,6 +822,21 @@ export function createSterileApp(
     }
     return true;
   }
+  app.get(prefix + "/consumables/movement-report", async (req, res) => {
+    if (
+      Object.keys(req.query).length !== 2 ||
+      typeof req.query.from !== "string" ||
+      typeof req.query.to !== "string"
+    )
+      throw new SterileError("INVALID_REQUEST");
+    res.json(
+      await new StockMovementReportRegistry(dependencies.repository!).report(
+        res.locals.scope,
+        req.query.from,
+        req.query.to,
+      ),
+    );
+  });
   app.get(prefix + "/consumables/replenishment", async (req, res) => {
     noQuery(req);
     res.json(

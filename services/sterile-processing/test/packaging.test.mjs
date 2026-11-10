@@ -1770,3 +1770,64 @@ test("replenishment HTTP report is scoped, read-only, strict and reflects stock 
     0,
   );
 });
+
+test("stock movement report is scoped, date-strict, read-only and available to existing consumable readers", async (t) => {
+  const f = await httpFixture(t),
+    lot = await (
+      await f.call("/preview/consumable-stock-example", {
+        requestId: randomUUID(),
+      })
+    ).json();
+  await fundLotHttp(f, lot, 10);
+  const from = new Date().toISOString().slice(0, 10),
+    to = new Date(Date.now() + 86400000).toISOString().slice(0, 10),
+    path = f.base + "/consumables/movement-report",
+    query = "?from=" + from + "&to=" + to;
+  for (const role of ["operator", "reviewer", "viewer"]) {
+    await f.login(role);
+    const res = await f.call(path + query);
+    assert.equal(res.status, 200);
+    const r = await res.json();
+    assert.equal(r.items.length, 1);
+    assert.equal(r.items[0].lotId, lot.id);
+    assert.equal(r.items[0].availableDelta, 10);
+    assert.equal(r.items[0].balance.available, 10);
+    assert.equal(r.from, from);
+    assert.equal(r.to, to);
+  }
+  for (const suffix of [
+    "",
+    query + "&extra=1",
+    query + "&from=" + from,
+    "?from=" + from,
+    "?from=2026-02-30&to=2026-03-01",
+    "?from=2025-01-01&to=2026-01-01",
+    "?from=" + from + "&to=" + from,
+  ])
+    assert.equal((await f.call(path + suffix)).status, 400);
+  assert.equal(
+    (await f.call(path.replace(f.session.facilityId, randomUUID()) + query))
+      .status,
+    404,
+  );
+  const { StockMovementReportRegistry } =
+      await import("@intrusionshield/sterile-processing"),
+    reopened = new PreviewSqliteRepository(f.file);
+  t.after(() => reopened.close());
+  const r = await new StockMovementReportRegistry(reopened).report(
+    f.session,
+    from,
+    to,
+  );
+  assert.equal(r.items[0].balance.received, 10);
+  assert.equal(
+    (
+      await new StockMovementReportRegistry(reopened).report(
+        { ...f.session, tenantId: randomUUID() },
+        from,
+        to,
+      )
+    ).items.length,
+    0,
+  );
+});

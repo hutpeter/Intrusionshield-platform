@@ -351,3 +351,8 @@ Optional reviewer target quantities now produce live suggestions for eligible lo
 ## Replenishment report and CSV — preview delivered
 
 Complete low-stock facility snapshots now include supplier/product/lot details and suggestions. CSV exports the displayed snapshot across all local display pages. U-REPLENREPORT-01 remains pending; U-REPLEN-01 passed from the owner screenshot. Regional spreadsheet import, production-scale streaming, product grouping and purchasing remain deferred. See [REPLENISHMENT-REPORT.md](REPLENISHMENT-REPORT.md). Asset reuse remains intended; RSP-ISS-001 stays parked.
+
+
+## Dated stock movement report and CSV — preview delivered
+
+Read-only UTC reports now preserve receipts, usage, quarantine/disposal and signed count adjustments with original balances and evidence. CSV exports all displayed-snapshot rows. U-STOCKHIST-01 is pending. Physical verification, backfill, production-scale streaming and regional spreadsheet import remain deferred. See [STOCK-MOVEMENT-REPORT.md](STOCK-MOVEMENT-REPORT.md). Asset reuse remains intended; RSP-ISS-001 stays parked.

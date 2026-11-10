@@ -10,12 +10,12 @@ CSV uses stable English keys, UTF-8 BOM, RFC 4180 quoting, CRLF records, scope/t
 
 GET `/consumables/replenishment` requires `consumables:read`, rejects query parameters and returns a complete report. Existing local preview operator/reviewer/auditor read roles can view/export. No new permission or mutation is introduced.
 
-## One owner check — U-REPLENREPORT-01 pending
+## One owner check — U-REPLENREPORT-01 passed November 10, 2026
 
 After update/restart, **Consumable lots → Replenishment report → Generate replenishment report → Export replenishment CSV**. Expect a downloaded `ruby-replenishment-YYYY-MM-DD.csv` containing supplier, available, target and suggested quantity columns. The previously checked example should show target 20/suggestion 15 if its stock has not changed. This is the only owner check; no new fixture or stock decision is required.
 
 ## Verification and deferred work
 
-Developer November 10, 2026: 418 scoped tests (219 domain, 149 HTTP/SQLite, 50 web), builds and Chromium verify supplier/target/suggestion display, CSV download of the displayed snapshot after a later receipt, regeneration and exact stock links. Automated checks cover fifty-row page boundaries, scope, no-write behavior, missing targets, expiry and safe CSV text. U-REPLEN-01 passed from the owner's dashboard screenshot. U-REPLENREPORT-01 remains pending.
+Developer November 10, 2026: 418 scoped tests (219 domain, 149 HTTP/SQLite, 50 web), builds and Chromium verify supplier/target/suggestion display, CSV download of the displayed snapshot after a later receipt, regeneration and exact stock links. Automated checks cover fifty-row page boundaries, scope, no-write behavior, missing targets, expiry and safe CSV text. U-REPLEN-01 passed from the owner's dashboard screenshot. U-REPLENREPORT-01 passed November 10, 2026 from the owner confirmation and supplied CSV.
 
 Regional spreadsheet import, large production datasets/streaming, product grouping, cross-lot ordering, purchasing integration, pack conversion and site planning policy remain deferred. Future Ruby Asset Management reuse remains intended. U-TRACE-01 and original U-LOANER-01 remain unconfirmed; RSP-ISS-001 stays parked.

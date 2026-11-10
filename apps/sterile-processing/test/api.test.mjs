@@ -1545,3 +1545,84 @@ test("replenishment source links reject a different lot response", async (t) => 
     "other",
   );
 });
+
+test("stock movement report rejects wrong periods, foreign rows, inconsistent deltas and balance identities", async (t) => {
+  const from = "2026-11-01",
+    to = "2026-11-11",
+    row = {
+      id: "movement",
+      tenantId: session.tenantId,
+      facilityId: session.facilityId,
+      lotId: "lot",
+      lotCode: "LOT",
+      product: "Wrap",
+      supplier: "Supplier",
+      manufacturerLot: "M1",
+      actorId: "actor",
+      reason: "Reason",
+      reference: "REF",
+      parentRequestId: "request",
+      action: "adjustment",
+      quantity: -2,
+      availableDelta: -2,
+      unit: "each",
+      version: 2,
+      at: "2026-11-10T12:00:00.000Z",
+      stockCountId: "count",
+      packageId: null,
+      packageCode: null,
+      balance: {
+        tenantId: session.tenantId,
+        facilityId: session.facilityId,
+        lotId: "lot",
+        unit: "each",
+        version: 2,
+        available: 8,
+        received: 10,
+        adjustments: -2,
+        used: 0,
+        quarantined: 0,
+        discarded: 0,
+      },
+    };
+  const value = {
+    tenantId: session.tenantId,
+    facilityId: session.facilityId,
+    generatedAt: "2026-11-10T13:00:00.000Z",
+    from,
+    to,
+    unit: "each",
+    items: [row],
+  };
+  fake(t, async () => response(value));
+  assert.equal(
+    (await api.stockMovementReport(session, from, to, signal())).items[0]
+      .availableDelta,
+    -2,
+  );
+  await assert.rejects(
+    api.stockMovementReport(session, "2026-11-02", to, signal()),
+  );
+  row.facilityId = "other";
+  await assert.rejects(api.stockMovementReport(session, from, to, signal()));
+  row.facilityId = session.facilityId;
+  row.availableDelta = 2;
+  await assert.rejects(api.stockMovementReport(session, from, to, signal()));
+  row.availableDelta = -2;
+  row.balance.lotId = "other";
+  await assert.rejects(api.stockMovementReport(session, from, to, signal()));
+  row.balance.lotId = "lot";
+  row.balance.available = 9;
+  await assert.rejects(api.stockMovementReport(session, from, to, signal()));
+  row.balance.available = 8;
+  row.at = to + "T00:00:00.000Z";
+  await assert.rejects(api.stockMovementReport(session, from, to, signal()));
+  row.at = from + "T00:00:00.000Z";
+  value.items = [row, row];
+  await assert.rejects(api.stockMovementReport(session, from, to, signal()));
+  value.items = [row];
+  assert.equal(
+    (await api.stockMovementReport(session, from, to, signal())).items.length,
+    1,
+  );
+});

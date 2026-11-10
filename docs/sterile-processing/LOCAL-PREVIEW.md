@@ -330,3 +330,8 @@ Replenishment targets and suggested quantities are now available through the exi
 ### Replenishment report CSV
 
 Consumable lots → **Replenishment report → Generate replenishment report → Export replenishment CSV**. Export uses the displayed snapshot, including all rows beyond the fifty-row display page. See [REPLENISHMENT-REPORT.md](REPLENISHMENT-REPORT.md) for U-REPLENREPORT-01, the only owner check for this build.
+
+
+### Dated stock movement CSV
+
+Consumable lots → **Stock movement report → Generate stock movement report → Export stock movements CSV**. Default seven-day UTC period; changing dates requires generation, and CSV exports the displayed snapshot across all fifty-row display pages. See [STOCK-MOVEMENT-REPORT.md](STOCK-MOVEMENT-REPORT.md) for U-STOCKHIST-01, the only owner check for this build.

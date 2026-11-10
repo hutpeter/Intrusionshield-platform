@@ -958,6 +958,13 @@ Developer: 413 scoped tests (218 domain, 148 HTTP/SQLite, 47 web), builds and Ch
 
 ## Current owner check — replenishment report CSV
 
-**U-REPLENREPORT-01 pending:** Consumable lots → Replenishment report → Generate replenishment report → Export replenishment CSV. Expect the downloaded CSV with supplier, available, target and suggested quantity columns; the existing unchanged example has target 20/suggestion 15. This is the only owner check. U-REPLEN-01 passed November 10 from the owner screenshot.
+**U-REPLENREPORT-01 passed November 10, 2026:** owner confirmed the download and supplied CSV rows with supplier, available 5/target 20/suggestion 15 and blank target/suggestion for an unconfigured lot. Original check: Consumable lots → Replenishment report → Generate replenishment report → Export replenishment CSV. Expect the downloaded CSV with supplier, available, target and suggested quantity columns; the existing unchanged example has target 20/suggestion 15. This is the only owner check. U-REPLEN-01 passed November 10 from the owner screenshot.
 
 Developer: 418 scoped tests (219 domain, 149 HTTP/SQLite, 50 web), builds and Chromium report/CSV snapshot/regeneration/source checks passed. Regional spreadsheet import, large production scale, purchasing and physical/site planning policy remain deferred. U-TRACE-01 and original U-LOANER-01 remain pending; RSP-ISS-001 stays parked. See [REPLENISHMENT-REPORT.md](REPLENISHMENT-REPORT.md).
+
+
+## Current owner check — dated stock movement CSV
+
+**U-STOCKHIST-01 pending:** Consumable lots → Stock movement report → Generate stock movement report → Export stock movements CSV, using the default seven-day period. Confirm downloaded action, quantity, available change/after, reason/evidence and actor columns. No new stock movement is requested. This is the only owner check. U-REPLENREPORT-01 passed November 10 from the supplied CSV and owner confirmation.
+
+Developer: 423 scoped tests (221 domain, 150 HTTP/SQLite, 52 web), builds and Chromium receipt/adjustment/history/CSV/date-snapshot/source checks passed. Physical verification, production scale, backfill, regional spreadsheet import and wider site acceptance remain deferred. U-TRACE-01 and original U-LOANER-01 remain pending; RSP-ISS-001 stays parked. See [STOCK-MOVEMENT-REPORT.md](STOCK-MOVEMENT-REPORT.md).

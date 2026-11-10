@@ -1,3 +1,5 @@
+import { StockMovementReport } from "./StockMovementReport";
+import { stockMovementReportLabels } from "./stock-movement-report-text";
 import { Replenishment } from "./Replenishment";
 import { replenishmentLabels } from "./replenishment-text";
 import { reconciliationLabels } from "./reconciliation-text";
@@ -47,6 +49,7 @@ export function ConsumablesWorkspace({
   openId?: string;
   openCountId?: string;
 }) {
+  const [showMovementReport, setShowMovementReport] = useState(false);
   const [showReplenishment, setShowReplenishment] = useState(false),
     [reportBusy, setReportBusy] = useState(false);
   const rec = reconciliationLabels(language),
@@ -321,9 +324,60 @@ export function ConsumablesWorkspace({
         )}
       </div>
       {!form && !decision && !stockLot && !policyLot && (
-        <button disabled={busy} onClick={() => setShowReplenishment(true)}>
+        <button
+          disabled={busy}
+          onClick={() => {
+            setShowMovementReport(false);
+            setShowReplenishment(true);
+          }}
+        >
           {replenishmentLabels(language).title}
         </button>
+      )}
+      {!form && !decision && !stockLot && !policyLot && (
+        <button
+          disabled={busy}
+          onClick={() => {
+            setShowReplenishment(false);
+            setShowMovementReport(true);
+          }}
+        >
+          {stockMovementReportLabels(language).title}
+        </button>
+      )}
+      {showMovementReport && (
+        <StockMovementReport
+          session={session}
+          language={language}
+          blocked={busy || stockDirty || policyDirty || !!form}
+          onBusy={setReportBusy}
+          onExpired={onExpired}
+          onClose={() => setShowMovementReport(false)}
+          onOpen={(id) => {
+            if (pending.current) return;
+            const a = new AbortController();
+            pending.current = a;
+            setReportBusy(true);
+            void api
+              .consumableRecord(session, id, a.signal)
+              .then((lot) => {
+                if (!a.signal.aborted) {
+                  setStockLot({ lot });
+                  setShowMovementReport(false);
+                }
+              })
+              .catch((e) => {
+                if (!a.signal.aborted) {
+                  if (e instanceof ApiError && e.status === 401) onExpired();
+                  else setError(e);
+                }
+              })
+              .finally(() => {
+                if (!a.signal.aborted) setReportBusy(false);
+                pending.current = null;
+              });
+          }}
+        />
       )}
       {showReplenishment && (
         <Replenishment

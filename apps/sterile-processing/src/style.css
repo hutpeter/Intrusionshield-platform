@@ -1247,3 +1247,8 @@ td {
 .replenishment-table td:nth-child(4) {
   min-width: 160px;
 }
+
+.stock-movement-report-table { min-width: 3400px; }
+.stock-movement-report-table td { min-width: 100px; }
+.stock-movement-report-table td:nth-child(2) { min-width: 240px; }
+.stock-movement-report-table td:first-child { min-width: 170px; }
