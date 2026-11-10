@@ -308,6 +308,7 @@ function Workspace({
   const [dashboardTarget, setDashboardTarget] = useState<{
     workspace: DashboardWorkspace;
     id: string;
+    countId?: string;
   } | null>(null);
   const [instruments, setInstruments] = useState<Page<Instrument> | null>(null),
     [types, setTypes] = useState<Page<InstrumentType> | null>(null),
@@ -1113,9 +1114,9 @@ function Workspace({
             onBusy={setTrayBusy}
             onExpired={onExpired}
             onModule={(workspace) => navigate(workspace)}
-            onOpen={(workspace, id) =>
+            onOpen={(workspace, id, countId) =>
               guard(() => {
-                setDashboardTarget({ workspace, id });
+                setDashboardTarget({ workspace, id, countId });
                 setTab(workspace);
                 setSelected(workspace === "instruments" ? id : null);
                 setPage(1);
@@ -1138,6 +1139,11 @@ function Workspace({
         {tab === "consumables" && (
           <ConsumablesWorkspace
             key={trayReset}
+            openCountId={
+              dashboardTarget?.workspace === "consumables"
+                ? dashboardTarget.countId
+                : undefined
+            }
             openId={
               dashboardTarget?.workspace === "consumables"
                 ? dashboardTarget.id

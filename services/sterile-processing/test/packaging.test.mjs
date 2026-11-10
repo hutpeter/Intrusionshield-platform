@@ -1500,3 +1500,146 @@ test("two SQLite reviewers approve a pending count at most once", async (t) => {
     other.close();
   }
 });
+
+test("review queue preserves exact count targets, detects stale snapshots and hides reviewer totals", async (t) => {
+  const f = await httpFixture(t),
+    requestId = randomUUID();
+  assert.equal(
+    (await f.call("/preview/review-queue-example", { requestId })).status,
+    403,
+  );
+  await f.login("reviewer");
+  const response = await f.call("/preview/review-queue-example", { requestId });
+  assert.equal(response.status, 201);
+  const fixture = await response.json();
+  assert.deepEqual(
+    await (await f.call("/preview/review-queue-example", { requestId })).json(),
+    fixture,
+  );
+  const queuePath = f.base + "/dashboard/queues/stockCountReviews";
+  let queue = (await (await f.call(queuePath)).json()).queue;
+  assert.equal(queue.total, 2);
+  for (const [name, current, stale] of [
+    ["ready", 10, false],
+    ["stale", 12, true],
+  ]) {
+    const count = fixture[name];
+    const row = queue.items.find((x) => x.id === count.id);
+    assert.equal(row.stockCountReview.lotId, count.lotId);
+    assert.equal(row.stockCountReview.countId, count.id);
+    assert.equal(row.stockCountReview.currentAvailable, current);
+    assert.equal(row.stockCountReview.recordedAvailable, 10);
+    assert.equal(row.stockCountReview.countedAvailable, 8);
+    assert.equal(row.stockCountReview.difference, -2);
+    assert.equal(row.stockCountReview.stale, stale);
+    const path =
+      f.base + "/consumables/" + count.lotId + "/stock/counts/" + count.id;
+    assert.deepEqual(await (await f.call(path)).json(), count);
+  }
+  const ready = fixture.ready,
+    stale = fixture.stale;
+  assert.equal(
+    (
+      await f.call(
+        f.base + "/consumables/" + stale.lotId + "/stock/counts/" + ready.id,
+      )
+    ).status,
+    404,
+  );
+  const decide = (count, action) =>
+    f.call(
+      f.base +
+        "/consumables/" +
+        count.lotId +
+        "/stock/counts/" +
+        count.id +
+        "/" +
+        action,
+      {
+        requestId: randomUUID(),
+        version: 1,
+        reason: "REVIEW",
+        reference: "EVIDENCE",
+        confirmed: true,
+      },
+    );
+  assert.equal((await decide(stale, "approve")).status, 409);
+  assert.equal((await decide(ready, "approve")).status, 200);
+  queue = (await (await f.call(queuePath)).json()).queue;
+  assert.equal(queue.total, 1);
+  assert.equal(queue.items[0].id, stale.id);
+  assert.equal(
+    (
+      await (
+        await f.call(
+          f.base + "/consumables/" + ready.lotId + "/stock/counts/" + ready.id,
+        )
+      ).json()
+    ).state,
+    "approved",
+  );
+  assert.equal((await decide(stale, "reject")).status, 200);
+  assert.equal((await (await f.call(queuePath)).json()).queue.total, 0);
+  assert.equal(
+    (
+      await (
+        await f.call(f.base + "/consumables/" + stale.lotId + "/stock")
+      ).json()
+    ).balance.available,
+    12,
+  );
+  for (const role of ["operator", "viewer"]) {
+    await f.login(role);
+    assert.equal((await f.call(queuePath)).status, 403);
+    const hidden = (
+      await (await f.call(f.base + "/dashboard")).json()
+    ).queues.find((q) => q.id === "stockCountReviews");
+    assert.equal(hidden.access, "restricted");
+    assert.equal(hidden.total, null);
+    assert.deepEqual(hidden.items, []);
+  }
+});
+
+test("review queue paging is stable, scoped and read-only across SQLite reopen", async (t) => {
+  const f = await httpFixture(t);
+  const { prepareReviewQueueExample } =
+    await import("../dist/development/review-queue-example.js");
+  const { DashboardRegistry } =
+    await import("@intrusionshield/sterile-processing");
+  for (let i = 0; i < 7; i++)
+    await prepareReviewQueueExample(f.repo, f.session, randomUUID());
+  const d = new DashboardRegistry(f.repo),
+    a = (await d.queue(f.session, "stockCountReviews", 1)).queue,
+    b = (await d.queue(f.session, "stockCountReviews", 2)).queue;
+  assert.equal(a.total, 14);
+  assert.equal(a.items.length, 12);
+  assert.equal(b.items.length, 2);
+  assert.equal(new Set([...a.items, ...b.items].map((x) => x.id)).size, 14);
+  assert.equal(
+    [...a.items, ...b.items].filter((x) => x.stockCountReview.stale).length,
+    7,
+  );
+  assert.deepEqual((await d.queue(f.session, "stockCountReviews", 1)).queue, a);
+  assert.equal(
+    (
+      await d.queue(
+        { ...f.session, facilityId: randomUUID() },
+        "stockCountReviews",
+        1,
+      )
+    ).queue.total,
+    0,
+  );
+  const reopened = new PreviewSqliteRepository(f.file);
+  t.after(() => reopened.close());
+  assert.deepEqual(
+    (
+      await new DashboardRegistry(reopened).queue(
+        f.session,
+        "stockCountReviews",
+        1,
+      )
+    ).queue,
+    a,
+  );
+});

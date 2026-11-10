@@ -1,6 +1,6 @@
 # Physical stock reconciliation
 
-## One owner check: U-CONS-05 (pending)
+## One owner check: U-CONS-05 (passed November 10, 2026)
 
 Update/restart the preview and enter as **Demo reviewer**. Open **Consumable lots → Prepare fictional stock count example**. This creates a new fictional lot with a receipt of **10** items and an operator count of **8**, then opens the reviewer decision. Review the recorded **10**, counted **8**, difference **−2** and prefilled simulated review reason/evidence. Tick **I confirm this count decision and any stock adjustment.**, then **Approve stock adjustment**. Expect **Stock count approved.**, Available balance **8** and Net approved adjustments **−2**. This is the only owner check. Operator entry, rejection, stale counts, concurrency, audit rollback and reload are developer-verified.
 
@@ -28,4 +28,4 @@ Physical counting procedures, location/bin allocation, counting quarantined stoc
 
 The stock ledger, scoped thresholds and count/review/adjustment pattern are intended foundations for **Ruby Asset Management**. Shared inventory services can be extracted when that module's boundaries are defined; sterile-specific packaging and clinical gates must remain with their module. No Asset Management module is implemented here. RSP-ISS-001 independent instrument-inspector enforcement stays parked; this stock review workflow does not change it.
 
-Developer November 10, 2026: 406 scoped tests passed (216 domain, 145 HTTP/SQLite, 45 web), scoped builds and Chromium reviewer helper/negative adjustment/operator entry/zero-difference approval/refresh passed. Tests cover positive/negative/zero counts, pending uniqueness, independent approval, stale stock, rejection, strict quantity/scope/CSRF/role checks, idempotency, two-connection approval races, atomic audit rollback and SQLite reopen. No U-CONS-05 owner pass is inferred.
+Developer November 10, 2026: 406 scoped tests passed (216 domain, 145 HTTP/SQLite, 45 web), scoped builds and Chromium reviewer helper/negative adjustment/operator entry/zero-difference approval/refresh passed. Tests cover positive/negative/zero counts, pending uniqueness, independent approval, stale stock, rejection, strict quantity/scope/CSRF/role checks, idempotency, two-connection approval races, atomic audit rollback and SQLite reopen. U-CONS-05 subsequently passed from the owner approval screenshot.

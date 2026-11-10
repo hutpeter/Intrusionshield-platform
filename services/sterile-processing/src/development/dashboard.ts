@@ -1,3 +1,4 @@
+import { stockCountReview } from "@intrusionshield/sterile-processing";
 import type { DatabaseSync } from "node:sqlite";
 import type {
   DashboardQueueId,
@@ -10,6 +11,39 @@ export function readDashboardQueue(
   id: DashboardQueueId,
   offset = 0,
 ): { total: number; items: DashboardRow[] } {
+  if (id === "stockCountReviews") {
+    const from =
+        "FROM sp_stock_counts c JOIN sp_consumables l ON l.tenant_id=c.tenant_id AND l.facility_id=c.facility_id AND l.id=c.lot_id LEFT JOIN sp_consumable_stock s ON s.tenant_id=c.tenant_id AND s.facility_id=c.facility_id AND s.lot_id=c.lot_id WHERE c.tenant_id=? AND c.facility_id=? AND c.state='pending'",
+      total = (
+        db.prepare("SELECT count(*) AS n " + from).get(...args) as { n: number }
+      ).n;
+    const rows = db
+      .prepare(
+        "SELECT c.payload AS countPayload,s.payload AS stockPayload " +
+          from +
+          " ORDER BY json_extract(c.payload,'$.recordedAt') ASC,c.id ASC LIMIT 12 OFFSET ?",
+      )
+      .all(...args, offset) as {
+      countPayload: string;
+      stockPayload: string | null;
+    }[];
+    return {
+      total,
+      items: rows.map((r) => {
+        const count = JSON.parse(r.countPayload),
+          stock = r.stockPayload ? JSON.parse(r.stockPayload) : null,
+          review = stockCountReview(count, stock);
+        return {
+          id: count.id,
+          code: count.lotCode,
+          state: review.stale ? "count_stale" : "count_ready",
+          updatedAt: count.recordedAt,
+          units: null,
+          stockCountReview: review,
+        };
+      }),
+    };
+  }
   if (id === "consumableAlerts") {
     const today = new Date().toISOString().slice(0, 10),
       available = "coalesce(json_extract(s.payload,'$.available'),0)",
@@ -76,7 +110,7 @@ export function readDashboardQueue(
       `${alias}.tenant_id=p.tenant_id AND ${alias}.facility_id=p.facility_id`,
     pending = `EXISTS(SELECT 1 FROM sp_recall_instruments ri WHERE ${same("ri")} AND ri.recall_id=p.id AND NOT EXISTS(SELECT 1 FROM sp_recall_readmissions rm WHERE rm.tenant_id=ri.tenant_id AND rm.facility_id=ri.facility_id AND rm.instrument_id=ri.instrument_id AND rm.recall_id=ri.recall_id))`;
   const configs: Record<
-    Exclude<DashboardQueueId, "consumableAlerts">,
+    Exclude<DashboardQueueId, "consumableAlerts" | "stockCountReviews">,
     [string, string, string]
   > = {
     cleaning: [

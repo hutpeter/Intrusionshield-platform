@@ -1,3 +1,4 @@
+import { prepareReviewQueueExample } from "./review-queue-example.js";
 import { StockReconciliationRegistry } from "@intrusionshield/sterile-processing";
 import { ConsumableStockRegistry } from "@intrusionshield/sterile-processing";
 import { createHash } from "node:crypto";
@@ -633,6 +634,32 @@ export function createSterilePreview({
         await prepareUnpackagedIncidentExample(
           repository,
           { tenantId, facilityId, actorId: actors.reviewer },
+          { tenantId, facilityId, actorId: actors.operator },
+          sterileUuid(req.body.requestId),
+        ),
+      );
+  });
+  app.post("/preview/review-queue-example", async (req, res) => {
+    const session = res.locals.session as Session;
+    if (session.role !== "reviewer") {
+      res.status(403).json({ error: "FORBIDDEN" });
+      return;
+    }
+    if (
+      Object.keys(req.query).length ||
+      !req.body ||
+      Array.isArray(req.body) ||
+      Object.keys(req.body).length !== 1 ||
+      typeof req.body.requestId !== "string"
+    ) {
+      res.status(400).json({ error: "INVALID_REQUEST" });
+      return;
+    }
+    res
+      .status(201)
+      .json(
+        await prepareReviewQueueExample(
+          repository,
           { tenantId, facilityId, actorId: actors.operator },
           sterileUuid(req.body.requestId),
         ),

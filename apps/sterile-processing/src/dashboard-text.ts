@@ -29,6 +29,7 @@ const en = {
   maintenance: "Instruments requiring maintenance or service",
   packageAlerts: "Package integrity and expiry alerts",
   consumableAlerts: "Consumable stock and expiry alerts",
+  stockCountReviews: "Stock counts awaiting review",
 };
 const es: typeof en = {
   title: "Panel operativo",
@@ -60,6 +61,7 @@ const es: typeof en = {
   maintenance: "Instrumentos retenidos por mantenimiento",
   packageAlerts: "Alertas de integridad y caducidad de paquetes",
   consumableAlerts: "Alertas de existencias y caducidad de consumibles",
+  stockCountReviews: "Recuentos pendientes de revisión",
 };
 const fr: typeof en = {
   title: "Tableau opérationnel",
@@ -91,6 +93,7 @@ const fr: typeof en = {
   maintenance: "Instruments bloqués pour maintenance",
   packageAlerts: "Alertes d’intégrité et de péremption des paquets",
   consumableAlerts: "Alertes de stock et péremption des consommables",
+  stockCountReviews: "Comptages en attente de revue",
 };
 export const dashboardLabels = (l: Language) =>
   l === "es" ? es : l === "fr" ? fr : en;

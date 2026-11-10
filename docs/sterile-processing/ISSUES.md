@@ -335,4 +335,9 @@ Reviewer-configured per-lot minimums and expiry warning days now drive a scoped 
 
 ## Stock reconciliation follow-up and Asset Management reuse
 
-Available-item physical counts, reviewer approval/rejection and signed adjustment movements are delivered with stale-version, idempotency, scope and audit protections. U-CONS-05 remains pending. Location/quarantined-stock counts, stock freezes/schedules, correction of decided counts, physical procedures and production/scale/clinical acceptance remain deferred. Reuse the ledger/threshold/count-review pattern for Ruby Asset Management when its shared-service boundaries are defined; sterile clinical gates remain separate. See [STOCK-RECONCILIATION.md](STOCK-RECONCILIATION.md). RSP-ISS-001 stays parked.
+Available-item physical counts, reviewer approval/rejection and signed adjustment movements are delivered with stale-version, idempotency, scope and audit protections. U-CONS-05 passed November 10, 2026 from the owner approval screenshot (received 10, available 8, net adjustments −2). Location/quarantined-stock counts, stock freezes/schedules, correction of decided counts, physical procedures and production/scale/clinical acceptance remain deferred. Reuse the ledger/threshold/count-review pattern for Ruby Asset Management when its shared-service boundaries are defined; sterile clinical gates remain separate. See [STOCK-RECONCILIATION.md](STOCK-RECONCILIATION.md). RSP-ISS-001 stays parked.
+
+
+## Stock count reviewer queue — preview delivered
+
+Pending counts now appear in a reviewer-only dashboard queue with current/stale status, original reason/evidence and exact count links. Decisions retain the existing stock reconciliation gates. U-REVIEWQ-01 is pending; one read-only fixture check is offered. Physical counting policy, production scale and notifications remain deferred. See [REVIEW-QUEUES.md](REVIEW-QUEUES.md). RSP-ISS-001 stays parked.

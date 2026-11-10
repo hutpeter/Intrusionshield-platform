@@ -15,6 +15,7 @@ export const dashboardQueueIds = [
   "maintenance",
   "packageAlerts",
   "consumableAlerts",
+  "stockCountReviews",
 ] as const;
 export type DashboardQueueId = (typeof dashboardQueueIds)[number];
 export type DashboardWorkspace =
@@ -38,8 +39,10 @@ export const dashboardWorkspaces: Record<DashboardQueueId, DashboardWorkspace> =
     maintenance: "instruments",
     packageAlerts: "packaging",
     consumableAlerts: "consumables",
+    stockCountReviews: "consumables",
   };
 export interface DashboardRow {
+  stockCountReview?: import("./stock-reconciliation.js").StockCountReview;
   consumableAlert?: import("./consumable-alerts.js").ConsumableAlert;
   id: string;
   code: string;

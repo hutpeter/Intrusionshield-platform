@@ -317,3 +317,8 @@ Enter as **Demo reviewer**, then **Consumable lots → Prepare fictional stock a
 ## Physical stock reconciliation
 
 As **Demo reviewer**, use **Consumable lots → Prepare fictional stock count example** for the single U-CONS-05 decision check. Normal operators record counts in **Stock and movements**; reviewers decide them separately. See [STOCK-RECONCILIATION.md](STOCK-RECONCILIATION.md).
+
+
+### Stock count reviewer queue
+
+Demo reviewer → Operational dashboard → **Prepare fictional review queue example** creates ready/stale pending counts. Open records route to the exact count and show its current decision. See [REVIEW-QUEUES.md](REVIEW-QUEUES.md) for U-REVIEWQ-01, the only owner check for this build.

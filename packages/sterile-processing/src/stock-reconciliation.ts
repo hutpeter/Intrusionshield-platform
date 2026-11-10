@@ -36,6 +36,40 @@ export interface StockCount {
     movementId: string | null;
   } | null;
 }
+export interface StockCountReview {
+  lotId: string;
+  countId: string;
+  recordedAvailable: number;
+  countedAvailable: number;
+  difference: number;
+  reason: string;
+  reference: string;
+  stockVersion: number;
+  currentStockVersion: number | null;
+  currentAvailable: number | null;
+  stale: boolean;
+}
+export function stockCountReview(
+  count: StockCount,
+  stock: ConsumableStock | null,
+): StockCountReview {
+  return {
+    lotId: count.lotId,
+    countId: count.id,
+    recordedAvailable: count.recordedAvailable,
+    countedAvailable: count.countedAvailable,
+    difference: count.difference,
+    reason: count.reason,
+    reference: count.reference,
+    stockVersion: count.stockVersion,
+    currentStockVersion: stock?.version ?? null,
+    currentAvailable: stock?.available ?? null,
+    stale:
+      !stock ||
+      stock.version !== count.stockVersion ||
+      stock.available !== count.recordedAvailable,
+  };
+}
 export interface StockCountInput {
   requestId: string;
   stockVersion: number;
@@ -237,6 +271,16 @@ export class StockReconciliationRegistry extends SterileRegistryBase {
         return item;
       },
     );
+  }
+  async get(scope: SterileScope, lotId: string, id: string) {
+    const s = scopeOf(scope),
+      lot = sterileUuid(lotId),
+      key = sterileUuid(id);
+    return this.repository.transaction(s, async (tx) => {
+      const count = await tx.findStockCount(key);
+      if (!count || count.lotId !== lot) throw new SterileError("NOT_FOUND");
+      return count;
+    });
   }
   async list(scope: SterileScope, id: string, page = 1) {
     const s = scopeOf(scope),

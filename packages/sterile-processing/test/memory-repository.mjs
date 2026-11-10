@@ -1,4 +1,5 @@
 /** SQL-free test adapter only. Never loaded by the service composition root. */
+import { stockCountReview } from "../dist/stock-reconciliation.js";
 import { consumableAlert } from "../dist/consumable-alerts.js";
 export class MemoryRepository {
   state = {
@@ -271,6 +272,38 @@ export class MemoryRepository {
         };
       },
       dashboardQueue: async (id, offset = 0) => {
+        if (id === "stockCountReviews") {
+          const rows = s.stockCounts
+            .filter(
+              (x) =>
+                own(x) &&
+                x.state === "pending" &&
+                s.consumables.some((l) => own(l) && l.id === x.lotId),
+            )
+            .map((count) => {
+              const review = stockCountReview(
+                count,
+                s.consumableStock.find(
+                  (x) => own(x) && x.lotId === count.lotId,
+                ) ?? null,
+              );
+              return {
+                id: count.id,
+                code: count.lotCode,
+                state: review.stale ? "count_stale" : "count_ready",
+                updatedAt: count.recordedAt,
+                units: null,
+                stockCountReview: review,
+              };
+            })
+            .sort(
+              (a, b) =>
+                a.updatedAt.localeCompare(b.updatedAt) ||
+                a.id.localeCompare(b.id),
+            );
+          return { total: rows.length, items: rows.slice(offset, offset + 12) };
+        }
+
         if (id === "consumableAlerts") {
           const now = new Date().toISOString(),
             rows = s.consumables

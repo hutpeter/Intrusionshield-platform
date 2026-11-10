@@ -786,6 +786,7 @@ test("dashboard rejects a mismatched workspace or hidden queue count instead of 
       "maintenance",
       "packageAlerts",
       "consumableAlerts",
+      "stockCountReviews",
     ],
     workspaces = [
       "processing",
@@ -797,6 +798,7 @@ test("dashboard rejects a mismatched workspace or hidden queue count instead of 
       "recalls",
       "instruments",
       "packaging",
+      "consumables",
       "consumables",
     ];
   const queues = ids.map((id, n) => ({
@@ -1342,4 +1344,75 @@ test("physical stock count and review API preserve explicit quantities, versions
     api.stockCounts(session, "lot", 1, signal()),
     (e) => e.code === "SERVICE_UNAVAILABLE",
   );
+});
+
+test("review queue rejects forged count navigation and inconsistent stale metadata", async (t) => {
+  const row = {
+    id: "count",
+    code: "LOT",
+    state: "count_ready",
+    updatedAt: new Date().toISOString(),
+    units: null,
+    stockCountReview: {
+      lotId: "lot",
+      countId: "count",
+      recordedAvailable: 10,
+      countedAvailable: 8,
+      difference: -2,
+      stockVersion: 1,
+      currentStockVersion: 1,
+      currentAvailable: 10,
+      stale: false,
+      reason: "COUNT",
+      reference: "REF",
+    },
+  };
+  let result = {
+    tenantId: session.tenantId,
+    facilityId: session.facilityId,
+    generatedAt: new Date().toISOString(),
+    page: 1,
+    limit: 12,
+    queue: {
+      id: "stockCountReviews",
+      workspace: "consumables",
+      access: "allowed",
+      total: 1,
+      items: [row],
+    },
+  };
+  fake(t, async () => response(result));
+  assert.equal(
+    (await api.dashboardQueue(session, "stockCountReviews", 1, signal())).queue
+      .items[0].stockCountReview.lotId,
+    "lot",
+  );
+  row.stockCountReview.countId = "other";
+  await assert.rejects(
+    api.dashboardQueue(session, "stockCountReviews", 1, signal()),
+  );
+  row.stockCountReview.countId = "count";
+  row.stockCountReview.currentAvailable = 12;
+  await assert.rejects(
+    api.dashboardQueue(session, "stockCountReviews", 1, signal()),
+  );
+  row.stockCountReview.stale = true;
+  assert.equal(
+    (await api.dashboardQueue(session, "stockCountReviews", 1, signal())).queue
+      .items[0].stockCountReview.stale,
+    true,
+  );
+  result = {
+    tenantId: session.tenantId,
+    facilityId: session.facilityId,
+    lotId: "lot",
+    id: "count",
+    state: "approved",
+  };
+  assert.equal(
+    (await api.stockCount(session, "lot", "count", signal())).state,
+    "approved",
+  );
+  await assert.rejects(api.stockCount(session, "other", "count", signal()));
+  await assert.rejects(api.stockCount(session, "lot", "other", signal()));
 });

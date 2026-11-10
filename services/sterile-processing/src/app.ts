@@ -338,6 +338,7 @@ export function createSterileApp(
     maintenance: "instruments:read",
     packageAlerts: "packaging:read",
     consumableAlerts: "consumables:read",
+    stockCountReviews: "consumables:read",
   } as const;
   app.get(prefix + "/dashboard", async (req, res) => {
     noQuery(req);
@@ -348,7 +349,13 @@ export function createSterileApp(
           res.locals.scope,
           "sterile.core",
           dashboardPermissions[id],
-        )) === true
+        )) === true &&
+        (id !== "stockCountReviews" ||
+          (await dependencies.authorize!(
+            res.locals.scope,
+            "sterile.core",
+            "consumables:reconcile",
+          )) === true)
       )
         allowed.push(id);
     res.json(
@@ -368,7 +375,13 @@ export function createSterileApp(
         res.locals.scope,
         "sterile.core",
         dashboardPermissions[id],
-      )) !== true
+      )) !== true ||
+      (id === "stockCountReviews" &&
+        (await dependencies.authorize!(
+          res.locals.scope,
+          "sterile.core",
+          "consumables:reconcile",
+        )) !== true)
     ) {
       res.status(403).json({ error: "FORBIDDEN" });
       return;
@@ -807,6 +820,19 @@ export function createSterileApp(
     }
     return true;
   }
+  app.get(
+    prefix + "/consumables/:id/stock/counts/:countId",
+    async (req, res) => {
+      noQuery(req);
+      res.json(
+        await new StockReconciliationRegistry(dependencies.repository!).get(
+          res.locals.scope,
+          sterileUuid(req.params.id),
+          sterileUuid(req.params.countId),
+        ),
+      );
+    },
+  );
   app.get(prefix + "/consumables/:id/stock/counts", async (req, res) =>
     res.json(
       await new StockReconciliationRegistry(dependencies.repository!).list(

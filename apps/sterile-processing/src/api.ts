@@ -303,7 +303,66 @@ function validConsumableAlert(
     Number.isFinite(Date.parse(a.expiresOn))
   );
 }
+function validStockCountReview(
+  row: import("@intrusionshield/sterile-processing").DashboardRow,
+) {
+  const r = row.stockCountReview;
+  return (
+    !!r &&
+    r.countId === row.id &&
+    typeof r.lotId === "string" &&
+    typeof r.reason === "string" &&
+    typeof r.reference === "string" &&
+    Number.isSafeInteger(r.recordedAvailable) &&
+    r.recordedAvailable >= 0 &&
+    Number.isSafeInteger(r.countedAvailable) &&
+    r.countedAvailable >= 0 &&
+    Number.isSafeInteger(r.difference) &&
+    r.difference === r.countedAvailable - r.recordedAvailable &&
+    Number.isSafeInteger(r.stockVersion) &&
+    r.stockVersion >= 1 &&
+    (r.currentStockVersion === null ||
+      (Number.isSafeInteger(r.currentStockVersion) &&
+        r.currentStockVersion >= 1)) &&
+    (r.currentAvailable === null ||
+      (Number.isSafeInteger(r.currentAvailable) && r.currentAvailable >= 0)) &&
+    typeof r.stale === "boolean" &&
+    r.stale ===
+      (r.currentStockVersion !== r.stockVersion ||
+        r.currentAvailable !== r.recordedAvailable)
+  );
+}
 export const api = {
+  stockCount: async (
+    s: Session,
+    lotId: string,
+    countId: string,
+    signal: AbortSignal,
+  ) => {
+    const r = await scoped(
+      s,
+      call<import("@intrusionshield/sterile-processing").StockCount>(
+        base(s) +
+          "/consumables/" +
+          encodeURIComponent(lotId) +
+          "/stock/counts/" +
+          encodeURIComponent(countId),
+        signal,
+      ),
+    );
+    if (r.lotId !== lotId || r.id !== countId)
+      throw new ApiError(503, "SERVICE_UNAVAILABLE");
+    return r;
+  },
+  async reviewQueueExample(s: Session, requestId: string, signal: AbortSignal) {
+    const r = await call<{
+      ready: import("@intrusionshield/sterile-processing").StockCount;
+      stale: import("@intrusionshield/sterile-processing").StockCount;
+    }>("/preview/review-queue-example", signal, { requestId }, s.csrf);
+    await scoped(s, Promise.resolve(r.ready));
+    await scoped(s, Promise.resolve(r.stale));
+    return r;
+  },
   stockCounts: async (
     s: Session,
     id: string,
@@ -1100,6 +1159,7 @@ export const api = {
       maintenance: "instruments",
       packageAlerts: "packaging",
       consumableAlerts: "consumables",
+      stockCountReviews: "consumables",
     };
     const q = r.queue;
     if (
@@ -1117,6 +1177,7 @@ export const api = {
       (q.items.length > 0 && (page - 1) * 12 + q.items.length > q.total) ||
       q.items.some(
         (i) =>
+          (q.id === "stockCountReviews" && !validStockCountReview(i)) ||
           (q.id === "consumableAlerts" &&
             !validConsumableAlert(i.consumableAlert)) ||
           typeof i.id !== "string" ||
@@ -1143,6 +1204,7 @@ export const api = {
       "maintenance",
       "packageAlerts",
       "consumableAlerts",
+      "stockCountReviews",
     ];
     const workspaces = {
       cleaning: "processing",
@@ -1155,13 +1217,14 @@ export const api = {
       maintenance: "instruments",
       packageAlerts: "packaging",
       consumableAlerts: "consumables",
+      stockCountReviews: "consumables",
     };
     if (
       r.limit !== 12 ||
       !Number.isFinite(Date.parse(r.generatedAt)) ||
       !Array.isArray(r.queues) ||
-      r.queues.length !== 10 ||
-      new Set(r.queues.map((q) => q.id)).size !== 10 ||
+      r.queues.length !== 11 ||
+      new Set(r.queues.map((q) => q.id)).size !== 11 ||
       r.queues.some(
         (q) =>
           !ids.includes(q.id) ||
@@ -1176,6 +1239,7 @@ export const api = {
               q.total! < q.items.length) ||
           q.items.some(
             (i) =>
+              (q.id === "stockCountReviews" && !validStockCountReview(i)) ||
               (q.id === "consumableAlerts" &&
                 !validConsumableAlert(i.consumableAlert)) ||
               typeof i.id !== "string" ||

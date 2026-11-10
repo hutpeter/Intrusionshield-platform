@@ -1,3 +1,4 @@
+import { reviewQueueLabels } from "./review-queue-text";
 import { stockLabels } from "./stock-text";
 import { consumableAlertLabels } from "./consumable-alert-text";
 import { useEffect, useRef, useState } from "react";
@@ -23,7 +24,7 @@ export function Dashboard({
   blocked: boolean;
   onBusy: (v: boolean) => void;
   onExpired: () => void;
-  onOpen: (workspace: DashboardWorkspace, id: string) => void;
+  onOpen: (workspace: DashboardWorkspace, id: string, countId?: string) => void;
   onModule: (workspace: DashboardWorkspace) => void;
 }) {
   const t = dashboardLabels(language),
@@ -35,6 +36,7 @@ export function Dashboard({
     [snapshots, setSnapshots] = useState<
       Partial<Record<DashboardQueueId, string>>
     >({}),
+    reviewFixtureKey = useRef(crypto.randomUUID()),
     fixtureKey = useRef<string | null>(null),
     pending = useRef<AbortController | null>(null);
   useEffect(() => {
@@ -121,6 +123,27 @@ export function Dashboard({
       if (!c.signal.aborted) setLoading(false);
     }
   };
+  async function prepareReviewExample() {
+    if (loading || blocked) return;
+    const a = new AbortController();
+    pending.current = a;
+    setLoading(true);
+    setError(false);
+    try {
+      await api.reviewQueueExample(session, reviewFixtureKey.current, a.signal);
+      if (!a.signal.aborted) {
+        reviewFixtureKey.current = crypto.randomUUID();
+        setNonce((n) => n + 1);
+      }
+    } catch (e) {
+      if (!a.signal.aborted) {
+        if (e instanceof ApiError && e.status === 401) onExpired();
+        else setError(true);
+      }
+    } finally {
+      if (!a.signal.aborted) setLoading(false);
+    }
+  }
   const date = (d: string) =>
     new Intl.DateTimeFormat(language, {
       dateStyle: "medium",
@@ -156,6 +179,17 @@ export function Dashboard({
           </div>
         )}
 
+      {session.mode === "local-dummy-preview" && session.canRecall && (
+        <div>
+          <button
+            disabled={blocked || loading}
+            onClick={() => void prepareReviewExample()}
+          >
+            {reviewQueueLabels(language).example}
+          </button>
+          <p className="muted">{reviewQueueLabels(language).exampleNote}</p>
+        </div>
+      )}
       {error && (
         <p className="alert" role="alert">
           {t.error}
@@ -180,7 +214,11 @@ export function Dashboard({
                   <strong className="queue-total">{q.total ?? "—"}</strong>
                 </div>
                 {q.access === "restricted" ? (
-                  <p>{t.restricted}</p>
+                  <p>
+                    {q.id === "stockCountReviews"
+                      ? reviewQueueLabels(language).restricted
+                      : t.restricted}
+                  </p>
                 ) : (
                   <>
                     <p className="muted">
@@ -193,6 +231,32 @@ export function Dashboard({
                         <li key={item.id}>
                           <div>
                             <strong>{item.code}</strong>
+                            {item.stockCountReview && (
+                              <>
+                                <small>
+                                  <strong>
+                                    {item.stockCountReview.stale
+                                      ? reviewQueueLabels(language).stale
+                                      : reviewQueueLabels(language).ready}
+                                  </strong>{" "}
+                                  · {reviewQueueLabels(language).recorded}:{" "}
+                                  {item.stockCountReview.recordedAvailable} ·{" "}
+                                  {reviewQueueLabels(language).counted}:{" "}
+                                  {item.stockCountReview.countedAvailable} ·{" "}
+                                  {reviewQueueLabels(language).difference}:{" "}
+                                  {item.stockCountReview.difference} ·{" "}
+                                  {reviewQueueLabels(language).current}:{" "}
+                                  {item.stockCountReview.currentAvailable ??
+                                    "—"}
+                                </small>
+                                <small>
+                                  {reviewQueueLabels(language).reason}:{" "}
+                                  {item.stockCountReview.reason} ·{" "}
+                                  {reviewQueueLabels(language).reference}:{" "}
+                                  {item.stockCountReview.reference}
+                                </small>
+                              </>
+                            )}
                             {item.consumableAlert && (
                               <small>
                                 {[
@@ -228,7 +292,13 @@ export function Dashboard({
                           </div>
                           <button
                             disabled={blocked || loading}
-                            onClick={() => onOpen(q.workspace, item.id)}
+                            onClick={() =>
+                              onOpen(
+                                q.workspace,
+                                item.stockCountReview?.lotId ?? item.id,
+                                item.stockCountReview?.countId,
+                              )
+                            }
                           >
                             {t.open}
                           </button>

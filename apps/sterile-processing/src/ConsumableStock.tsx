@@ -12,6 +12,7 @@ export function ConsumableStockPanel({
   lot,
   initialReceive = false,
   initialReview = false,
+  openCountId,
   session,
   language,
   blocked,
@@ -24,6 +25,7 @@ export function ConsumableStockPanel({
   lot: ConsumableLot;
   initialReceive?: boolean;
   initialReview?: boolean;
+  openCountId?: string;
   session: Session;
   language: Language;
   blocked: boolean;
@@ -290,6 +292,7 @@ export function ConsumableStockPanel({
             lot={report.lot}
             balance={report.balance}
             initialReview={initialReview}
+            openCountId={openCountId}
             session={session}
             language={language}
             blocked={blocked || saving || loading || !!action}

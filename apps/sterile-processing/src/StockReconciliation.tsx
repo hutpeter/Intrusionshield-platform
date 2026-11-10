@@ -1,3 +1,4 @@
+import { reviewQueueLabels } from "./review-queue-text";
 import { useEffect, useRef, useState } from "react";
 import type {
   StockCount,
@@ -11,6 +12,7 @@ export function StockReconciliation({
   lot,
   balance,
   initialReview = false,
+  openCountId,
   session,
   language,
   blocked,
@@ -22,6 +24,7 @@ export function StockReconciliation({
   lot: ConsumableLot;
   balance: ConsumableStock | null;
   initialReview?: boolean;
+  openCountId?: string;
   session: Session;
   language: Language;
   blocked: boolean;
@@ -30,6 +33,8 @@ export function StockReconciliation({
   onDirty: (v: boolean) => void;
   onSaved: () => void;
 }) {
+  const [focused, setFocused] = useState<StockCount | null>(null),
+    focusAnchor = useRef<HTMLElement | null>(null);
   const t = reconciliationLabels(language),
     c = labels(language),
     [rows, setRows] = useState<Page<StockCount> | null>(null),
@@ -95,6 +100,28 @@ export function StockReconciliation({
       });
     return () => a.abort();
   }, [session, lot.id, page, nonce]);
+  useEffect(() => {
+    if (!openCountId) {
+      setFocused(null);
+      return;
+    }
+    const a = new AbortController();
+    void api
+      .stockCount(session, lot.id, openCountId, a.signal)
+      .then((c) => {
+        if (!a.signal.aborted) setFocused(c);
+      })
+      .catch((e) => {
+        if (!a.signal.aborted) {
+          if (e instanceof ApiError && e.status === 401) onExpired();
+          else setError(e);
+        }
+      });
+    return () => a.abort();
+  }, [session, lot.id, openCountId, nonce]);
+  useEffect(() => {
+    if (focused) focusAnchor.current?.scrollIntoView({ block: "start" });
+  }, [focused?.id]);
   function begin(
     action: "count" | "approve" | "reject",
     count: StockCount | null = null,
@@ -173,6 +200,46 @@ export function StockReconciliation({
     }
   }
   const pendingCount = rows?.items.some((x) => x.state === "pending");
+  const renderCount = (x: StockCount) => (
+    <>
+      <strong>
+        {x.state === "pending"
+          ? t.pending
+          : x.state === "approved"
+            ? t.approved
+            : t.rejected}
+      </strong>
+      <p>
+        {t.recorded}: {x.recordedAvailable} · {t.counted}: {x.countedAvailable}{" "}
+        · {t.difference}: {x.difference} · {x.recordedAt}
+      </p>
+      <p>
+        {x.reason} · {x.reference}
+      </p>
+      {x.state === "pending" && balance?.version !== x.stockVersion && (
+        <p className="alert">{t.stale}</p>
+      )}
+      {x.decision && (
+        <p>
+          {x.decision.reason} · {x.decision.reference} · {x.decision.at}
+          {x.difference === 0 ? " · " + t.zero : ""}
+        </p>
+      )}
+      {!mode && x.state === "pending" && session.canRecall && (
+        <>
+          <button
+            disabled={busy || loading || balance?.version !== x.stockVersion}
+            onClick={() => begin("approve", x)}
+          >
+            {t.approve}
+          </button>
+          <button disabled={busy || loading} onClick={() => begin("reject", x)}>
+            {t.reject}
+          </button>
+        </>
+      )}
+    </>
+  );
   return (
     <section>
       <h3>{t.title}</h3>
@@ -276,53 +343,22 @@ export function StockReconciliation({
           </fieldset>
         </form>
       )}
+      {focused && (
+        <article
+          className="panel"
+          aria-label={reviewQueueLabels(language).selected}
+          ref={focusAnchor}
+        >
+          <h4>{reviewQueueLabels(language).selected}</h4>
+          {renderCount(focused)}
+        </article>
+      )}
       <ul>
-        {rows?.items.map((x) => (
-          <li key={x.id}>
-            <strong>
-              {x.state === "pending"
-                ? t.pending
-                : x.state === "approved"
-                  ? t.approved
-                  : t.rejected}
-            </strong>
-            <p>
-              {t.recorded}: {x.recordedAvailable} · {t.counted}:{" "}
-              {x.countedAvailable} · {t.difference}: {x.difference} ·{" "}
-              {x.recordedAt}
-            </p>
-            <p>
-              {x.reason} · {x.reference}
-            </p>
-            {x.state === "pending" && balance?.version !== x.stockVersion && (
-              <p className="alert">{t.stale}</p>
-            )}
-            {x.decision && (
-              <p>
-                {x.decision.reason} · {x.decision.reference} · {x.decision.at}
-                {x.difference === 0 ? " · " + t.zero : ""}
-              </p>
-            )}
-            {!mode && x.state === "pending" && session.canRecall && (
-              <>
-                <button
-                  disabled={
-                    busy || loading || balance?.version !== x.stockVersion
-                  }
-                  onClick={() => begin("approve", x)}
-                >
-                  {t.approve}
-                </button>
-                <button
-                  disabled={busy || loading}
-                  onClick={() => begin("reject", x)}
-                >
-                  {t.reject}
-                </button>
-              </>
-            )}
-          </li>
-        ))}
+        {rows?.items
+          .filter((x) => x.id !== focused?.id)
+          .map((x) => (
+            <li key={x.id}>{renderCount(x)}</li>
+          ))}
       </ul>
       {rows && !rows.items.length && <p>{t.noCounts}</p>}
       <div className="pagination">

@@ -33,6 +33,7 @@ export function ConsumablesWorkspace({
   onBusy,
   onRecall,
   openId,
+  openCountId,
 }: {
   session: Session;
   language: Language;
@@ -42,6 +43,7 @@ export function ConsumablesWorkspace({
   onBusy: (v: boolean) => void;
   onRecall: (id: string) => void;
   openId?: string;
+  openCountId?: string;
 }) {
   const rec = reconciliationLabels(language),
     countExampleId = useRef(crypto.randomUUID());
@@ -55,6 +57,7 @@ export function ConsumablesWorkspace({
       lot: ConsumableLot;
       initialReceive?: boolean;
       initialReview?: boolean;
+      openCountId?: string;
     } | null>(null),
     [stockDirty, setStockDirty] = useState(false),
     [stockBusy, setStockBusy] = useState(false),
@@ -164,7 +167,7 @@ export function ConsumablesWorkspace({
     void api
       .consumableRecord(session, openId, a.signal)
       .then((lot) => {
-        if (!a.signal.aborted) setStockLot({ lot });
+        if (!a.signal.aborted) setStockLot({ lot, openCountId });
       })
       .catch((e) => {
         if (!a.signal.aborted) {
@@ -173,7 +176,7 @@ export function ConsumablesWorkspace({
         }
       });
     return () => a.abort();
-  }, [session, openId]);
+  }, [session, openId, openCountId]);
   async function countExample() {
     if (busy || pending.current) return;
     const a = new AbortController();
@@ -432,10 +435,11 @@ export function ConsumablesWorkspace({
       )}
       {stockLot && (
         <ConsumableStockPanel
-          key={stockLot.lot.id}
+          key={stockLot.lot.id + (stockLot.openCountId ?? "")}
           lot={stockLot.lot}
           initialReceive={stockLot.initialReceive}
           initialReview={stockLot.initialReview}
+          openCountId={stockLot.openCountId}
           session={session}
           language={language}
           blocked={blocked || saving || decisionBusy}
