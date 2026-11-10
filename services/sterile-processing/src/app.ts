@@ -1,5 +1,6 @@
 import express from "express";
 import {
+  ReplenishmentRegistry,
   StockReconciliationRegistry,
   ConsumableAlertRegistry,
   ConsumableStockRegistry,
@@ -820,6 +821,14 @@ export function createSterileApp(
     }
     return true;
   }
+  app.get(prefix + "/consumables/replenishment", async (req, res) => {
+    noQuery(req);
+    res.json(
+      await new ReplenishmentRegistry(dependencies.repository!).get(
+        res.locals.scope,
+      ),
+    );
+  });
   app.get(
     prefix + "/consumables/:id/stock/counts/:countId",
     async (req, res) => {

@@ -325,3 +325,8 @@ Demo reviewer → Operational dashboard → **Prepare fictional review queue exa
 
 
 Replenishment targets and suggested quantities are now available through the existing stock alert settings/example. See [REPLENISHMENT.md](REPLENISHMENT.md) for the current U-REPLEN-01 owner check and calculation rules.
+
+
+### Replenishment report CSV
+
+Consumable lots → **Replenishment report → Generate replenishment report → Export replenishment CSV**. Export uses the displayed snapshot, including all rows beyond the fifty-row display page. See [REPLENISHMENT-REPORT.md](REPLENISHMENT-REPORT.md) for U-REPLENREPORT-01, the only owner check for this build.

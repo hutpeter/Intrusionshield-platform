@@ -345,4 +345,9 @@ Pending counts now appear in a reviewer-only dashboard queue with current/stale 
 
 ## Consumable replenishment suggestions — preview delivered
 
-Optional reviewer target quantities now produce live suggestions for eligible low-stock lots. Existing stock and purchasing remain unchanged. U-REPLEN-01 is pending. Cross-lot grouping, pack conversions, purchasing integration, physical verification and production policy remain deferred. See [REPLENISHMENT.md](REPLENISHMENT.md). Ruby Asset Management reuse remains intended; RSP-ISS-001 stays parked.
+Optional reviewer target quantities now produce live suggestions for eligible low-stock lots. Existing stock and purchasing remain unchanged. U-REPLEN-01 passed November 10, 2026 from the owner dashboard screenshot. Cross-lot grouping, pack conversions, purchasing integration, physical verification and production policy remain deferred. See [REPLENISHMENT.md](REPLENISHMENT.md). Ruby Asset Management reuse remains intended; RSP-ISS-001 stays parked.
+
+
+## Replenishment report and CSV — preview delivered
+
+Complete low-stock facility snapshots now include supplier/product/lot details and suggestions. CSV exports the displayed snapshot across all local display pages. U-REPLENREPORT-01 remains pending; U-REPLEN-01 passed from the owner screenshot. Regional spreadsheet import, production-scale streaming, product grouping and purchasing remain deferred. See [REPLENISHMENT-REPORT.md](REPLENISHMENT-REPORT.md). Asset reuse remains intended; RSP-ISS-001 stays parked.

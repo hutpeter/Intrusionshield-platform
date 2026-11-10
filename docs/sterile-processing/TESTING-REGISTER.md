@@ -951,6 +951,13 @@ Developer November 10, 2026: 409 scoped tests (216 domain, 147 HTTP/SQLite, 46 w
 
 ## Current owner check — replenishment suggestions
 
-**U-REPLEN-01 pending:** Demo reviewer → Consumable lots → Prepare fictional stock alert example → review minimum 10/target 20 → confirm and save alert settings → Operational dashboard. Expect the new lot's alert to show target 20 and suggested replenishment 15, available 5. This is the only owner check. U-REVIEWQ-01 passed November 10 from the owner screenshot.
+**U-REPLEN-01 passed November 10, 2026:** owner screenshot confirms target 20, available 5 and suggested 15. Original check: Demo reviewer → Consumable lots → Prepare fictional stock alert example → review minimum 10/target 20 → confirm and save alert settings → Operational dashboard. Expect the new lot's alert to show target 20 and suggested replenishment 15, available 5. This is the only owner check. U-REVIEWQ-01 passed November 10 from the owner screenshot.
 
 Developer: 413 scoped tests (218 domain, 148 HTTP/SQLite, 47 web), builds and Chromium settings/suggestion/source-link/refresh checks passed. Cross-lot ordering, physical verification, production policy and broader owner exception acceptance remain deferred. U-TRACE-01 and original U-LOANER-01 remain pending; RSP-ISS-001 stays parked. See [REPLENISHMENT.md](REPLENISHMENT.md).
+
+
+## Current owner check — replenishment report CSV
+
+**U-REPLENREPORT-01 pending:** Consumable lots → Replenishment report → Generate replenishment report → Export replenishment CSV. Expect the downloaded CSV with supplier, available, target and suggested quantity columns; the existing unchanged example has target 20/suggestion 15. This is the only owner check. U-REPLEN-01 passed November 10 from the owner screenshot.
+
+Developer: 418 scoped tests (219 domain, 149 HTTP/SQLite, 50 web), builds and Chromium report/CSV snapshot/regeneration/source checks passed. Regional spreadsheet import, large production scale, purchasing and physical/site planning policy remain deferred. U-TRACE-01 and original U-LOANER-01 remain pending; RSP-ISS-001 stays parked. See [REPLENISHMENT-REPORT.md](REPLENISHMENT-REPORT.md).

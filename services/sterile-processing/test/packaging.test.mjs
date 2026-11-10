@@ -1714,3 +1714,59 @@ test("replenishment policy persists with scoped live suggestions and legacy sett
   );
   assert.equal((await read()).suggestedQuantity, null);
 });
+
+test("replenishment HTTP report is scoped, read-only, strict and reflects stock changes on generation", async (t) => {
+  const f = await httpFixture(t);
+  await f.login("reviewer");
+  const lot = await (
+    await f.call("/preview/consumable-alert-example", {
+      requestId: randomUUID(),
+    })
+  ).json();
+  await f.call(f.base + "/consumables/" + lot.id + "/alert-policy", {
+    requestId: randomUUID(),
+    version: 1,
+    minimumStock: 10,
+    targetStock: 20,
+    warningDays: 7,
+    reason: "SIMULATED plan",
+    reference: "POLICY",
+    confirmed: true,
+  });
+  const path = f.base + "/consumables/replenishment";
+  for (const role of ["operator", "reviewer", "viewer"]) {
+    await f.login(role);
+    const r = await f.call(path);
+    assert.equal(r.status, 200);
+    const report = await r.json();
+    assert.equal(report.items[0].lotId, lot.id);
+    assert.equal(report.items[0].supplier, "DEMO-SUPPLIER");
+    assert.equal(report.items[0].suggestedQuantity, 15);
+    assert.equal(report.unit, "each");
+  }
+  assert.equal((await f.call(path + "?page=1")).status, 400);
+  await f.login("operator");
+  await f.call(f.base + "/consumables/" + lot.id + "/stock/receive", {
+    requestId: randomUUID(),
+    version: 1,
+    quantity: 2,
+    reason: "DELIVERY",
+    reference: "REF",
+    confirmed: true,
+  });
+  assert.equal(
+    (await (await f.call(path)).json()).items[0].suggestedQuantity,
+    13,
+  );
+  const { ReplenishmentRegistry } =
+    await import("@intrusionshield/sterile-processing");
+  assert.equal(
+    (
+      await new ReplenishmentRegistry(f.repo).get({
+        ...f.session,
+        tenantId: randomUUID(),
+      })
+    ).items.length,
+    0,
+  );
+});

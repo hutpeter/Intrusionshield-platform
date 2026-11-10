@@ -1233,3 +1233,17 @@ td {
   height: 12px;
   border-radius: 2px;
 }
+
+.replenishment-table {
+  min-width: 2000px;
+}
+.replenishment-table td {
+  min-width: 100px;
+}
+.replenishment-table td:first-child {
+  min-width: 240px;
+}
+.replenishment-table td:nth-child(2),
+.replenishment-table td:nth-child(4) {
+  min-width: 160px;
+}

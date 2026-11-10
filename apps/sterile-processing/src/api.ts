@@ -344,6 +344,60 @@ function validStockCountReview(
   );
 }
 export const api = {
+  replenishment: async (s: Session, signal: AbortSignal) => {
+    const r = await scoped(
+      s,
+      call<import("@intrusionshield/sterile-processing").ReplenishmentReport>(
+        base(s) + "/consumables/replenishment",
+        signal,
+      ),
+    );
+    if (
+      r.unit !== "each" ||
+      !Number.isFinite(Date.parse(r.generatedAt)) ||
+      !Array.isArray(r.items) ||
+      new Set(r.items.map((x) => x.lotId)).size !== r.items.length ||
+      r.items.some(
+        (x) =>
+          [
+            x.lotId,
+            x.code,
+            x.name,
+            x.kind,
+            x.lotNumber,
+            x.supplier,
+            x.supplierReference,
+            x.expiresOn,
+          ].some((v) => typeof v !== "string") ||
+          !["wrap", "pouch", "indicator"].includes(x.kind) ||
+          !/^\d{4}-\d{2}-\d{2}$/.test(x.expiresOn) ||
+          !Number.isFinite(Date.parse(x.expiresOn)) ||
+          typeof x.stockRecorded !== "boolean" ||
+          !Number.isSafeInteger(x.available) ||
+          x.available < 0 ||
+          !Number.isSafeInteger(x.minimumStock) ||
+          x.minimumStock < 0 ||
+          x.available > x.minimumStock ||
+          (x.targetStock !== null &&
+            (!Number.isSafeInteger(x.targetStock) ||
+              x.targetStock < x.minimumStock ||
+              x.targetStock > 1000000000)) ||
+          x.status !==
+            (x.expiresOn < r.generatedAt.slice(0, 10)
+              ? "expired"
+              : x.targetStock === null
+                ? "target_not_set"
+                : "suggested") ||
+          x.suggestedQuantity !==
+            (x.status === "suggested"
+              ? Math.max(0, x.targetStock! - x.available)
+              : null),
+      )
+    )
+      throw new ApiError(503, "SERVICE_UNAVAILABLE");
+    return r;
+  },
+
   stockCount: async (
     s: Session,
     lotId: string,
@@ -447,14 +501,17 @@ export const api = {
         s.csrf,
       ),
     ),
-  consumableRecord: (s: Session, id: string, signal: AbortSignal) =>
-    scoped(
+  consumableRecord: async (s: Session, id: string, signal: AbortSignal) => {
+    const r = await scoped(
       s,
       call<import("@intrusionshield/sterile-processing").ConsumableLot>(
         base(s) + "/consumables/" + encodeURIComponent(id),
         signal,
       ),
-    ),
+    );
+    if (r.id !== id) throw new ApiError(503, "SERVICE_UNAVAILABLE");
+    return r;
+  },
   configureConsumableAlerts: (
     s: Session,
     id: string,

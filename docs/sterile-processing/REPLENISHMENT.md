@@ -6,12 +6,12 @@ For an eligible low-stock lot (available at or below minimum), **Suggested reple
 
 The suggestion updates on dashboard refresh after receipts, consumption, adjustments or policy changes. It is per exact registered lot, not a supplier/product order total. It creates no purchase order, reservation or stock movement. Purchasing and replacement of expired lots remain separate decisions. A higher target alone does not trigger an alert when stock is above minimum.
 
-## One owner check — U-REPLEN-01 pending
+## One owner check — U-REPLEN-01 passed November 10, 2026
 
 Update/restart and enter as **Demo reviewer → Consumable lots → Prepare fictional stock alert example**. Review the prefilled minimum **10**, target **20** and simulated reason/reference, confirm and **Save alert settings**. Open **Operational dashboard** and find the new lot under **Consumable stock and expiry alerts**. Expect **Replenishment target: 20 · Suggested replenishment: 15** (available 5). Codes vary. This is the only owner check for this build.
 
 ## Verification and deferred work
 
-Developer November 10, 2026: 413 scoped tests (218 domain, 148 HTTP/SQLite, 47 web), builds and Chromium verified policy saving, target/suggestion display, exact source navigation and refresh. Tests cover invalid bounds, optional/cleared targets, stock updates, expiry/withdrawal exclusion, scope/role/CSRF, retries and persistence. U-REVIEWQ-01 is passed from the owner screenshot; U-REPLEN-01 remains pending.
+Developer November 10, 2026: 413 scoped tests (218 domain, 148 HTTP/SQLite, 47 web), builds and Chromium verified policy saving, target/suggestion display, exact source navigation and refresh. Tests cover invalid bounds, optional/cleared targets, stock updates, expiry/withdrawal exclusion, scope/role/CSRF, retries and persistence. U-REVIEWQ-01 is passed from the owner screenshot; U-REPLEN-01 passed November 10, 2026 from the owner dashboard screenshot.
 
 Product-level grouping, target approval policy at sites, cross-lot planning, lead times, order rounding, pack conversions, purchasing, notifications, physical verification and production/clinical acceptance remain deferred. Reuse of stock alerts/count review/replenishment for future Ruby Asset Management remains intended; no Asset module is added. U-TRACE-01 and original U-LOANER-01 remain unconfirmed; RSP-ISS-001 stays parked.

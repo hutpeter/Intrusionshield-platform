@@ -1479,3 +1479,69 @@ test("replenishment target and suggested quantity are validated before display",
     null,
   );
 });
+
+test("replenishment reports reject foreign scope, duplicate source IDs and inconsistent suggestions", async (t) => {
+  const row = {
+    lotId: "lot",
+    code: "LOT",
+    kind: "wrap",
+    name: "Wrap",
+    lotNumber: "M1",
+    supplier: "Supplier",
+    supplierReference: "REF",
+    expiresOn: "2099-01-01",
+    available: 5,
+    minimumStock: 10,
+    targetStock: 20,
+    suggestedQuantity: 15,
+    stockRecorded: true,
+    status: "suggested",
+  };
+  let value = {
+    tenantId: session.tenantId,
+    facilityId: session.facilityId,
+    generatedAt: "2026-11-10T19:00:00Z",
+    unit: "each",
+    items: [row],
+  };
+  fake(t, async () => response(value));
+  assert.equal(
+    (await api.replenishment(session, signal())).items[0].suggestedQuantity,
+    15,
+  );
+  value.facilityId = "other";
+  await assert.rejects(api.replenishment(session, signal()));
+  value.facilityId = session.facilityId;
+  value.items = [row, row];
+  await assert.rejects(api.replenishment(session, signal()));
+  value.items = [row];
+  row.suggestedQuantity = 13;
+  await assert.rejects(api.replenishment(session, signal()));
+  row.suggestedQuantity = 15;
+  row.available = 11;
+  await assert.rejects(api.replenishment(session, signal()));
+  row.available = 5;
+  row.expiresOn = "2026-11-09";
+  await assert.rejects(api.replenishment(session, signal()));
+  row.status = "expired";
+  row.suggestedQuantity = null;
+  assert.equal(
+    (await api.replenishment(session, signal())).items[0].suggestedQuantity,
+    null,
+  );
+});
+
+test("replenishment source links reject a different lot response", async (t) => {
+  fake(t, async () =>
+    response({
+      tenantId: session.tenantId,
+      facilityId: session.facilityId,
+      id: "other",
+    }),
+  );
+  await assert.rejects(api.consumableRecord(session, "lot", signal()));
+  assert.equal(
+    (await api.consumableRecord(session, "other", signal())).id,
+    "other",
+  );
+});

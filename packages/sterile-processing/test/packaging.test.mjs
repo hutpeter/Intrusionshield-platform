@@ -1100,3 +1100,54 @@ test("expired empty lots never suggest replenishing their registered lot", async
     null,
   );
 });
+
+test("replenishment report includes every low-stock lot beyond catalogue paging with stable supplier ordering and no writes", async () => {
+  const { ReplenishmentRegistry, ConsumableRegistry, ConsumableAlertRegistry } =
+    await import("../dist/index.js");
+  const f = await fixture(),
+    lots = new ConsumableRegistry(f.repo),
+    policy = new ConsumableAlertRegistry(f.repo);
+  for (let i = 0; i < 53; i++) {
+    const lot = await lots.register(
+      f.s,
+      lotInput({
+        code: "PLAN-" + String(i).padStart(3, "0"),
+        supplier: i % 2 ? "B" : "A",
+        expiresOn: i === 0 ? "2020-01-01" : "2099-01-01",
+      }),
+    );
+    await policy.configure(f.s, lot.id, {
+      requestId: randomUUID(),
+      version: 1,
+      minimumStock: 10,
+      targetStock: i === 1 ? null : 20,
+      warningDays: 7,
+      reason: "SIMULATED plan",
+      reference: "POLICY",
+      confirmed: true,
+    });
+  }
+  const before = structuredClone(f.repo.state),
+    registry = new ReplenishmentRegistry(f.repo),
+    report = await registry.get(f.s);
+  assert.equal(report.items.length, 53);
+  assert.equal(new Set(report.items.map((x) => x.lotId)).size, 53);
+  assert.equal(report.items[0].code, "PLAN-000");
+  assert.equal(report.items[0].status, "expired");
+  assert.equal(report.items[0].suggestedQuantity, null);
+  assert.equal(
+    report.items.find((x) => x.code === "PLAN-001").status,
+    "target_not_set",
+  );
+  assert.equal(
+    report.items.find((x) => x.code === "PLAN-052").suggestedQuantity,
+    20,
+  );
+  assert.equal(report.items[0].stockRecorded, false);
+  assert.deepEqual(f.repo.state, before);
+  assert.equal(
+    (await registry.get({ ...f.s, facilityId: randomUUID() })).items.length,
+    0,
+  );
+  assert.deepEqual((await registry.get(f.s)).items, report.items);
+});

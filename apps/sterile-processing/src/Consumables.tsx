@@ -1,3 +1,5 @@
+import { Replenishment } from "./Replenishment";
+import { replenishmentLabels } from "./replenishment-text";
 import { reconciliationLabels } from "./reconciliation-text";
 import { ConsumableAlertSettings } from "./ConsumableAlertSettings";
 import { consumableAlertLabels } from "./consumable-alert-text";
@@ -45,6 +47,8 @@ export function ConsumablesWorkspace({
   openId?: string;
   openCountId?: string;
 }) {
+  const [showReplenishment, setShowReplenishment] = useState(false),
+    [reportBusy, setReportBusy] = useState(false);
   const rec = reconciliationLabels(language),
     countExampleId = useRef(crypto.randomUUID());
   const al = consumableAlertLabels(language),
@@ -86,15 +90,21 @@ export function ConsumablesWorkspace({
     [error, setError] = useState<unknown>(null),
     [saved, setSaved] = useState(false),
     pending = useRef<AbortController | null>(null),
-    busy = blocked || saving || decisionBusy || stockBusy || policyBusy;
+    busy =
+      blocked ||
+      saving ||
+      decisionBusy ||
+      stockBusy ||
+      policyBusy ||
+      reportBusy;
   useEffect(() => {
     onDirty(!!form || decisionDirty || stockDirty || policyDirty);
     return () => onDirty(false);
   }, [!!form, decisionDirty, stockDirty, policyDirty, onDirty]);
   useEffect(() => {
-    onBusy(saving || decisionBusy || stockBusy || policyBusy);
+    onBusy(saving || decisionBusy || stockBusy || policyBusy || reportBusy);
     return () => onBusy(false);
-  }, [saving, decisionBusy, stockBusy, policyBusy, onBusy]);
+  }, [saving, decisionBusy, stockBusy, policyBusy, reportBusy, onBusy]);
   useEffect(() => () => pending.current?.abort(), []);
   useEffect(() => {
     const a = new AbortController();
@@ -310,6 +320,55 @@ export function ConsumablesWorkspace({
           </div>
         )}
       </div>
+      {!form && !decision && !stockLot && !policyLot && (
+        <button disabled={busy} onClick={() => setShowReplenishment(true)}>
+          {replenishmentLabels(language).title}
+        </button>
+      )}
+      {showReplenishment && (
+        <Replenishment
+          session={session}
+          language={language}
+          blocked={
+            reportBusy ||
+            blocked ||
+            saving ||
+            decisionBusy ||
+            stockBusy ||
+            policyBusy ||
+            stockDirty ||
+            policyDirty ||
+            !!form
+          }
+          onBusy={setReportBusy}
+          onExpired={onExpired}
+          onClose={() => setShowReplenishment(false)}
+          onOpen={(id) => {
+            if (pending.current) return;
+            const a = new AbortController();
+            pending.current = a;
+            setReportBusy(true);
+            void api
+              .consumableRecord(session, id, a.signal)
+              .then((lot) => {
+                if (!a.signal.aborted) {
+                  setStockLot({ lot });
+                  setShowReplenishment(false);
+                }
+              })
+              .catch((e) => {
+                if (!a.signal.aborted) {
+                  if (e instanceof ApiError && e.status === 401) onExpired();
+                  else setError(e);
+                }
+              })
+              .finally(() => {
+                if (!a.signal.aborted) setReportBusy(false);
+                pending.current = null;
+              });
+          }}
+        />
+      )}
       <p className="readonly-note">{t.note}</p>
       {saved && (
         <p role="status" className="success">
