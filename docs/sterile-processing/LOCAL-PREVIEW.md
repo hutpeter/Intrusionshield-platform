@@ -301,3 +301,7 @@ All demo roles can open **Operational performance** and **Generate report**. See
 ## Consumable lots
 
 Enter as **Demo operator** and open **Consumable lots**. The **Prepare fictional lot example** button prefills a form; saving requires explicit confirmation. See [CONSUMABLES.md](CONSUMABLES.md) for U-CONS-01. New UI packaging now selects a registered wrap/pouch lot and optionally an indicator lot.
+
+## Consumable lot withdrawal
+
+Enter as **Demo reviewer**, open **Consumable lots** and use **Withdraw lot** on the prior fictional lot. See [CONSUMABLE-WITHDRAWAL.md](CONSUMABLE-WITHDRAWAL.md) for the single U-CONS-02 owner check. Existing packages change only after a separately confirmed linked recall.

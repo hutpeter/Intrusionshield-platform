@@ -718,11 +718,13 @@ export function PackagingWorkspace({
                             key={x.id}
                             value={x.id}
                             disabled={
+                              !!x.withdrawal ||
                               x.expiresOn <
-                              new Date().toISOString().slice(0, 10)
+                                new Date().toISOString().slice(0, 10)
                             }
                           >
                             {x.code} · {x.name} · {x.lotNumber} · {x.expiresOn}
+                            {x.withdrawal ? " · " + t.CONSUMABLE_WITHDRAWN : ""}
                             {x.expiresOn < new Date().toISOString().slice(0, 10)
                               ? " · " + lotText.expired
                               : ""}
@@ -747,11 +749,13 @@ export function PackagingWorkspace({
                             key={x.id}
                             value={x.id}
                             disabled={
+                              !!x.withdrawal ||
                               x.expiresOn <
-                              new Date().toISOString().slice(0, 10)
+                                new Date().toISOString().slice(0, 10)
                             }
                           >
                             {x.code} · {x.lotNumber} · {x.expiresOn}
+                            {x.withdrawal ? " · " + t.CONSUMABLE_WITHDRAWN : ""}
                           </option>
                         ))}
                     </select>

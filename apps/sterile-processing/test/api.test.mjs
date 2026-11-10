@@ -1133,3 +1133,37 @@ test("consumable list/use rejects foreign scope and registration uses CSRF with 
   assert.equal(calls.at(-1).options.headers["x-sterile-csrf"], session.csrf);
   assert.deepEqual(JSON.parse(calls.at(-1).options.body), input);
 });
+
+test("lot withdrawal and linked recall requests carry explicit version/confirmation and CSRF; foreign lot responses fail", async (t) => {
+  const calls = [];
+  let value = { ...session, id: "lot", version: 2 };
+  fake(t, async (path, options) => {
+    calls.push({ path, options });
+    return response(value);
+  });
+  const decision = {
+    requestId: "request",
+    version: 1,
+    reason: "SIMULATED",
+    reference: "NOTICE",
+    confirmed: true,
+  };
+  await api.withdrawConsumable(session, "lot", decision, signal());
+  assert.ok(calls.at(-1).path.endsWith("/consumables/lot/withdraw"));
+  assert.equal(calls.at(-1).options.headers["x-sterile-csrf"], session.csrf);
+  assert.deepEqual(JSON.parse(calls.at(-1).options.body), decision);
+  const recall = {
+    ...decision,
+    version: 2,
+    packageId: "package",
+    code: "CASE",
+    impactHash: "a".repeat(64),
+  };
+  await api.consumableRecall(session, "lot", recall, signal());
+  assert.deepEqual(JSON.parse(calls.at(-1).options.body), recall);
+  value = { ...value, facilityId: "foreign" };
+  await assert.rejects(
+    api.withdrawConsumable(session, "lot", decision, signal()),
+    (e) => e.code === "SERVICE_UNAVAILABLE",
+  );
+});

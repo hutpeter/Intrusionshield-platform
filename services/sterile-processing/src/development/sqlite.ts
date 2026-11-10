@@ -1020,6 +1020,15 @@ CREATE INDEX IF NOT EXISTS sp_assignment_assembly ON sp_assignments(tenant_id,fa
               ) as import("@intrusionshield/sterile-processing").ConsumableUse,
           );
         },
+        updateConsumable: async (item, expected) => {
+          own(item);
+          const r = this.db
+            .prepare(
+              "UPDATE sp_consumables SET payload=? WHERE tenant_id=? AND facility_id=? AND id=? AND json_extract(payload,'$.version')=?",
+            )
+            .run(JSON.stringify(item), ...args, item.id, expected);
+          if (r.changes !== 1) throw new SterileError("CONFLICT");
+        },
         findConsumable: async (id) =>
           read<import("@intrusionshield/sterile-processing").ConsumableLot>(
             "SELECT payload FROM sp_consumables WHERE tenant_id=? AND facility_id=? AND id=?",

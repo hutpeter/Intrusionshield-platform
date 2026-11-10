@@ -1,3 +1,4 @@
+import { consumableWithdrawLabels } from "./consumable-withdraw-text";
 import { incidentLabels } from "./incident-text";
 import { RecallClearancePanel } from "./RecallClearance";
 import { clearanceLabels } from "./clearance-text";
@@ -801,6 +802,13 @@ export function RecallWorkspace({
                     · {p.instruments}: {shown.lineage.instrumentIds.length}
                   </>
                 )}
+              </p>
+            )}
+            {shown.consumableLot && (
+              <p className="readonly-note">
+                {consumableWithdrawLabels(language).title}:{" "}
+                {shown.consumableLot.code} · {shown.consumableLot.lotNumber} ·{" "}
+                {shown.consumableLot.supplier} · {shown.consumableLot.reference}
               </p>
             )}
             <dl className="details-grid">

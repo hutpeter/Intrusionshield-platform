@@ -400,3 +400,130 @@ test("packaging rejects expired, foreign, duplicate, indicator-only and mismatch
   );
   assert.equal(f.repo.state.packages.length, 0);
 });
+
+test("lot withdrawal is versioned, idempotent, permanent and blocks new packing without changing saved packages", async () => {
+  const { ConsumableRegistry } = await import("../dist/index.js"),
+    f = await fixture(),
+    r = new ConsumableRegistry(f.repo),
+    lot = await r.register(f.s, lotInput()),
+    p = await f.pk.pack(f.s, body(f.a, { consumableLotIds: [lot.id] })),
+    input = {
+      requestId: randomUUID(),
+      version: 1,
+      reason: "SIMULATED defect",
+      reference: "SIMULATED supplier notice",
+      confirmed: true,
+    };
+  const withdrawn = await r.withdraw(f.s, lot.id, input);
+  assert.equal(withdrawn.version, 2);
+  assert.equal(withdrawn.withdrawal.reference, input.reference);
+  assert.deepEqual(await r.withdraw(f.s, lot.id, input), withdrawn);
+  assert.equal(
+    (await f.pk.get(f.s, p.id)).consumableLots[0].withdrawal,
+    undefined,
+  );
+  assert.equal((await f.pk.get(f.s, p.id)).recall, undefined);
+  await fail(
+    r.withdraw(f.s, lot.id, { ...input, requestId: randomUUID() }),
+    "CONFLICT",
+  );
+  const { resolveConsumables } = await import("../dist/consumables.js");
+  await fail(
+    f.repo.transaction(f.s, (tx) =>
+      resolveConsumables(tx, [lot.id], new Date().toISOString()),
+    ),
+    "CONSUMABLE_WITHDRAWN",
+  );
+  await fail(
+    r.withdraw({ ...f.s, facilityId: randomUUID() }, lot.id, {
+      ...input,
+      requestId: randomUUID(),
+    }),
+    "NOT_FOUND",
+  );
+});
+test("withdrawn lot recall requires exact package provenance and current preview, creates durable existing blocks and atomic association", async () => {
+  const { ConsumableRegistry, RecallRegistry } =
+      await import("../dist/index.js"),
+    f = await fixture(),
+    r = new ConsumableRegistry(f.repo),
+    lot = await r.register(f.s, lotInput()),
+    other = await r.register(f.s, lotInput()),
+    p = await f.pk.pack(f.s, body(f.a, { consumableLotIds: [lot.id] })),
+    decision = {
+      requestId: randomUUID(),
+      version: 1,
+      reason: "SIMULATED defect",
+      reference: "NOTICE",
+      confirmed: true,
+    };
+  await fail(r.recallPreview(f.s, lot.id, p.id), "CONFLICT");
+  await r.withdraw(f.s, lot.id, decision);
+  await r.withdraw(f.s, other.id, { ...decision, requestId: randomUUID() });
+  await fail(r.recallPreview(f.s, other.id, p.id), "CONFLICT");
+  const impact = await r.recallPreview(f.s, lot.id, p.id),
+    input = {
+      ...decision,
+      requestId: randomUUID(),
+      version: 2,
+      packageId: p.id,
+      impactHash: impact.impactHash,
+      code: "LOT-RECALL",
+    };
+  await fail(
+    r.createRecall(f.s, lot.id, { ...input, confirmed: false }),
+    "INVALID_REQUEST",
+  );
+  await fail(r.createRecall(f.s, lot.id, { ...input, version: 1 }), "CONFLICT");
+  await fail(
+    r.createRecall(f.s, lot.id, { ...input, impactHash: "a".repeat(64) }),
+    "CONFLICT",
+  );
+  f.repo.failAudit = true;
+  await assert.rejects(r.createRecall(f.s, lot.id, input));
+  assert.equal(f.repo.state.recalls.length, 0);
+  assert.equal((await r.detail(f.s, lot.id)).version, 2);
+  f.repo.failAudit = false;
+  const saved = await r.createRecall(f.s, lot.id, input);
+  assert.equal(saved.version, 3);
+  assert.equal(saved.recalls.length, 1);
+  assert.deepEqual(await r.createRecall(f.s, lot.id, input), saved);
+  const recall = await new RecallRegistry(f.repo).get(f.s, saved.recalls[0].id);
+  assert.equal(recall.consumableLot.id, lot.id);
+  assert.equal((await f.pk.get(f.s, p.id)).recall.caseId, recall.id);
+  assert.equal(f.repo.state.recallInstruments.length, 1);
+  await fail(
+    r.createRecall(f.s, lot.id, {
+      ...input,
+      requestId: randomUUID(),
+      version: 3,
+    }),
+    "CONFLICT",
+  );
+});
+test("lot withdrawal validation and audit failures leave the original lot unchanged", async () => {
+  const { ConsumableRegistry } = await import("../dist/index.js"),
+    f = await fixture(),
+    r = new ConsumableRegistry(f.repo),
+    lot = await r.register(f.s, lotInput()),
+    input = {
+      requestId: randomUUID(),
+      version: 1,
+      reason: "SIMULATED",
+      reference: "NOTICE",
+      confirmed: true,
+    };
+  for (const extra of [
+    { confirmed: false },
+    { reason: "" },
+    { reference: "" },
+    { version: 0 },
+  ])
+    await fail(
+      r.withdraw(f.s, lot.id, { ...input, ...extra }),
+      "INVALID_REQUEST",
+    );
+  f.repo.failAudit = true;
+  await assert.rejects(r.withdraw(f.s, lot.id, input));
+  assert.deepEqual(await r.detail(f.s, lot.id), lot);
+});

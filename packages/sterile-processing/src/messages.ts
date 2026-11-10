@@ -1,4 +1,6 @@
 const es = {
+  CONSUMABLE_WITHDRAWN:
+    "Lote retirado. No se permite usarlo en un nuevo empaque.",
   CONSUMABLE_LIMIT:
     "El catálogo supera el límite de selección de esta vista previa (1000 lotes). No se puede continuar con el empaque.",
   CONSUMABLE_EXPIRED:
@@ -71,6 +73,7 @@ const es = {
 };
 type Messages = Record<keyof typeof es, string>;
 const en: Messages = {
+  CONSUMABLE_WITHDRAWN: "Lot withdrawn. It cannot be used in new packaging.",
   CONSUMABLE_LIMIT:
     "The catalogue exceeds this preview’s selection limit (1000 lots). Packaging cannot continue in this preview.",
   CONSUMABLE_EXPIRED: "Consumable lot expired. Select a current lot.",
@@ -142,6 +145,8 @@ const en: Messages = {
     "Service unavailable. The change has not been confirmed.",
 };
 const fr: Messages = {
+  CONSUMABLE_WITHDRAWN:
+    "Lot retiré. Il ne peut pas être utilisé dans un nouvel emballage.",
   CONSUMABLE_LIMIT:
     "Le catalogue dépasse la limite de sélection de cet aperçu (1000 lots). L’emballage ne peut pas continuer.",
   CONSUMABLE_EXPIRED: "Lot de consommable périmé. Sélectionnez un lot valide.",

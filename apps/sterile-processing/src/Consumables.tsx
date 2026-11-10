@@ -1,3 +1,5 @@
+import { ConsumableDecision } from "./ConsumableDecision";
+import { consumableWithdrawLabels } from "./consumable-withdraw-text";
 import { useEffect, useRef, useState } from "react";
 import type {
   ConsumableLot,
@@ -24,6 +26,7 @@ export function ConsumablesWorkspace({
   onExpired,
   onDirty,
   onBusy,
+  onRecall,
 }: {
   session: Session;
   language: Language;
@@ -31,7 +34,15 @@ export function ConsumablesWorkspace({
   onExpired: () => void;
   onDirty: (v: boolean) => void;
   onBusy: (v: boolean) => void;
+  onRecall: (id: string) => void;
 }) {
+  const w = consumableWithdrawLabels(language),
+    [decision, setDecision] = useState<{
+      lot: ConsumableLot;
+      packageId?: string;
+    } | null>(null),
+    [decisionDirty, setDecisionDirty] = useState(false),
+    [decisionBusy, setDecisionBusy] = useState(false);
   const [usageId, setUsageId] = useState<string | null>(null),
     [usageLoading, setUsageLoading] = useState(false),
     [usagePage, setUsagePage] = useState(1),
@@ -49,15 +60,15 @@ export function ConsumablesWorkspace({
     [error, setError] = useState<unknown>(null),
     [saved, setSaved] = useState(false),
     pending = useRef<AbortController | null>(null),
-    busy = blocked || saving;
+    busy = blocked || saving || decisionBusy;
   useEffect(() => {
-    onDirty(!!form);
+    onDirty(!!form || decisionDirty);
     return () => onDirty(false);
-  }, [!!form, onDirty]);
+  }, [!!form, decisionDirty, onDirty]);
   useEffect(() => {
-    onBusy(saving);
+    onBusy(saving || decisionBusy);
     return () => onBusy(false);
-  }, [saving, onBusy]);
+  }, [saving, decisionBusy, onBusy]);
   useEffect(() => () => pending.current?.abort(), []);
   useEffect(() => {
     const a = new AbortController();
@@ -139,6 +150,7 @@ export function ConsumablesWorkspace({
     });
     setSaved(false);
   }
+  const selectedLot = rows?.items.find((x) => x.id === usageId);
   return (
     <section>
       <div className="page-heading">
@@ -146,7 +158,7 @@ export function ConsumablesWorkspace({
           <h1>{t.title}</h1>
           <p>{t.intro}</p>
         </div>
-        {session.canWrite && !form && (
+        {session.canWrite && !form && !decision && (
           <div>
             <button disabled={busy} onClick={example}>
               {t.example}
@@ -250,6 +262,25 @@ export function ConsumablesWorkspace({
           </fieldset>
         </form>
       )}
+      {decision && (
+        <ConsumableDecision
+          key={decision.lot.id + (decision.packageId ?? "")}
+          lot={decision.lot}
+          packageId={decision.packageId}
+          session={session}
+          language={language}
+          blocked={blocked || saving}
+          onExpired={onExpired}
+          onBusy={setDecisionBusy}
+          onDirty={setDecisionDirty}
+          onClose={() => setDecision(null)}
+          onRecall={onRecall}
+          onSaved={(lot) => {
+            setDecision({ lot });
+            setNonce((n) => n + 1);
+          }}
+        />
+      )}
       {loading && <p role="status">{c.loading}</p>}
       {usageId && (
         <section className="panel">
@@ -264,6 +295,20 @@ export function ConsumablesWorkspace({
                 {usage.items.map((x) => (
                   <li key={x.id}>
                     {x.code} · {x.state} · {x.createdAt}
+                    {session.canRecall &&
+                      selectedLot?.withdrawal &&
+                      !selectedLot.recalls?.some(
+                        (r) => r.packageId === x.id,
+                      ) && (
+                        <button
+                          disabled={busy || !!form || decisionDirty}
+                          onClick={() =>
+                            setDecision({ lot: selectedLot, packageId: x.id })
+                          }
+                        >
+                          {w.recall}
+                        </button>
+                      )}
                   </li>
                 ))}
               </ul>
@@ -328,10 +373,20 @@ export function ConsumablesWorkspace({
                     >
                       {t.usage}
                     </button>
+                    {session.canRecall && (
+                      <button
+                        disabled={busy || !!form || decisionDirty}
+                        onClick={() => setDecision({ lot: r })}
+                      >
+                        {r.withdrawal ? w.title : w.withdraw}
+                      </button>
+                    )}
                     <small>
-                      {r.expiresOn < new Date().toISOString().slice(0, 10)
-                        ? t.expired
-                        : t.current}
+                      {r.withdrawal
+                        ? w.withdrawn
+                        : r.expiresOn < new Date().toISOString().slice(0, 10)
+                          ? t.expired
+                          : t.current}
                     </small>
                   </td>
                 </tr>

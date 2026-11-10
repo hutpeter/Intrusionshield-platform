@@ -613,17 +613,26 @@ export function createSterilePreview({
       });
       return;
     }
-    if (Object.keys(req.query).length || !req.body || Array.isArray(req.body) ||
-        Object.keys(req.body).length !== 1 || typeof req.body.requestId !== "string") {
+    if (
+      Object.keys(req.query).length ||
+      !req.body ||
+      Array.isArray(req.body) ||
+      Object.keys(req.body).length !== 1 ||
+      typeof req.body.requestId !== "string"
+    ) {
       res.status(400).json({ error: "INVALID_REQUEST" });
       return;
     }
-    res.status(201).json(await prepareUnpackagedIncidentExample(
-      repository,
-      { tenantId, facilityId, actorId: actors.reviewer },
-      { tenantId, facilityId, actorId: actors.operator },
-      sterileUuid(req.body.requestId),
-    ));
+    res
+      .status(201)
+      .json(
+        await prepareUnpackagedIncidentExample(
+          repository,
+          { tenantId, facilityId, actorId: actors.reviewer },
+          { tenantId, facilityId, actorId: actors.operator },
+          sterileUuid(req.body.requestId),
+        ),
+      );
   });
   app.post("/preview/equipment-incident-example", async (req, res) => {
     const session = res.locals.session as Session;
@@ -965,6 +974,7 @@ export function createSterilePreview({
         fixtureGrants.has("core.authentication") &&
         fixtureGrants.has("core.authorization") &&
         ((scope.actorId === actors.operator &&
+          permission !== "consumables:withdraw" &&
           permission !== "equipment-incidents:write" &&
           permission !== "equipment:write" &&
           permission !== "procedures:publish" &&
@@ -976,6 +986,7 @@ export function createSterilePreview({
           (scope.actorId === actors.viewer && permission.endsWith(":read")) ||
           (scope.actorId === actors.reviewer &&
             (permission.endsWith(":read") ||
+              permission === "consumables:withdraw" ||
               permission === "equipment-incidents:write" ||
               permission === "equipment:write" ||
               permission === "equipment:hold" ||

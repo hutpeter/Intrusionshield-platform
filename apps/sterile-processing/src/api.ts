@@ -284,6 +284,53 @@ async function checkedIncident(
   return r;
 }
 export const api = {
+  withdrawConsumable: (
+    s: Session,
+    id: string,
+    body: import("@intrusionshield/sterile-processing").ConsumableDecisionInput,
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<import("@intrusionshield/sterile-processing").ConsumableLot>(
+        base(s) + "/consumables/" + encodeURIComponent(id) + "/withdraw",
+        signal,
+        body,
+        s.csrf,
+      ),
+    ),
+  consumableRecallImpact: (
+    s: Session,
+    id: string,
+    pid: string,
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<RecallImpact>(
+        base(s) +
+          "/consumables/" +
+          encodeURIComponent(id) +
+          "/recall-impact?packageId=" +
+          encodeURIComponent(pid),
+        signal,
+      ),
+    ),
+  consumableRecall: (
+    s: Session,
+    id: string,
+    body: import("@intrusionshield/sterile-processing").ConsumableRecallInput,
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<import("@intrusionshield/sterile-processing").ConsumableLot>(
+        base(s) + "/consumables/" + encodeURIComponent(id) + "/recalls",
+        signal,
+        body,
+        s.csrf,
+      ),
+    ),
   consumablePackages: (
     s: Session,
     id: string,

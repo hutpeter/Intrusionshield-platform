@@ -32,6 +32,7 @@ export class RecallRegistry extends SterileRegistryBase {
     scope: SterileScope,
     input: RecallInput,
     equipmentIncidentId?: string,
+    consumableLotId?: string,
   ) {
     const s = scopeOf(scope),
       code = codeOf(input.code),
@@ -50,6 +51,9 @@ export class RecallRegistry extends SterileRegistryBase {
       "recall-created",
       {
         ...input,
+        ...(consumableLotId
+          ? { consumableLotId: sterileUuid(consumableLotId) }
+          : {}),
         ...(equipmentIncidentId
           ? { equipmentIncidentId: sterileUuid(equipmentIncidentId) }
           : {}),
@@ -81,7 +85,31 @@ export class RecallRegistry extends SterileRegistryBase {
             !incident.impact.targets.some((p) => p.id === sourceId))
         )
           throw new SterileError("INVALID_REQUEST");
+        const lot = consumableLotId
+          ? await tx.findConsumable(sterileUuid(consumableLotId))
+          : null;
+        if (
+          consumableLotId &&
+          (!lot?.withdrawal ||
+            input.sourceKind !== "package" ||
+            !(await tx.findPackage(sourceId))?.consumableLots?.some(
+              (x) => x.id === lot.id,
+            ))
+        )
+          throw new SterileError("INVALID_REQUEST");
         const record: RecallRecord = {
+          ...(lot?.withdrawal
+            ? {
+                consumableLot: {
+                  id: lot.id,
+                  code: lot.code,
+                  lotNumber: lot.lotNumber,
+                  supplier: lot.supplier,
+                  reference: lot.withdrawal.reference,
+                  withdrawnAt: lot.withdrawal.at,
+                },
+              }
+            : {}),
           ...(incident
             ? {
                 equipmentIncident: {

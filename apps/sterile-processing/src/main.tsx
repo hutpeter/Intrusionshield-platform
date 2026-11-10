@@ -1143,6 +1143,13 @@ function Workspace({
             blocked={blocked}
             onExpired={onExpired}
             onDirty={setTrayDirty}
+            onRecall={(id) =>
+              guard(() => {
+                setDashboardTarget({ workspace: "recalls", id });
+                setTab("recalls");
+                setSelected(null);
+              })
+            }
             onBusy={setTrayBusy}
           />
         )}

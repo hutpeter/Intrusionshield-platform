@@ -1,8 +1,8 @@
 # Consumable lots and packaging provenance
 
-## One owner check: U-CONS-01 (pending)
+## One owner check: U-CONS-01 (passed November 10, 2026)
 
-Update and restart the preview, enter as **Demo operator**, then open **Consumable lots** → **Prepare fictional lot example**. Review the prefilled fictional wrap, supplier reference and expiry, tick **I confirm this consumable lot record.**, then **Save lot record**. Expect **Lot record saved.** and the lot in the table. This is the only requested owner check. Packaging selection, frozen references, package-use lookup and reload are developer-verified.
+Owner screenshot confirms the saved lot, supplier reference, expiry and Within recorded expiry. Original check: update and restart the preview, enter as **Demo operator**, then open **Consumable lots** → **Prepare fictional lot example**. Review the prefilled fictional wrap, supplier reference and expiry, tick **I confirm this consumable lot record.**, then **Save lot record**. Expect **Lot record saved.** and the lot in the table. This is the only requested owner check. Packaging selection, frozen references, package-use lookup and reload are developer-verified.
 
 ## Delivered behavior
 
@@ -16,6 +16,8 @@ Update and restart the preview, enter as **Demo operator**, then open **Consumab
 
 ## Deferred work
 
-Stock quantities, receipts/issues/adjustments, supplier catalogues, barcode/GS1 ingestion, attachments, product/method compatibility approvals, catalogue corrections/withdrawals, multi-lot allocation by quantity, cross-record manufacturer-lot search, consumable incidents/holds/recalls and automated expiry alerts are not part of this increment. Physical verification, broader owner packaging/exception/language/mobile workflows and clinical/production acceptance remain deferred. RSP-ISS-001 stays parked; no independent-inspector enforcement change is included.
+Stock quantities, receipts/issues/adjustments, supplier catalogues, barcode/GS1 ingestion, attachments, product/method compatibility approvals, catalogue corrections, multi-lot allocation by quantity, cross-record manufacturer-lot search, automatic consumable incidents/holds and bulk recalls and automated expiry alerts are not part of this increment. Physical verification, broader owner packaging/exception/language/mobile workflows and clinical/production acceptance remain deferred. RSP-ISS-001 stays parked; no independent-inspector enforcement change is included.
 
 Developer verification November 9, 2026: 379 scoped tests passed (205 domain, 133 HTTP/SQLite, 41 web), scoped builds and Chromium workflow passed. Coverage includes strict dates, expiry boundary, primary/indicator rules, duplicate/foreign selections, supplier snapshot retention, idempotency, audit rollback, CSRF/roles, SQL reopen, package usage, trace facts and browser save/select/package/lookup/refresh.
+
+Reviewer withdrawal and separately confirmed per-package linked recalls are now delivered; see [CONSUMABLE-WITHDRAWAL.md](CONSUMABLE-WITHDRAWAL.md) for the current U-CONS-02 owner check.

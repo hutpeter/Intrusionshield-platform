@@ -319,4 +319,8 @@ Bounded read-only recorded-work throughput, timings, retries, explicit equipment
 
 ## Consumable inventory and recall follow-up
 
-Immutable scoped consumable lot registration, inclusive UTC expiry gate at packaging, frozen package/trace provenance and paged exact-record package-use lookup are delivered in the preview. U-CONS-01 remains pending. Quantity inventory, catalogue correction/withdrawal, product compatibility, manufacturer-lot grouping, lot incidents/holds/recalls, hardware/supplier integration, alerts and production migration/index/scale/clinical acceptance remain deferred. See [CONSUMABLES.md](CONSUMABLES.md). RSP-ISS-001 stays parked.
+Immutable scoped consumable lot registration, inclusive UTC expiry gate at packaging, frozen package/trace provenance and paged exact-record package-use lookup are delivered in the preview. U-CONS-01 passed November 10, 2026 from the saved-lot owner screenshot. Quantity inventory, catalogue correction, product compatibility, manufacturer-lot grouping, bulk/automatic lot incidents/holds/recalls, hardware/supplier integration, alerts and production migration/index/scale/clinical acceptance remain deferred. See [CONSUMABLES.md](CONSUMABLES.md). RSP-ISS-001 stays parked.
+
+## Consumable withdrawal follow-up
+
+Permanent reviewer withdrawal blocks new packaging with the exact registered lot ID. Separately previewed/confirmed per-package recalls preserve lot provenance and use existing persistent blocks and recovery/disposition controls. U-CONS-02 is pending. Bulk manufacturer-lot matching/recalls, physical quarantine/notifications, correction/restore and production/clinical acceptance remain deferred. See [CONSUMABLE-WITHDRAWAL.md](CONSUMABLE-WITHDRAWAL.md). RSP-ISS-001 remains parked.

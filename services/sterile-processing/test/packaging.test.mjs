@@ -595,3 +595,195 @@ test("consumable and package-use source permissions are checked before repositor
   );
   assert.equal(queries, 0);
 });
+
+test("reviewer lot withdrawal is scoped and persistent; separate linked recall retains lot provenance and package blocks", async (t) => {
+  const f = await httpFixture(t),
+    input = {
+      requestId: randomUUID(),
+      code: "WITHDRAW-LOT",
+      kind: "wrap",
+      name: "DEMO WRAP",
+      lotNumber: "LOT-1",
+      supplier: "DEMO",
+      supplierReference: "DELIVERY",
+      expiresOn: "2099-01-01",
+      confirmed: true,
+    };
+  const lot = await (await f.call(f.base + "/consumables", input)).json(),
+    a = await example(f),
+    p = await (
+      await f.call(
+        f.base + "/packages",
+        packBody(a, { consumableLotIds: [lot.id] }),
+      )
+    ).json(),
+    decision = {
+      requestId: randomUUID(),
+      version: 1,
+      reason: "SIMULATED supplier defect",
+      reference: "SUPPLIER-NOTICE",
+      confirmed: true,
+    },
+    path = f.base + "/consumables/" + lot.id;
+  for (const role of ["operator", "viewer"]) {
+    await f.login(role);
+    assert.equal((await f.call(path + "/withdraw", decision)).status, 403);
+  }
+  await f.login("reviewer");
+  assert.equal(
+    (await f.call(path + "/withdraw", decision, { "x-sterile-csrf": "bad" }))
+      .status,
+    403,
+  );
+  assert.equal(
+    (await f.call(path + "/withdraw", { ...decision, extra: true })).status,
+    400,
+  );
+  const response = await f.call(path + "/withdraw", decision);
+  assert.equal(response.status, 200);
+  const withdrawn = await response.json();
+  assert.equal(withdrawn.version, 2);
+  assert.deepEqual(
+    await (await f.call(path + "/withdraw", decision)).json(),
+    withdrawn,
+  );
+  assert.equal(
+    (await (await f.call(f.base + "/packages/" + p.id)).json()).recall,
+    undefined,
+  );
+  const impact = await (
+    await f.call(path + "/recall-impact?packageId=" + p.id)
+  ).json();
+  assert.equal(impact.items.length, 1);
+  const body = {
+    ...decision,
+    requestId: randomUUID(),
+    version: 2,
+    packageId: p.id,
+    impactHash: impact.impactHash,
+    code: "LOT-HTTP-RECALL",
+  };
+  assert.equal(
+    (await f.call(path + "/recalls", { ...body, confirmed: false })).status,
+    400,
+  );
+  assert.equal(
+    (await f.call(path + "/recalls", { ...body, impactHash: "a".repeat(64) }))
+      .status,
+    409,
+  );
+  const savedResponse = await f.call(path + "/recalls", body);
+  assert.equal(savedResponse.status, 201);
+  const saved = await savedResponse.json();
+  assert.equal(saved.recalls.length, 1);
+  const recall = await (
+    await f.call(f.base + "/recalls/" + saved.recalls[0].id)
+  ).json();
+  assert.equal(recall.consumableLot.id, lot.id);
+  assert.equal(
+    (await (await f.call(f.base + "/packages/" + p.id)).json()).recall.caseId,
+    recall.id,
+  );
+  const reopened = new PreviewSqliteRepository(f.file);
+  try {
+    const { ConsumableRegistry, PackagingRegistry } =
+      await import("@intrusionshield/sterile-processing");
+    assert.equal(
+      (await new ConsumableRegistry(reopened).detail(f.session, lot.id))
+        .withdrawal.reference,
+      decision.reference,
+    );
+    assert.equal(
+      (await new PackagingRegistry(reopened).get(f.session, p.id)).recall
+        .caseId,
+      recall.id,
+    );
+  } finally {
+    reopened.close();
+  }
+  await f.login("operator");
+  const next = await example(f);
+  assert.equal(
+    (
+      await f.call(
+        f.base + "/packages",
+        packBody(next, {
+          code: "BLOCKED-LOT-PACK",
+          consumableLotIds: [lot.id],
+        }),
+      )
+    ).status,
+    409,
+  );
+});
+test("lot recall source permissions are denied before any repository transaction", async (t) => {
+  const { createSterileApp } = await import("../dist/app.js"),
+    s = {
+      tenantId: randomUUID(),
+      facilityId: randomUUID(),
+      actorId: randomUUID(),
+    },
+    server = createServer();
+  let denied = "recall:read",
+    queries = 0;
+  server.on(
+    "request",
+    createSterileApp({
+      repository: {
+        transaction: async () => {
+          queries++;
+          throw Error("must not query");
+        },
+      },
+      authenticate: async () => ({ ...s, facilityIds: [s.facilityId] }),
+      authorize: async (sc, cap, p) => p !== denied,
+    }),
+  );
+  server.listen(0, "127.0.0.1");
+  await once(server, "listening");
+  t.after(() => new Promise((resolve) => server.close(resolve)));
+  const path =
+    "http://127.0.0.1:" +
+    server.address().port +
+    "/api/v1/sterile/facilities/" +
+    s.facilityId +
+    "/consumables/" +
+    randomUUID();
+  for (const permission of [
+    "consumables:read",
+    "packaging:read",
+    "recall:read",
+  ]) {
+    denied = permission;
+    assert.equal(
+      (
+        await fetch(path + "/recall-impact?packageId=" + randomUUID(), {
+          headers: { authorization: "Bearer demo" },
+        })
+      ).status,
+      403,
+    );
+    assert.equal(queries, 0);
+  }
+  for (const permission of [
+    "consumables:withdraw",
+    "packaging:read",
+    "recall:write",
+  ]) {
+    denied = permission;
+    assert.equal(
+      (
+        await fetch(path + "/recalls", {
+          method: "POST",
+          headers: {
+            authorization: "Bearer demo",
+            "content-type": "application/json",
+          },
+          body: "{}",
+        })
+      ).status,
+      403,
+    );
+    assert.equal(queries, 0);
+  }
+});

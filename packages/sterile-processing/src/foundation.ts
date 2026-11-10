@@ -134,6 +134,8 @@ export interface SterileAuditEvent {
     | "equipment-incident-finding-recorded"
     | "equipment-incident-recorded"
     | "equipment-incident-recall-created"
+    | "consumable-withdrawn"
+    | "consumable-recall-created"
     | "consumable-registered"
     | "equipment-registered"
     | "equipment-service-recorded"
@@ -188,6 +190,10 @@ export interface SterileTransaction {
     id: string,
     page: number,
   ): Promise<import("./consumables.js").ConsumableUse[]>;
+  updateConsumable(
+    item: import("./consumables.js").ConsumableLot,
+    expected: number,
+  ): Promise<void>;
   findConsumable(
     id: string,
   ): Promise<import("./consumables.js").ConsumableLot | null>;
@@ -474,6 +480,7 @@ export interface SterileRepository {
 export class SterileError extends Error {
   constructor(
     public readonly code:
+      | "CONSUMABLE_WITHDRAWN"
       | "CONSUMABLE_EXPIRED"
       | "REPORT_LIMIT"
       | "INCIDENT_LIMIT"

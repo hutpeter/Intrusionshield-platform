@@ -40,6 +40,7 @@ export interface SterileDependencies {
     scope: SterileScope,
     capability: "sterile.core",
     permission:
+      | "consumables:withdraw"
       | "consumables:read"
       | "consumables:write"
       | "reports:read"
@@ -203,7 +204,9 @@ export function createSterileApp(
       const permission = req.path.startsWith("/consumables")
         ? readOnly
           ? "consumables:read"
-          : "consumables:write"
+          : req.path.endsWith("/withdraw") || req.path.endsWith("/recalls")
+            ? "consumables:withdraw"
+            : "consumables:write"
         : (req.path.endsWith("/maintenance/authorize") ||
               req.path.endsWith("/service-policy")) &&
             !readOnly
@@ -787,6 +790,77 @@ export function createSterileApp(
     ) {
       res.status(403).json({ error: "FORBIDDEN" });
       return false;
+    }
+    return true;
+  }
+  app.post(prefix + "/consumables/:id/withdraw", async (req, res) => {
+    noQuery(req);
+    const v = body(req.body, [
+      "requestId",
+      "version",
+      "reason",
+      "reference",
+      "confirmed",
+    ]);
+    res.json(
+      await new ConsumableRegistry(dependencies.repository!).withdraw(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        v as unknown as Parameters<ConsumableRegistry["withdraw"]>[2],
+      ),
+    );
+  });
+  app.get(prefix + "/consumables/:id/recall-impact", async (req, res) => {
+    if (!(await lotRecallPermission(req, res, "recall:read"))) return;
+    if (
+      Object.keys(req.query).length !== 1 ||
+      typeof req.query.packageId !== "string"
+    )
+      throw new SterileError("INVALID_REQUEST");
+    res.json(
+      await new ConsumableRegistry(dependencies.repository!).recallPreview(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        req.query.packageId,
+      ),
+    );
+  });
+  app.post(prefix + "/consumables/:id/recalls", async (req, res) => {
+    noQuery(req);
+    if (!(await lotRecallPermission(req, res, "recall:write"))) return;
+    const v = body(req.body, [
+      "requestId",
+      "version",
+      "reason",
+      "reference",
+      "confirmed",
+      "packageId",
+      "impactHash",
+      "code",
+    ]);
+    res
+      .status(201)
+      .json(
+        await new ConsumableRegistry(dependencies.repository!).createRecall(
+          res.locals.scope,
+          sterileUuid(req.params.id),
+          v as unknown as Parameters<ConsumableRegistry["createRecall"]>[2],
+        ),
+      );
+  });
+  async function lotRecallPermission(
+    req: express.Request,
+    res: express.Response,
+    permission: "recall:read" | "recall:write",
+  ) {
+    for (const p of ["packaging:read", permission] as const) {
+      if (
+        (await dependencies.authorize!(res.locals.scope, "sterile.core", p)) !==
+        true
+      ) {
+        res.status(403).json({ error: "FORBIDDEN" });
+        return false;
+      }
     }
     return true;
   }
@@ -2288,6 +2362,7 @@ export function createSterileApp(
           ? {
               SCAN_DUPLICATE: 409,
               SCAN_TYPE: 409,
+              CONSUMABLE_WITHDRAWN: 409,
               CONSUMABLE_EXPIRED: 409,
               REPORT_LIMIT: 409,
               INCIDENT_LIMIT: 409,

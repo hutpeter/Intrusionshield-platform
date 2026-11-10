@@ -1011,6 +1011,13 @@ export class MemoryRepository {
             state: x.state,
             createdAt: x.createdAt,
           })),
+      updateConsumable: async (item, expected) => {
+        const n = s.consumables.findIndex(
+          (x) => own(x) && x.id === item.id && x.version === expected,
+        );
+        if (!own(item) || n < 0) throw Error("constraint");
+        s.consumables[n] = structuredClone(item);
+      },
       findConsumable: async (id) =>
         read(s.consumables.find((x) => own(x) && x.id === id)),
       findConsumableByCode: async (code) =>

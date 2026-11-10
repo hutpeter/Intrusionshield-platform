@@ -31,6 +31,14 @@ export interface RecallItem {
   } | null;
 }
 export interface RecallRecord {
+  consumableLot?: {
+    id: string;
+    code: string;
+    lotNumber: string;
+    supplier: string;
+    reference: string;
+    withdrawnAt: string;
+  };
   equipmentIncident?: {
     id: string;
     code: string;

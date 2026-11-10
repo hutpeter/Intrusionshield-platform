@@ -907,10 +907,16 @@ remains unconfirmed; no retrospective pass is inferred. RSP-ISS-001 stays parked
 
 Developer November 9, 2026: 373 scoped tests passed (202 domain, 131 HTTP/SQLite, 40 web), scoped builds passed; domain event boundaries/retries/timing/interval unions, persisted scoped reads, source authorization before queries, strict dates/limits, reopen/read-only behavior and CSV formula protection verified. Chromium verifies seven days, report sections, refresh and exporting the displayed snapshot after filter edits. Production scale/calendar/hardware and broader manual/clinical acceptance deferred. U-TRACE-01 and original U-LOANER-01 remain unconfirmed; RSP-ISS-001 stays parked. This entry does not change separately recorded incident hold/release/closure acceptance.
 
-## Current owner check — consumable lot registration
+## Previous owner check — consumable lot registration
 
-**U-CONS-01 pending:** Demo operator → **Consumable lots** → **Prepare fictional lot example** → review → tick confirmation → **Save lot record**. Expect **Lot record saved.** and the saved lot row. This is the only requested owner check; packaging selection, frozen provenance and package-use lookup are developer-verified. See [CONSUMABLES.md](CONSUMABLES.md).
+**U-CONS-01 passed November 10, 2026:** owner screenshot confirms Lot record saved, the saved wrap lot, supplier reference, expiry day and Within recorded expiry. Original check: Demo operator → **Consumable lots** → **Prepare fictional lot example** → review → tick confirmation → **Save lot record**. Expect **Lot record saved.** and the saved lot row. This is the only requested owner check; packaging selection, frozen provenance and package-use lookup are developer-verified. See [CONSUMABLES.md](CONSUMABLES.md).
 
 Broader owner packaging/expiry exceptions, physical stock/labels, operational policies, manufacturer compatibility, production migration/scale and clinical acceptance remain deferred. U-PERF-01 passed from owner screenshots. U-TRACE-01 and original U-LOANER-01 remain unconfirmed. RSP-ISS-001 remains parked.
 
-Developer November 9, 2026: 379 scoped tests passed (205 domain, 133 HTTP/SQLite, 41 web), scoped builds and Chromium registration/packaging/frozen-provenance/use-lookup/refresh passed. No owner pass is inferred for U-CONS-01.
+Developer November 9, 2026: 379 scoped tests passed (205 domain, 133 HTTP/SQLite, 41 web), scoped builds and Chromium registration/packaging/frozen-provenance/use-lookup/refresh passed. U-CONS-01 subsequently passed from the November 10 owner screenshot.
+
+## Current owner check — consumable lot withdrawal
+
+**U-CONS-02 pending:** Demo reviewer → **Consumable lots** → **Withdraw lot** on the prior fictional lot → review prefilled simulated reason/reference → tick withdrawal confirmation → **Record lot withdrawal**. Expect **Lot withdrawal recorded.** and **Withdrawn — blocked for new packaging**. This is the only requested owner check. Linked recall preview/confirmation, existing blocks and case navigation are developer-verified; no owner recall is requested. See [CONSUMABLE-WITHDRAWAL.md](CONSUMABLE-WITHDRAWAL.md).
+
+Developer November 10, 2026: 385 scoped tests passed (208 domain, 135 HTTP/SQLite, 42 web), scoped builds and Chromium full withdrawal/explicit linked recall/navigation/refresh passed. Broader manufacturer-lot grouping, physical quarantine/notification, inventory, production/clinical policies and exception acceptance remain deferred. U-CONS-01 is passed. U-TRACE-01 and original U-LOANER-01 remain unconfirmed; RSP-ISS-001 stays parked.
