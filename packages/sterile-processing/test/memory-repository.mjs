@@ -27,6 +27,7 @@ export class MemoryRepository {
     equipmentIncidentVersions: [],
     consumables: [],
     consumableStock: [],
+    stockCounts: [],
     consumableStockMovements: [],
     equipment: [],
     equipmentVersions: [],
@@ -1058,6 +1059,45 @@ export class MemoryRepository {
             state: x.state,
             createdAt: x.createdAt,
           })),
+      findStockCount: async (id) =>
+        read(s.stockCounts.find((x) => own(x) && x.id === id)),
+      findPendingStockCount: async (id) =>
+        read(
+          s.stockCounts.find(
+            (x) => own(x) && x.lotId === id && x.state === "pending",
+          ),
+        ),
+      insertStockCount: async (item) => {
+        if (
+          !own(item) ||
+          s.stockCounts.some(
+            (x) =>
+              own(x) &&
+              (x.id === item.id ||
+                (x.lotId === item.lotId && x.state === "pending")),
+          )
+        )
+          throw Error("constraint");
+        s.stockCounts.push(structuredClone(item));
+      },
+      updateStockCount: async (item, expected) => {
+        const n = s.stockCounts.findIndex(
+          (x) =>
+            own(x) &&
+            x.id === item.id &&
+            x.version === expected &&
+            x.state === "pending",
+        );
+        if (!own(item) || n < 0) throw Error("constraint");
+        s.stockCounts[n] = structuredClone(item);
+      },
+      listStockCounts: async (id, page) =>
+        s.stockCounts
+          .filter((x) => own(x) && x.lotId === id)
+          .slice()
+          .reverse()
+          .slice((page - 1) * 50, (page - 1) * 50 + 51)
+          .map((x) => structuredClone(x)),
       findConsumableStock: async (id) =>
         read(s.consumableStock.find((x) => own(x) && x.lotId === id)),
       saveConsumableStock: async (item, expected) => {

@@ -35,6 +35,11 @@ export interface ConsumableRecallInput extends ConsumableDecisionInput {
   code: string;
 }
 export interface ConsumableLot {
+  pendingStockCount?: {
+    id: string;
+    countedAvailable: number;
+    difference: number;
+  };
   alertPolicy?: import("./consumable-alerts.js").ConsumableAlertPolicy;
   stock?: import("./consumable-stock.js").ConsumableStock;
   withdrawal?: {
@@ -312,7 +317,20 @@ export class ConsumableRegistry extends SterileRegistryBase {
         items: await Promise.all(
           rows.slice(0, 50).map(async (lot) => {
             const stock = await tx.findConsumableStock(lot.id);
-            return { ...lot, ...(stock ? { stock } : {}) };
+            const count = await tx.findPendingStockCount(lot.id);
+            return {
+              ...lot,
+              ...(stock ? { stock } : {}),
+              ...(count
+                ? {
+                    pendingStockCount: {
+                      id: count.id,
+                      countedAvailable: count.countedAvailable,
+                      difference: count.difference,
+                    },
+                  }
+                : {}),
+            };
           }),
         ),
         page: n,

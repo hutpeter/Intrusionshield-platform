@@ -1,5 +1,7 @@
 import type { Language } from "./text";
 const en = {
+  adjustment: "Approved count adjustment",
+  adjustments: "Net approved adjustments",
   title: "Stock and movements",
   example: "Prepare fictional stock example",
   exampleHelp:
@@ -35,6 +37,8 @@ const en = {
   usage: "Consumable quantities used",
 };
 const es: typeof en = {
+  adjustment: "Ajuste de recuento aprobado",
+  adjustments: "Ajustes netos aprobados",
   title: "Existencias y movimientos",
   example: "Preparar ejemplo ficticio de existencias",
   exampleHelp:
@@ -70,6 +74,8 @@ const es: typeof en = {
   usage: "Cantidades de consumibles usadas",
 };
 const fr: typeof en = {
+  adjustment: "Ajustement de comptage approuvé",
+  adjustments: "Ajustements nets approuvés",
   title: "Stock et mouvements",
   example: "Préparer un exemple fictif de stock",
   exampleHelp:

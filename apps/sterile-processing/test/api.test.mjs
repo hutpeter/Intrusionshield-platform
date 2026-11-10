@@ -1290,3 +1290,56 @@ test("consumable alert policy carries explicit settings and CSRF; dashboard queu
     (e) => e.code === "SERVICE_UNAVAILABLE",
   );
 });
+
+test("physical stock count and review API preserve explicit quantities, versions and confirmations with scoped responses", async (t) => {
+  let value = {
+      tenantId: session.tenantId,
+      facilityId: session.facilityId,
+      id: "count",
+      lotId: "lot",
+    },
+    calls = [];
+  fake(t, async (path, options) => {
+    calls.push({ path, options });
+    return response(value);
+  });
+  const input = {
+    requestId: "request",
+    stockVersion: 1,
+    countedAvailable: 8,
+    reason: "COUNT",
+    reference: "EVIDENCE",
+    confirmed: true,
+  };
+  await api.recordStockCount(session, "lot", input, signal());
+  assert.ok(calls.at(-1).path.endsWith("/stock/counts"));
+  assert.equal(calls.at(-1).options.headers["x-sterile-csrf"], session.csrf);
+  assert.deepEqual(JSON.parse(calls.at(-1).options.body), input);
+  const decision = {
+    requestId: "review",
+    version: 1,
+    reason: "REVIEW",
+    reference: "EVIDENCE",
+    confirmed: true,
+  };
+  await api.decideStockCount(
+    session,
+    "lot",
+    "count",
+    "approve",
+    decision,
+    signal(),
+  );
+  assert.ok(calls.at(-1).path.endsWith("/stock/counts/count/approve"));
+  assert.deepEqual(JSON.parse(calls.at(-1).options.body), decision);
+  value = { ...value, facilityId: "foreign" };
+  await assert.rejects(
+    api.recordStockCount(session, "lot", input, signal()),
+    (e) => e.code === "SERVICE_UNAVAILABLE",
+  );
+  value = { items: [{ ...value }], page: 1, hasMore: false };
+  await assert.rejects(
+    api.stockCounts(session, "lot", 1, signal()),
+    (e) => e.code === "SERVICE_UNAVAILABLE",
+  );
+});

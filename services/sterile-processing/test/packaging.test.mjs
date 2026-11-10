@@ -1222,3 +1222,281 @@ test("SQL consumable expiry alerts include the seventh warning day and expired p
     false,
   );
 });
+
+test("operator counts await reviewer approval; strict fields, CSRF and scoped decisions preserve original receipt history", async (t) => {
+  const f = await httpFixture(t),
+    lot = await (
+      await f.call("/preview/consumable-stock-example", {
+        requestId: randomUUID(),
+      })
+    ).json();
+  await fundLotHttp(f, lot, 10);
+  const path = f.base + "/consumables/" + lot.id + "/stock/counts",
+    input = {
+      requestId: randomUUID(),
+      stockVersion: 1,
+      countedAvailable: 8,
+      reason: "SIMULATED physical count",
+      reference: "COUNT-EVIDENCE",
+      confirmed: true,
+    };
+  assert.equal((await f.call(path, { ...input, difference: 999 })).status, 400);
+  assert.equal(
+    (await f.call(path, input, { "x-sterile-csrf": "bad" })).status,
+    403,
+  );
+  let response = await f.call(path, input);
+  assert.equal(response.status, 201);
+  const count = await response.json();
+  assert.equal(count.difference, -2);
+  assert.deepEqual(await (await f.call(path, input)).json(), count);
+  assert.equal(
+    (await (await f.call(f.base + "/consumables/" + lot.id + "/stock")).json())
+      .balance.available,
+    10,
+  );
+  const decision = {
+    requestId: randomUUID(),
+    version: 1,
+    reason: "SIMULATED approved",
+    reference: "REVIEW-EVIDENCE",
+    confirmed: true,
+  };
+  assert.equal(
+    (await f.call(path + "/" + count.id + "/approve", decision)).status,
+    403,
+  );
+  await f.login("viewer");
+  assert.equal((await f.call(path)).status, 200);
+  assert.equal(
+    (await f.call(path, { ...input, requestId: randomUUID() })).status,
+    403,
+  );
+  await f.login("reviewer");
+  assert.equal(
+    (await f.call(path, { ...input, requestId: randomUUID() })).status,
+    403,
+  );
+  assert.equal(
+    (
+      await f.call(path + "/" + count.id + "/approve", {
+        ...decision,
+        confirmed: false,
+      })
+    ).status,
+    400,
+  );
+  response = await f.call(path + "/" + count.id + "/approve", decision);
+  assert.equal(response.status, 200);
+  assert.equal((await response.json()).state, "approved");
+  const report = await (
+    await f.call(f.base + "/consumables/" + lot.id + "/stock")
+  ).json();
+  assert.equal(report.balance.available, 8);
+  assert.equal(report.balance.received, 10);
+  assert.equal(report.balance.adjustments, -2);
+  assert.equal(report.movements.items[0].stockCountId, count.id);
+  assert.equal(report.movements.items.at(-1).balance.available, 10);
+  const reopened = new PreviewSqliteRepository(f.file);
+  try {
+    const { StockReconciliationRegistry, ConsumableStockRegistry } =
+      await import("@intrusionshield/sterile-processing");
+    assert.equal(
+      (await new StockReconciliationRegistry(reopened).list(f.session, lot.id))
+        .items[0].state,
+      "approved",
+    );
+    assert.equal(
+      (await new ConsumableStockRegistry(reopened).report(f.session, lot.id))
+        .balance.available,
+      8,
+    );
+  } finally {
+    reopened.close();
+  }
+});
+test("SQL count approval audit failure rolls back adjustment ledger and count state together", async (t) => {
+  const f = await httpFixture(t),
+    { StockReconciliationRegistry, ConsumableStockRegistry } =
+      await import("@intrusionshield/sterile-processing"),
+    lot = await (
+      await f.call("/preview/consumable-stock-example", {
+        requestId: randomUUID(),
+      })
+    ).json();
+  await fundLotHttp(f, lot, 10);
+  const r = new StockReconciliationRegistry(f.repo),
+    count = await r.record(f.session, lot.id, {
+      requestId: randomUUID(),
+      stockVersion: 1,
+      countedAvailable: 7,
+      reason: "COUNT",
+      reference: "EVIDENCE",
+      confirmed: true,
+    }),
+    reviewer = { ...f.session, actorId: randomUUID() },
+    decision = {
+      requestId: randomUUID(),
+      version: 1,
+      reason: "REVIEW",
+      reference: "EVIDENCE",
+      confirmed: true,
+    },
+    broken = {
+      transaction: (s, work) =>
+        f.repo.transaction(s, (tx) =>
+          work({
+            ...tx,
+            appendAudit: async (e) => {
+              if (e.action === "stock-count-decided")
+                throw Error("synthetic count audit failure");
+              return tx.appendAudit(e);
+            },
+          }),
+        ),
+    };
+  await assert.rejects(
+    new StockReconciliationRegistry(broken).decide(
+      reviewer,
+      lot.id,
+      count.id,
+      "approve",
+      decision,
+    ),
+  );
+  assert.equal(
+    (await new ConsumableStockRegistry(f.repo).report(f.session, lot.id))
+      .balance.available,
+    10,
+  );
+  assert.equal(
+    (await new ConsumableStockRegistry(f.repo).report(f.session, lot.id))
+      .movements.items.length,
+    1,
+  );
+  assert.equal((await r.list(f.session, lot.id)).items[0].state, "pending");
+  await r.decide(reviewer, lot.id, count.id, "approve", decision);
+  assert.equal(
+    (await new ConsumableStockRegistry(f.repo).report(f.session, lot.id))
+      .balance.available,
+    7,
+  );
+});
+test("fictional reconciliation helper creates pending count without adjustment; stale approvals require rejection and recount", async (t) => {
+  const f = await httpFixture(t),
+    requestId = randomUUID();
+  assert.equal(
+    (await f.call("/preview/stock-count-example", { requestId })).status,
+    403,
+  );
+  await f.login("reviewer");
+  let response = await f.call("/preview/stock-count-example", { requestId });
+  assert.equal(response.status, 201);
+  const lot = await response.json();
+  assert.equal(
+    (await (await f.call("/preview/stock-count-example", { requestId })).json())
+      .id,
+    lot.id,
+  );
+  const path = f.base + "/consumables/" + lot.id + "/stock",
+    count = (await (await f.call(path + "/counts")).json()).items[0];
+  assert.equal(count.state, "pending");
+  assert.equal(count.countedAvailable, 8);
+  assert.equal((await (await f.call(path)).json()).balance.available, 10);
+  await f.login("operator");
+  await f.call(path + "/receive", {
+    requestId: randomUUID(),
+    version: 1,
+    quantity: 2,
+    reason: "DELIVERY",
+    reference: "REF",
+    confirmed: true,
+  });
+  await f.login("reviewer");
+  const decision = {
+    requestId: randomUUID(),
+    version: 1,
+    reason: "REVIEW",
+    reference: "EVIDENCE",
+    confirmed: true,
+  };
+  assert.equal(
+    (await f.call(path + "/counts/" + count.id + "/approve", decision)).status,
+    409,
+  );
+  assert.equal(
+    (
+      await f.call(path + "/counts/" + count.id + "/reject", {
+        ...decision,
+        requestId: randomUUID(),
+      })
+    ).status,
+    200,
+  );
+  assert.equal((await (await f.call(path)).json()).balance.available, 12);
+});
+
+test("two SQLite reviewers approve a pending count at most once", async (t) => {
+  const f = await httpFixture(t),
+    { StockReconciliationRegistry, ConsumableStockRegistry } =
+      await import("@intrusionshield/sterile-processing"),
+    lot = await (
+      await f.call("/preview/consumable-stock-example", {
+        requestId: randomUUID(),
+      })
+    ).json();
+  await fundLotHttp(f, lot, 10);
+  const count = await new StockReconciliationRegistry(f.repo).record(
+      f.session,
+      lot.id,
+      {
+        requestId: randomUUID(),
+        stockVersion: 1,
+        countedAvailable: 8,
+        reason: "COUNT",
+        reference: "REF",
+        confirmed: true,
+      },
+    ),
+    other = new PreviewSqliteRepository(f.file),
+    reviewer = { ...f.session, actorId: randomUUID() },
+    input = () => ({
+      requestId: randomUUID(),
+      version: 1,
+      reason: "REVIEW",
+      reference: "REF",
+      confirmed: true,
+    });
+  try {
+    const outcomes = await Promise.allSettled([
+      new StockReconciliationRegistry(f.repo).decide(
+        reviewer,
+        lot.id,
+        count.id,
+        "approve",
+        input(),
+      ),
+      new StockReconciliationRegistry(other).decide(
+        { ...reviewer, actorId: randomUUID() },
+        lot.id,
+        count.id,
+        "approve",
+        input(),
+      ),
+    ]);
+    assert.equal(outcomes.filter((x) => x.status === "fulfilled").length, 1);
+    assert.equal(
+      outcomes.find((x) => x.status === "rejected").reason.code,
+      "CONFLICT",
+    );
+    const report = await new ConsumableStockRegistry(other).report(
+      f.session,
+      lot.id,
+    );
+    assert.equal(report.balance.available, 8);
+    assert.equal(report.balance.adjustments, -2);
+    assert.equal(report.movements.items.length, 2);
+  } finally {
+    other.close();
+  }
+});

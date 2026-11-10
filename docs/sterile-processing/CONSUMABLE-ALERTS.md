@@ -1,8 +1,8 @@
 # Consumable stock and expiry alerts
 
-## One owner check: U-CONS-04 (pending)
+## One owner check: U-CONS-04 (passed November 10, 2026)
 
-Update/restart the preview and enter as **Demo reviewer**. Open **Consumable lots → Prepare fictional stock alert example**. This prepares a new fictional lot with five items expiring in three UTC days and opens settings with **Minimum stock: 10** and **Expiry warning days: 7**. Review the prefilled reason/reference, tick **I confirm these stock alert settings.**, then **Save alert settings**. Expect **Alert settings saved.**, Minimum stock **10** and Expiry warning days **7**. This is the only owner check. Dashboard classification, permissions, paging, links and refresh are developer-verified.
+Owner screenshot confirms saved alert settings with minimum 10 and warning 7. Original check: update/restart the preview and enter as **Demo reviewer**. Open **Consumable lots → Prepare fictional stock alert example**. This prepares a new fictional lot with five items expiring in three UTC days and opens settings with **Minimum stock: 10** and **Expiry warning days: 7**. Review the prefilled reason/reference, tick **I confirm these stock alert settings.**, then **Save alert settings**. Expect **Alert settings saved.**, Minimum stock **10** and Expiry warning days **7**. This is the only owner check. Dashboard classification, permissions, paging, links and refresh are developer-verified.
 
 ## Rules
 
@@ -22,4 +22,4 @@ The **Operational dashboard** includes **Consumable stock and expiry alerts**, p
 
 The reviewer-only fictional helper prepares lot/stock prerequisites but does not save the alert settings. Production authentication, site approval, supplier/product grouping, cross-lot reorder totals, purchasing integration, stocktake corrections, push notifications, physical reconciliation, large-scale indexing/migration and broader manual/clinical acceptance remain deferred. RSP-ISS-001 stays parked.
 
-Developer November 10, 2026: 398 scoped tests passed (213 domain, 141 HTTP/SQLite, 44 web), scoped builds and Chromium confirmed settings, combined low-stock/expiry dashboard metadata, exact record navigation and refresh passed. Coverage includes UTC boundaries, zero/unrecorded stock, withdrawn exclusion, replenishment, null threshold, read permissions, role/CSRF checks, stable pagination, scope, stale settings, audit rollback and SQLite reopen. No U-CONS-04 owner pass is inferred.
+Developer November 10, 2026: 398 scoped tests passed (213 domain, 141 HTTP/SQLite, 44 web), scoped builds and Chromium confirmed settings, combined low-stock/expiry dashboard metadata, exact record navigation and refresh passed. Coverage includes UTC boundaries, zero/unrecorded stock, withdrawn exclusion, replenishment, null threshold, read permissions, role/CSRF checks, stable pagination, scope, stale settings, audit rollback and SQLite reopen. U-CONS-04 subsequently passed from the owner screenshot.

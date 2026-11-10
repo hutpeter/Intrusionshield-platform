@@ -1,3 +1,4 @@
+import { StockReconciliationRegistry } from "@intrusionshield/sterile-processing";
 import { ConsumableStockRegistry } from "@intrusionshield/sterile-processing";
 import { createHash } from "node:crypto";
 import { ConsumableRegistry } from "@intrusionshield/sterile-processing";
@@ -637,6 +638,76 @@ export function createSterilePreview({
         ),
       );
   });
+  app.post("/preview/stock-count-example", async (req, res) => {
+    const session = res.locals.session as Session;
+    if (session.role !== "reviewer") {
+      res.status(403).json({ error: "FORBIDDEN" });
+      return;
+    }
+    if (
+      Object.keys(req.query).length ||
+      !req.body ||
+      Array.isArray(req.body) ||
+      Object.keys(req.body).length !== 1 ||
+      typeof req.body.requestId !== "string"
+    ) {
+      res.status(400).json({ error: "INVALID_REQUEST" });
+      return;
+    }
+    const requestId = sterileUuid(req.body.requestId),
+      scope = { tenantId, facilityId, actorId: actors.operator },
+      code = "COUNT-DEMO-" + requestId.toUpperCase(),
+      derived = (kind: string) => {
+        const h = createHash("sha256")
+          .update(kind + requestId)
+          .digest("hex");
+        return (
+          h.slice(0, 8) +
+          "-" +
+          h.slice(8, 12) +
+          "-4" +
+          h.slice(13, 16) +
+          "-a" +
+          h.slice(17, 20) +
+          "-" +
+          h.slice(20, 32)
+        );
+      };
+    let lot = await repository.transaction(scope, (tx) =>
+      tx.findConsumableByCode(code),
+    );
+    if (!lot)
+      lot = await new ConsumableRegistry(repository).register(scope, {
+        requestId,
+        code,
+        kind: "wrap",
+        name: "SIMULATED count wrap",
+        lotNumber: "SIMULATED-COUNT-LOT",
+        supplier: "DEMO-SUPPLIER",
+        supplierReference: "SIMULATED-DELIVERY",
+        expiresOn: "2099-01-01",
+        confirmed: true,
+      });
+    const stock = new ConsumableStockRegistry(repository);
+    if (!(await stock.report(scope, lot.id)).balance)
+      await stock.record(scope, lot.id, "receive", {
+        requestId: derived("stock:"),
+        version: 0,
+        quantity: 10,
+        reason: "SIMULATED count prerequisites",
+        reference: "SIMULATED-DELIVERY",
+        confirmed: true,
+      });
+    await new StockReconciliationRegistry(repository).record(scope, lot.id, {
+      requestId: derived("count:"),
+      stockVersion: 1,
+      countedAvailable: 8,
+      reason: "SIMULATED physical available count",
+      reference: "SIMULATED-COUNT-EVIDENCE",
+      confirmed: true,
+    });
+    res.status(201).json(lot);
+  });
   app.post("/preview/consumable-alert-example", async (req, res) => {
     const session = res.locals.session as Session;
     if (session.role !== "reviewer") {
@@ -1072,6 +1143,7 @@ export function createSterilePreview({
         fixtureGrants.has("core.authentication") &&
         fixtureGrants.has("core.authorization") &&
         ((scope.actorId === actors.operator &&
+          permission !== "consumables:reconcile" &&
           permission !== "consumables:policy" &&
           permission !== "consumables:withdraw" &&
           permission !== "equipment-incidents:write" &&
@@ -1085,6 +1157,7 @@ export function createSterilePreview({
           (scope.actorId === actors.viewer && permission.endsWith(":read")) ||
           (scope.actorId === actors.reviewer &&
             (permission.endsWith(":read") ||
+              permission === "consumables:reconcile" ||
               permission === "consumables:policy" ||
               permission === "consumables:withdraw" ||
               permission === "equipment-incidents:write" ||

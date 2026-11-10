@@ -304,6 +304,79 @@ function validConsumableAlert(
   );
 }
 export const api = {
+  stockCounts: async (
+    s: Session,
+    id: string,
+    n: number,
+    signal: AbortSignal,
+  ) => {
+    const r = await scopedPage<
+      import("@intrusionshield/sterile-processing").StockCount
+    >(
+      s,
+      base(s) + "/consumables/" + encodeURIComponent(id) + "/stock/counts",
+      n,
+      signal,
+    );
+    if (r.items.some((x) => x.lotId !== id))
+      throw new ApiError(503, "SERVICE_UNAVAILABLE");
+    return r;
+  },
+  recordStockCount: async (
+    s: Session,
+    id: string,
+    body: import("@intrusionshield/sterile-processing").StockCountInput,
+    signal: AbortSignal,
+  ) => {
+    const r = await scoped(
+      s,
+      call<import("@intrusionshield/sterile-processing").StockCount>(
+        base(s) + "/consumables/" + encodeURIComponent(id) + "/stock/counts",
+        signal,
+        body,
+        s.csrf,
+      ),
+    );
+    if (r.lotId !== id) throw new ApiError(503, "SERVICE_UNAVAILABLE");
+    return r;
+  },
+  decideStockCount: async (
+    s: Session,
+    id: string,
+    countId: string,
+    action: "approve" | "reject",
+    body: import("@intrusionshield/sterile-processing").StockCountDecisionInput,
+    signal: AbortSignal,
+  ) => {
+    const r = await scoped(
+      s,
+      call<import("@intrusionshield/sterile-processing").StockCount>(
+        base(s) +
+          "/consumables/" +
+          encodeURIComponent(id) +
+          "/stock/counts/" +
+          encodeURIComponent(countId) +
+          "/" +
+          action,
+        signal,
+        body,
+        s.csrf,
+      ),
+    );
+    if (r.lotId !== id || r.id !== countId)
+      throw new ApiError(503, "SERVICE_UNAVAILABLE");
+    return r;
+  },
+  stockCountExample: (s: Session, requestId: string, signal: AbortSignal) =>
+    scoped(
+      s,
+      call<import("@intrusionshield/sterile-processing").ConsumableLot>(
+        "/preview/stock-count-example",
+        signal,
+        { requestId },
+        s.csrf,
+      ),
+    ),
   consumableRecord: (s: Session, id: string, signal: AbortSignal) =>
     scoped(
       s,
@@ -389,10 +462,7 @@ export const api = {
   recordConsumableStock: (
     s: Session,
     id: string,
-    action: Exclude<
-      import("@intrusionshield/sterile-processing").StockAction,
-      "use"
-    >,
+    action: import("@intrusionshield/sterile-processing").ManualStockAction,
     body: import("@intrusionshield/sterile-processing").StockInput,
     signal: AbortSignal,
   ) =>

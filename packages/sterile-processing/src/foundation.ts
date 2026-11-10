@@ -134,6 +134,8 @@ export interface SterileAuditEvent {
     | "equipment-incident-finding-recorded"
     | "equipment-incident-recorded"
     | "equipment-incident-recall-created"
+    | "stock-count-recorded"
+    | "stock-count-decided"
     | "consumable-alert-policy-recorded"
     | "consumable-stock-recorded"
     | "consumable-withdrawn"
@@ -164,6 +166,7 @@ export interface SterileAuditEvent {
   reason: string;
 }
 export type SterileRecord =
+  | import("./stock-reconciliation.js").StockCount
   | import("./consumable-stock.js").StockMovement
   | import("./consumables.js").ConsumableLot
   | InstrumentType
@@ -189,6 +192,23 @@ export interface CommandReceipt {
 }
 /** All methods are scoped to the transaction's tenant/facility. Writes and audit commit together. */
 export interface SterileTransaction {
+  findStockCount(
+    id: string,
+  ): Promise<import("./stock-reconciliation.js").StockCount | null>;
+  findPendingStockCount(
+    lotId: string,
+  ): Promise<import("./stock-reconciliation.js").StockCount | null>;
+  insertStockCount(
+    item: import("./stock-reconciliation.js").StockCount,
+  ): Promise<void>;
+  updateStockCount(
+    item: import("./stock-reconciliation.js").StockCount,
+    expected: number,
+  ): Promise<void>;
+  listStockCounts(
+    lotId: string,
+    page: number,
+  ): Promise<import("./stock-reconciliation.js").StockCount[]>;
   findConsumableStock(
     id: string,
   ): Promise<import("./consumable-stock.js").ConsumableStock | null>;

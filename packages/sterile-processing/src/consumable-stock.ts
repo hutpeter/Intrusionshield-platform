@@ -16,6 +16,7 @@ export interface ConsumableStock {
   lotId: string;
   unit: "each";
   received: number;
+  adjustments?: number;
   used: number;
   quarantined: number;
   discarded: number;
@@ -24,8 +25,15 @@ export interface ConsumableStock {
   updatedAt: string;
 }
 export type StockAction =
-  "receive" | "use" | "quarantine" | "discard" | "discard_quarantined";
+  | "receive"
+  | "use"
+  | "quarantine"
+  | "discard"
+  | "discard_quarantined"
+  | "adjustment";
+export type ManualStockAction = Exclude<StockAction, "use" | "adjustment">;
 export interface StockMovement {
+  stockCountId?: string;
   id: string;
   tenantId: string;
   facilityId: string;
@@ -72,7 +80,7 @@ async function move(
   tx: SterileTransaction,
   s: SterileScope,
   lot: ConsumableLot,
-  action: StockAction,
+  action: Exclude<StockAction, "adjustment">,
   n: number,
   at: string,
   parentRequestId: string,
@@ -219,7 +227,7 @@ export class ConsumableStockRegistry extends SterileRegistryBase {
   async record(
     scope: SterileScope,
     id: string,
-    action: Exclude<StockAction, "use">,
+    action: ManualStockAction,
     input: StockInput,
   ) {
     const s = scopeOf(scope),

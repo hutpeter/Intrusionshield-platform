@@ -1,3 +1,4 @@
+import { reconciliationLabels } from "./reconciliation-text";
 import { ConsumableAlertSettings } from "./ConsumableAlertSettings";
 import { consumableAlertLabels } from "./consumable-alert-text";
 import { ConsumableStockPanel } from "./ConsumableStock";
@@ -42,6 +43,8 @@ export function ConsumablesWorkspace({
   onRecall: (id: string) => void;
   openId?: string;
 }) {
+  const rec = reconciliationLabels(language),
+    countExampleId = useRef(crypto.randomUUID());
   const al = consumableAlertLabels(language),
     [policyLot, setPolicyLot] = useState<ConsumableLot | null>(null),
     [policyDirty, setPolicyDirty] = useState(false),
@@ -51,6 +54,7 @@ export function ConsumablesWorkspace({
     [stockLot, setStockLot] = useState<{
       lot: ConsumableLot;
       initialReceive?: boolean;
+      initialReview?: boolean;
     } | null>(null),
     [stockDirty, setStockDirty] = useState(false),
     [stockBusy, setStockBusy] = useState(false),
@@ -170,6 +174,34 @@ export function ConsumablesWorkspace({
       });
     return () => a.abort();
   }, [session, openId]);
+  async function countExample() {
+    if (busy || pending.current) return;
+    const a = new AbortController();
+    pending.current = a;
+    setSaving(true);
+    setError(null);
+    try {
+      const lot = await api.stockCountExample(
+        session,
+        countExampleId.current,
+        a.signal,
+      );
+      if (!a.signal.aborted) {
+        setStockLot({ lot, initialReview: true });
+        setPage(1);
+        setNonce((n) => n + 1);
+        countExampleId.current = crypto.randomUUID();
+      }
+    } catch (e) {
+      if (!a.signal.aborted) {
+        if (e instanceof ApiError && e.status === 401) onExpired();
+        else setError(e);
+      }
+    } finally {
+      pending.current = null;
+      if (!a.signal.aborted) setSaving(false);
+    }
+  }
   async function alertExample() {
     if (busy || pending.current) return;
     const a = new AbortController();
@@ -245,6 +277,11 @@ export function ConsumablesWorkspace({
           <h1>{t.title}</h1>
           <p>{t.intro}</p>
         </div>
+        {session.canRecall && !form && !decision && !stockLot && !policyLot && (
+          <button disabled={busy} onClick={() => void countExample()}>
+            {rec.example}
+          </button>
+        )}
         {session.canRecall && !form && !decision && !stockLot && !policyLot && (
           <button disabled={busy} onClick={() => void alertExample()}>
             {al.example}
@@ -398,6 +435,7 @@ export function ConsumablesWorkspace({
           key={stockLot.lot.id}
           lot={stockLot.lot}
           initialReceive={stockLot.initialReceive}
+          initialReview={stockLot.initialReview}
           session={session}
           language={language}
           blocked={blocked || saving || decisionBusy}
@@ -524,6 +562,12 @@ export function ConsumablesWorkspace({
                     </button>
                     <small>
                       {st.available}: {r.stock?.available ?? 0} · {st.unit}
+                      {r.pendingStockCount && (
+                        <strong>
+                          {rec.pending} · {rec.difference}:{" "}
+                          {r.pendingStockCount.difference}
+                        </strong>
+                      )}
                     </small>
                     {session.canRecall && !r.withdrawal && (
                       <button

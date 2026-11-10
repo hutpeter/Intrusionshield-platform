@@ -13,9 +13,9 @@ Registering a consumable lot does not create stock. No quantities are inferred f
 ## Balances and roles
 
 - Demo operator records stock receipts with quantity, reason, delivery/evidence reference and confirmation. Receipts can document stock that is expired or withdrawn; doing so does not make it usable.
-- Demo reviewer can quarantine available stock, discard available stock or discard quarantined stock. These are recorded physical-action references, not remote physical actions. There is no quarantine release or stock correction action in this increment.
+- Demo reviewer can quarantine available stock, discard available stock or discard quarantined stock. These are recorded physical-action references, not remote physical actions. There is no quarantine release action; physical-count reconciliation is delivered separately.
 - All preview roles read balances and paginated movement history. Every receipt/movement uses scoped authorization, CSRF, strict fields, optimistic stock versions and command idempotency.
-- `received = available + used + quarantined + discarded`. Quarantine removes available items; disposal removes available or quarantined items according to the explicitly selected action. No balance may become negative. A withdrawn/expired lot has zero usable items even when its recorded available physical balance is positive. Withdrawal does not silently pretend physical stock has been quarantined.
+- `received + net approved adjustments = available + used + quarantined + discarded`. Quarantine removes available items; disposal removes available or quarantined items according to the explicitly selected action. No balance may become negative. A withdrawn/expired lot has zero usable items even when its recorded available physical balance is positive. Withdrawal does not silently pretend physical stock has been quarantined.
 - Stock versions are independent of the lot's attribute/withdrawal/recall version. Stock receipts do not invalidate unrelated lot decisions. Movement history stores its version, resulting balance, actor/time, root request reference and package association where applicable; package usage freezes before/after stock versions. Reads use 50 rows plus sentinel.
 
 ## Packaging
@@ -35,3 +35,5 @@ Developer November 10, 2026: 392 scoped tests passed (211 domain, 138 HTTP/SQLit
 Physical inventory reconciliation, adjustments/corrections, quarantine release, unit conversions, reservations before package save, supplier purchasing, stock valuation, cross-lot replenishment planning, barcode stock receipts, production migrations/indexes/scale, full manual operational and clinical acceptance remain deferred. RSP-ISS-001 remains parked.
 
 Per-lot minimum-stock settings and current dashboard stock/expiry alerts are now delivered. See [CONSUMABLE-ALERTS.md](CONSUMABLE-ALERTS.md) for the current U-CONS-04 owner check.
+
+Operator physical counts and reviewer-approved adjustments are now delivered; see [STOCK-RECONCILIATION.md](STOCK-RECONCILIATION.md). Earlier receipts/usage remain unchanged, and approved signed adjustments are tracked separately.

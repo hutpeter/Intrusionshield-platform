@@ -1,5 +1,6 @@
 import express from "express";
 import {
+  StockReconciliationRegistry,
   ConsumableAlertRegistry,
   ConsumableStockRegistry,
   ConsumableRegistry,
@@ -42,6 +43,7 @@ export interface SterileDependencies {
     scope: SterileScope,
     capability: "sterile.core",
     permission:
+      | "consumables:reconcile"
       | "consumables:policy"
       | "consumables:withdraw"
       | "consumables:read"
@@ -207,15 +209,17 @@ export function createSterileApp(
       const permission = req.path.startsWith("/consumables")
         ? readOnly
           ? "consumables:read"
-          : req.path.endsWith("/alert-policy")
-            ? "consumables:policy"
-            : req.path.endsWith("/withdraw") ||
-                req.path.endsWith("/recalls") ||
-                /\/stock\/(quarantine|discard|discard_quarantined)$/.test(
-                  req.path,
-                )
-              ? "consumables:withdraw"
-              : "consumables:write"
+          : /\/stock\/counts\/[^/]+\/(approve|reject)$/.test(req.path)
+            ? "consumables:reconcile"
+            : req.path.endsWith("/alert-policy")
+              ? "consumables:policy"
+              : req.path.endsWith("/withdraw") ||
+                  req.path.endsWith("/recalls") ||
+                  /\/stock\/(quarantine|discard|discard_quarantined)$/.test(
+                    req.path,
+                  )
+                ? "consumables:withdraw"
+                : "consumables:write"
         : (req.path.endsWith("/maintenance/authorize") ||
               req.path.endsWith("/service-policy")) &&
             !readOnly
@@ -803,6 +807,62 @@ export function createSterileApp(
     }
     return true;
   }
+  app.get(prefix + "/consumables/:id/stock/counts", async (req, res) =>
+    res.json(
+      await new StockReconciliationRegistry(dependencies.repository!).list(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        page(req),
+      ),
+    ),
+  );
+  app.post(prefix + "/consumables/:id/stock/counts", async (req, res) => {
+    noQuery(req);
+    const v = body(req.body, [
+      "requestId",
+      "stockVersion",
+      "countedAvailable",
+      "reason",
+      "reference",
+      "confirmed",
+    ]);
+    res
+      .status(201)
+      .json(
+        await new StockReconciliationRegistry(dependencies.repository!).record(
+          res.locals.scope,
+          sterileUuid(req.params.id),
+          v as unknown as Parameters<StockReconciliationRegistry["record"]>[2],
+        ),
+      );
+  });
+  for (const action of ["approve", "reject"] as const)
+    app.post(
+      prefix + "/consumables/:id/stock/counts/:countId/" + action,
+      async (req, res) => {
+        noQuery(req);
+        const v = body(req.body, [
+          "requestId",
+          "version",
+          "reason",
+          "reference",
+          "confirmed",
+        ]);
+        res.json(
+          await new StockReconciliationRegistry(
+            dependencies.repository!,
+          ).decide(
+            res.locals.scope,
+            sterileUuid(req.params.id),
+            sterileUuid(req.params.countId),
+            action,
+            v as unknown as Parameters<
+              StockReconciliationRegistry["decide"]
+            >[4],
+          ),
+        );
+      },
+    );
   app.post(prefix + "/consumables/:id/alert-policy", async (req, res) => {
     noQuery(req);
     const v = body(req.body, [

@@ -1,8 +1,8 @@
+import { StockReconciliation } from "./StockReconciliation";
 import { consumableAlertLabels } from "./consumable-alert-text";
 import { useEffect, useRef, useState } from "react";
 import type {
   ConsumableLot,
-  StockAction,
   StockInput,
 } from "@intrusionshield/sterile-processing";
 import { api, ApiError, type Session } from "./api";
@@ -11,6 +11,7 @@ import { stockLabels } from "./stock-text";
 export function ConsumableStockPanel({
   lot,
   initialReceive = false,
+  initialReview = false,
   session,
   language,
   blocked,
@@ -22,6 +23,7 @@ export function ConsumableStockPanel({
 }: {
   lot: ConsumableLot;
   initialReceive?: boolean;
+  initialReview?: boolean;
   session: Session;
   language: Language;
   blocked: boolean;
@@ -31,6 +33,8 @@ export function ConsumableStockPanel({
   onSaved: () => void;
   onClose: () => void;
 }) {
+  const [countBusy, setCountBusy] = useState(false),
+    [countDirty, setCountDirty] = useState(false);
   const t = stockLabels(language),
     c = labels(language),
     [report, setReport] = useState<Awaited<
@@ -38,9 +42,9 @@ export function ConsumableStockPanel({
     > | null>(null),
     [page, setPage] = useState(1),
     [nonce, setNonce] = useState(0),
-    [action, setAction] = useState<Exclude<StockAction, "use"> | null>(
-      initialReceive ? "receive" : null,
-    ),
+    [action, setAction] = useState<
+      import("@intrusionshield/sterile-processing").ManualStockAction | null
+    >(initialReceive ? "receive" : null),
     [quantity, setQuantity] = useState(initialReceive ? "10" : "1"),
     [reason, setReason] = useState(
       initialReceive && lot.code.startsWith("STOCK-DEMO-")
@@ -59,15 +63,15 @@ export function ConsumableStockPanel({
     [saved, setSaved] = useState(false),
     pending = useRef<AbortController | null>(null),
     requestId = useRef(crypto.randomUUID()),
-    busy = blocked || saving;
+    busy = blocked || saving || countBusy;
   useEffect(() => {
-    onBusy(saving);
+    onBusy(saving || countBusy);
     return () => onBusy(false);
-  }, [saving, onBusy]);
+  }, [saving, countBusy, onBusy]);
   useEffect(() => {
-    onDirty(!!action);
+    onDirty(!!action || countDirty);
     return () => onDirty(false);
-  }, [!!action, onDirty]);
+  }, [!!action, countDirty, onDirty]);
   useEffect(() => () => pending.current?.abort(), []);
   useEffect(() => {
     const a = new AbortController();
@@ -188,10 +192,13 @@ export function ConsumableStockPanel({
             {consumableAlertLabels(language).expiry}: {report.lot.expiresOn}
           </p>
           <p>
+            {t.adjustments}: {report.balance?.adjustments ?? 0}
+          </p>
+          <p>
             {t.unit} · {t.version}: {report.balance?.version ?? 0}
           </p>
           {!report.balance && <p>{t.none}</p>}
-          {!action && (
+          {!action && !countDirty && (
             <div>
               {session.canWrite && (
                 <button
@@ -279,6 +286,21 @@ export function ConsumableStockPanel({
               </fieldset>
             </form>
           )}
+          <StockReconciliation
+            lot={report.lot}
+            balance={report.balance}
+            initialReview={initialReview}
+            session={session}
+            language={language}
+            blocked={blocked || saving || loading || !!action}
+            onExpired={onExpired}
+            onBusy={setCountBusy}
+            onDirty={setCountDirty}
+            onSaved={() => {
+              setNonce((n) => n + 1);
+              onSaved();
+            }}
+          />
           <h3>{t.history}</h3>
           <div className="table-scroll">
             <table>
@@ -313,7 +335,7 @@ export function ConsumableStockPanel({
           </div>
           <div className="pagination">
             <button
-              disabled={busy || loading || page === 1 || !!action}
+              disabled={busy || loading || page === 1 || !!action || countDirty}
               onClick={() => setPage((p) => p - 1)}
             >
               {c.previous}

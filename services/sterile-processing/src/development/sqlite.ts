@@ -86,6 +86,8 @@ CREATE TABLE IF NOT EXISTS sp_service_usage(tenant_id TEXT NOT NULL,facility_id 
 CREATE TABLE IF NOT EXISTS sp_service_exposures(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,instrument_id TEXT NOT NULL,load_id TEXT NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,instrument_id,load_id),FOREIGN KEY(tenant_id,facility_id,instrument_id) REFERENCES sp_instruments(tenant_id,facility_id,id));
 CREATE TABLE IF NOT EXISTS sp_loaners(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,code TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,code));
 CREATE TABLE IF NOT EXISTS sp_loaner_versions(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id,version),FOREIGN KEY(tenant_id,facility_id,id) REFERENCES sp_loaners(tenant_id,facility_id,id));
+CREATE TABLE IF NOT EXISTS sp_stock_counts(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,lot_id TEXT NOT NULL,state TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),FOREIGN KEY(tenant_id,facility_id,lot_id) REFERENCES sp_consumables(tenant_id,facility_id,id));
+CREATE UNIQUE INDEX IF NOT EXISTS sp_one_pending_stock_count ON sp_stock_counts(tenant_id,facility_id,lot_id) WHERE state='pending';
 CREATE TABLE IF NOT EXISTS sp_consumable_stock(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,lot_id TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,lot_id),FOREIGN KEY(tenant_id,facility_id,lot_id) REFERENCES sp_consumables(tenant_id,facility_id,id));
 CREATE TABLE IF NOT EXISTS sp_consumable_stock_movements(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,lot_id TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,lot_id,version),FOREIGN KEY(tenant_id,facility_id,lot_id) REFERENCES sp_consumables(tenant_id,facility_id,id));
 CREATE TABLE IF NOT EXISTS sp_consumables(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,code TEXT NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,code));
@@ -1020,6 +1022,58 @@ CREATE INDEX IF NOT EXISTS sp_assignment_assembly ON sp_assignments(tenant_id,fa
               JSON.parse(
                 x.payload,
               ) as import("@intrusionshield/sterile-processing").ConsumableUse,
+          );
+        },
+        findStockCount: async (id) =>
+          read<import("@intrusionshield/sterile-processing").StockCount>(
+            "SELECT payload FROM sp_stock_counts WHERE tenant_id=? AND facility_id=? AND id=?",
+            id,
+          ),
+        findPendingStockCount: async (id) =>
+          read<import("@intrusionshield/sterile-processing").StockCount>(
+            "SELECT payload FROM sp_stock_counts WHERE tenant_id=? AND facility_id=? AND lot_id=? AND state='pending'",
+            id,
+          ),
+        insertStockCount: async (item) => {
+          own(item);
+          this.db
+            .prepare("INSERT INTO sp_stock_counts VALUES(?,?,?,?,?,?,?)")
+            .run(
+              ...args,
+              item.id,
+              item.lotId,
+              item.state,
+              item.version,
+              JSON.stringify(item),
+            );
+        },
+        updateStockCount: async (item, expected) => {
+          own(item);
+          const r = this.db
+            .prepare(
+              "UPDATE sp_stock_counts SET state=?,version=?,payload=? WHERE tenant_id=? AND facility_id=? AND id=? AND version=? AND state='pending'",
+            )
+            .run(
+              item.state,
+              item.version,
+              JSON.stringify(item),
+              ...args,
+              item.id,
+              expected,
+            );
+          if (r.changes !== 1) throw new SterileError("CONFLICT");
+        },
+        listStockCounts: async (id, page) => {
+          const rows = this.db
+            .prepare(
+              "SELECT payload FROM sp_stock_counts WHERE tenant_id=? AND facility_id=? AND lot_id=? ORDER BY rowid DESC LIMIT 51 OFFSET ?",
+            )
+            .all(...args, id, (page - 1) * 50) as { payload: string }[];
+          return rows.map(
+            (x) =>
+              JSON.parse(
+                x.payload,
+              ) as import("@intrusionshield/sterile-processing").StockCount,
           );
         },
         findConsumableStock: async (id) =>

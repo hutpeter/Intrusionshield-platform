@@ -313,3 +313,7 @@ As **Demo operator**, open **Consumable lots → Prepare fictional stock example
 ## Consumable stock alerts
 
 Enter as **Demo reviewer**, then **Consumable lots → Prepare fictional stock alert example** for the single U-CONS-04 settings check. The dashboard now has a paginated **Consumable stock and expiry alerts** queue with links to exact stock records. See [CONSUMABLE-ALERTS.md](CONSUMABLE-ALERTS.md).
+
+## Physical stock reconciliation
+
+As **Demo reviewer**, use **Consumable lots → Prepare fictional stock count example** for the single U-CONS-05 decision check. Normal operators record counts in **Stock and movements**; reviewers decide them separately. See [STOCK-RECONCILIATION.md](STOCK-RECONCILIATION.md).

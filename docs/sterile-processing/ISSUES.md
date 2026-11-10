@@ -331,4 +331,8 @@ Whole-item receipts, packaging deductions, quarantine/disposal movements and pag
 
 ## Consumable alert follow-up
 
-Reviewer-configured per-lot minimums and expiry warning days now drive a scoped dashboard queue, with exact totals, twelve-row paging and links to current stock records. U-CONS-04 remains pending. Site-wide/product-level grouping, reorder planning, notifications, physical verification and production/scale/clinical acceptance remain deferred. See [CONSUMABLE-ALERTS.md](CONSUMABLE-ALERTS.md). RSP-ISS-001 stays parked.
+Reviewer-configured per-lot minimums and expiry warning days now drive a scoped dashboard queue, with exact totals, twelve-row paging and links to current stock records. U-CONS-04 passed November 10, 2026 from the saved-settings owner screenshot. Site-wide/product-level grouping, reorder planning, notifications, physical verification and production/scale/clinical acceptance remain deferred. See [CONSUMABLE-ALERTS.md](CONSUMABLE-ALERTS.md). RSP-ISS-001 stays parked.
+
+## Stock reconciliation follow-up and Asset Management reuse
+
+Available-item physical counts, reviewer approval/rejection and signed adjustment movements are delivered with stale-version, idempotency, scope and audit protections. U-CONS-05 remains pending. Location/quarantined-stock counts, stock freezes/schedules, correction of decided counts, physical procedures and production/scale/clinical acceptance remain deferred. Reuse the ledger/threshold/count-review pattern for Ruby Asset Management when its shared-service boundaries are defined; sterile clinical gates remain separate. See [STOCK-RECONCILIATION.md](STOCK-RECONCILIATION.md). RSP-ISS-001 stays parked.

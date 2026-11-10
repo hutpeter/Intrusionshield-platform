@@ -804,3 +804,203 @@ test("reviewer alert settings preserve stock, reject stale/invalid scope and rol
   queue = await new DashboardRegistry(f.repo).queue(f.s, "consumableAlerts");
   assert.equal(queue.queue.total, 0);
 });
+
+test("physical counts preserve stock until independent approval records a signed adjustment and immutable evidence", async () => {
+  const {
+      ConsumableRegistry,
+      ConsumableStockRegistry,
+      StockReconciliationRegistry,
+    } = await import("../dist/index.js"),
+    f = await fixture(),
+    lot = await new ConsumableRegistry(f.repo).register(f.s, lotInput()),
+    stock = new ConsumableStockRegistry(f.repo),
+    r = new StockReconciliationRegistry(f.repo),
+    reviewer = { ...f.s, actorId: randomUUID() };
+  await fundLots(f, [lot], 10);
+  const input = {
+      requestId: randomUUID(),
+      stockVersion: 1,
+      countedAvailable: 8,
+      reason: "SIMULATED count",
+      reference: "COUNT-EVIDENCE",
+      confirmed: true,
+    },
+    count = await r.record(f.s, lot.id, input);
+  assert.equal(count.difference, -2);
+  assert.equal((await stock.report(f.s, lot.id)).balance.available, 10);
+  assert.deepEqual(await r.record(f.s, lot.id, input), count);
+  const decision = {
+    requestId: randomUUID(),
+    version: 1,
+    reason: "SIMULATED approved",
+    reference: "REVIEW",
+    confirmed: true,
+  };
+  await fail(r.decide(f.s, lot.id, count.id, "approve", decision), "CONFLICT");
+  const approved = await r.decide(
+    reviewer,
+    lot.id,
+    count.id,
+    "approve",
+    decision,
+  );
+  assert.equal(approved.state, "approved");
+  assert.deepEqual(
+    await r.decide(reviewer, lot.id, count.id, "approve", decision),
+    approved,
+  );
+  const report = await stock.report(f.s, lot.id);
+  assert.equal(report.balance.available, 8);
+  assert.equal(report.balance.received, 10);
+  assert.equal(report.balance.adjustments, -2);
+  assert.equal(report.movements.items[0].stockCountId, count.id);
+  assert.equal(report.movements.items[0].quantity, -2);
+  assert.equal(report.movements.items.at(-1).balance.available, 10);
+  await fail(
+    r.decide(reviewer, lot.id, count.id, "approve", {
+      ...decision,
+      requestId: randomUUID(),
+    }),
+    "CONFLICT",
+  );
+});
+test("intervening stock movements require rejection and recount; positive and zero adjustments preserve conservation", async () => {
+  const {
+      ConsumableRegistry,
+      ConsumableStockRegistry,
+      StockReconciliationRegistry,
+    } = await import("../dist/index.js"),
+    f = await fixture(),
+    lot = await new ConsumableRegistry(f.repo).register(f.s, lotInput()),
+    stock = new ConsumableStockRegistry(f.repo),
+    r = new StockReconciliationRegistry(f.repo),
+    reviewer = { ...f.s, actorId: randomUUID() },
+    countInput = {
+      requestId: randomUUID(),
+      stockVersion: 1,
+      countedAvailable: 8,
+      reason: "SIMULATED count",
+      reference: "COUNT",
+      confirmed: true,
+    },
+    decision = {
+      requestId: randomUUID(),
+      version: 1,
+      reason: "REVIEW",
+      reference: "EVIDENCE",
+      confirmed: true,
+    };
+  await fundLots(f, [lot], 10);
+  const old = await r.record(f.s, lot.id, countInput);
+  await stock.record(f.s, lot.id, "receive", {
+    requestId: randomUUID(),
+    version: 1,
+    quantity: 2,
+    reason: "NEW DELIVERY",
+    reference: "REF",
+    confirmed: true,
+  });
+  await fail(
+    r.decide(reviewer, lot.id, old.id, "approve", decision),
+    "CONFLICT",
+  );
+  await r.decide(reviewer, lot.id, old.id, "reject", {
+    ...decision,
+    requestId: randomUUID(),
+  });
+  assert.equal((await stock.report(f.s, lot.id)).balance.available, 12);
+  const count = await r.record(f.s, lot.id, {
+    ...countInput,
+    requestId: randomUUID(),
+    stockVersion: 2,
+    countedAvailable: 14,
+  });
+  await r.decide(reviewer, lot.id, count.id, "approve", {
+    ...decision,
+    requestId: randomUUID(),
+  });
+  let report = await stock.report(f.s, lot.id);
+  assert.equal(report.balance.available, 14);
+  assert.equal(report.balance.adjustments, 2);
+  const zero = await r.record(f.s, lot.id, {
+      ...countInput,
+      requestId: randomUUID(),
+      stockVersion: 3,
+      countedAvailable: 14,
+    }),
+    approved = await r.decide(reviewer, lot.id, zero.id, "approve", {
+      ...decision,
+      requestId: randomUUID(),
+    });
+  assert.equal(approved.decision.movementId, null);
+  report = await stock.report(f.s, lot.id);
+  assert.equal(report.balance.version, 3);
+  assert.equal(report.movements.items.length, 3);
+});
+test("count validation, pending uniqueness, scope and approval audit rollback protect stock and count decisions", async () => {
+  const {
+      ConsumableRegistry,
+      ConsumableStockRegistry,
+      StockReconciliationRegistry,
+    } = await import("../dist/index.js"),
+    f = await fixture(),
+    lot = await new ConsumableRegistry(f.repo).register(f.s, lotInput()),
+    r = new StockReconciliationRegistry(f.repo),
+    reviewer = { ...f.s, actorId: randomUUID() },
+    input = {
+      requestId: randomUUID(),
+      stockVersion: 1,
+      countedAvailable: 0,
+      reason: "SIMULATED zero count",
+      reference: "COUNT",
+      confirmed: true,
+    };
+  await fundLots(f, [lot], 10);
+  for (const extra of [
+    { countedAvailable: -1 },
+    { countedAvailable: 0.5 },
+    { confirmed: false },
+    { reference: "" },
+  ])
+    await fail(
+      r.record(f.s, lot.id, { ...input, ...extra }),
+      "INVALID_REQUEST",
+    );
+  const count = await r.record(f.s, lot.id, input);
+  await fail(
+    r.record(f.s, lot.id, { ...input, requestId: randomUUID() }),
+    "CONFLICT",
+  );
+  await fail(r.list({ ...f.s, facilityId: randomUUID() }, lot.id), "NOT_FOUND");
+  const decision = {
+    requestId: randomUUID(),
+    version: 1,
+    reason: "REVIEW",
+    reference: "REF",
+    confirmed: true,
+  };
+  await fail(
+    r.decide(reviewer, randomUUID(), count.id, "approve", decision),
+    "NOT_FOUND",
+  );
+  f.repo.failAudit = true;
+  await assert.rejects(
+    r.decide(reviewer, lot.id, count.id, "approve", decision),
+  );
+  assert.equal(
+    (await new ConsumableStockRegistry(f.repo).report(f.s, lot.id)).balance
+      .available,
+    10,
+  );
+  assert.equal((await r.list(f.s, lot.id)).items[0].state, "pending");
+  f.repo.failAudit = false;
+  const approved = await r.decide(
+    reviewer,
+    lot.id,
+    count.id,
+    "approve",
+    decision,
+  );
+  assert.equal(approved.state, "approved");
+  assert.equal(f.repo.state.consumableStock[0].available, 0);
+});
