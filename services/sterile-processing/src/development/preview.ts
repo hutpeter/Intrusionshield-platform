@@ -1,3 +1,5 @@
+import { ConsumableStockRegistry } from "@intrusionshield/sterile-processing";
+import { createHash } from "node:crypto";
 import { ConsumableRegistry } from "@intrusionshield/sterile-processing";
 import { prepareEquipmentIncidentExample } from "./equipment-incident-example.js";
 import { prepareUnpackagedIncidentExample } from "./unpackaged-incident-example.js";
@@ -635,6 +637,67 @@ export function createSterilePreview({
         ),
       );
   });
+  app.post("/preview/consumable-alert-example", async (req, res) => {
+    const session = res.locals.session as Session;
+    if (session.role !== "reviewer") {
+      res.status(403).json({ error: "FORBIDDEN" });
+      return;
+    }
+    if (
+      Object.keys(req.query).length ||
+      !req.body ||
+      Array.isArray(req.body) ||
+      Object.keys(req.body).length !== 1 ||
+      typeof req.body.requestId !== "string"
+    ) {
+      res.status(400).json({ error: "INVALID_REQUEST" });
+      return;
+    }
+    const requestId = sterileUuid(req.body.requestId),
+      scope = { tenantId, facilityId, actorId: actors.operator },
+      code = "ALERT-DEMO-" + requestId.toUpperCase();
+    let lot = await repository.transaction(scope, (tx) =>
+      tx.findConsumableByCode(code),
+    );
+    if (!lot)
+      lot = await new ConsumableRegistry(repository).register(scope, {
+        requestId,
+        code,
+        kind: "wrap",
+        name: "SIMULATED alert wrap",
+        lotNumber: "SIMULATED-ALERT-LOT",
+        supplier: "DEMO-SUPPLIER",
+        supplierReference: "SIMULATED-ALERT-DELIVERY",
+        expiresOn: new Date(Date.now() + 3 * 86400000)
+          .toISOString()
+          .slice(0, 10),
+        confirmed: true,
+      });
+    const stock = new ConsumableStockRegistry(repository);
+    if (!(await stock.report(scope, lot.id)).balance) {
+      const h = createHash("sha256")
+        .update("alert-stock:" + requestId)
+        .digest("hex");
+      await stock.record(scope, lot.id, "receive", {
+        requestId:
+          h.slice(0, 8) +
+          "-" +
+          h.slice(8, 12) +
+          "-4" +
+          h.slice(13, 16) +
+          "-a" +
+          h.slice(17, 20) +
+          "-" +
+          h.slice(20, 32),
+        version: 0,
+        quantity: 5,
+        reason: "SIMULATED alert prerequisites",
+        reference: "SIMULATED-ALERT-DELIVERY",
+        confirmed: true,
+      });
+    }
+    res.status(201).json(lot);
+  });
   app.post("/preview/consumable-stock-example", async (req, res) => {
     const session = res.locals.session as Session;
     if (session.role !== "operator") {
@@ -652,24 +715,22 @@ export function createSterilePreview({
       return;
     }
     const requestId = sterileUuid(req.body.requestId);
-    res
-      .status(201)
-      .json(
-        await new ConsumableRegistry(repository).register(
-          { tenantId, facilityId, actorId: actors.operator },
-          {
-            requestId,
-            code: "STOCK-DEMO-" + requestId,
-            kind: "wrap",
-            name: "SIMULATED stock wrap",
-            lotNumber: "SIMULATED-STOCK-LOT",
-            supplier: "DEMO-SUPPLIER",
-            supplierReference: "SIMULATED-DELIVERY",
-            expiresOn: "2099-01-01",
-            confirmed: true,
-          },
-        ),
-      );
+    res.status(201).json(
+      await new ConsumableRegistry(repository).register(
+        { tenantId, facilityId, actorId: actors.operator },
+        {
+          requestId,
+          code: "STOCK-DEMO-" + requestId,
+          kind: "wrap",
+          name: "SIMULATED stock wrap",
+          lotNumber: "SIMULATED-STOCK-LOT",
+          supplier: "DEMO-SUPPLIER",
+          supplierReference: "SIMULATED-DELIVERY",
+          expiresOn: "2099-01-01",
+          confirmed: true,
+        },
+      ),
+    );
   });
   app.post("/preview/equipment-incident-example", async (req, res) => {
     const session = res.locals.session as Session;
@@ -1011,6 +1072,7 @@ export function createSterilePreview({
         fixtureGrants.has("core.authentication") &&
         fixtureGrants.has("core.authorization") &&
         ((scope.actorId === actors.operator &&
+          permission !== "consumables:policy" &&
           permission !== "consumables:withdraw" &&
           permission !== "equipment-incidents:write" &&
           permission !== "equipment:write" &&
@@ -1023,6 +1085,7 @@ export function createSterilePreview({
           (scope.actorId === actors.viewer && permission.endsWith(":read")) ||
           (scope.actorId === actors.reviewer &&
             (permission.endsWith(":read") ||
+              permission === "consumables:policy" ||
               permission === "consumables:withdraw" ||
               permission === "equipment-incidents:write" ||
               permission === "equipment:write" ||

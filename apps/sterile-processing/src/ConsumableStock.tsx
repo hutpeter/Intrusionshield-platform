@@ -1,3 +1,4 @@
+import { consumableAlertLabels } from "./consumable-alert-text";
 import { useEffect, useRef, useState } from "react";
 import type {
   ConsumableLot,
@@ -178,6 +179,14 @@ export function ConsumableStockPanel({
               <dd>{usable}</dd>
             </div>
           </dl>
+          <p>
+            {consumableAlertLabels(language).minimumShort}:{" "}
+            {report.lot.alertPolicy?.minimumStock ??
+              consumableAlertLabels(language).none}{" "}
+            · {consumableAlertLabels(language).warning}:{" "}
+            {report.lot.alertPolicy?.warningDays ?? 7} ·{" "}
+            {consumableAlertLabels(language).expiry}: {report.lot.expiresOn}
+          </p>
           <p>
             {t.unit} · {t.version}: {report.balance?.version ?? 0}
           </p>

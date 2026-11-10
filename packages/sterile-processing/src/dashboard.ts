@@ -14,9 +14,11 @@ export const dashboardQueueIds = [
   "recall",
   "maintenance",
   "packageAlerts",
+  "consumableAlerts",
 ] as const;
 export type DashboardQueueId = (typeof dashboardQueueIds)[number];
 export type DashboardWorkspace =
+  | "consumables"
   | "processing"
   | "trays"
   | "packaging"
@@ -35,8 +37,10 @@ export const dashboardWorkspaces: Record<DashboardQueueId, DashboardWorkspace> =
     recall: "recalls",
     maintenance: "instruments",
     packageAlerts: "packaging",
+    consumableAlerts: "consumables",
   };
 export interface DashboardRow {
+  consumableAlert?: import("./consumable-alerts.js").ConsumableAlert;
   id: string;
   code: string;
   state: string;

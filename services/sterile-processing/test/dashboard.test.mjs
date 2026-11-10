@@ -202,7 +202,7 @@ test("dashboard endpoint is read-only for preview roles and rejects query inject
     const r = await f.call(f.base + "/dashboard");
     assert.equal(r.status, 200);
     const data = await r.json();
-    assert.equal(data.queues.length, 9);
+    assert.equal(data.queues.length, 10);
     assert.equal(data.limit, 12);
     assert.ok(data.queues.every((q) => q.access === "allowed"));
   }

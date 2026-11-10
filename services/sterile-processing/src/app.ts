@@ -1,5 +1,6 @@
 import express from "express";
 import {
+  ConsumableAlertRegistry,
   ConsumableStockRegistry,
   ConsumableRegistry,
   InstrumentRegistry,
@@ -41,6 +42,7 @@ export interface SterileDependencies {
     scope: SterileScope,
     capability: "sterile.core",
     permission:
+      | "consumables:policy"
       | "consumables:withdraw"
       | "consumables:read"
       | "consumables:write"
@@ -205,13 +207,15 @@ export function createSterileApp(
       const permission = req.path.startsWith("/consumables")
         ? readOnly
           ? "consumables:read"
-          : req.path.endsWith("/withdraw") ||
-              req.path.endsWith("/recalls") ||
-              /\/stock\/(quarantine|discard|discard_quarantined)$/.test(
-                req.path,
-              )
-            ? "consumables:withdraw"
-            : "consumables:write"
+          : req.path.endsWith("/alert-policy")
+            ? "consumables:policy"
+            : req.path.endsWith("/withdraw") ||
+                req.path.endsWith("/recalls") ||
+                /\/stock\/(quarantine|discard|discard_quarantined)$/.test(
+                  req.path,
+                )
+              ? "consumables:withdraw"
+              : "consumables:write"
         : (req.path.endsWith("/maintenance/authorize") ||
               req.path.endsWith("/service-policy")) &&
             !readOnly
@@ -329,6 +333,7 @@ export function createSterileApp(
     recall: "recall:read",
     maintenance: "instruments:read",
     packageAlerts: "packaging:read",
+    consumableAlerts: "consumables:read",
   } as const;
   app.get(prefix + "/dashboard", async (req, res) => {
     noQuery(req);
@@ -798,6 +803,25 @@ export function createSterileApp(
     }
     return true;
   }
+  app.post(prefix + "/consumables/:id/alert-policy", async (req, res) => {
+    noQuery(req);
+    const v = body(req.body, [
+      "requestId",
+      "version",
+      "minimumStock",
+      "warningDays",
+      "reason",
+      "reference",
+      "confirmed",
+    ]);
+    res.json(
+      await new ConsumableAlertRegistry(dependencies.repository!).configure(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        v as unknown as Parameters<ConsumableAlertRegistry["configure"]>[2],
+      ),
+    );
+  });
   app.get(prefix + "/consumables/:id/stock", async (req, res) =>
     res.json(
       await new ConsumableStockRegistry(dependencies.repository!).report(

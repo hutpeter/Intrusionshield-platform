@@ -17,7 +17,7 @@ const en = {
   next: "Next",
   of: "of",
   units: "Related items",
-  note: "Queues can overlap and count different records: episodes, trays, packages, loads, returns, recall cases or instruments. Counts are a snapshot, not permission to proceed. Each record is checked again when opened.",
+  note: "Queues can overlap and count different records: episodes, trays, packages, loads, returns, recall cases, instruments or consumable lots. Counts are a snapshot, not permission to proceed. Each record is checked again when opened.",
   error: "Queues could not be loaded. Refresh to retry.",
   cleaning: "Cleaning awaiting work",
   inspection: "Awaiting inspection",
@@ -28,6 +28,7 @@ const en = {
   recall: "Recall actions outstanding",
   maintenance: "Instruments requiring maintenance or service",
   packageAlerts: "Package integrity and expiry alerts",
+  consumableAlerts: "Consumable stock and expiry alerts",
 };
 const es: typeof en = {
   title: "Panel operativo",
@@ -47,7 +48,7 @@ const es: typeof en = {
   next: "Siguiente",
   of: "de",
   units: "Elementos relacionados",
-  note: "Las colas pueden solaparse y cuentan episodios, bandejas, paquetes, cargas, devoluciones, casos de retirada o instrumentos. Son una instantánea, no autorización para continuar. Se verifica el registro vigente al abrirlo.",
+  note: "Las colas pueden solaparse y cuentan episodios, bandejas, paquetes, cargas, devoluciones, casos de retirada, instrumentos o lotes de consumibles. Son una instantánea, no autorización para continuar. Se verifica el registro vigente al abrirlo.",
   error: "No se pudieron cargar las colas. Actualice para reintentar.",
   cleaning: "Limpieza pendiente de trabajo",
   inspection: "Inspección pendiente",
@@ -58,6 +59,7 @@ const es: typeof en = {
   recall: "Acciones de retirada pendientes",
   maintenance: "Instrumentos retenidos por mantenimiento",
   packageAlerts: "Alertas de integridad y caducidad de paquetes",
+  consumableAlerts: "Alertas de existencias y caducidad de consumibles",
 };
 const fr: typeof en = {
   title: "Tableau opérationnel",
@@ -77,7 +79,7 @@ const fr: typeof en = {
   next: "Suivant",
   of: "sur",
   units: "Éléments associés",
-  note: "Les files peuvent se chevaucher et comptent épisodes, plateaux, emballages, charges, retours, rappels ou instruments. Cet instantané n’autorise aucune action. Chaque fiche actuelle est revérifiée à l’ouverture.",
+  note: "Les files peuvent se chevaucher et comptent épisodes, plateaux, emballages, charges, retours, rappels, instruments ou lots de consommables. Cet instantané n’autorise aucune action. Chaque fiche actuelle est revérifiée à l’ouverture.",
   error: "Files non chargées. Actualisez pour réessayer.",
   cleaning: "Nettoyage en attente de travail",
   inspection: "Inspection en attente",
@@ -88,6 +90,7 @@ const fr: typeof en = {
   recall: "Actions de rappel en attente",
   maintenance: "Instruments bloqués pour maintenance",
   packageAlerts: "Alertes d’intégrité et de péremption des paquets",
+  consumableAlerts: "Alertes de stock et péremption des consommables",
 };
 export const dashboardLabels = (l: Language) =>
   l === "es" ? es : l === "fr" ? fr : en;

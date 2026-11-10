@@ -134,6 +134,7 @@ export interface SterileAuditEvent {
     | "equipment-incident-finding-recorded"
     | "equipment-incident-recorded"
     | "equipment-incident-recall-created"
+    | "consumable-alert-policy-recorded"
     | "consumable-stock-recorded"
     | "consumable-withdrawn"
     | "consumable-recall-created"

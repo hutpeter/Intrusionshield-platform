@@ -1138,6 +1138,11 @@ function Workspace({
         {tab === "consumables" && (
           <ConsumablesWorkspace
             key={trayReset}
+            openId={
+              dashboardTarget?.workspace === "consumables"
+                ? dashboardTarget.id
+                : undefined
+            }
             session={session}
             language={language}
             blocked={blocked}

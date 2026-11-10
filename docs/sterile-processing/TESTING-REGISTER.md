@@ -921,10 +921,16 @@ Developer November 9, 2026: 379 scoped tests passed (205 domain, 133 HTTP/SQLite
 
 Developer November 10, 2026: 385 scoped tests passed (208 domain, 135 HTTP/SQLite, 42 web), scoped builds and Chromium full withdrawal/explicit linked recall/navigation/refresh passed. Broader manufacturer-lot grouping, physical quarantine/notification, inventory, production/clinical policies and exception acceptance remain deferred. U-CONS-01 is passed. U-TRACE-01 and original U-LOANER-01 remain unconfirmed; RSP-ISS-001 stays parked.
 
-## Current owner check — consumable stock receipt
+## Previous owner check — consumable stock receipt
 
-**U-CONS-03 pending:** Demo operator → **Consumable lots** → **Prepare fictional stock example** → review prefilled receipt for 10 items → tick stock confirmation → **Save stock movement**. Expect **Stock movement recorded.**, Total received 10 and Available balance 10. This is the only owner check; packaging deductions, quarantine/disposal, concurrent overspend prevention and reload are developer-verified. See [CONSUMABLE-STOCK.md](CONSUMABLE-STOCK.md).
+**U-CONS-03 passed November 10, 2026:** owner screenshot confirms Stock movement recorded, Total received 10, Available balance 10, usable stock 10 and receipt movement version 1. Original check: Demo operator → **Consumable lots** → **Prepare fictional stock example** → review prefilled receipt for 10 items → tick stock confirmation → **Save stock movement**. Expect **Stock movement recorded.**, Total received 10 and Available balance 10. This is the only owner check; packaging deductions, quarantine/disposal, concurrent overspend prevention and reload are developer-verified. See [CONSUMABLE-STOCK.md](CONSUMABLE-STOCK.md).
 
-U-CONS-02 passed from the November 10 owner screenshot. Broader physical inventory, correction/conversion/threshold policies, production migration/scale and manual/clinical acceptance remain deferred. U-TRACE-01 and original U-LOANER-01 remain unconfirmed; RSP-ISS-001 stays parked. No U-CONS-03 owner pass is inferred.
+U-CONS-02 passed from the November 10 owner screenshot. Broader physical inventory, correction/conversion/threshold policies, production migration/scale and manual/clinical acceptance remain deferred. U-TRACE-01 and original U-LOANER-01 remain unconfirmed; RSP-ISS-001 stays parked. U-CONS-03 subsequently passed from the owner receipt screenshot.
 
-Developer November 10, 2026: 392 scoped tests passed (211 domain, 138 HTTP/SQLite, 43 web), scoped builds and Chromium receipt confirmation/packaging deduction/ledger after refresh/reviewer quarantine/disposal passed. No U-CONS-03 owner acceptance is inferred.
+Developer November 10, 2026: 392 scoped tests passed (211 domain, 138 HTTP/SQLite, 43 web), scoped builds and Chromium receipt confirmation/packaging deduction/ledger after refresh/reviewer quarantine/disposal passed. U-CONS-03 subsequently passed from the owner receipt screenshot.
+
+## Current owner check — consumable stock alert settings
+
+**U-CONS-04 pending:** Demo reviewer → **Consumable lots → Prepare fictional stock alert example** → review minimum 10, warning 7 and simulated references → tick settings confirmation → **Save alert settings**. Expect **Alert settings saved.**, Minimum stock 10 and Expiry warning days 7. This is the only owner check; dashboard alerts, paging and exact stock-record navigation are developer-verified. See [CONSUMABLE-ALERTS.md](CONSUMABLE-ALERTS.md).
+
+Developer November 10, 2026: 398 scoped tests passed (213 domain, 141 HTTP/SQLite, 44 web), builds and Chromium confirmed settings/combined alerts/source navigation/refresh passed. U-CONS-03 passed from the owner screenshot. Broader site thresholds, grouping/reordering, notifications, physical stocktake and production/clinical acceptance remain deferred. U-TRACE-01 and original U-LOANER-01 remain unconfirmed. RSP-ISS-001 stays parked. No U-CONS-04 owner pass is inferred.

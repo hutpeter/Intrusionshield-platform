@@ -1,4 +1,5 @@
 /** SQL-free test adapter only. Never loaded by the service composition root. */
+import { consumableAlert } from "../dist/consumable-alerts.js";
 export class MemoryRepository {
   state = {
     serviceUsages: [],
@@ -269,6 +270,50 @@ export class MemoryRepository {
         };
       },
       dashboardQueue: async (id, offset = 0) => {
+        if (id === "consumableAlerts") {
+          const now = new Date().toISOString(),
+            rows = s.consumables
+              .filter(own)
+              .flatMap((lot) => {
+                const stock =
+                    s.consumableStock.find(
+                      (x) => own(x) && x.lotId === lot.id,
+                    ) ?? null,
+                  a = consumableAlert(lot, stock, now);
+                return a
+                  ? [
+                      {
+                        id: lot.id,
+                        code: lot.code,
+                        state: "consumable_alert",
+                        units: a.available,
+                        updatedAt: [
+                          lot.createdAt,
+                          lot.alertPolicy?.at ?? lot.createdAt,
+                          stock?.updatedAt ?? lot.createdAt,
+                        ]
+                          .sort()
+                          .at(-1),
+                        consumableAlert: a,
+                        expiresOn: lot.expiresOn,
+                      },
+                    ]
+                  : [];
+              })
+              .sort(
+                (a, b) =>
+                  a.expiresOn.localeCompare(b.expiresOn) ||
+                  a.code.localeCompare(b.code) ||
+                  a.id.localeCompare(b.id),
+              );
+          return {
+            total: rows.length,
+            items: rows
+              .slice(offset, offset + 12)
+              .map(({ expiresOn, ...r }) => r),
+          };
+        }
+
         const pending = (r) =>
           s.recallInstruments.some(
             (i) =>

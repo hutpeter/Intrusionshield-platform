@@ -10,11 +10,75 @@ export function readDashboardQueue(
   id: DashboardQueueId,
   offset = 0,
 ): { total: number; items: DashboardRow[] } {
+  if (id === "consumableAlerts") {
+    const today = new Date().toISOString().slice(0, 10),
+      available = "coalesce(json_extract(s.payload,'$.available'),0)",
+      minimum = "json_extract(p.payload,'$.alertPolicy.minimumStock')",
+      warning =
+        "coalesce(json_extract(p.payload,'$.alertPolicy.warningDays'),7)",
+      expires = "json_extract(p.payload,'$.expiresOn')",
+      low = `(${minimum} IS NOT NULL AND ${available}<=${minimum})`,
+      expiry = `(${available}>0 AND julianday(${expires})<=julianday(?) + ${warning})`,
+      from = `FROM sp_consumables p LEFT JOIN sp_consumable_stock s ON s.tenant_id=p.tenant_id AND s.facility_id=p.facility_id AND s.lot_id=p.id WHERE p.tenant_id=? AND p.facility_id=? AND json_extract(p.payload,'$.withdrawal') IS NULL AND (${low} OR ${expiry})`,
+      total = (
+        db.prepare(`SELECT count(*) AS n ${from}`).get(...args, today) as {
+          n: number;
+        }
+      ).n;
+    const rows = db
+      .prepare(
+        `SELECT p.id,p.code, max(json_extract(p.payload,'$.createdAt'),coalesce(json_extract(p.payload,'$.alertPolicy.at'),json_extract(p.payload,'$.createdAt')),coalesce(json_extract(s.payload,'$.updatedAt'),json_extract(p.payload,'$.createdAt'))) AS updatedAt,${available} AS units,p.payload AS lot,s.payload AS stock ${from} ORDER BY ${expires} ASC,p.code ASC,p.id ASC LIMIT 12 OFFSET ?`,
+      )
+      .all(...args, today, offset) as {
+      id: string;
+      code: string;
+      updatedAt: string;
+      units: number;
+      lot: string;
+      stock: string | null;
+    }[];
+    return {
+      total,
+      items: rows.map((r) => {
+        const lot = JSON.parse(r.lot),
+          stock = r.stock ? JSON.parse(r.stock) : null,
+          minimumStock = lot.alertPolicy?.minimumStock ?? null,
+          warningDays = lot.alertPolicy?.warningDays ?? 7,
+          days = (Date.parse(lot.expiresOn) - Date.parse(today)) / 86400000,
+          lowStock = minimumStock !== null && r.units <= minimumStock,
+          expiry =
+            r.units > 0 && Number.isFinite(days) && days <= warningDays
+              ? days < 0
+                ? ("expired" as const)
+                : ("expiring" as const)
+              : ("current" as const);
+        return {
+          id: r.id,
+          code: r.code,
+          updatedAt: r.updatedAt,
+          units: r.units,
+          state: "consumable_alert",
+          consumableAlert: {
+            available: r.units,
+            minimumStock,
+            warningDays,
+            expiresOn: lot.expiresOn,
+            lowStock,
+            expiry,
+            stockRecorded: !!stock,
+          },
+        };
+      }),
+    };
+  }
   const state = "json_extract(p.payload,'$.state')",
     same = (alias: string) =>
       `${alias}.tenant_id=p.tenant_id AND ${alias}.facility_id=p.facility_id`,
     pending = `EXISTS(SELECT 1 FROM sp_recall_instruments ri WHERE ${same("ri")} AND ri.recall_id=p.id AND NOT EXISTS(SELECT 1 FROM sp_recall_readmissions rm WHERE rm.tenant_id=ri.tenant_id AND rm.facility_id=ri.facility_id AND rm.instrument_id=ri.instrument_id AND rm.recall_id=ri.recall_id))`;
-  const configs: Record<DashboardQueueId, [string, string, string]> = {
+  const configs: Record<
+    Exclude<DashboardQueueId, "consumableAlerts">,
+    [string, string, string]
+  > = {
     cleaning: [
       "sp_processing",
       `${state} IN ('received','cleaning_failed','inspection_failed')`,

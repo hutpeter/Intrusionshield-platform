@@ -689,3 +689,118 @@ test("stock and package multi-lot writes roll back together on insufficient indi
   assert.equal(f.repo.state.packages.length, 0);
   assert.equal(f.repo.state.consumableStockMovements.length, 2);
 });
+
+test("consumable alert boundaries use inclusive UTC expiry and configured minimum without inferring quantities", async () => {
+  const { consumableAlert } = await import("../dist/index.js"),
+    lot = { expiresOn: "2026-11-17" },
+    stock = { available: 5 },
+    at = "2026-11-10T23:59:59.999Z";
+  assert.equal(consumableAlert(lot, stock, at).expiry, "expiring");
+  assert.equal(
+    consumableAlert({ ...lot, expiresOn: "2026-11-18" }, stock, at),
+    null,
+  );
+  assert.equal(
+    consumableAlert({ ...lot, expiresOn: "2026-11-10" }, stock, at).expiry,
+    "expiring",
+  );
+  assert.equal(
+    consumableAlert({ ...lot, expiresOn: "2026-11-09" }, stock, at).expiry,
+    "expired",
+  );
+  assert.equal(consumableAlert(lot, { available: 0 }, at), null);
+  assert.equal(
+    consumableAlert({ ...lot, withdrawal: { at } }, stock, at),
+    null,
+  );
+  const policy = { minimumStock: 5, warningDays: 7 };
+  assert.equal(
+    consumableAlert({ ...lot, alertPolicy: policy }, stock, at).lowStock,
+    true,
+  );
+  assert.equal(
+    consumableAlert({ ...lot, alertPolicy: policy }, { available: 6 }, at)
+      .lowStock,
+    false,
+  );
+  assert.equal(
+    consumableAlert(
+      { ...lot, alertPolicy: { ...policy, minimumStock: 0 } },
+      null,
+      at,
+    ).stockRecorded,
+    false,
+  );
+});
+test("reviewer alert settings preserve stock, reject stale/invalid scope and roll back with audit failures", async () => {
+  const { ConsumableRegistry, ConsumableAlertRegistry, DashboardRegistry } =
+      await import("../dist/index.js"),
+    f = await fixture(),
+    r = new ConsumableAlertRegistry(f.repo),
+    lot = await new ConsumableRegistry(f.repo).register(
+      f.s,
+      lotInput({ expiresOn: "2099-01-01" }),
+    );
+  await fundLots(f, [lot], 5);
+  const input = {
+      requestId: randomUUID(),
+      version: 1,
+      minimumStock: 5,
+      warningDays: 7,
+      reason: "SIMULATED threshold",
+      reference: "POLICY",
+      confirmed: true,
+    },
+    saved = await r.configure(f.s, lot.id, input);
+  assert.equal(saved.version, 2);
+  assert.deepEqual(await r.configure(f.s, lot.id, input), saved);
+  assert.equal(f.repo.state.consumableStock[0].available, 5);
+  let queue = await new DashboardRegistry(f.repo).queue(
+    f.s,
+    "consumableAlerts",
+  );
+  assert.equal(queue.queue.total, 1);
+  assert.equal(queue.queue.items[0].consumableAlert.minimumStock, 5);
+  await fail(
+    r.configure(f.s, lot.id, { ...input, requestId: randomUUID() }),
+    "CONFLICT",
+  );
+  for (const extra of [
+    { minimumStock: -1 },
+    { minimumStock: 1.5 },
+    { warningDays: 0 },
+    { warningDays: 366 },
+    { confirmed: false },
+    { reference: "" },
+  ])
+    await fail(
+      r.configure(f.s, lot.id, { ...input, ...extra }),
+      "INVALID_REQUEST",
+    );
+  await fail(
+    r.configure({ ...f.s, facilityId: randomUUID() }, lot.id, input),
+    "NOT_FOUND",
+  );
+  f.repo.failAudit = true;
+  await assert.rejects(
+    r.configure(f.s, lot.id, {
+      ...input,
+      requestId: randomUUID(),
+      version: 2,
+      minimumStock: 1,
+    }),
+  );
+  f.repo.failAudit = false;
+  assert.equal(
+    (await new ConsumableRegistry(f.repo).detail(f.s, lot.id)).version,
+    2,
+  );
+  await r.configure(f.s, lot.id, {
+    ...input,
+    requestId: randomUUID(),
+    version: 2,
+    minimumStock: null,
+  });
+  queue = await new DashboardRegistry(f.repo).queue(f.s, "consumableAlerts");
+  assert.equal(queue.queue.total, 0);
+});

@@ -1,8 +1,8 @@
 # Consumable stock receipts and packaging usage
 
-## One owner check: U-CONS-03 (pending)
+## One owner check: U-CONS-03 (passed November 10, 2026)
 
-Update/restart the preview and enter as **Demo operator**. Open **Consumable lots** → **Prepare fictional stock example**. This creates a new fictional lot and opens a prefilled stock receipt for **10** items. Review the quantity/reason/reference, tick **I confirm this stock movement and quantity.**, then **Save stock movement**. Expect **Stock movement recorded.**, Total received **10** and Available balance **10**. This is the only owner check. Packaging deductions, quarantine/disposal, insufficient stock, concurrent saves and reload are developer-verified.
+Owner screenshot confirms the stock receipt, total/available/usable 10 and movement version 1. Original check: update/restart the preview and enter as **Demo operator**. Open **Consumable lots** → **Prepare fictional stock example**. This creates a new fictional lot and opens a prefilled stock receipt for **10** items. Review the quantity/reason/reference, tick **I confirm this stock movement and quantity.**, then **Save stock movement**. Expect **Stock movement recorded.**, Total received **10** and Available balance **10**. This is the only owner check. Packaging deductions, quarantine/disposal, insufficient stock, concurrent saves and reload are developer-verified.
 
 ## Units and starting balance
 
@@ -32,4 +32,6 @@ SQLite adds scoped stock balance and immutable movement tables, with lot foreign
 
 Developer November 10, 2026: 392 scoped tests passed (211 domain, 138 HTTP/SQLite, 43 web), scoped builds and Chromium receipt/packaging/refresh/reviewer quarantine/disposal passed. Checks cover quantity validation, missing receipts, conservation, idempotency, stale versions, source scope/roles/CSRF, multi-lot rollback, package-audit rollback, two-connection overspend prevention, immutable usage, trace facts, no restock on void and SQLite reopen. Chromium covers receipt confirmation, package usage and persistent balance after refresh.
 
-Physical inventory reconciliation, adjustments/corrections, quarantine release, unit conversions, reservations before package save, supplier purchasing, stock valuation, replenishment thresholds, barcode stock receipts, production migrations/indexes/scale, full manual operational and clinical acceptance remain deferred. RSP-ISS-001 remains parked.
+Physical inventory reconciliation, adjustments/corrections, quarantine release, unit conversions, reservations before package save, supplier purchasing, stock valuation, cross-lot replenishment planning, barcode stock receipts, production migrations/indexes/scale, full manual operational and clinical acceptance remain deferred. RSP-ISS-001 remains parked.
+
+Per-lot minimum-stock settings and current dashboard stock/expiry alerts are now delivered. See [CONSUMABLE-ALERTS.md](CONSUMABLE-ALERTS.md) for the current U-CONS-04 owner check.

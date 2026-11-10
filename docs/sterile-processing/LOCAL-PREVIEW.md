@@ -309,3 +309,7 @@ Enter as **Demo reviewer**, open **Consumable lots** and use **Withdraw lot** on
 ## Consumable stock
 
 As **Demo operator**, open **Consumable lots → Prepare fictional stock example** for the single U-CONS-03 receipt check. Stock is added only after confirmation. New registered-lot packaging requires quantities and available stock. See [CONSUMABLE-STOCK.md](CONSUMABLE-STOCK.md).
+
+## Consumable stock alerts
+
+Enter as **Demo reviewer**, then **Consumable lots → Prepare fictional stock alert example** for the single U-CONS-04 settings check. The dashboard now has a paginated **Consumable stock and expiry alerts** queue with links to exact stock records. See [CONSUMABLE-ALERTS.md](CONSUMABLE-ALERTS.md).

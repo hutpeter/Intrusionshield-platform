@@ -785,6 +785,7 @@ test("dashboard rejects a mismatched workspace or hidden queue count instead of 
       "recall",
       "maintenance",
       "packageAlerts",
+      "consumableAlerts",
     ],
     workspaces = [
       "processing",
@@ -796,6 +797,7 @@ test("dashboard rejects a mismatched workspace or hidden queue count instead of 
       "recalls",
       "instruments",
       "packaging",
+      "consumables",
     ];
   const queues = ids.map((id, n) => ({
     id,
@@ -1222,4 +1224,69 @@ test("stock API validates nested lot/balance/ledger scope and sends explicit who
   await api.recordConsumableStock(session, "lot", "receive", input, signal());
   assert.equal(calls.at(-1).options.headers["x-sterile-csrf"], session.csrf);
   assert.deepEqual(JSON.parse(calls.at(-1).options.body), input);
+});
+
+test("consumable alert policy carries explicit settings and CSRF; dashboard queue accepts scoped metadata and rejects missing metadata", async (t) => {
+  let value = {
+      tenantId: session.tenantId,
+      facilityId: session.facilityId,
+      id: "lot",
+    },
+    calls = [];
+  fake(t, async (path, options) => {
+    calls.push({ path, options });
+    return response(value);
+  });
+  const input = {
+    requestId: "request",
+    version: 1,
+    minimumStock: 5,
+    warningDays: 7,
+    reason: "SIMULATED",
+    reference: "POLICY",
+    confirmed: true,
+  };
+  await api.configureConsumableAlerts(session, "lot", input, signal());
+  assert.equal(calls.at(-1).options.headers["x-sterile-csrf"], session.csrf);
+  assert.deepEqual(JSON.parse(calls.at(-1).options.body), input);
+  value = {
+    ...value,
+    page: 1,
+    limit: 12,
+    generatedAt: new Date().toISOString(),
+    queue: {
+      id: "consumableAlerts",
+      workspace: "consumables",
+      access: "allowed",
+      total: 1,
+      items: [
+        {
+          id: "lot",
+          code: "LOT",
+          state: "consumable_alert",
+          updatedAt: new Date().toISOString(),
+          units: 5,
+          consumableAlert: {
+            available: 5,
+            minimumStock: 10,
+            warningDays: 7,
+            expiresOn: "2026-11-13",
+            lowStock: true,
+            expiry: "expiring",
+            stockRecorded: true,
+          },
+        },
+      ],
+    },
+  };
+  assert.equal(
+    (await api.dashboardQueue(session, "consumableAlerts", 1, signal())).queue
+      .items[0].consumableAlert.available,
+    5,
+  );
+  delete value.queue.items[0].consumableAlert;
+  await assert.rejects(
+    api.dashboardQueue(session, "consumableAlerts", 1, signal()),
+    (e) => e.code === "SERVICE_UNAVAILABLE",
+  );
 });

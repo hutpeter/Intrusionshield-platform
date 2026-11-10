@@ -1,3 +1,5 @@
+import { ConsumableAlertSettings } from "./ConsumableAlertSettings";
+import { consumableAlertLabels } from "./consumable-alert-text";
 import { ConsumableStockPanel } from "./ConsumableStock";
 import { stockLabels } from "./stock-text";
 import { ConsumableDecision } from "./ConsumableDecision";
@@ -29,6 +31,7 @@ export function ConsumablesWorkspace({
   onDirty,
   onBusy,
   onRecall,
+  openId,
 }: {
   session: Session;
   language: Language;
@@ -37,7 +40,13 @@ export function ConsumablesWorkspace({
   onDirty: (v: boolean) => void;
   onBusy: (v: boolean) => void;
   onRecall: (id: string) => void;
+  openId?: string;
 }) {
+  const al = consumableAlertLabels(language),
+    [policyLot, setPolicyLot] = useState<ConsumableLot | null>(null),
+    [policyDirty, setPolicyDirty] = useState(false),
+    [policyBusy, setPolicyBusy] = useState(false),
+    alertExampleId = useRef(crypto.randomUUID());
   const st = stockLabels(language),
     [stockLot, setStockLot] = useState<{
       lot: ConsumableLot;
@@ -70,15 +79,15 @@ export function ConsumablesWorkspace({
     [error, setError] = useState<unknown>(null),
     [saved, setSaved] = useState(false),
     pending = useRef<AbortController | null>(null),
-    busy = blocked || saving || decisionBusy || stockBusy;
+    busy = blocked || saving || decisionBusy || stockBusy || policyBusy;
   useEffect(() => {
-    onDirty(!!form || decisionDirty || stockDirty);
+    onDirty(!!form || decisionDirty || stockDirty || policyDirty);
     return () => onDirty(false);
-  }, [!!form, decisionDirty, stockDirty, onDirty]);
+  }, [!!form, decisionDirty, stockDirty, policyDirty, onDirty]);
   useEffect(() => {
-    onBusy(saving || decisionBusy || stockBusy);
+    onBusy(saving || decisionBusy || stockBusy || policyBusy);
     return () => onBusy(false);
-  }, [saving, decisionBusy, stockBusy, onBusy]);
+  }, [saving, decisionBusy, stockBusy, policyBusy, onBusy]);
   useEffect(() => () => pending.current?.abort(), []);
   useEffect(() => {
     const a = new AbortController();
@@ -145,6 +154,50 @@ export function ConsumablesWorkspace({
       if (!a.signal.aborted) setSaving(false);
     }
   }
+  useEffect(() => {
+    if (!openId) return;
+    const a = new AbortController();
+    void api
+      .consumableRecord(session, openId, a.signal)
+      .then((lot) => {
+        if (!a.signal.aborted) setStockLot({ lot });
+      })
+      .catch((e) => {
+        if (!a.signal.aborted) {
+          if (e instanceof ApiError && e.status === 401) onExpired();
+          else setError(e);
+        }
+      });
+    return () => a.abort();
+  }, [session, openId]);
+  async function alertExample() {
+    if (busy || pending.current) return;
+    const a = new AbortController();
+    pending.current = a;
+    setSaving(true);
+    setError(null);
+    try {
+      const lot = await api.consumableAlertExample(
+        session,
+        alertExampleId.current,
+        a.signal,
+      );
+      if (!a.signal.aborted) {
+        setPolicyLot(lot);
+        setPage(1);
+        setNonce((n) => n + 1);
+        alertExampleId.current = crypto.randomUUID();
+      }
+    } catch (e) {
+      if (!a.signal.aborted) {
+        if (e instanceof ApiError && e.status === 401) onExpired();
+        else setError(e);
+      }
+    } finally {
+      pending.current = null;
+      if (!a.signal.aborted) setSaving(false);
+    }
+  }
   async function stockExample() {
     if (busy || pending.current) return;
     const a = new AbortController();
@@ -192,7 +245,12 @@ export function ConsumablesWorkspace({
           <h1>{t.title}</h1>
           <p>{t.intro}</p>
         </div>
-        {session.canWrite && !form && !decision && !stockLot && (
+        {session.canRecall && !form && !decision && !stockLot && !policyLot && (
+          <button disabled={busy} onClick={() => void alertExample()}>
+            {al.example}
+          </button>
+        )}
+        {session.canWrite && !form && !decision && !stockLot && !policyLot && (
           <div>
             <button disabled={busy} onClick={() => void stockExample()}>
               {st.example}
@@ -318,6 +376,23 @@ export function ConsumablesWorkspace({
           }}
         />
       )}
+      {policyLot && (
+        <ConsumableAlertSettings
+          key={policyLot.id}
+          lot={policyLot}
+          session={session}
+          language={language}
+          blocked={blocked || saving || stockBusy || decisionBusy}
+          onExpired={onExpired}
+          onBusy={setPolicyBusy}
+          onDirty={setPolicyDirty}
+          onClose={() => setPolicyLot(null)}
+          onSaved={(lot) => {
+            setPolicyLot(lot);
+            setNonce((n) => n + 1);
+          }}
+        />
+      )}
       {stockLot && (
         <ConsumableStockPanel
           key={stockLot.lot.id}
@@ -354,7 +429,11 @@ export function ConsumablesWorkspace({
                       ) && (
                         <button
                           disabled={
-                            busy || !!form || decisionDirty || stockDirty
+                            busy ||
+                            !!form ||
+                            decisionDirty ||
+                            stockDirty ||
+                            policyDirty
                           }
                           onClick={() =>
                             setDecision({ lot: selectedLot, packageId: x.id })
@@ -428,9 +507,16 @@ export function ConsumablesWorkspace({
                       {t.usage}
                     </button>
                     <button
-                      disabled={busy || !!form || decisionDirty || stockDirty}
+                      disabled={
+                        busy ||
+                        !!form ||
+                        decisionDirty ||
+                        stockDirty ||
+                        policyDirty
+                      }
                       onClick={() => {
                         setDecision(null);
+                        setPolicyLot(null);
                         setStockLot({ lot: r });
                       }}
                     >
@@ -439,11 +525,36 @@ export function ConsumablesWorkspace({
                     <small>
                       {st.available}: {r.stock?.available ?? 0} · {st.unit}
                     </small>
-                    {session.canRecall && (
+                    {session.canRecall && !r.withdrawal && (
                       <button
-                        disabled={busy || !!form || decisionDirty || stockDirty}
+                        disabled={
+                          busy ||
+                          !!form ||
+                          stockDirty ||
+                          decisionDirty ||
+                          policyDirty
+                        }
                         onClick={() => {
                           setStockLot(null);
+                          setDecision(null);
+                          setPolicyLot(r);
+                        }}
+                      >
+                        {al.settings}
+                      </button>
+                    )}
+                    {session.canRecall && (
+                      <button
+                        disabled={
+                          busy ||
+                          !!form ||
+                          decisionDirty ||
+                          stockDirty ||
+                          policyDirty
+                        }
+                        onClick={() => {
+                          setStockLot(null);
+                          setPolicyLot(null);
                           setDecision({ lot: r });
                         }}
                       >

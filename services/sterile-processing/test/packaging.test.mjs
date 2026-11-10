@@ -1012,3 +1012,213 @@ test("SQLite failure in package audit rolls back prior stock audits, balances, l
   assert.equal(p.consumableUsage[0].quantity, 2);
   assert.equal((await r.report(f.session, lot.id)).balance.available, 2);
 });
+
+test("stock alert settings require reviewer confirmation and CSRF; SQL dashboard derives live scoped values across stock changes", async (t) => {
+  const f = await httpFixture(t),
+    requestId = randomUUID();
+  assert.equal(
+    (await f.call("/preview/consumable-alert-example", { requestId })).status,
+    403,
+  );
+  await f.login("reviewer");
+  let response = await f.call("/preview/consumable-alert-example", {
+    requestId,
+  });
+  assert.equal(response.status, 201);
+  const lot = await response.json(),
+    path = f.base + "/consumables/" + lot.id + "/alert-policy",
+    input = {
+      requestId: randomUUID(),
+      version: 1,
+      minimumStock: 10,
+      warningDays: 7,
+      reason: "SIMULATED review",
+      reference: "POLICY",
+      confirmed: true,
+    };
+  assert.equal(
+    (await f.call(path, input, { "x-sterile-csrf": "bad" })).status,
+    403,
+  );
+  assert.equal(
+    (await f.call(path, { ...input, confirmed: false })).status,
+    400,
+  );
+  assert.equal((await f.call(path, { ...input, extra: true })).status, 400);
+  response = await f.call(path, input);
+  assert.equal(response.status, 200);
+  const saved = await response.json();
+  assert.equal(saved.version, 2);
+  assert.deepEqual(await (await f.call(path, input)).json(), saved);
+  let q = await (
+    await f.call(f.base + "/dashboard/queues/consumableAlerts")
+  ).json();
+  let item = q.queue.items.find((x) => x.id === lot.id);
+  assert.equal(q.queue.workspace, "consumables");
+  assert.equal(item.consumableAlert.available, 5);
+  assert.equal(item.consumableAlert.lowStock, true);
+  assert.equal(item.consumableAlert.expiry, "expiring");
+  await f.login("operator");
+  assert.equal(
+    (await f.call(path, { ...input, requestId: randomUUID(), version: 2 }))
+      .status,
+    403,
+  );
+  await f.call(f.base + "/consumables/" + lot.id + "/stock/receive", {
+    requestId: randomUUID(),
+    version: 1,
+    quantity: 6,
+    reason: "SIMULATED replenishment",
+    reference: "DELIVERY",
+    confirmed: true,
+  });
+  q = await (
+    await f.call(f.base + "/dashboard/queues/consumableAlerts")
+  ).json();
+  item = q.queue.items.find((x) => x.id === lot.id);
+  assert.equal(item.consumableAlert.available, 11);
+  assert.equal(item.consumableAlert.lowStock, false);
+  assert.equal(item.consumableAlert.expiry, "expiring");
+  await f.login("reviewer");
+  assert.equal(
+    (
+      await f.call(f.base + "/consumables/" + lot.id + "/withdraw", {
+        requestId: randomUUID(),
+        version: 2,
+        reason: "SIMULATED withdrawal",
+        reference: "NOTICE",
+        confirmed: true,
+      })
+    ).status,
+    200,
+  );
+  q = await (
+    await f.call(f.base + "/dashboard/queues/consumableAlerts")
+  ).json();
+  assert.equal(
+    q.queue.items.some((x) => x.id === lot.id),
+    false,
+  );
+});
+test("consumable alert queue pages cover all matching lots in stable order and exclude foreign scope, positive far-future stock and withdrawn lots", async (t) => {
+  const f = await httpFixture(t),
+    {
+      ConsumableRegistry,
+      ConsumableAlertRegistry,
+      ConsumableStockRegistry,
+      DashboardRegistry,
+      consumableAlert,
+    } = await import("@intrusionshield/sterile-processing"),
+    lots = new ConsumableRegistry(f.repo),
+    policies = new ConsumableAlertRegistry(f.repo),
+    stock = new ConsumableStockRegistry(f.repo);
+  for (let n = 0; n < 15; n++) {
+    const lot = await lots.register(f.session, {
+      requestId: randomUUID(),
+      code: "LOW-" + String(n).padStart(2, "0"),
+      kind: "wrap",
+      name: "SIMULATED",
+      lotNumber: "LOT",
+      supplier: "DEMO",
+      supplierReference: "REF",
+      expiresOn: "2099-01-01",
+      confirmed: true,
+    });
+    await policies.configure(f.session, lot.id, {
+      requestId: randomUUID(),
+      version: 1,
+      minimumStock: 0,
+      warningDays: 7,
+      reason: "SIMULATED zero-stock",
+      reference: "POLICY",
+      confirmed: true,
+    });
+  }
+  const registry = new DashboardRegistry(f.repo),
+    a = await registry.queue(f.session, "consumableAlerts", 1),
+    b = await registry.queue(f.session, "consumableAlerts", 2);
+  assert.equal(a.queue.total, 15);
+  assert.equal(a.queue.items.length, 12);
+  assert.equal(b.queue.items.length, 3);
+  assert.equal(
+    new Set([...a.queue.items, ...b.queue.items].map((x) => x.id)).size,
+    15,
+  );
+  assert.equal(
+    (
+      await registry.queue(
+        { ...f.session, facilityId: randomUUID() },
+        "consumableAlerts",
+      )
+    ).queue.total,
+    0,
+  );
+  for (const x of [...a.queue.items, ...b.queue.items]) {
+    assert.equal(x.consumableAlert.lowStock, true);
+    assert.equal(x.consumableAlert.stockRecorded, false);
+  }
+  const reopened = new PreviewSqliteRepository(f.file);
+  try {
+    const page = await new DashboardRegistry(reopened).queue(
+      f.session,
+      "consumableAlerts",
+    );
+    assert.deepEqual(page.queue.items, a.queue.items);
+  } finally {
+    reopened.close();
+  }
+});
+
+test("SQL consumable expiry alerts include the seventh warning day and expired positive balances but not an eighth day or zero balance", async (t) => {
+  const f = await httpFixture(t),
+    { ConsumableRegistry, ConsumableStockRegistry, DashboardRegistry } =
+      await import("@intrusionshield/sterile-processing"),
+    lots = new ConsumableRegistry(f.repo),
+    stock = new ConsumableStockRegistry(f.repo),
+    day = (n) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10),
+    ids = {};
+  for (const [name, days, quantity] of [
+    ["SEVEN", 7, 1],
+    ["EIGHT", 8, 1],
+    ["EXPIRED", -1, 1],
+    ["EMPTY", -1, 0],
+  ]) {
+    const lot = await lots.register(f.session, {
+      requestId: randomUUID(),
+      code: "EXPIRY-" + name,
+      kind: "pouch",
+      name: "SIMULATED",
+      lotNumber: "LOT",
+      supplier: "DEMO",
+      supplierReference: "REF",
+      expiresOn: day(days),
+      confirmed: true,
+    });
+    ids[name] = lot.id;
+    if (quantity)
+      await stock.record(f.session, lot.id, "receive", {
+        requestId: randomUUID(),
+        version: 0,
+        quantity,
+        reason: "SIMULATED",
+        reference: "REF",
+        confirmed: true,
+      });
+  }
+  const q = (
+    await new DashboardRegistry(f.repo).queue(f.session, "consumableAlerts")
+  ).queue;
+  assert.equal(q.total, 2);
+  assert.equal(
+    q.items.find((x) => x.id === ids.SEVEN).consumableAlert.expiry,
+    "expiring",
+  );
+  assert.equal(
+    q.items.find((x) => x.id === ids.EXPIRED).consumableAlert.expiry,
+    "expired",
+  );
+  assert.equal(
+    q.items.some((x) => x.id === ids.EIGHT || x.id === ids.EMPTY),
+    false,
+  );
+});

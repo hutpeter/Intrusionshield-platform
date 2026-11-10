@@ -327,4 +327,8 @@ Permanent reviewer withdrawal blocks new packaging with the exact registered lot
 
 ## Consumable inventory follow-up
 
-Whole-item receipts, packaging deductions, quarantine/disposal movements and paginated immutable stock history are delivered in the preview. U-CONS-03 remains pending. Physical reconciliation, corrections/quarantine release, conversions, purchasing/valuation/replenishment, stock reservations before packaging, legacy unlinked enforcement and production migration/index/scale/clinical acceptance remain deferred. See [CONSUMABLE-STOCK.md](CONSUMABLE-STOCK.md). RSP-ISS-001 stays parked.
+Whole-item receipts, packaging deductions, quarantine/disposal movements and paginated immutable stock history are delivered in the preview. U-CONS-03 passed November 10, 2026 from the saved-receipt owner screenshot. Physical reconciliation, corrections/quarantine release, conversions, purchasing/valuation/replenishment, stock reservations before packaging, legacy unlinked enforcement and production migration/index/scale/clinical acceptance remain deferred. See [CONSUMABLE-STOCK.md](CONSUMABLE-STOCK.md). RSP-ISS-001 stays parked.
+
+## Consumable alert follow-up
+
+Reviewer-configured per-lot minimums and expiry warning days now drive a scoped dashboard queue, with exact totals, twelve-row paging and links to current stock records. U-CONS-04 remains pending. Site-wide/product-level grouping, reorder planning, notifications, physical verification and production/scale/clinical acceptance remain deferred. See [CONSUMABLE-ALERTS.md](CONSUMABLE-ALERTS.md). RSP-ISS-001 stays parked.

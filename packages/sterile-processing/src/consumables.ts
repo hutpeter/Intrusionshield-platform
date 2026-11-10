@@ -35,6 +35,7 @@ export interface ConsumableRecallInput extends ConsumableDecisionInput {
   code: string;
 }
 export interface ConsumableLot {
+  alertPolicy?: import("./consumable-alerts.js").ConsumableAlertPolicy;
   stock?: import("./consumable-stock.js").ConsumableStock;
   withdrawal?: {
     at: string;

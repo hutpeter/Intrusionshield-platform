@@ -283,7 +283,64 @@ async function checkedIncident(
     throw new ApiError(503, "SERVICE_UNAVAILABLE");
   return r;
 }
+function validConsumableAlert(
+  a: import("@intrusionshield/sterile-processing").ConsumableAlert | undefined,
+) {
+  return (
+    !!a &&
+    Number.isSafeInteger(a.available) &&
+    a.available >= 0 &&
+    (a.minimumStock === null ||
+      (Number.isSafeInteger(a.minimumStock) && a.minimumStock >= 0)) &&
+    Number.isSafeInteger(a.warningDays) &&
+    a.warningDays >= 1 &&
+    a.warningDays <= 365 &&
+    typeof a.lowStock === "boolean" &&
+    typeof a.stockRecorded === "boolean" &&
+    ["current", "expiring", "expired"].includes(a.expiry) &&
+    typeof a.expiresOn === "string" &&
+    /^\d{4}-\d{2}-\d{2}$/.test(a.expiresOn) &&
+    Number.isFinite(Date.parse(a.expiresOn))
+  );
+}
 export const api = {
+  consumableRecord: (s: Session, id: string, signal: AbortSignal) =>
+    scoped(
+      s,
+      call<import("@intrusionshield/sterile-processing").ConsumableLot>(
+        base(s) + "/consumables/" + encodeURIComponent(id),
+        signal,
+      ),
+    ),
+  configureConsumableAlerts: (
+    s: Session,
+    id: string,
+    body: import("@intrusionshield/sterile-processing").ConsumableAlertInput,
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<import("@intrusionshield/sterile-processing").ConsumableLot>(
+        base(s) + "/consumables/" + encodeURIComponent(id) + "/alert-policy",
+        signal,
+        body,
+        s.csrf,
+      ),
+    ),
+  consumableAlertExample: (
+    s: Session,
+    requestId: string,
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<import("@intrusionshield/sterile-processing").ConsumableLot>(
+        "/preview/consumable-alert-example",
+        signal,
+        { requestId },
+        s.csrf,
+      ),
+    ),
   async consumableStock(
     s: Session,
     id: string,
@@ -972,6 +1029,7 @@ export const api = {
       recall: "recalls",
       maintenance: "instruments",
       packageAlerts: "packaging",
+      consumableAlerts: "consumables",
     };
     const q = r.queue;
     if (
@@ -989,6 +1047,8 @@ export const api = {
       (q.items.length > 0 && (page - 1) * 12 + q.items.length > q.total) ||
       q.items.some(
         (i) =>
+          (q.id === "consumableAlerts" &&
+            !validConsumableAlert(i.consumableAlert)) ||
           typeof i.id !== "string" ||
           typeof i.code !== "string" ||
           !Number.isFinite(Date.parse(i.updatedAt)),
@@ -1012,6 +1072,7 @@ export const api = {
       "recall",
       "maintenance",
       "packageAlerts",
+      "consumableAlerts",
     ];
     const workspaces = {
       cleaning: "processing",
@@ -1023,13 +1084,14 @@ export const api = {
       recall: "recalls",
       maintenance: "instruments",
       packageAlerts: "packaging",
+      consumableAlerts: "consumables",
     };
     if (
       r.limit !== 12 ||
       !Number.isFinite(Date.parse(r.generatedAt)) ||
       !Array.isArray(r.queues) ||
-      r.queues.length !== 9 ||
-      new Set(r.queues.map((q) => q.id)).size !== 9 ||
+      r.queues.length !== 10 ||
+      new Set(r.queues.map((q) => q.id)).size !== 10 ||
       r.queues.some(
         (q) =>
           !ids.includes(q.id) ||
@@ -1044,6 +1106,8 @@ export const api = {
               q.total! < q.items.length) ||
           q.items.some(
             (i) =>
+              (q.id === "consumableAlerts" &&
+                !validConsumableAlert(i.consumableAlert)) ||
               typeof i.id !== "string" ||
               typeof i.code !== "string" ||
               !Number.isFinite(Date.parse(i.updatedAt)),

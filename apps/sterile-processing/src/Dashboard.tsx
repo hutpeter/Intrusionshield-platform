@@ -1,3 +1,5 @@
+import { stockLabels } from "./stock-text";
+import { consumableAlertLabels } from "./consumable-alert-text";
 import { useEffect, useRef, useState } from "react";
 import type {
   OperationalDashboard,
@@ -191,7 +193,33 @@ export function Dashboard({
                         <li key={item.id}>
                           <div>
                             <strong>{item.code}</strong>
+                            {item.consumableAlert && (
+                              <small>
+                                {[
+                                  item.consumableAlert.lowStock
+                                    ? consumableAlertLabels(language).low
+                                    : null,
+                                  item.consumableAlert.expiry === "expiring"
+                                    ? consumableAlertLabels(language).expiring
+                                    : item.consumableAlert.expiry === "expired"
+                                      ? consumableAlertLabels(language).expired
+                                      : null,
+                                ]
+                                  .filter(Boolean)
+                                  .join(" · ")}{" "}
+                                · {consumableAlertLabels(language).available}:{" "}
+                                {item.consumableAlert.available} ·{" "}
+                                {consumableAlertLabels(language).minimumShort}:{" "}
+                                {item.consumableAlert.minimumStock ?? "—"} ·{" "}
+                                {consumableAlertLabels(language).expiry}:{" "}
+                                {item.consumableAlert.expiresOn}
+                              </small>
+                            )}
                             <small>
+                              {item.consumableAlert &&
+                                !item.consumableAlert.stockRecorded && (
+                                  <>{stockLabels(language).noReceipt} · </>
+                                )}
                               {date(item.updatedAt)}
                               {item.units !== null
                                 ? ` · ${t.units}: ${item.units}`
