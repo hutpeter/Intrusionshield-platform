@@ -340,4 +340,9 @@ Available-item physical counts, reviewer approval/rejection and signed adjustmen
 
 ## Stock count reviewer queue — preview delivered
 
-Pending counts now appear in a reviewer-only dashboard queue with current/stale status, original reason/evidence and exact count links. Decisions retain the existing stock reconciliation gates. U-REVIEWQ-01 is pending; one read-only fixture check is offered. Physical counting policy, production scale and notifications remain deferred. See [REVIEW-QUEUES.md](REVIEW-QUEUES.md). RSP-ISS-001 stays parked.
+Pending counts now appear in a reviewer-only dashboard queue with current/stale status, original reason/evidence and exact count links. Decisions retain the existing stock reconciliation gates. U-REVIEWQ-01 passed November 10, 2026 from the owner screenshot. Physical counting policy, production scale and notifications remain deferred. See [REVIEW-QUEUES.md](REVIEW-QUEUES.md). RSP-ISS-001 stays parked.
+
+
+## Consumable replenishment suggestions — preview delivered
+
+Optional reviewer target quantities now produce live suggestions for eligible low-stock lots. Existing stock and purchasing remain unchanged. U-REPLEN-01 is pending. Cross-lot grouping, pack conversions, purchasing integration, physical verification and production policy remain deferred. See [REPLENISHMENT.md](REPLENISHMENT.md). Ruby Asset Management reuse remains intended; RSP-ISS-001 stays parked.

@@ -1004,3 +1004,99 @@ test("count validation, pending uniqueness, scope and approval audit rollback pr
   assert.equal(approved.state, "approved");
   assert.equal(f.repo.state.consumableStock[0].available, 0);
 });
+
+test("replenishment targets are optional, bounded and derive suggestions only for eligible low stock", async () => {
+  const { ConsumableRegistry, ConsumableAlertRegistry, consumableAlert } =
+    await import("../dist/index.js");
+  const f = await fixture(),
+    lot = await new ConsumableRegistry(f.repo).register(
+      f.s,
+      lotInput({ expiresOn: "2099-01-01" }),
+    );
+  await fundLots(f, [lot], 5);
+  const r = new ConsumableAlertRegistry(f.repo),
+    input = {
+      requestId: randomUUID(),
+      version: 1,
+      minimumStock: 10,
+      targetStock: 20,
+      warningDays: 7,
+      reason: "SIMULATED replenishment",
+      reference: "POLICY",
+      confirmed: true,
+    };
+  for (const extra of [
+    { targetStock: 9 },
+    { targetStock: -1 },
+    { targetStock: 1.5 },
+    { targetStock: 1000000001 },
+    { minimumStock: null },
+    { targetStock: "20" },
+  ])
+    await fail(
+      r.configure(f.s, lot.id, { ...input, ...extra }),
+      "INVALID_REQUEST",
+    );
+  const saved = await r.configure(f.s, lot.id, input);
+  assert.equal(saved.alertPolicy.targetStock, 20);
+  assert.deepEqual(await r.configure(f.s, lot.id, input), saved);
+  assert.equal(f.repo.state.consumableStock[0].available, 5);
+  const alert = consumableAlert(
+    saved,
+    { available: 5 },
+    "2026-11-10T00:00:00Z",
+  );
+  assert.equal(alert.suggestedQuantity, 15);
+  assert.equal(
+    consumableAlert(saved, { available: 10 }, "2026-11-10T00:00:00Z")
+      .suggestedQuantity,
+    10,
+  );
+  assert.equal(
+    consumableAlert(saved, { available: 11 }, "2026-11-10T00:00:00Z"),
+    null,
+  );
+  assert.equal(
+    consumableAlert(
+      { ...saved, expiresOn: "2026-11-09" },
+      { available: 5 },
+      "2026-11-10T00:00:00Z",
+    ).suggestedQuantity,
+    null,
+  );
+  assert.equal(
+    consumableAlert({ ...saved, withdrawal: {} }, { available: 5 }),
+    null,
+  );
+  assert.equal(
+    consumableAlert(
+      { ...saved, alertPolicy: { ...saved.alertPolicy, targetStock: null } },
+      { available: 5 },
+    ).suggestedQuantity,
+    null,
+  );
+  assert.equal(
+    consumableAlert(saved, null, "2026-11-10T00:00:00Z").suggestedQuantity,
+    20,
+  );
+  const cleared = await r.configure(f.s, lot.id, {
+    ...input,
+    requestId: randomUUID(),
+    version: 2,
+    targetStock: null,
+  });
+  assert.equal(cleared.alertPolicy.targetStock, null);
+});
+
+test("expired empty lots never suggest replenishing their registered lot", async () => {
+  const { consumableAlert } = await import("../dist/index.js");
+  const lot = {
+    expiresOn: "2026-11-09",
+    alertPolicy: { minimumStock: 10, targetStock: 20, warningDays: 7 },
+  };
+  assert.equal(
+    consumableAlert(lot, { available: 0 }, "2026-11-10T00:00:00Z")
+      .suggestedQuantity,
+    null,
+  );
+});

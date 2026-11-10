@@ -8,7 +8,7 @@ The Operational dashboard includes **Stock counts awaiting review**. It lists pe
 
 The queue requires dashboard read, consumable read and `consumables:reconcile`. Users without source/reviewer access get no source query, records or total; the paged endpoint returns 403. Count reads in the lot workspace retain existing consumable-read permissions. Tenant/facility and lot/count association checks apply to direct links.
 
-## One owner check — U-REVIEWQ-01 pending
+## One owner check — U-REVIEWQ-01 passed November 10, 2026
 
 After updating/restarting, enter as **Demo reviewer → Operational dashboard → Prepare fictional review queue example**. In **Stock counts awaiting review**, expect two new fictional rows: **Ready for review** and **New count required**. Both show recorded 10, counted 8 and difference −2; the stale row has current available 12. This check requires no stock decision. Global totals/codes vary with existing data; use Next if earlier counts occupy the first page.
 
@@ -16,6 +16,6 @@ The reviewer-only local helper records two new operator counts with simulated re
 
 ## Validation and deferred work
 
-Scoped builds, 409 tests (216 domain, 147 HTTP/SQLite, 46 web) and Chromium verify ready/stale metadata, exact source navigation, approval/removal and stale approval denial. Automated checks cover hidden permissions/totals, strict requests, helper retry safety, stable paging, source association, independent decisions and SQLite reopen. U-CONS-05 passed from the owner's November 10 screenshot. U-REVIEWQ-01 remains pending.
+Scoped builds, 409 tests (216 domain, 147 HTTP/SQLite, 46 web) and Chromium verify ready/stale metadata, exact source navigation, approval/removal and stale approval denial. Automated checks cover hidden permissions/totals, strict requests, helper retry safety, stable paging, source association, independent decisions and SQLite reopen. U-CONS-05 passed from the owner's November 10 screenshot. U-REVIEWQ-01 passed November 10, 2026 from the owner dashboard screenshot.
 
 Physical stocktake policy, location/quarantine counting, stock freezes, production scale, notifications and broad owner exception acceptance remain deferred. U-TRACE-01 and original U-LOANER-01 remain unconfirmed. RSP-ISS-001 stays parked. Reuse of the stock ledger, thresholds and reviewer workflow for future Ruby Asset Management remains intended; no Asset module is implemented here.

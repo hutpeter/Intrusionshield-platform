@@ -944,6 +944,13 @@ Developer November 10, 2026: 406 scoped tests passed (216 domain, 145 HTTP/SQLit
 
 ## Current owner check — stock count reviewer queue
 
-**U-REVIEWQ-01 pending:** Demo reviewer → **Operational dashboard → Prepare fictional review queue example**. Expect new fictional rows in **Stock counts awaiting review** labelled **Ready for review** and **New count required**, each recorded 10/count 8/difference −2; stale current stock 12. No approval or rejection is requested. Codes/global totals vary. This is the only owner check for this build.
+**U-REVIEWQ-01 passed November 10, 2026:** owner screenshot confirms both ready/stale rows, recorded 10/counted 8/difference −2 and current 10/12. Original check: Demo reviewer → **Operational dashboard → Prepare fictional review queue example**. Expect new fictional rows in **Stock counts awaiting review** labelled **Ready for review** and **New count required**, each recorded 10/count 8/difference −2; stale current stock 12. No approval or rejection is requested. Codes/global totals vary. This is the only owner check for this build.
 
 Developer November 10, 2026: 409 scoped tests (216 domain, 147 HTTP/SQLite, 46 web), builds and Chromium verified ready/stale status, exact count navigation, approval/removal and stale approval denial. Paging, permissions, source association and SQLite reopen are automated. Physical procedures, production scale and wider owner exception checks remain deferred. U-CONS-05 is passed from the owner screenshot; U-TRACE-01 and original U-LOANER-01 remain pending; RSP-ISS-001 stays parked. See [REVIEW-QUEUES.md](REVIEW-QUEUES.md).
+
+
+## Current owner check — replenishment suggestions
+
+**U-REPLEN-01 pending:** Demo reviewer → Consumable lots → Prepare fictional stock alert example → review minimum 10/target 20 → confirm and save alert settings → Operational dashboard. Expect the new lot's alert to show target 20 and suggested replenishment 15, available 5. This is the only owner check. U-REVIEWQ-01 passed November 10 from the owner screenshot.
+
+Developer: 413 scoped tests (218 domain, 148 HTTP/SQLite, 47 web), builds and Chromium settings/suggestion/source-link/refresh checks passed. Cross-lot ordering, physical verification, production policy and broader owner exception acceptance remain deferred. U-TRACE-01 and original U-LOANER-01 remain pending; RSP-ISS-001 stays parked. See [REPLENISHMENT.md](REPLENISHMENT.md).

@@ -1,4 +1,7 @@
-import { stockCountReview } from "@intrusionshield/sterile-processing";
+import {
+  consumableAlert,
+  stockCountReview,
+} from "@intrusionshield/sterile-processing";
 import type { DatabaseSync } from "node:sqlite";
 import type {
   DashboardQueueId,
@@ -75,32 +78,14 @@ export function readDashboardQueue(
       total,
       items: rows.map((r) => {
         const lot = JSON.parse(r.lot),
-          stock = r.stock ? JSON.parse(r.stock) : null,
-          minimumStock = lot.alertPolicy?.minimumStock ?? null,
-          warningDays = lot.alertPolicy?.warningDays ?? 7,
-          days = (Date.parse(lot.expiresOn) - Date.parse(today)) / 86400000,
-          lowStock = minimumStock !== null && r.units <= minimumStock,
-          expiry =
-            r.units > 0 && Number.isFinite(days) && days <= warningDays
-              ? days < 0
-                ? ("expired" as const)
-                : ("expiring" as const)
-              : ("current" as const);
+          stock = r.stock ? JSON.parse(r.stock) : null;
         return {
           id: r.id,
           code: r.code,
           updatedAt: r.updatedAt,
           units: r.units,
           state: "consumable_alert",
-          consumableAlert: {
-            available: r.units,
-            minimumStock,
-            warningDays,
-            expiresOn: lot.expiresOn,
-            lowStock,
-            expiry,
-            stockRecorded: !!stock,
-          },
+          consumableAlert: consumableAlert(lot, stock, today + "T00:00:00Z")!,
         };
       }),
     };

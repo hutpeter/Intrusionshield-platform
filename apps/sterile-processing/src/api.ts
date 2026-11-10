@@ -298,6 +298,17 @@ function validConsumableAlert(
     typeof a.lowStock === "boolean" &&
     typeof a.stockRecorded === "boolean" &&
     ["current", "expiring", "expired"].includes(a.expiry) &&
+    (a.targetStock == null ||
+      (Number.isSafeInteger(a.targetStock) &&
+        a.minimumStock !== null &&
+        a.targetStock >= a.minimumStock &&
+        a.targetStock <= 1000000000)) &&
+    (a.suggestedQuantity == null ||
+      (Number.isSafeInteger(a.suggestedQuantity) &&
+        a.lowStock &&
+        a.expiry !== "expired" &&
+        a.targetStock != null &&
+        a.suggestedQuantity === Math.max(0, a.targetStock - a.available))) &&
     typeof a.expiresOn === "string" &&
     /^\d{4}-\d{2}-\d{2}$/.test(a.expiresOn) &&
     Number.isFinite(Date.parse(a.expiresOn))

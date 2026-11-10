@@ -257,6 +257,15 @@ export function Dashboard({
                                 </small>
                               </>
                             )}
+                            {item.consumableAlert?.suggestedQuantity !=
+                              null && (
+                              <small>
+                                {consumableAlertLabels(language).targetShort}:{" "}
+                                {item.consumableAlert.targetStock} ·{" "}
+                                {consumableAlertLabels(language).suggested}:{" "}
+                                {item.consumableAlert.suggestedQuantity}
+                              </small>
+                            )}
                             {item.consumableAlert && (
                               <small>
                                 {[

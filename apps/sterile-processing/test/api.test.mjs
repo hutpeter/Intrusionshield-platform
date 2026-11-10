@@ -1416,3 +1416,66 @@ test("review queue rejects forged count navigation and inconsistent stale metada
   await assert.rejects(api.stockCount(session, "other", "count", signal()));
   await assert.rejects(api.stockCount(session, "lot", "other", signal()));
 });
+
+test("replenishment target and suggested quantity are validated before display", async (t) => {
+  const alert = {
+    available: 5,
+    minimumStock: 10,
+    targetStock: 20,
+    suggestedQuantity: 15,
+    warningDays: 7,
+    expiresOn: "2099-01-01",
+    lowStock: true,
+    expiry: "current",
+    stockRecorded: true,
+  };
+  const value = {
+    tenantId: session.tenantId,
+    facilityId: session.facilityId,
+    generatedAt: new Date().toISOString(),
+    page: 1,
+    limit: 12,
+    queue: {
+      id: "consumableAlerts",
+      workspace: "consumables",
+      access: "allowed",
+      total: 1,
+      items: [
+        {
+          id: "lot",
+          code: "LOT",
+          state: "consumable_alert",
+          updatedAt: new Date().toISOString(),
+          units: 5,
+          consumableAlert: alert,
+        },
+      ],
+    },
+  };
+  fake(t, async () => response(value));
+  assert.equal(
+    (await api.dashboardQueue(session, "consumableAlerts", 1, signal())).queue
+      .items[0].consumableAlert.suggestedQuantity,
+    15,
+  );
+  alert.suggestedQuantity = 16;
+  await assert.rejects(
+    api.dashboardQueue(session, "consumableAlerts", 1, signal()),
+  );
+  alert.suggestedQuantity = 15;
+  alert.targetStock = 9;
+  await assert.rejects(
+    api.dashboardQueue(session, "consumableAlerts", 1, signal()),
+  );
+  alert.targetStock = 20;
+  alert.expiry = "expired";
+  await assert.rejects(
+    api.dashboardQueue(session, "consumableAlerts", 1, signal()),
+  );
+  alert.suggestedQuantity = null;
+  assert.equal(
+    (await api.dashboardQueue(session, "consumableAlerts", 1, signal())).queue
+      .items[0].consumableAlert.suggestedQuantity,
+    null,
+  );
+});

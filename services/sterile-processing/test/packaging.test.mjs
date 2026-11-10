@@ -1643,3 +1643,74 @@ test("review queue paging is stable, scoped and read-only across SQLite reopen",
     a,
   );
 });
+
+test("replenishment policy persists with scoped live suggestions and legacy settings remain usable", async (t) => {
+  const f = await httpFixture(t);
+  await f.login("reviewer");
+  const lot = await (
+      await f.call("/preview/consumable-alert-example", {
+        requestId: randomUUID(),
+      })
+    ).json(),
+    path = f.base + "/consumables/" + lot.id + "/alert-policy";
+  const input = {
+    requestId: randomUUID(),
+    version: 1,
+    minimumStock: 10,
+    targetStock: 20,
+    warningDays: 7,
+    reason: "SIMULATED target",
+    reference: "POLICY",
+    confirmed: true,
+  };
+  assert.equal((await f.call(path, { ...input, targetStock: 9 })).status, 400);
+  assert.equal((await f.call(path, input)).status, 200);
+  assert.equal((await f.call(path, input)).status, 200);
+  const read = async () =>
+    (
+      await (await f.call(f.base + "/dashboard/queues/consumableAlerts")).json()
+    ).queue.items.find((x) => x.id === lot.id).consumableAlert;
+  assert.equal((await read()).suggestedQuantity, 15);
+  const reopened = new PreviewSqliteRepository(f.file);
+  t.after(() => reopened.close());
+  const { ConsumableRegistry } =
+    await import("@intrusionshield/sterile-processing");
+  assert.equal(
+    (await new ConsumableRegistry(reopened).detail(f.session, lot.id))
+      .alertPolicy.targetStock,
+    20,
+  );
+  await f.login("operator");
+  assert.equal(
+    (await f.call(path, { ...input, requestId: randomUUID(), version: 2 }))
+      .status,
+    403,
+  );
+  assert.equal(
+    (
+      await f.call(f.base + "/consumables/" + lot.id + "/stock/receive", {
+        requestId: randomUUID(),
+        version: 1,
+        quantity: 2,
+        reason: "DELIVERY",
+        reference: "REF",
+        confirmed: true,
+      })
+    ).status,
+    201,
+  );
+  assert.equal((await read()).suggestedQuantity, 13);
+  await f.login("reviewer");
+  assert.equal(
+    (
+      await f.call(path, {
+        ...input,
+        requestId: randomUUID(),
+        version: 2,
+        targetStock: null,
+      })
+    ).status,
+    200,
+  );
+  assert.equal((await read()).suggestedQuantity, null);
+});

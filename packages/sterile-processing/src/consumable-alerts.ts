@@ -10,6 +10,7 @@ import {
 import type { ConsumableLot } from "./consumables.js";
 import type { ConsumableStock } from "./consumable-stock.js";
 export interface ConsumableAlertPolicy {
+  targetStock?: number | null;
   minimumStock: number | null;
   warningDays: number;
   reason: string;
@@ -20,6 +21,7 @@ export interface ConsumableAlertPolicy {
 export interface ConsumableAlertInput {
   requestId: string;
   version: number;
+  targetStock?: number | null;
   minimumStock: number | null;
   warningDays: number;
   reason: string;
@@ -28,12 +30,14 @@ export interface ConsumableAlertInput {
 }
 export interface ConsumableAlert {
   available: number;
+  targetStock?: number | null;
   minimumStock: number | null;
   warningDays: number;
   expiresOn: string;
   lowStock: boolean;
   expiry: "current" | "expiring" | "expired";
   stockRecorded: boolean;
+  suggestedQuantity: number | null;
 }
 export function consumableAlert(
   lot: ConsumableLot,
@@ -57,6 +61,11 @@ export function consumableAlert(
   return {
     available,
     minimumStock,
+    targetStock: lot.alertPolicy?.targetStock ?? null,
+    suggestedQuantity:
+      lowStock && lot.expiresOn >= today && lot.alertPolicy?.targetStock != null
+        ? Math.max(0, lot.alertPolicy.targetStock - available)
+        : null,
     warningDays,
     expiresOn: lot.expiresOn,
     lowStock,
@@ -82,6 +91,12 @@ export class ConsumableAlertRegistry extends SterileRegistryBase {
         (!Number.isSafeInteger(input.minimumStock) ||
           input.minimumStock < 0 ||
           input.minimumStock > 1000000000)) ||
+      (input.targetStock != null &&
+        (!Number.isSafeInteger(input.targetStock) ||
+          input.targetStock < 0 ||
+          input.targetStock > 1000000000 ||
+          input.minimumStock === null ||
+          input.targetStock < input.minimumStock)) ||
       !Number.isSafeInteger(input.warningDays) ||
       input.warningDays < 1 ||
       input.warningDays > 365
@@ -102,6 +117,7 @@ export class ConsumableAlertRegistry extends SterileRegistryBase {
           version: lot.version + 1,
           alertPolicy: {
             minimumStock: input.minimumStock,
+            targetStock: input.targetStock ?? null,
             warningDays: input.warningDays,
             reason,
             reference,

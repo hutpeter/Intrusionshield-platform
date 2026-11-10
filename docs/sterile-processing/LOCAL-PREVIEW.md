@@ -322,3 +322,6 @@ As **Demo reviewer**, use **Consumable lots → Prepare fictional stock count ex
 ### Stock count reviewer queue
 
 Demo reviewer → Operational dashboard → **Prepare fictional review queue example** creates ready/stale pending counts. Open records route to the exact count and show its current decision. See [REVIEW-QUEUES.md](REVIEW-QUEUES.md) for U-REVIEWQ-01, the only owner check for this build.
+
+
+Replenishment targets and suggested quantities are now available through the existing stock alert settings/example. See [REPLENISHMENT.md](REPLENISHMENT.md) for the current U-REPLEN-01 owner check and calculation rules.

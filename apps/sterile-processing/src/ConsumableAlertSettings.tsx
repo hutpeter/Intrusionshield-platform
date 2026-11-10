@@ -30,6 +30,10 @@ export function ConsumableAlertSettings({
     [minimum, setMinimum] = useState(
       lot.alertPolicy?.minimumStock?.toString() ?? (demo ? "10" : ""),
     ),
+    [target, setTarget] = useState(
+      lot.alertPolicy?.targetStock?.toString() ??
+        (demo && !lot.alertPolicy ? "20" : ""),
+    ),
     [warning, setWarning] = useState(String(lot.alertPolicy?.warningDays ?? 7)),
     [reason, setReason] = useState(
       demo ? "SIMULATED minimum stock review" : "",
@@ -66,6 +70,7 @@ export function ConsumableAlertSettings({
           requestId: request.current,
           version: lot.version,
           minimumStock: minimum === "" ? null : Number(minimum),
+          targetStock: target === "" ? null : Number(target),
           warningDays: Number(warning),
           reason,
           reference,
@@ -135,6 +140,17 @@ export function ConsumableAlertSettings({
                 />
               </label>
               <label>
+                {t.target}
+                <input
+                  type="number"
+                  min={minimum === "" ? 0 : Number(minimum)}
+                  max={1000000000}
+                  step={1}
+                  value={target}
+                  onChange={(e) => setTarget(e.target.value)}
+                />
+              </label>
+              <label>
                 {t.warning}
                 <input
                   required
@@ -184,6 +200,10 @@ export function ConsumableAlertSettings({
             <div>
               <dt>{t.minimumShort}</dt>
               <dd>{lot.alertPolicy?.minimumStock ?? t.none}</dd>
+            </div>
+            <div>
+              <dt>{t.targetShort}</dt>
+              <dd>{lot.alertPolicy?.targetStock ?? t.none}</dd>
             </div>
             <div>
               <dt>{t.warning}</dt>

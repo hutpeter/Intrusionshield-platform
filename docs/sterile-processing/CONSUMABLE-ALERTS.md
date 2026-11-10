@@ -23,3 +23,6 @@ The **Operational dashboard** includes **Consumable stock and expiry alerts**, p
 The reviewer-only fictional helper prepares lot/stock prerequisites but does not save the alert settings. Production authentication, site approval, supplier/product grouping, cross-lot reorder totals, purchasing integration, stocktake corrections, push notifications, physical reconciliation, large-scale indexing/migration and broader manual/clinical acceptance remain deferred. RSP-ISS-001 stays parked.
 
 Developer November 10, 2026: 398 scoped tests passed (213 domain, 141 HTTP/SQLite, 44 web), scoped builds and Chromium confirmed settings, combined low-stock/expiry dashboard metadata, exact record navigation and refresh passed. Coverage includes UTC boundaries, zero/unrecorded stock, withdrawn exclusion, replenishment, null threshold, read permissions, role/CSRF checks, stable pagination, scope, stale settings, audit rollback and SQLite reopen. U-CONS-04 subsequently passed from the owner screenshot.
+
+
+Replenishment targets and suggested quantities are now available through the existing stock alert settings/example. See [REPLENISHMENT.md](REPLENISHMENT.md) for the current U-REPLEN-01 owner check and calculation rules.

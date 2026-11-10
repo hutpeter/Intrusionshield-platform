@@ -891,15 +891,19 @@ export function createSterileApp(
     );
   app.post(prefix + "/consumables/:id/alert-policy", async (req, res) => {
     noQuery(req);
-    const v = body(req.body, [
-      "requestId",
-      "version",
-      "minimumStock",
-      "warningDays",
-      "reason",
-      "reference",
-      "confirmed",
-    ]);
+    const v = body(
+      req.body,
+      [
+        "requestId",
+        "version",
+        "minimumStock",
+        "warningDays",
+        "reason",
+        "reference",
+        "confirmed",
+      ],
+      ["targetStock"],
+    );
     res.json(
       await new ConsumableAlertRegistry(dependencies.repository!).configure(
         res.locals.scope,
