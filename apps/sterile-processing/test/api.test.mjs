@@ -1588,6 +1588,7 @@ test("stock movement report rejects wrong periods, foreign rows, inconsistent de
   const value = {
     tenantId: session.tenantId,
     facilityId: session.facilityId,
+    filters: { lotCode: null, action: null },
     generatedAt: "2026-11-10T13:00:00.000Z",
     from,
     to,
@@ -1624,5 +1625,87 @@ test("stock movement report rejects wrong periods, foreign rows, inconsistent de
   assert.equal(
     (await api.stockMovementReport(session, from, to, signal())).items.length,
     1,
+  );
+});
+
+test("movement report client validates applied filters and rejects rows outside the requested lot or action", async (t) => {
+  const row = {
+      id: "m",
+      tenantId: session.tenantId,
+      facilityId: session.facilityId,
+      lotId: "lot",
+      lotCode: "LOT-A",
+      product: "Wrap",
+      supplier: "Supplier",
+      manufacturerLot: "M1",
+      actorId: "actor",
+      reason: "Reason",
+      reference: "REF",
+      parentRequestId: "request",
+      action: "receive",
+      quantity: 10,
+      availableDelta: 10,
+      unit: "each",
+      version: 1,
+      at: "2026-11-10T12:00:00.000Z",
+      packageId: null,
+      packageCode: null,
+      balance: {
+        tenantId: session.tenantId,
+        facilityId: session.facilityId,
+        lotId: "lot",
+        unit: "each",
+        version: 1,
+        available: 10,
+        received: 10,
+        used: 0,
+        quarantined: 0,
+        discarded: 0,
+      },
+    },
+    from = "2026-11-01",
+    to = "2026-11-11",
+    value = {
+      tenantId: session.tenantId,
+      facilityId: session.facilityId,
+      generatedAt: "2026-11-10T13:00:00Z",
+      from,
+      to,
+      unit: "each",
+      filters: { lotCode: "LOT-A", action: "receive" },
+      items: [row],
+    },
+    paths = [];
+  fake(t, async (path) => {
+    paths.push(path);
+    return response(value);
+  });
+  const filters = { lotCode: " lot-a ", action: "receive" };
+  assert.equal(
+    (await api.stockMovementReport(session, from, to, signal(), filters)).items
+      .length,
+    1,
+  );
+  assert.ok(paths.at(-1).includes("lotCode=%20lot-a%20&action=receive"));
+  value.filters.action = "quarantine";
+  await assert.rejects(
+    api.stockMovementReport(session, from, to, signal(), filters),
+  );
+  value.filters.action = "receive";
+  row.lotCode = "LOT-AA";
+  await assert.rejects(
+    api.stockMovementReport(session, from, to, signal(), filters),
+  );
+  row.lotCode = "LOT-A";
+  row.action = "quarantine";
+  await assert.rejects(
+    api.stockMovementReport(session, from, to, signal(), filters),
+  );
+  row.action = "receive";
+  value.items = [];
+  assert.equal(
+    (await api.stockMovementReport(session, from, to, signal(), filters)).items
+      .length,
+    0,
   );
 });

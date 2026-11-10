@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import type { StockMovementReport as Report } from "@intrusionshield/sterile-processing";
+import type {
+  StockMovementReport as Report,
+  StockAction,
+} from "@intrusionshield/sterile-processing";
 import { api, ApiError, type Session } from "./api";
 import { labels, type Language } from "./text";
 import { stockMovementReportLabels } from "./stock-movement-report-text";
@@ -27,6 +30,8 @@ export function StockMovementReport({
     c = labels(language),
     [from, setFrom] = useState(() => day(Date.now() - 6 * dayMs)),
     [through, setThrough] = useState(() => day(Date.now())),
+    [lotCode, setLotCode] = useState(""),
+    [action, setAction] = useState<StockAction | "">(""),
     [report, setReport] = useState<Report | null>(null),
     [page, setPage] = useState(1),
     [loading, setLoading] = useState(false),
@@ -46,7 +51,10 @@ export function StockMovementReport({
     setError(null);
     try {
       const to = day(Date.parse(through + "T00:00:00.000Z") + dayMs),
-        r = await api.stockMovementReport(session, from, to, a.signal);
+        r = await api.stockMovementReport(session, from, to, a.signal, {
+          ...(lotCode.trim() ? { lotCode: lotCode.trim() } : {}),
+          ...(action ? { action } : {}),
+        });
       if (!a.signal.aborted) {
         setReport(r);
         setPage(1);
@@ -112,8 +120,57 @@ export function StockMovementReport({
                 onChange={(e) => setThrough(e.target.value)}
               />
             </label>
+            <label>
+              {t.lotFilter}
+              <input
+                maxLength={100}
+                value={lotCode}
+                onChange={(e) => setLotCode(e.target.value)}
+                list="movement-lot-codes"
+              />
+              <datalist id="movement-lot-codes">
+                {[...new Set(report?.items.map((x) => x.lotCode) ?? [])].map(
+                  (code) => (
+                    <option key={code} value={code} />
+                  ),
+                )}
+              </datalist>
+            </label>
+            <label>
+              {t.actionFilter}
+              <select
+                aria-label={t.actionFilter}
+                value={action}
+                onChange={(e) => setAction(e.target.value as StockAction | "")}
+              >
+                <option value="">{t.allActions}</option>
+                {(
+                  [
+                    "receive",
+                    "use",
+                    "quarantine",
+                    "discard",
+                    "discard_quarantined",
+                    "adjustment",
+                  ] as const
+                ).map((a) => (
+                  <option key={a} value={a}>
+                    {t[a]}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
           <button>{t.generate}</button>
+          <button
+            type="button"
+            onClick={() => {
+              setLotCode("");
+              setAction("");
+            }}
+          >
+            {t.clear}
+          </button>
         </fieldset>
       </form>
       <button disabled={busy || !report} onClick={download}>
@@ -132,6 +189,10 @@ export function StockMovementReport({
           <p>
             {t.snapshot}: {report.generatedAt} · {report.from} —{" "}
             {day(Date.parse(report.to) - dayMs)} · {report.items.length}
+          </p>
+          <p>
+            {t.applied}: {report.filters.lotCode ?? t.allLots} ·{" "}
+            {report.filters.action ? t[report.filters.action] : t.allActions}
           </p>
           {!report.items.length ? (
             <p>{t.empty}</p>

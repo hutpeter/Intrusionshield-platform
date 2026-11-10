@@ -10,12 +10,15 @@ The repository reads all catalogue and movement pages in one scoped transaction.
 
 The GET `/consumables/movement-report?from=YYYY-MM-DD&to=YYYY-MM-DD` endpoint uses existing `consumables:read`. Tenant/facility scope, row and balance identity, period and signed-delta checks apply. Local operator/reviewer/auditor roles retain read access. CSV uses stable English keys, scope/period/snapshot columns, UTF-8 BOM, CRLF, quoted fields and spreadsheet formula neutralization. Negative numeric cells are text-escaped for spreadsheet safety. Empty reports export headers only.
 
-## One owner check — U-STOCKHIST-01 pending
+## One owner check — U-STOCKHIST-01 passed November 10, 2026
 
 Update/restart, then **Consumable lots → Stock movement report → Generate stock movement report → Export stock movements CSV**. Use the default seven-day period. Confirm the downloaded CSV includes action, quantity, available change, available after, reason/evidence and actor columns. Earlier checked receipts/adjustments should be present if recorded in that period. No new fixture or stock change is required. This is the only owner check.
 
 ## Verification and deferred work
 
-Developer November 10, 2026: 423 scoped tests (221 domain, 150 HTTP/SQLite, 52 web), builds and Chromium verify receipt/adjustment rows, saved balances, signed CSV, frozen snapshot after editing date inputs and exact stock-record links. Automated tests cover all six actions, withdrawal history, immutable balances, UTC start/end, invalid periods, both catalogue/movement page boundaries, no writes, scope, response validation and SQLite reopen. U-REPLENREPORT-01 passed from the owner's CSV confirmation. U-STOCKHIST-01 remains pending.
+Developer November 10, 2026: 423 scoped tests (221 domain, 150 HTTP/SQLite, 52 web), builds and Chromium verify receipt/adjustment rows, saved balances, signed CSV, frozen snapshot after editing date inputs and exact stock-record links. Automated tests cover all six actions, withdrawal history, immutable balances, UTC start/end, invalid periods, both catalogue/movement page boundaries, no writes, scope, response validation and SQLite reopen. U-REPLENREPORT-01 passed from the owner's CSV confirmation. U-STOCKHIST-01 passed November 10, 2026 from the supplied movement CSV.
 
 Physical stock verification, historical backfill, production-scale indexing/streaming, movement correction workflows, regional spreadsheet import and site inventory policy remain deferred. Ruby Asset Management reuse remains intended without implementing that module. U-TRACE-01 and original U-LOANER-01 remain unconfirmed; RSP-ISS-001 stays parked.
+
+
+Optional exact lot-code and movement-type filters are now available. See [STOCK-MOVEMENT-FILTERS.md](STOCK-MOVEMENT-FILTERS.md) for query, snapshot and CSV rules and the current owner check.

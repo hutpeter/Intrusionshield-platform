@@ -349,6 +349,7 @@ export const api = {
     from: string,
     to: string,
     signal: AbortSignal,
+    filters: import("@intrusionshield/sterile-processing").StockMovementFilters = {},
   ) => {
     const r = await scoped(
       s,
@@ -357,11 +358,21 @@ export const api = {
           "/consumables/movement-report?from=" +
           encodeURIComponent(from) +
           "&to=" +
-          encodeURIComponent(to),
+          encodeURIComponent(to) +
+          (filters.lotCode === undefined
+            ? ""
+            : "&lotCode=" + encodeURIComponent(filters.lotCode)) +
+          (filters.action === undefined
+            ? ""
+            : "&action=" + encodeURIComponent(filters.action)),
         signal,
       ),
     );
     if (
+      !r.filters ||
+      r.filters.lotCode !==
+        (filters.lotCode?.trim().normalize("NFC").toUpperCase() ?? null) ||
+      r.filters.action !== (filters.action ?? null) ||
       r.from !== from ||
       r.to !== to ||
       r.unit !== "each" ||
@@ -371,6 +382,8 @@ export const api = {
       r.items.some((x) => {
         const b = x.balance;
         return (
+          (r.filters.lotCode !== null && x.lotCode !== r.filters.lotCode) ||
+          (r.filters.action !== null && x.action !== r.filters.action) ||
           x.tenantId !== s.tenantId ||
           x.facilityId !== s.facilityId ||
           [

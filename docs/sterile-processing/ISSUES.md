@@ -355,4 +355,9 @@ Complete low-stock facility snapshots now include supplier/product/lot details a
 
 ## Dated stock movement report and CSV — preview delivered
 
-Read-only UTC reports now preserve receipts, usage, quarantine/disposal and signed count adjustments with original balances and evidence. CSV exports all displayed-snapshot rows. U-STOCKHIST-01 is pending. Physical verification, backfill, production-scale streaming and regional spreadsheet import remain deferred. See [STOCK-MOVEMENT-REPORT.md](STOCK-MOVEMENT-REPORT.md). Asset reuse remains intended; RSP-ISS-001 stays parked.
+Read-only UTC reports now preserve receipts, usage, quarantine/disposal and signed count adjustments with original balances and evidence. CSV exports all displayed-snapshot rows. U-STOCKHIST-01 passed November 10, 2026 from the supplied movement CSV. Physical verification, backfill, production-scale streaming and regional spreadsheet import remain deferred. See [STOCK-MOVEMENT-REPORT.md](STOCK-MOVEMENT-REPORT.md). Asset reuse remains intended; RSP-ISS-001 stays parked.
+
+
+## Stock movement report filters — preview delivered
+
+Exact lot-code and movement-type filters now intersect with report dates. Snapshot/CSV preserve canonical applied filters. U-STOCKFILTER-01 remains pending. Multi-select, supplier/product grouping, production-scale querying and broader spreadsheet acceptance remain deferred. See [STOCK-MOVEMENT-FILTERS.md](STOCK-MOVEMENT-FILTERS.md). Asset reuse remains intended; RSP-ISS-001 stays parked.

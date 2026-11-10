@@ -1300,3 +1300,68 @@ test("movement report includes UTC start, excludes end, and crosses movement and
   assert.equal(r.items[0].version, 1);
   assert.equal(r.items.at(-1).version, 52);
 });
+
+test("movement filters match exact canonical lot codes and action intersections without changing source history", async () => {
+  const {
+      ConsumableRegistry,
+      ConsumableStockRegistry,
+      StockMovementReportRegistry,
+    } = await import("../dist/index.js"),
+    f = await fixture(),
+    lots = new ConsumableRegistry(f.repo),
+    stock = new ConsumableStockRegistry(f.repo),
+    a = await lots.register(f.s, lotInput({ code: "FILTER-A" })),
+    b = await lots.register(f.s, lotInput({ code: "FILTER-AA" }));
+  await fundLots(f, [a, b], 10);
+  for (const lot of [a, b])
+    await stock.record(f.s, lot.id, "quarantine", {
+      requestId: randomUUID(),
+      version: 1,
+      quantity: 2,
+      reason: "SIMULATED quarantine",
+      reference: "EVIDENCE",
+      confirmed: true,
+    });
+  const registry = new StockMovementReportRegistry(f.repo),
+    from = new Date().toISOString().slice(0, 10),
+    to = new Date(Date.now() + 86400000).toISOString().slice(0, 10),
+    before = structuredClone(f.repo.state);
+  const byLot = await registry.report(f.s, from, to, { lotCode: " filter-a " });
+  assert.deepEqual(byLot.filters, { lotCode: "FILTER-A", action: null });
+  assert.equal(byLot.items.length, 2);
+  assert.ok(byLot.items.every((x) => x.lotId === a.id));
+  const byAction = await registry.report(f.s, from, to, {
+    action: "quarantine",
+  });
+  assert.equal(byAction.items.length, 2);
+  assert.ok(byAction.items.every((x) => x.action === "quarantine"));
+  const both = await registry.report(f.s, from, to, {
+    lotCode: b.code,
+    action: "quarantine",
+  });
+  assert.equal(both.items.length, 1);
+  assert.equal(both.items[0].lotId, b.id);
+  assert.equal(both.items[0].balance.available, 8);
+  assert.equal(
+    (await registry.report(f.s, from, to, { lotCode: "UNKNOWN" })).items.length,
+    0,
+  );
+  assert.equal(
+    (await registry.report(f.s, from, to, { action: "use" })).items.length,
+    0,
+  );
+  assert.equal((await registry.report(f.s, from, to)).items.length, 4);
+  for (const filters of [
+    { lotCode: "" },
+    { lotCode: "bad code" },
+    { lotCode: "x".repeat(101) },
+    { action: "unknown" },
+    { action: "" },
+    { action: null },
+    { lotCode: null },
+    { lotId: a.id },
+    null,
+  ])
+    await fail(registry.report(f.s, from, to, filters), "INVALID_REQUEST");
+  assert.deepEqual(f.repo.state, before);
+});

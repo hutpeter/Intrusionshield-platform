@@ -34,6 +34,7 @@ test("movement CSV exports frozen scope/dates, all rows, signed adjustment and s
     r = {
       tenantId: "tenant",
       facilityId: "facility",
+      filters: { lotCode: "LOT", action: "adjustment" },
       generatedAt: "2026-11-10T13:00:00.000Z",
       from: "2026-11-01",
       to: "2026-11-11",
@@ -44,7 +45,7 @@ test("movement CSV exports frozen scope/dates, all rows, signed adjustment and s
       })),
     };
   const csv = stockMovementReportCsv(r);
-  assert.equal(csv.match(/"adjustment"/g).length, 53);
+  assert.equal(csv.match(/"adjustment"/g).length, 106);
   assert.ok(csv.includes('"movement-52"'));
   assert.ok(csv.includes('"\'=FORMULA"'));
   assert.ok(csv.includes('"Wrap ""special"""'));
@@ -53,6 +54,8 @@ test("movement CSV exports frozen scope/dates, all rows, signed adjustment and s
   assert.ok(csv.includes('"count"'));
   assert.ok(csv.includes(r.generatedAt));
   assert.ok(csv.includes(r.to));
+  assert.ok(csv.includes('"filter_lot_code","filter_action"'));
+  assert.ok(csv.includes('"LOT","adjustment"\r\n'));
   assert.equal(
     stockMovementReportCsv({ ...r, items: [] }).split("\r\n").length,
     2,

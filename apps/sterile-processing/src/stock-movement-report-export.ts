@@ -33,6 +33,8 @@ export function stockMovementReportCsv(r: StockMovementReport): string {
       "evidence_reference",
       "actor_id",
       "parent_request_id",
+      "filter_lot_code",
+      "filter_action",
     ],
   ];
   for (const x of r.items)
@@ -67,6 +69,8 @@ export function stockMovementReportCsv(r: StockMovementReport): string {
       x.reference,
       x.actorId,
       x.parentRequestId,
+      r.filters?.lotCode,
+      r.filters?.action,
     ]);
   return (
     "\ufeff" +

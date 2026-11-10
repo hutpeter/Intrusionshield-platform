@@ -335,3 +335,8 @@ Consumable lots → **Replenishment report → Generate replenishment report →
 ### Dated stock movement CSV
 
 Consumable lots → **Stock movement report → Generate stock movement report → Export stock movements CSV**. Default seven-day UTC period; changing dates requires generation, and CSV exports the displayed snapshot across all fifty-row display pages. See [STOCK-MOVEMENT-REPORT.md](STOCK-MOVEMENT-REPORT.md) for U-STOCKHIST-01, the only owner check for this build.
+
+
+### Stock movement report filters
+
+Consumable lots → Stock movement report now includes **Exact lot code**, **Movement type** and **Clear filters**. Generate to apply input changes; CSV exports only the matching displayed snapshot. See [STOCK-MOVEMENT-FILTERS.md](STOCK-MOVEMENT-FILTERS.md) for U-STOCKFILTER-01, the only owner check for this build.

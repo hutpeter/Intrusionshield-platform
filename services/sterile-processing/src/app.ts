@@ -824,9 +824,14 @@ export function createSterileApp(
   }
   app.get(prefix + "/consumables/movement-report", async (req, res) => {
     if (
-      Object.keys(req.query).length !== 2 ||
+      Object.keys(req.query).some(
+        (k) => !["from", "to", "lotCode", "action"].includes(k),
+      ) ||
       typeof req.query.from !== "string" ||
-      typeof req.query.to !== "string"
+      typeof req.query.to !== "string" ||
+      (req.query.lotCode !== undefined &&
+        typeof req.query.lotCode !== "string") ||
+      (req.query.action !== undefined && typeof req.query.action !== "string")
     )
       throw new SterileError("INVALID_REQUEST");
     res.json(
@@ -834,6 +839,17 @@ export function createSterileApp(
         res.locals.scope,
         req.query.from,
         req.query.to,
+        {
+          ...(req.query.lotCode === undefined
+            ? {}
+            : { lotCode: req.query.lotCode as string }),
+          ...(req.query.action === undefined
+            ? {}
+            : {
+                action: req.query
+                  .action as import("@intrusionshield/sterile-processing").StockAction,
+              }),
+        },
       ),
     );
   });

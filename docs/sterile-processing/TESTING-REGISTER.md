@@ -965,6 +965,13 @@ Developer: 418 scoped tests (219 domain, 149 HTTP/SQLite, 50 web), builds and Ch
 
 ## Current owner check — dated stock movement CSV
 
-**U-STOCKHIST-01 pending:** Consumable lots → Stock movement report → Generate stock movement report → Export stock movements CSV, using the default seven-day period. Confirm downloaded action, quantity, available change/after, reason/evidence and actor columns. No new stock movement is requested. This is the only owner check. U-REPLENREPORT-01 passed November 10 from the supplied CSV and owner confirmation.
+**U-STOCKHIST-01 passed November 10, 2026:** owner supplied the eight-row movement CSV with receipt history, −2 adjustment, available after 8 and reason/evidence/actor fields. Original check: Consumable lots → Stock movement report → Generate stock movement report → Export stock movements CSV, using the default seven-day period. Confirm downloaded action, quantity, available change/after, reason/evidence and actor columns. No new stock movement is requested. This is the only owner check. U-REPLENREPORT-01 passed November 10 from the supplied CSV and owner confirmation.
 
 Developer: 423 scoped tests (221 domain, 150 HTTP/SQLite, 52 web), builds and Chromium receipt/adjustment/history/CSV/date-snapshot/source checks passed. Physical verification, production scale, backfill, regional spreadsheet import and wider site acceptance remain deferred. U-TRACE-01 and original U-LOANER-01 remain pending; RSP-ISS-001 stays parked. See [STOCK-MOVEMENT-REPORT.md](STOCK-MOVEMENT-REPORT.md).
+
+
+## Current owner check — stock movement filters
+
+**U-STOCKFILTER-01 pending:** Consumable lots → Stock movement report → Movement type: Approved count adjustment → Generate stock movement report → Export stock movements CSV. Leave exact lot code blank. Expect only adjustment rows and CSV action/filter_action `adjustment`. This is the only owner check. U-STOCKHIST-01 passed November 10 from the supplied eight-row movement CSV.
+
+Developer: 426 scoped tests (222 domain, 151 HTTP/SQLite, 53 web), builds and Chromium exact lot/type intersection, canonical filters, filtered CSV and clear/regenerate checks passed. Source history remains unchanged. Physical verification, grouping/multi-select, production scale and regional spreadsheet acceptance remain deferred. U-TRACE-01 and original U-LOANER-01 remain pending; RSP-ISS-001 stays parked. See [STOCK-MOVEMENT-FILTERS.md](STOCK-MOVEMENT-FILTERS.md).

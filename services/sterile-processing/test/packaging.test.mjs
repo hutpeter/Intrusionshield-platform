@@ -1831,3 +1831,64 @@ test("stock movement report is scoped, date-strict, read-only and available to e
     0,
   );
 });
+
+test("movement report HTTP filters are strict, scoped, canonical and intersect without partial code matches", async (t) => {
+  const f = await httpFixture(t),
+    lots = [];
+  for (let i = 0; i < 2; i++) {
+    const lot = await (
+      await f.call("/preview/consumable-stock-example", {
+        requestId: randomUUID(),
+      })
+    ).json();
+    await fundLotHttp(f, lot, 10);
+    lots.push(lot);
+  }
+  await f.login("reviewer");
+  await f.call(f.base + "/consumables/" + lots[0].id + "/stock/quarantine", {
+    requestId: randomUUID(),
+    version: 1,
+    quantity: 2,
+    reason: "SIMULATED quarantine",
+    reference: "EVIDENCE",
+    confirmed: true,
+  });
+  const from = new Date().toISOString().slice(0, 10),
+    to = new Date(Date.now() + 86400000).toISOString().slice(0, 10),
+    path = f.base + "/consumables/movement-report?from=" + from + "&to=" + to;
+  let res = await f.call(
+    path + "&lotCode=" + lots[0].code.toLowerCase() + "&action=quarantine",
+  );
+  assert.equal(res.status, 200);
+  let r = await res.json();
+  assert.equal(r.items.length, 1);
+  assert.equal(r.items[0].lotId, lots[0].id);
+  assert.deepEqual(r.filters, { lotCode: lots[0].code, action: "quarantine" });
+  assert.equal(
+    (
+      await (
+        await f.call(path + "&lotCode=" + lots[1].code + "&action=quarantine")
+      ).json()
+    ).items.length,
+    0,
+  );
+  assert.equal(
+    (await (await f.call(path + "&action=receive")).json()).items.length,
+    2,
+  );
+  assert.equal(
+    (await (await f.call(path + "&lotCode=NOT-FOUND")).json()).items.length,
+    0,
+  );
+  for (const suffix of [
+    "&action=invalid",
+    "&action=",
+    "&lotCode=",
+    "&lotCode=bad%20code",
+    "&action=receive&action=quarantine",
+    "&lotCode=A&lotCode=B",
+    "&lotId=" + lots[0].id,
+  ])
+    assert.equal((await f.call(path + suffix)).status, 400);
+  assert.equal((await (await f.call(path)).json()).items.length, 3);
+});

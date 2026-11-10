@@ -1,10 +1,11 @@
 import {
+  codeOf,
   scopeOf,
   SterileError,
   type SterileScope,
   type SterileRepository,
 } from "./foundation.js";
-import type { StockMovement } from "./consumable-stock.js";
+import type { StockAction, StockMovement } from "./consumable-stock.js";
 export interface StockMovementReportRow extends StockMovement {
   lotCode: string;
   product: string;
@@ -12,7 +13,20 @@ export interface StockMovementReportRow extends StockMovement {
   manufacturerLot: string;
   availableDelta: number;
 }
+export interface StockMovementFilters {
+  lotCode?: string;
+  action?: StockAction;
+}
+export const stockMovementActions = [
+  "receive",
+  "use",
+  "quarantine",
+  "discard",
+  "discard_quarantined",
+  "adjustment",
+] as const;
 export interface StockMovementReport {
+  filters: { lotCode: string | null; action: StockAction | null };
   tenantId: string;
   facilityId: string;
   generatedAt: string;
@@ -36,6 +50,7 @@ export class StockMovementReportRegistry {
     scope: SterileScope,
     from: string,
     to: string,
+    filters: StockMovementFilters = {},
   ): Promise<StockMovementReport> {
     const s = scopeOf(scope);
     if (
@@ -46,13 +61,32 @@ export class StockMovementReportRegistry {
       Date.parse(to) > Math.floor(Date.now() / dayMs) * dayMs + dayMs
     )
       throw new SterileError("INVALID_REQUEST");
+    if (
+      !filters ||
+      typeof filters !== "object" ||
+      Array.isArray(filters) ||
+      Object.keys(filters).some((k) => !["lotCode", "action"].includes(k)) ||
+      (filters.action !== undefined &&
+        !stockMovementActions.includes(filters.action))
+    )
+      throw new SterileError("INVALID_REQUEST");
+    const lotCode =
+        filters.lotCode === undefined ? null : codeOf(filters.lotCode),
+      action = filters.action ?? null;
     return this.repository.transaction(s, async (tx) => {
       const generatedAt = new Date().toISOString(),
         start = from + "T00:00:00.000Z",
         end = to + "T00:00:00.000Z",
         items: StockMovementReportRow[] = [];
       for (let page = 1; ; page++) {
-        const lots = await tx.listConsumables(page);
+        const selected = lotCode
+          ? await tx.findConsumableByCode(lotCode)
+          : null;
+        const lots = lotCode
+          ? selected
+            ? [selected]
+            : []
+          : await tx.listConsumables(page);
         for (const lot of lots.slice(0, 50)) {
           for (let movementPage = 1; ; movementPage++) {
             const movements = await tx.listConsumableStockMovements(
@@ -60,7 +94,11 @@ export class StockMovementReportRegistry {
               movementPage,
             );
             for (const m of movements.slice(0, 50))
-              if (m.at >= start && m.at < end)
+              if (
+                m.at >= start &&
+                m.at < end &&
+                (action === null || m.action === action)
+              )
                 items.push({
                   ...m,
                   lotCode: lot.code,
@@ -90,6 +128,7 @@ export class StockMovementReportRegistry {
         tenantId: s.tenantId,
         facilityId: s.facilityId,
         generatedAt,
+        filters: { lotCode, action },
         from,
         to,
         unit: "each",
