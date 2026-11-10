@@ -134,6 +134,7 @@ export interface SterileAuditEvent {
     | "equipment-incident-finding-recorded"
     | "equipment-incident-recorded"
     | "equipment-incident-recall-created"
+    | "consumable-stock-recorded"
     | "consumable-withdrawn"
     | "consumable-recall-created"
     | "consumable-registered"
@@ -162,6 +163,7 @@ export interface SterileAuditEvent {
   reason: string;
 }
 export type SterileRecord =
+  | import("./consumable-stock.js").StockMovement
   | import("./consumables.js").ConsumableLot
   | InstrumentType
   | import("./equipment-incidents.js").EquipmentIncident
@@ -186,6 +188,20 @@ export interface CommandReceipt {
 }
 /** All methods are scoped to the transaction's tenant/facility. Writes and audit commit together. */
 export interface SterileTransaction {
+  findConsumableStock(
+    id: string,
+  ): Promise<import("./consumable-stock.js").ConsumableStock | null>;
+  saveConsumableStock(
+    item: import("./consumable-stock.js").ConsumableStock,
+    expected: number,
+  ): Promise<void>;
+  listConsumableStockMovements(
+    id: string,
+    page: number,
+  ): Promise<import("./consumable-stock.js").StockMovement[]>;
+  insertConsumableStockMovement(
+    item: import("./consumable-stock.js").StockMovement,
+  ): Promise<void>;
   listConsumablePackages(
     id: string,
     page: number,
@@ -480,6 +496,7 @@ export interface SterileRepository {
 export class SterileError extends Error {
   constructor(
     public readonly code:
+      | "INSUFFICIENT_STOCK"
       | "CONSUMABLE_WITHDRAWN"
       | "CONSUMABLE_EXPIRED"
       | "REPORT_LIMIT"

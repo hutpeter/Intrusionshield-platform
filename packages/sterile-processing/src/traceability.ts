@@ -504,6 +504,15 @@ export class TraceabilityRegistry {
         }
         if (row.kind === "package") {
           const p = r as SterilePackage;
+          for (const usage of p.consumableUsage ?? [])
+            fact("consumable_usage", p.createdAt, p.packedBy, usage, [
+              "lotCode",
+              "quantity",
+              "unit",
+              "movementId",
+              "stockVersionBefore",
+              "stockVersionAfter",
+            ]);
           for (const lot of p.consumableLots ?? [])
             fact("consumable_lot", p.createdAt, p.packedBy, lot, [
               "id",

@@ -1,3 +1,5 @@
+import { ConsumableStockPanel } from "./ConsumableStock";
+import { stockLabels } from "./stock-text";
 import { ConsumableDecision } from "./ConsumableDecision";
 import { consumableWithdrawLabels } from "./consumable-withdraw-text";
 import { useEffect, useRef, useState } from "react";
@@ -36,6 +38,14 @@ export function ConsumablesWorkspace({
   onBusy: (v: boolean) => void;
   onRecall: (id: string) => void;
 }) {
+  const st = stockLabels(language),
+    [stockLot, setStockLot] = useState<{
+      lot: ConsumableLot;
+      initialReceive?: boolean;
+    } | null>(null),
+    [stockDirty, setStockDirty] = useState(false),
+    [stockBusy, setStockBusy] = useState(false),
+    exampleId = useRef(crypto.randomUUID());
   const w = consumableWithdrawLabels(language),
     [decision, setDecision] = useState<{
       lot: ConsumableLot;
@@ -60,15 +70,15 @@ export function ConsumablesWorkspace({
     [error, setError] = useState<unknown>(null),
     [saved, setSaved] = useState(false),
     pending = useRef<AbortController | null>(null),
-    busy = blocked || saving || decisionBusy;
+    busy = blocked || saving || decisionBusy || stockBusy;
   useEffect(() => {
-    onDirty(!!form || decisionDirty);
+    onDirty(!!form || decisionDirty || stockDirty);
     return () => onDirty(false);
-  }, [!!form, decisionDirty, onDirty]);
+  }, [!!form, decisionDirty, stockDirty, onDirty]);
   useEffect(() => {
-    onBusy(saving || decisionBusy);
+    onBusy(saving || decisionBusy || stockBusy);
     return () => onBusy(false);
-  }, [saving, decisionBusy, onBusy]);
+  }, [saving, decisionBusy, stockBusy, onBusy]);
   useEffect(() => () => pending.current?.abort(), []);
   useEffect(() => {
     const a = new AbortController();
@@ -135,6 +145,30 @@ export function ConsumablesWorkspace({
       if (!a.signal.aborted) setSaving(false);
     }
   }
+  async function stockExample() {
+    if (busy || pending.current) return;
+    const a = new AbortController();
+    pending.current = a;
+    setSaving(true);
+    setError(null);
+    try {
+      const lot = await api.stockExample(session, exampleId.current, a.signal);
+      if (!a.signal.aborted) {
+        setStockLot({ lot, initialReceive: true });
+        setPage(1);
+        setNonce((n) => n + 1);
+        exampleId.current = crypto.randomUUID();
+      }
+    } catch (e) {
+      if (!a.signal.aborted) {
+        if (e instanceof ApiError && e.status === 401) onExpired();
+        else setError(e);
+      }
+    } finally {
+      pending.current = null;
+      if (!a.signal.aborted) setSaving(false);
+    }
+  }
   function example() {
     const v = blank();
     setForm({
@@ -158,8 +192,11 @@ export function ConsumablesWorkspace({
           <h1>{t.title}</h1>
           <p>{t.intro}</p>
         </div>
-        {session.canWrite && !form && !decision && (
+        {session.canWrite && !form && !decision && !stockLot && (
           <div>
+            <button disabled={busy} onClick={() => void stockExample()}>
+              {st.example}
+            </button>
             <button disabled={busy} onClick={example}>
               {t.example}
             </button>
@@ -281,6 +318,21 @@ export function ConsumablesWorkspace({
           }}
         />
       )}
+      {stockLot && (
+        <ConsumableStockPanel
+          key={stockLot.lot.id}
+          lot={stockLot.lot}
+          initialReceive={stockLot.initialReceive}
+          session={session}
+          language={language}
+          blocked={blocked || saving || decisionBusy}
+          onExpired={onExpired}
+          onBusy={setStockBusy}
+          onDirty={setStockDirty}
+          onClose={() => setStockLot(null)}
+          onSaved={() => setNonce((n) => n + 1)}
+        />
+      )}
       {loading && <p role="status">{c.loading}</p>}
       {usageId && (
         <section className="panel">
@@ -301,7 +353,9 @@ export function ConsumablesWorkspace({
                         (r) => r.packageId === x.id,
                       ) && (
                         <button
-                          disabled={busy || !!form || decisionDirty}
+                          disabled={
+                            busy || !!form || decisionDirty || stockDirty
+                          }
                           onClick={() =>
                             setDecision({ lot: selectedLot, packageId: x.id })
                           }
@@ -373,10 +427,25 @@ export function ConsumablesWorkspace({
                     >
                       {t.usage}
                     </button>
+                    <button
+                      disabled={busy || !!form || decisionDirty || stockDirty}
+                      onClick={() => {
+                        setDecision(null);
+                        setStockLot({ lot: r });
+                      }}
+                    >
+                      {st.title}
+                    </button>
+                    <small>
+                      {st.available}: {r.stock?.available ?? 0} · {st.unit}
+                    </small>
                     {session.canRecall && (
                       <button
-                        disabled={busy || !!form || decisionDirty}
-                        onClick={() => setDecision({ lot: r })}
+                        disabled={busy || !!form || decisionDirty || stockDirty}
+                        onClick={() => {
+                          setStockLot(null);
+                          setDecision({ lot: r });
+                        }}
                       >
                         {r.withdrawal ? w.title : w.withdraw}
                       </button>

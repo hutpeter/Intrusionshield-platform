@@ -284,6 +284,80 @@ async function checkedIncident(
   return r;
 }
 export const api = {
+  async consumableStock(
+    s: Session,
+    id: string,
+    n: number,
+    signal: AbortSignal,
+  ) {
+    const r = await scoped(
+      s,
+      call<{
+        tenantId: string;
+        facilityId: string;
+        lot: import("@intrusionshield/sterile-processing").ConsumableLot;
+        balance:
+          import("@intrusionshield/sterile-processing").ConsumableStock | null;
+        movements: Page<
+          import("@intrusionshield/sterile-processing").StockMovement
+        >;
+      }>(
+        base(s) + "/consumables/" + encodeURIComponent(id) + "/stock?page=" + n,
+        signal,
+      ),
+    );
+    await scoped(s, Promise.resolve(r.lot));
+    if (
+      r.lot.id !== id ||
+      !r.movements ||
+      r.movements.page !== n ||
+      !Array.isArray(r.movements.items) ||
+      r.movements.items.length > 50 ||
+      typeof r.movements.hasMore !== "boolean"
+    )
+      throw new ApiError(503, "SERVICE_UNAVAILABLE");
+    if (r.balance) {
+      await scoped(s, Promise.resolve(r.balance));
+      if (r.balance.lotId !== id)
+        throw new ApiError(503, "SERVICE_UNAVAILABLE");
+    }
+    for (const m of r.movements.items) {
+      await scoped(s, Promise.resolve(m));
+      await scoped(s, Promise.resolve(m.balance));
+      if (m.lotId !== id || m.balance.lotId !== id)
+        throw new ApiError(503, "SERVICE_UNAVAILABLE");
+    }
+    return r;
+  },
+  recordConsumableStock: (
+    s: Session,
+    id: string,
+    action: Exclude<
+      import("@intrusionshield/sterile-processing").StockAction,
+      "use"
+    >,
+    body: import("@intrusionshield/sterile-processing").StockInput,
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<import("@intrusionshield/sterile-processing").StockMovement>(
+        base(s) + "/consumables/" + encodeURIComponent(id) + "/stock/" + action,
+        signal,
+        body,
+        s.csrf,
+      ),
+    ),
+  stockExample: (s: Session, requestId: string, signal: AbortSignal) =>
+    scoped(
+      s,
+      call<import("@intrusionshield/sterile-processing").ConsumableLot>(
+        "/preview/consumable-stock-example",
+        signal,
+        { requestId },
+        s.csrf,
+      ),
+    ),
   withdrawConsumable: (
     s: Session,
     id: string,

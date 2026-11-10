@@ -1,5 +1,6 @@
 import express from "express";
 import {
+  ConsumableStockRegistry,
   ConsumableRegistry,
   InstrumentRegistry,
   EquipmentRegistry,
@@ -204,7 +205,11 @@ export function createSterileApp(
       const permission = req.path.startsWith("/consumables")
         ? readOnly
           ? "consumables:read"
-          : req.path.endsWith("/withdraw") || req.path.endsWith("/recalls")
+          : req.path.endsWith("/withdraw") ||
+              req.path.endsWith("/recalls") ||
+              /\/stock\/(quarantine|discard|discard_quarantined)$/.test(
+                req.path,
+              )
             ? "consumables:withdraw"
             : "consumables:write"
         : (req.path.endsWith("/maintenance/authorize") ||
@@ -793,6 +798,42 @@ export function createSterileApp(
     }
     return true;
   }
+  app.get(prefix + "/consumables/:id/stock", async (req, res) =>
+    res.json(
+      await new ConsumableStockRegistry(dependencies.repository!).report(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        page(req),
+      ),
+    ),
+  );
+  for (const action of [
+    "receive",
+    "quarantine",
+    "discard",
+    "discard_quarantined",
+  ] as const)
+    app.post(prefix + "/consumables/:id/stock/" + action, async (req, res) => {
+      noQuery(req);
+      const v = body(req.body, [
+        "requestId",
+        "version",
+        "quantity",
+        "reason",
+        "reference",
+        "confirmed",
+      ]);
+      res
+        .status(201)
+        .json(
+          await new ConsumableStockRegistry(dependencies.repository!).record(
+            res.locals.scope,
+            sterileUuid(req.params.id),
+            action,
+            v as unknown as Parameters<ConsumableStockRegistry["record"]>[3],
+          ),
+        );
+    });
   app.post(prefix + "/consumables/:id/withdraw", async (req, res) => {
     noQuery(req);
     const v = body(req.body, [
@@ -1629,18 +1670,24 @@ export function createSterileApp(
         "contentsChecked",
         "confirmed",
       ],
-      ["shelfLife", "consumableLotIds"],
+      ["shelfLife", "consumableLotIds", "consumableUsage"],
     );
-    if (
-      v.consumableLotIds !== undefined &&
-      (await dependencies.authorize!(
-        res.locals.scope,
-        "sterile.core",
+    if (v.consumableLotIds !== undefined) {
+      for (const permission of [
         "consumables:read",
-      )) !== true
-    ) {
-      res.status(403).json({ error: "FORBIDDEN" });
-      return;
+        "consumables:write",
+      ] as const) {
+        if (
+          (await dependencies.authorize!(
+            res.locals.scope,
+            "sterile.core",
+            permission,
+          )) !== true
+        ) {
+          res.status(403).json({ error: "FORBIDDEN" });
+          return;
+        }
+      }
     }
     res
       .status(201)
@@ -2362,6 +2409,7 @@ export function createSterileApp(
           ? {
               SCAN_DUPLICATE: 409,
               SCAN_TYPE: 409,
+              INSUFFICIENT_STOCK: 409,
               CONSUMABLE_WITHDRAWN: 409,
               CONSUMABLE_EXPIRED: 409,
               REPORT_LIMIT: 409,

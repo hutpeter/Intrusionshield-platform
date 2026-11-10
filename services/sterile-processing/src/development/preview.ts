@@ -1,3 +1,4 @@
+import { ConsumableRegistry } from "@intrusionshield/sterile-processing";
 import { prepareEquipmentIncidentExample } from "./equipment-incident-example.js";
 import { prepareUnpackagedIncidentExample } from "./unpackaged-incident-example.js";
 import { prepareProcedureExample } from "./procedure-example.js";
@@ -631,6 +632,42 @@ export function createSterilePreview({
           { tenantId, facilityId, actorId: actors.reviewer },
           { tenantId, facilityId, actorId: actors.operator },
           sterileUuid(req.body.requestId),
+        ),
+      );
+  });
+  app.post("/preview/consumable-stock-example", async (req, res) => {
+    const session = res.locals.session as Session;
+    if (session.role !== "operator") {
+      res.status(403).json({ error: "FORBIDDEN" });
+      return;
+    }
+    if (
+      Object.keys(req.query).length ||
+      !req.body ||
+      Array.isArray(req.body) ||
+      Object.keys(req.body).length !== 1 ||
+      typeof req.body.requestId !== "string"
+    ) {
+      res.status(400).json({ error: "INVALID_REQUEST" });
+      return;
+    }
+    const requestId = sterileUuid(req.body.requestId);
+    res
+      .status(201)
+      .json(
+        await new ConsumableRegistry(repository).register(
+          { tenantId, facilityId, actorId: actors.operator },
+          {
+            requestId,
+            code: "STOCK-DEMO-" + requestId,
+            kind: "wrap",
+            name: "SIMULATED stock wrap",
+            lotNumber: "SIMULATED-STOCK-LOT",
+            supplier: "DEMO-SUPPLIER",
+            supplierReference: "SIMULATED-DELIVERY",
+            expiresOn: "2099-01-01",
+            confirmed: true,
+          },
         ),
       );
   });

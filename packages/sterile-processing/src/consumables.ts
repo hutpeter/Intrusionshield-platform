@@ -35,6 +35,7 @@ export interface ConsumableRecallInput extends ConsumableDecisionInput {
   code: string;
 }
 export interface ConsumableLot {
+  stock?: import("./consumable-stock.js").ConsumableStock;
   withdrawal?: {
     at: string;
     actorId: string;
@@ -306,7 +307,16 @@ export class ConsumableRegistry extends SterileRegistryBase {
       n = pageOf(page);
     return this.repository.transaction(s, async (tx) => {
       const rows = await tx.listConsumables(n);
-      return { items: rows.slice(0, 50), page: n, hasMore: rows.length > 50 };
+      return {
+        items: await Promise.all(
+          rows.slice(0, 50).map(async (lot) => {
+            const stock = await tx.findConsumableStock(lot.id);
+            return { ...lot, ...(stock ? { stock } : {}) };
+          }),
+        ),
+        page: n,
+        hasMore: rows.length > 50,
+      };
     });
   }
   async packages(scope: SterileScope, id: string, page = 1) {

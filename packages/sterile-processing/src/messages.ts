@@ -1,4 +1,6 @@
 const es = {
+  INSUFFICIENT_STOCK:
+    "Existencias insuficientes. Registre una recepción válida o reduzca la cantidad.",
   CONSUMABLE_WITHDRAWN:
     "Lote retirado. No se permite usarlo en un nuevo empaque.",
   CONSUMABLE_LIMIT:
@@ -73,6 +75,8 @@ const es = {
 };
 type Messages = Record<keyof typeof es, string>;
 const en: Messages = {
+  INSUFFICIENT_STOCK:
+    "Insufficient stock. Record a valid receipt or reduce the quantity.",
   CONSUMABLE_WITHDRAWN: "Lot withdrawn. It cannot be used in new packaging.",
   CONSUMABLE_LIMIT:
     "The catalogue exceeds this preview’s selection limit (1000 lots). Packaging cannot continue in this preview.",
@@ -145,6 +149,8 @@ const en: Messages = {
     "Service unavailable. The change has not been confirmed.",
 };
 const fr: Messages = {
+  INSUFFICIENT_STOCK:
+    "Stock insuffisant. Enregistrez une réception valide ou réduisez la quantité.",
   CONSUMABLE_WITHDRAWN:
     "Lot retiré. Il ne peut pas être utilisé dans un nouvel emballage.",
   CONSUMABLE_LIMIT:

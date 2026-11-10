@@ -305,3 +305,7 @@ Enter as **Demo operator** and open **Consumable lots**. The **Prepare fictional
 ## Consumable lot withdrawal
 
 Enter as **Demo reviewer**, open **Consumable lots** and use **Withdraw lot** on the prior fictional lot. See [CONSUMABLE-WITHDRAWAL.md](CONSUMABLE-WITHDRAWAL.md) for the single U-CONS-02 owner check. Existing packages change only after a separately confirmed linked recall.
+
+## Consumable stock
+
+As **Demo operator**, open **Consumable lots → Prepare fictional stock example** for the single U-CONS-03 receipt check. Stock is added only after confirmation. New registered-lot packaging requires quantities and available stock. See [CONSUMABLE-STOCK.md](CONSUMABLE-STOCK.md).

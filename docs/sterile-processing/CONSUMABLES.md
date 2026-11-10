@@ -16,8 +16,10 @@ Owner screenshot confirms the saved lot, supplier reference, expiry and Within r
 
 ## Deferred work
 
-Stock quantities, receipts/issues/adjustments, supplier catalogues, barcode/GS1 ingestion, attachments, product/method compatibility approvals, catalogue corrections, multi-lot allocation by quantity, cross-record manufacturer-lot search, automatic consumable incidents/holds and bulk recalls and automated expiry alerts are not part of this increment. Physical verification, broader owner packaging/exception/language/mobile workflows and clinical/production acceptance remain deferred. RSP-ISS-001 stays parked; no independent-inspector enforcement change is included.
+Stock corrections/adjustments, supplier catalogues, barcode/GS1 ingestion, attachments, product/method compatibility approvals, catalogue corrections, multi-lot allocation by quantity, cross-record manufacturer-lot search, automatic consumable incidents/holds and bulk recalls and automated expiry alerts are not part of this increment. Physical verification, broader owner packaging/exception/language/mobile workflows and clinical/production acceptance remain deferred. RSP-ISS-001 stays parked; no independent-inspector enforcement change is included.
 
 Developer verification November 9, 2026: 379 scoped tests passed (205 domain, 133 HTTP/SQLite, 41 web), scoped builds and Chromium workflow passed. Coverage includes strict dates, expiry boundary, primary/indicator rules, duplicate/foreign selections, supplier snapshot retention, idempotency, audit rollback, CSRF/roles, SQL reopen, package usage, trace facts and browser save/select/package/lookup/refresh.
 
 Reviewer withdrawal and separately confirmed per-package linked recalls are now delivered; see [CONSUMABLE-WITHDRAWAL.md](CONSUMABLE-WITHDRAWAL.md) for the current U-CONS-02 owner check.
+
+Stock receipts, quantities used in packaging and explicit quarantine/disposal movements are now delivered. See [CONSUMABLE-STOCK.md](CONSUMABLE-STOCK.md) for units, legacy limits and the current U-CONS-03 owner check.

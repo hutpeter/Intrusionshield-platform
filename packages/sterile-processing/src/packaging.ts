@@ -1,3 +1,4 @@
+import { consumeStock } from "./consumable-stock.js";
 import { resolveConsumables } from "./consumables.js";
 import type {
   ShelfLifePolicy,
@@ -176,10 +177,21 @@ export class PackagingRegistry extends SterileRegistryBase {
             throw new SterileError("INVALID_REQUEST");
         }
         const shelfLife = shelfLifePolicy(input.shelfLife, at);
+        const packageId = randomUUID();
+        const consumableUsage = await consumeStock(
+          tx,
+          s,
+          consumableLots,
+          input.consumableUsage,
+          at,
+          input.requestId,
+          { id: packageId, code },
+        );
         const item: SterilePackage = {
+          ...(consumableUsage ? { consumableUsage } : {}),
           ...(consumableLots ? { consumableLots } : {}),
           ...(shelfLife ? { shelfLife } : {}),
-          id: randomUUID(),
+          id: packageId,
           tenantId: s.tenantId,
           facilityId: s.facilityId,
           code,

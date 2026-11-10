@@ -86,6 +86,8 @@ CREATE TABLE IF NOT EXISTS sp_service_usage(tenant_id TEXT NOT NULL,facility_id 
 CREATE TABLE IF NOT EXISTS sp_service_exposures(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,instrument_id TEXT NOT NULL,load_id TEXT NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,instrument_id,load_id),FOREIGN KEY(tenant_id,facility_id,instrument_id) REFERENCES sp_instruments(tenant_id,facility_id,id));
 CREATE TABLE IF NOT EXISTS sp_loaners(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,code TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,code));
 CREATE TABLE IF NOT EXISTS sp_loaner_versions(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id,version),FOREIGN KEY(tenant_id,facility_id,id) REFERENCES sp_loaners(tenant_id,facility_id,id));
+CREATE TABLE IF NOT EXISTS sp_consumable_stock(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,lot_id TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,lot_id),FOREIGN KEY(tenant_id,facility_id,lot_id) REFERENCES sp_consumables(tenant_id,facility_id,id));
+CREATE TABLE IF NOT EXISTS sp_consumable_stock_movements(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,lot_id TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,lot_id,version),FOREIGN KEY(tenant_id,facility_id,lot_id) REFERENCES sp_consumables(tenant_id,facility_id,id));
 CREATE TABLE IF NOT EXISTS sp_consumables(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,code TEXT NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,code));
 CREATE TABLE IF NOT EXISTS sp_procedures(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,code TEXT NOT NULL,revision INTEGER NOT NULL,stage TEXT NOT NULL,state TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id),UNIQUE(tenant_id,facility_id,code,revision));
 CREATE TABLE IF NOT EXISTS sp_procedure_versions(tenant_id TEXT NOT NULL,facility_id TEXT NOT NULL,id TEXT NOT NULL,version INTEGER NOT NULL,payload TEXT NOT NULL CHECK(json_valid(payload)),PRIMARY KEY(tenant_id,facility_id,id,version),FOREIGN KEY(tenant_id,facility_id,id) REFERENCES sp_procedures(tenant_id,facility_id,id));
@@ -1019,6 +1021,59 @@ CREATE INDEX IF NOT EXISTS sp_assignment_assembly ON sp_assignments(tenant_id,fa
                 x.payload,
               ) as import("@intrusionshield/sterile-processing").ConsumableUse,
           );
+        },
+        findConsumableStock: async (id) =>
+          read<import("@intrusionshield/sterile-processing").ConsumableStock>(
+            "SELECT payload FROM sp_consumable_stock WHERE tenant_id=? AND facility_id=? AND lot_id=?",
+            id,
+          ),
+        saveConsumableStock: async (item, expected) => {
+          own(item);
+          if (expected === 0) {
+            this.db
+              .prepare("INSERT INTO sp_consumable_stock VALUES(?,?,?,?,?)")
+              .run(...args, item.lotId, item.version, JSON.stringify(item));
+          } else {
+            const r = this.db
+              .prepare(
+                "UPDATE sp_consumable_stock SET version=?,payload=? WHERE tenant_id=? AND facility_id=? AND lot_id=? AND version=?",
+              )
+              .run(
+                item.version,
+                JSON.stringify(item),
+                ...args,
+                item.lotId,
+                expected,
+              );
+            if (r.changes !== 1) throw new SterileError("CONFLICT");
+          }
+        },
+        listConsumableStockMovements: async (id, page) => {
+          const rows = this.db
+            .prepare(
+              "SELECT payload FROM sp_consumable_stock_movements WHERE tenant_id=? AND facility_id=? AND lot_id=? ORDER BY version DESC LIMIT 51 OFFSET ?",
+            )
+            .all(...args, id, (page - 1) * 50) as { payload: string }[];
+          return rows.map(
+            (x) =>
+              JSON.parse(
+                x.payload,
+              ) as import("@intrusionshield/sterile-processing").StockMovement,
+          );
+        },
+        insertConsumableStockMovement: async (item) => {
+          own(item);
+          this.db
+            .prepare(
+              "INSERT INTO sp_consumable_stock_movements VALUES(?,?,?,?,?,?)",
+            )
+            .run(
+              ...args,
+              item.id,
+              item.lotId,
+              item.version,
+              JSON.stringify(item),
+            );
         },
         updateConsumable: async (item, expected) => {
           own(item);

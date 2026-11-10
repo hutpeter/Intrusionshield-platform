@@ -94,6 +94,18 @@ async function httpFixture(t) {
     },
   };
 }
+async function fundLotHttp(f, lot, quantity = 20) {
+  const r = await f.call(f.base + "/consumables/" + lot.id + "/stock/receive", {
+    requestId: randomUUID(),
+    version: 0,
+    quantity,
+    reason: "SIMULATED receipt",
+    reference: "DELIVERY",
+    confirmed: true,
+  });
+  assert.equal(r.status, 201);
+  return r.json();
+}
 const packBody = (a, extra = {}) => ({
   requestId: randomUUID(),
   code: "PACK-1",
@@ -106,6 +118,14 @@ const packBody = (a, extra = {}) => ({
   sealChecked: true,
   contentsChecked: true,
   confirmed: true,
+  ...(extra.consumableLotIds
+    ? {
+        consumableUsage: extra.consumableLotIds.map((lotId) => ({
+          lotId,
+          quantity: 1,
+        })),
+      }
+    : {}),
   ...extra,
 });
 async function example(f) {
@@ -472,6 +492,7 @@ test("HTTP consumable registration, CSRF, roles, strict input and scoped frozen 
     (await (await f.call(f.base + "/consumables?page=1")).json()).items[0].id,
     lot.id,
   );
+  await fundLotHttp(f, lot);
   const a = await example(f);
   response = await f.call(
     f.base + "/packages",
@@ -610,6 +631,7 @@ test("reviewer lot withdrawal is scoped and persistent; separate linked recall r
       confirmed: true,
     };
   const lot = await (await f.call(f.base + "/consumables", input)).json(),
+    receipt = await fundLotHttp(f, lot),
     a = await example(f),
     p = await (
       await f.call(
@@ -786,4 +808,207 @@ test("lot recall source permissions are denied before any repository transaction
     );
     assert.equal(queries, 0);
   }
+});
+
+test("stock example starts with no stock; receipts, roles, CSRF, strict fields and ledger survive reopening", async (t) => {
+  const f = await httpFixture(t),
+    requestId = randomUUID(),
+    sample = await f.call("/preview/consumable-stock-example", { requestId });
+  assert.equal(sample.status, 201);
+  const lot = await sample.json(),
+    path = f.base + "/consumables/" + lot.id + "/stock",
+    input = {
+      requestId: randomUUID(),
+      version: 0,
+      quantity: 10,
+      reason: "SIMULATED receipt",
+      reference: "DELIVERY",
+      confirmed: true,
+    };
+  assert.equal((await (await f.call(path)).json()).balance, null);
+  assert.equal(
+    (await f.call(path + "/receive", input, { "x-sterile-csrf": "bad" }))
+      .status,
+    403,
+  );
+  assert.equal(
+    (await f.call(path + "/receive", { ...input, available: 999 })).status,
+    400,
+  );
+  assert.equal(
+    (await f.call(path + "/receive", { ...input, quantity: 0.5 })).status,
+    400,
+  );
+  const receipt = await f.call(path + "/receive", input);
+  assert.equal(receipt.status, 201);
+  assert.equal((await receipt.json()).balance.available, 10);
+  assert.equal(
+    (await (await f.call(path + "/receive", input)).json()).balance.available,
+    10,
+  );
+  assert.equal(
+    (
+      await f.call(path + "/quarantine", {
+        ...input,
+        requestId: randomUUID(),
+        version: 1,
+        quantity: 3,
+      })
+    ).status,
+    403,
+  );
+  await f.login("reviewer");
+  assert.equal(
+    (
+      await f.call(path + "/receive", {
+        ...input,
+        requestId: randomUUID(),
+        version: 1,
+      })
+    ).status,
+    403,
+  );
+  let r = await f.call(path + "/quarantine", {
+    ...input,
+    requestId: randomUUID(),
+    version: 1,
+    quantity: 3,
+  });
+  assert.equal(r.status, 201);
+  r = await f.call(path + "/discard_quarantined", {
+    ...input,
+    requestId: randomUUID(),
+    version: 2,
+    quantity: 2,
+  });
+  assert.equal(r.status, 201);
+  const report = await (await f.call(path)).json();
+  assert.equal(report.balance.available, 7);
+  assert.equal(report.balance.quarantined, 1);
+  assert.equal(report.balance.discarded, 2);
+  assert.equal(report.movements.items.length, 3);
+  const reopened = new PreviewSqliteRepository(f.file);
+  try {
+    const { ConsumableStockRegistry } =
+      await import("@intrusionshield/sterile-processing");
+    assert.deepEqual(
+      (await new ConsumableStockRegistry(reopened).report(f.session, lot.id))
+        .balance,
+      report.balance,
+    );
+  } finally {
+    reopened.close();
+  }
+  await f.login("viewer");
+  assert.equal((await f.call(path)).status, 200);
+  assert.equal(
+    (await f.call(path + "/discard", { ...input, version: 3, quantity: 1 }))
+      .status,
+    403,
+  );
+  assert.equal(
+    (
+      await f.call(
+        f.base.replace(f.session.facilityId, randomUUID()) +
+          "/consumables/" +
+          lot.id +
+          "/stock",
+      )
+    ).status,
+    404,
+  );
+});
+test("competing SQLite package saves cannot overspend the same lot and package/stock audit failure rolls back both", async (t) => {
+  const f = await httpFixture(t),
+    lot = await (
+      await f.call("/preview/consumable-stock-example", {
+        requestId: randomUUID(),
+      })
+    ).json(),
+    a = await example(f),
+    b = await example(f);
+  await fundLotHttp(f, lot, 5);
+  const other = new PreviewSqliteRepository(f.file);
+  try {
+    const stockBody = (a, code) =>
+      packBody(a, {
+        code,
+        material: lot.name,
+        materialLot: lot.lotNumber,
+        consumableLotIds: [lot.id],
+        consumableUsage: [{ lotId: lot.id, quantity: 3 }],
+      });
+    const results = await Promise.allSettled([
+      new PackagingRegistry(f.repo).pack(
+        f.session,
+        stockBody(a, "STOCK-RACE-A"),
+      ),
+      new PackagingRegistry(other).pack(
+        f.session,
+        stockBody(b, "STOCK-RACE-B"),
+      ),
+    ]);
+    assert.equal(results.filter((x) => x.status === "fulfilled").length, 1);
+    assert.equal(
+      results.find((x) => x.status === "rejected").reason.code,
+      "INSUFFICIENT_STOCK",
+    );
+    const { ConsumableStockRegistry } =
+      await import("@intrusionshield/sterile-processing");
+    const report = await new ConsumableStockRegistry(other).report(
+      f.session,
+      lot.id,
+    );
+    assert.equal(report.balance.available, 2);
+    assert.equal(report.balance.used, 3);
+    assert.equal(report.movements.items.length, 2);
+    const used = report.movements.items[0];
+    assert.ok(used.packageId);
+    assert.equal(
+      (await new PackagingRegistry(other).get(f.session, used.packageId))
+        .consumableUsage[0].movementId,
+      used.id,
+    );
+  } finally {
+    other.close();
+  }
+});
+
+test("SQLite failure in package audit rolls back prior stock audits, balances, ledger and retry receipt", async (t) => {
+  const f = await httpFixture(t),
+    lot = await (
+      await f.call("/preview/consumable-stock-example", {
+        requestId: randomUUID(),
+      })
+    ).json(),
+    a = await example(f);
+  await fundLotHttp(f, lot, 4);
+  const broken = {
+      transaction: (s, work) =>
+        f.repo.transaction(s, (tx) =>
+          work({
+            ...tx,
+            appendAudit: async (event) => {
+              if (event.action === "package-created")
+                throw Error("synthetic package audit failure");
+              return tx.appendAudit(event);
+            },
+          }),
+        ),
+    },
+    input = packBody(a, {
+      material: lot.name,
+      materialLot: lot.lotNumber,
+      consumableLotIds: [lot.id],
+      consumableUsage: [{ lotId: lot.id, quantity: 2 }],
+    });
+  await assert.rejects(new PackagingRegistry(broken).pack(f.session, input));
+  const { ConsumableStockRegistry } =
+      await import("@intrusionshield/sterile-processing"),
+    r = new ConsumableStockRegistry(f.repo);
+  assert.equal((await r.report(f.session, lot.id)).balance.available, 4);
+  assert.equal((await r.report(f.session, lot.id)).movements.items.length, 1);
+  const p = await new PackagingRegistry(f.repo).pack(f.session, input);
+  assert.equal(p.consumableUsage[0].quantity, 2);
+  assert.equal((await r.report(f.session, lot.id)).balance.available, 2);
 });

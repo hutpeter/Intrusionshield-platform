@@ -21,6 +21,14 @@ const body = (a, extra = {}) => ({
   sealChecked: true,
   contentsChecked: true,
   confirmed: true,
+  ...(extra.consumableLotIds
+    ? {
+        consumableUsage: extra.consumableLotIds.map((lotId) => ({
+          lotId,
+          quantity: 1,
+        })),
+      }
+    : {}),
   ...extra,
 });
 async function fixture({ legacy = false, draft = false } = {}) {
@@ -275,6 +283,22 @@ test("packaging rejects inspection recorded after the saved assembly completion"
   await fail(f.pk.pack(f.s, body(f.a)), "PACKAGING_BLOCKED");
 });
 
+async function fundLots(f, lots, quantity = 20) {
+  const { ConsumableStockRegistry } = await import("../dist/index.js");
+  for (const lot of lots)
+    await new ConsumableStockRegistry(f.repo).record(f.s, lot.id, "receive", {
+      requestId: randomUUID(),
+      version: 0,
+      quantity,
+      reason: "SIMULATED receipt",
+      reference: "DELIVERY",
+      confirmed: true,
+    });
+}
+async function fundAndPack(f, lots, input) {
+  await fundLots(f, lots);
+  return f.pk.pack(f.s, input);
+}
 const lotInput = (extra = {}) => ({
   requestId: randomUUID(),
   code: "LOT-" + randomUUID(),
@@ -326,8 +350,9 @@ test("packaging freezes primary and indicator lots, inclusive expiry and immutab
     r = new ConsumableRegistry(f.repo),
     lot = await r.register(f.s, lotInput()),
     indicator = await r.register(f.s, lotInput({ kind: "indicator" }));
-  const p = await f.pk.pack(
-    f.s,
+  const p = await fundAndPack(
+    f,
+    [lot, indicator],
     body(f.a, { consumableLotIds: [lot.id, indicator.id] }),
   );
   assert.deepEqual(p.consumableLots, [lot, indicator]);
@@ -394,6 +419,7 @@ test("packaging rejects expired, foreign, duplicate, indicator-only and mismatch
     "INVALID_REQUEST",
   );
   assert.equal(f.repo.state.packages.length, 0);
+  await fundLots(f, [lot]);
   f.repo.failAudit = true;
   await assert.rejects(
     f.pk.pack(f.s, body(f.a, { consumableLotIds: [lot.id] })),
@@ -406,7 +432,7 @@ test("lot withdrawal is versioned, idempotent, permanent and blocks new packing 
     f = await fixture(),
     r = new ConsumableRegistry(f.repo),
     lot = await r.register(f.s, lotInput()),
-    p = await f.pk.pack(f.s, body(f.a, { consumableLotIds: [lot.id] })),
+    p = await fundAndPack(f, [lot], body(f.a, { consumableLotIds: [lot.id] })),
     input = {
       requestId: randomUUID(),
       version: 1,
@@ -449,7 +475,7 @@ test("withdrawn lot recall requires exact package provenance and current preview
     r = new ConsumableRegistry(f.repo),
     lot = await r.register(f.s, lotInput()),
     other = await r.register(f.s, lotInput()),
-    p = await f.pk.pack(f.s, body(f.a, { consumableLotIds: [lot.id] })),
+    p = await fundAndPack(f, [lot], body(f.a, { consumableLotIds: [lot.id] })),
     decision = {
       requestId: randomUUID(),
       version: 1,
@@ -526,4 +552,140 @@ test("lot withdrawal validation and audit failures leave the original lot unchan
   f.repo.failAudit = true;
   await assert.rejects(r.withdraw(f.s, lot.id, input));
   assert.deepEqual(await r.detail(f.s, lot.id), lot);
+});
+
+test("stock receipts, quarantine and disposal conserve balances and preserve an immutable versioned ledger", async () => {
+  const { ConsumableRegistry, ConsumableStockRegistry } =
+      await import("../dist/index.js"),
+    f = await fixture(),
+    lot = await new ConsumableRegistry(f.repo).register(f.s, lotInput()),
+    r = new ConsumableStockRegistry(f.repo),
+    input = {
+      requestId: randomUUID(),
+      version: 0,
+      quantity: 10,
+      reason: "SIMULATED receipt",
+      reference: "DELIVERY",
+      confirmed: true,
+    };
+  const first = await r.record(f.s, lot.id, "receive", input);
+  assert.equal(first.balance.available, 10);
+  assert.deepEqual(await r.record(f.s, lot.id, "receive", input), first);
+  await r.record(f.s, lot.id, "quarantine", {
+    ...input,
+    requestId: randomUUID(),
+    version: 1,
+    quantity: 3,
+  });
+  await r.record(f.s, lot.id, "discard_quarantined", {
+    ...input,
+    requestId: randomUUID(),
+    version: 2,
+    quantity: 2,
+  });
+  await r.record(f.s, lot.id, "discard", {
+    ...input,
+    requestId: randomUUID(),
+    version: 3,
+    quantity: 1,
+  });
+  const report = await r.report(f.s, lot.id);
+  assert.equal(report.balance.available, 6);
+  assert.equal(report.balance.quarantined, 1);
+  assert.equal(report.balance.discarded, 3);
+  assert.equal(report.balance.received, 10);
+  assert.equal(report.movements.items.length, 4);
+  assert.equal(report.movements.items.at(-1).balance.available, 10);
+  await fail(
+    r.record(f.s, lot.id, "receive", { ...input, requestId: randomUUID() }),
+    "CONFLICT",
+  );
+  await fail(
+    r.record(f.s, lot.id, "quarantine", {
+      ...input,
+      requestId: randomUUID(),
+      version: 4,
+      quantity: 7,
+    }),
+    "INSUFFICIENT_STOCK",
+  );
+  await fail(
+    r.report({ ...f.s, facilityId: randomUUID() }, lot.id),
+    "NOT_FOUND",
+  );
+  for (const quantity of [0, -1, 0.5, NaN, 1000000001])
+    await fail(
+      r.record(f.s, lot.id, "receive", { ...input, quantity }),
+      "INVALID_REQUEST",
+    );
+});
+test("packaging deducts each selected lot once, retry/void preserve usage and overspend or missing quantities cannot save", async () => {
+  const { ConsumableRegistry, ConsumableStockRegistry } =
+      await import("../dist/index.js"),
+    f = await fixture(),
+    lot = await new ConsumableRegistry(f.repo).register(f.s, lotInput()),
+    r = new ConsumableStockRegistry(f.repo);
+  await fundLots(f, [lot], 3);
+  const input = body(f.a, {
+    consumableLotIds: [lot.id],
+    consumableUsage: [{ lotId: lot.id, quantity: 2 }],
+  });
+  await fail(
+    f.pk.pack(f.s, { ...input, consumableUsage: undefined }),
+    "INVALID_REQUEST",
+  );
+  await fail(
+    f.pk.pack(f.s, {
+      ...input,
+      consumableUsage: [{ lotId: lot.id, quantity: 4 }],
+    }),
+    "INSUFFICIENT_STOCK",
+  );
+  assert.equal((await r.report(f.s, lot.id)).balance.available, 3);
+  const p = await f.pk.pack(f.s, input);
+  assert.equal(p.consumableUsage[0].quantity, 2);
+  assert.deepEqual(await f.pk.pack(f.s, input), p);
+  assert.equal((await r.report(f.s, lot.id)).balance.available, 1);
+  assert.equal((await r.report(f.s, lot.id)).movements.items.length, 2);
+  const { TraceabilityRegistry } = await import("../dist/index.js");
+  const trace = await new TraceabilityRegistry(f.repo).report(
+    f.s,
+    "package",
+    p.id,
+  );
+  assert.ok(
+    trace.nodes.some((n) =>
+      n.snapshots.some((s) =>
+        s.facts.some((f) => f.kind === "consumable_usage"),
+      ),
+    ),
+  );
+  await f.pk.void(f.s, p.id, {
+    requestId: randomUUID(),
+    version: 1,
+    reason: "SIMULATED damaged wrap",
+    confirmed: true,
+  });
+  assert.equal((await r.report(f.s, lot.id)).balance.used, 2);
+  assert.equal((await r.report(f.s, lot.id)).balance.available, 1);
+  assert.equal((await f.pk.get(f.s, p.id, 1)).consumableUsage[0].quantity, 2);
+});
+test("stock and package multi-lot writes roll back together on insufficient indicator or audit failure", async () => {
+  const { ConsumableRegistry, ConsumableStockRegistry } =
+      await import("../dist/index.js"),
+    f = await fixture(),
+    reg = new ConsumableRegistry(f.repo),
+    lot = await reg.register(f.s, lotInput()),
+    indicator = await reg.register(f.s, lotInput({ kind: "indicator" })),
+    r = new ConsumableStockRegistry(f.repo);
+  await fundLots(f, [lot], 3);
+  const input = body(f.a, { consumableLotIds: [lot.id, indicator.id] });
+  await fail(f.pk.pack(f.s, input), "INSUFFICIENT_STOCK");
+  assert.equal((await r.report(f.s, lot.id)).balance.available, 3);
+  await fundLots(f, [indicator], 1);
+  f.repo.failAudit = true;
+  await assert.rejects(f.pk.pack(f.s, input));
+  assert.equal((await r.report(f.s, lot.id)).balance.available, 3);
+  assert.equal(f.repo.state.packages.length, 0);
+  assert.equal(f.repo.state.consumableStockMovements.length, 2);
 });

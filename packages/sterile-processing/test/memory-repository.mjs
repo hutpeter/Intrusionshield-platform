@@ -25,6 +25,8 @@ export class MemoryRepository {
     equipmentIncidents: [],
     equipmentIncidentVersions: [],
     consumables: [],
+    consumableStock: [],
+    consumableStockMovements: [],
     equipment: [],
     equipmentVersions: [],
     packages: [],
@@ -1011,6 +1013,40 @@ export class MemoryRepository {
             state: x.state,
             createdAt: x.createdAt,
           })),
+      findConsumableStock: async (id) =>
+        read(s.consumableStock.find((x) => own(x) && x.lotId === id)),
+      saveConsumableStock: async (item, expected) => {
+        const n = s.consumableStock.findIndex(
+          (x) => own(x) && x.lotId === item.lotId,
+        );
+        if (
+          !own(item) ||
+          (n < 0 ? expected !== 0 : s.consumableStock[n].version !== expected)
+        )
+          throw Error("constraint");
+        if (n < 0) s.consumableStock.push(structuredClone(item));
+        else s.consumableStock[n] = structuredClone(item);
+      },
+      listConsumableStockMovements: async (id, page) =>
+        s.consumableStockMovements
+          .filter((x) => own(x) && x.lotId === id)
+          .slice()
+          .reverse()
+          .slice((page - 1) * 50, (page - 1) * 50 + 51)
+          .map((x) => structuredClone(x)),
+      insertConsumableStockMovement: async (item) => {
+        if (
+          !own(item) ||
+          s.consumableStockMovements.some(
+            (x) =>
+              own(x) &&
+              (x.id === item.id ||
+                (x.lotId === item.lotId && x.version === item.version)),
+          )
+        )
+          throw Error("constraint");
+        s.consumableStockMovements.push(structuredClone(item));
+      },
       updateConsumable: async (item, expected) => {
         const n = s.consumables.findIndex(
           (x) => own(x) && x.id === item.id && x.version === expected,

@@ -1,8 +1,8 @@
 # Consumable lot withdrawal and linked recalls
 
-## One owner check: U-CONS-02 (pending)
+## One owner check: U-CONS-02 (passed November 10, 2026)
 
-Update/restart the preview, enter as **Demo reviewer** and open **Consumable lots**. On the fictional lot registered in U-CONS-01, click **Withdraw lot**. Its fictional decision reason and supplier notice reference are prefilled. Review them, tick **I confirm withdrawal of this lot from new packaging.**, then **Record lot withdrawal**. Expect **Lot withdrawal recorded.** and **Withdrawn — blocked for new packaging**. This is the only owner check. Do not create a recall for this check; the linked recall flow is developer-verified.
+Owner screenshot confirms the saved withdrawal, packaging block and simulated supplier notice. Original check: update/restart the preview, enter as **Demo reviewer** and open **Consumable lots**. On the fictional lot registered in U-CONS-01, click **Withdraw lot**. Its fictional decision reason and supplier notice reference are prefilled. Review them, tick **I confirm withdrawal of this lot from new packaging.**, then **Record lot withdrawal**. Expect **Lot withdrawal recorded.** and **Withdrawn — blocked for new packaging**. This is the only owner check. Do not create a recall for this check; the linked recall flow is developer-verified.
 
 ## Decision and scope
 
@@ -22,4 +22,6 @@ Registration/read roles remain unchanged. Withdrawal and linked recall creation 
 
 This works only from exact registered lot IDs and recorded package provenance. Earlier unlinked API/package material strings are not automatically matched; manufacturer lot numbers shared across separate catalogue records require separate review. Registration/expiry do not verify physical stock, compatibility, supplier notice authenticity or clinical safety. Physical stock quarantine, supplier notifications, acknowledgments, bulk manufacturer-lot search, automatic holds/alerts, correction/restore, inventory quantities, production migrations/indexes/scale and broader manual/clinical/operational acceptance remain deferred. RSP-ISS-001 stays parked.
 
-Developer November 10, 2026: 385 scoped tests passed (208 domain, 135 HTTP/SQLite, 42 web), scoped builds and Chromium registration/packaging/reviewer withdrawal/explicit recall preview/confirmation/source navigation/refresh passed. Validation includes original package immutability, withdrawn-lot server block, reviewer/CSRF/source permissions, stale preview/version, exact provenance, duplicate retry, audit rollback and SQLite reopen. No U-CONS-02 owner acceptance is inferred.
+Developer November 10, 2026: 385 scoped tests passed (208 domain, 135 HTTP/SQLite, 42 web), scoped builds and Chromium registration/packaging/reviewer withdrawal/explicit recall preview/confirmation/source navigation/refresh passed. Validation includes original package immutability, withdrawn-lot server block, reviewer/CSRF/source permissions, stale preview/version, exact provenance, duplicate retry, audit rollback and SQLite reopen. U-CONS-02 subsequently passed from the owner screenshot.
+
+Recorded stock receipts, packaging deductions, quarantine and disposal are now available; see [CONSUMABLE-STOCK.md](CONSUMABLE-STOCK.md). Withdrawal retains physical balances while making stock unusable for new packaging.

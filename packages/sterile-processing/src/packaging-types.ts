@@ -23,6 +23,7 @@ export interface InspectionProof {
   checks: InspectionItem;
 }
 export interface SterilePackage {
+  consumableUsage?: import("./consumable-stock.js").ConsumableUsage[];
   consumableLots?: import("./consumables.js").ConsumableLot[];
   shelfLife?: ShelfLifePolicy;
   integrityHold?: PackageIntegrityHold;
@@ -75,6 +76,7 @@ export type PackageSummary = Pick<
   returned?: ReturnStatus;
 };
 export interface PackageInput {
+  consumableUsage?: import("./consumable-stock.js").ConsumableUsageInput[];
   consumableLotIds?: string[];
   shelfLife?: ShelfLifePolicy;
   requestId: string;

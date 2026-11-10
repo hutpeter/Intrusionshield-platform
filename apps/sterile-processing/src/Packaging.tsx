@@ -1,3 +1,4 @@
+import { stockLabels } from "./stock-text";
 import { consumableLabels } from "./consumable-text";
 import type { ConsumableLot } from "@intrusionshield/sterile-processing";
 import { PackageSafety } from "./PackageSafety";
@@ -32,6 +33,8 @@ const empty = () => ({
   assemblyId: "",
   material: "",
   materialLot: "",
+  primaryQuantity: "1",
+  indicatorQuantity: "1",
   primaryLotId: "",
   indicatorLotId: "",
   procedure: "",
@@ -59,6 +62,7 @@ export function PackagingWorkspace({
   initialRecordId?: string;
 }) {
   const [symbolReady, setSymbolReady] = useState(false);
+  const st = stockLabels(language);
   const lotText = consumableLabels(language),
     [lots, setLots] = useState<ConsumableLot[]>([]);
   const t = labels(language),
@@ -199,6 +203,20 @@ export function PackagingWorkspace({
             code: fields.code,
             assemblyId: a.id,
             assemblyVersion: a.version,
+            consumableUsage: [
+              {
+                lotId: fields.primaryLotId,
+                quantity: Number(fields.primaryQuantity),
+              },
+              ...(fields.indicatorLotId
+                ? [
+                    {
+                      lotId: fields.indicatorLotId,
+                      quantity: Number(fields.indicatorQuantity),
+                    },
+                  ]
+                : []),
+            ],
             consumableLotIds: [
               fields.primaryLotId,
               ...(fields.indicatorLotId ? [fields.indicatorLotId] : []),
@@ -432,6 +450,16 @@ export function PackagingWorkspace({
             <dt>{p.material}</dt>
             <dd>
               {d.material} · {d.materialLot}
+              {!!d.consumableUsage?.length && (
+                <div>
+                  <strong>{st.usage}</strong>
+                  {d.consumableUsage.map((x) => (
+                    <p key={x.lotId}>
+                      {x.lotCode} · {x.quantity} · {st.unit}
+                    </p>
+                  ))}
+                </div>
+              )}
               {d.consumableLots?.length ? (
                 <strong>{lotText.linked}</strong>
               ) : (
@@ -718,13 +746,17 @@ export function PackagingWorkspace({
                             key={x.id}
                             value={x.id}
                             disabled={
+                              !x.stock?.available ||
                               !!x.withdrawal ||
                               x.expiresOn <
                                 new Date().toISOString().slice(0, 10)
                             }
                           >
                             {x.code} · {x.name} · {x.lotNumber} · {x.expiresOn}
-                            {x.withdrawal ? " · " + t.CONSUMABLE_WITHDRAWN : ""}
+                            {x.withdrawal
+                              ? " · " + t.CONSUMABLE_WITHDRAWN
+                              : ""}{" "}
+                            · {st.balance}: {x.stock?.available ?? 0}
                             {x.expiresOn < new Date().toISOString().slice(0, 10)
                               ? " · " + lotText.expired
                               : ""}
@@ -749,18 +781,61 @@ export function PackagingWorkspace({
                             key={x.id}
                             value={x.id}
                             disabled={
+                              !x.stock?.available ||
                               !!x.withdrawal ||
                               x.expiresOn <
                                 new Date().toISOString().slice(0, 10)
                             }
                           >
                             {x.code} · {x.lotNumber} · {x.expiresOn}
-                            {x.withdrawal ? " · " + t.CONSUMABLE_WITHDRAWN : ""}
+                            {x.withdrawal
+                              ? " · " + t.CONSUMABLE_WITHDRAWN
+                              : ""}{" "}
+                            · {st.balance}: {x.stock?.available ?? 0}
                           </option>
                         ))}
                     </select>
                   </label>
                 </div>
+                <div className="form-grid">
+                  <label>
+                    {st.primary}
+                    <input
+                      required
+                      type="number"
+                      min={1}
+                      max={
+                        lots.find((x) => x.id === fields.primaryLotId)?.stock
+                          ?.available ?? 1000000000
+                      }
+                      step={1}
+                      value={fields.primaryQuantity}
+                      onChange={(e) =>
+                        patch({ primaryQuantity: e.target.value })
+                      }
+                    />
+                  </label>
+                  {fields.indicatorLotId && (
+                    <label>
+                      {st.indicator}
+                      <input
+                        required
+                        type="number"
+                        min={1}
+                        max={
+                          lots.find((x) => x.id === fields.indicatorLotId)
+                            ?.stock?.available ?? 1000000000
+                        }
+                        step={1}
+                        value={fields.indicatorQuantity}
+                        onChange={(e) =>
+                          patch({ indicatorQuantity: e.target.value })
+                        }
+                      />
+                    </label>
+                  )}
+                </div>
+                <p>{st.unit}</p>
                 <h3>{q.title}</h3>
                 <p>{q.policyHelp}</p>
                 <div className="form-grid">

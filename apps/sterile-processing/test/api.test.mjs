@@ -1167,3 +1167,59 @@ test("lot withdrawal and linked recall requests carry explicit version/confirmat
     (e) => e.code === "SERVICE_UNAVAILABLE",
   );
 });
+
+test("stock API validates nested lot/balance/ledger scope and sends explicit whole quantities with CSRF", async (t) => {
+  const lot = {
+      tenantId: session.tenantId,
+      facilityId: session.facilityId,
+      id: "lot",
+    },
+    balance = { ...lot, lotId: "lot", version: 1, available: 10 };
+  let value = {
+      ...lot,
+      lot,
+      balance,
+      movements: { items: [], page: 1, hasMore: false },
+    },
+    calls = [];
+  fake(t, async (path, options) => {
+    calls.push({ path, options });
+    return response(value);
+  });
+  assert.equal(
+    (await api.consumableStock(session, "lot", 1, signal())).balance.available,
+    10,
+  );
+  value = { ...value, balance: { ...balance, facilityId: "foreign" } };
+  await assert.rejects(
+    api.consumableStock(session, "lot", 1, signal()),
+    (e) => e.code === "SERVICE_UNAVAILABLE",
+  );
+  value = {
+    ...value,
+    balance,
+    movements: {
+      items: [
+        { ...lot, lotId: "lot", balance: { ...balance, tenantId: "foreign" } },
+      ],
+      page: 1,
+      hasMore: false,
+    },
+  };
+  await assert.rejects(
+    api.consumableStock(session, "lot", 1, signal()),
+    (e) => e.code === "SERVICE_UNAVAILABLE",
+  );
+  value = { ...lot, lotId: "lot" };
+  const input = {
+    requestId: "request",
+    version: 1,
+    quantity: 3,
+    reason: "SIMULATED",
+    reference: "DELIVERY",
+    confirmed: true,
+  };
+  await api.recordConsumableStock(session, "lot", "receive", input, signal());
+  assert.equal(calls.at(-1).options.headers["x-sterile-csrf"], session.csrf);
+  assert.deepEqual(JSON.parse(calls.at(-1).options.body), input);
+});
