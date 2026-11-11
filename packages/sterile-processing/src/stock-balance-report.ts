@@ -1,9 +1,22 @@
 import {
+  codeOf,
+  SterileError,
   scopeOf,
   type SterileScope,
   type SterileRepository,
 } from "./foundation.js";
 import type { ConsumableLot } from "./consumables.js";
+export const stockBalanceStatuses = [
+  "current",
+  "untracked",
+  "expired",
+  "withdrawn",
+] as const;
+export type StockBalanceStatus = (typeof stockBalanceStatuses)[number];
+export interface StockBalanceFilters {
+  lotCode?: string;
+  status?: StockBalanceStatus;
+}
 export interface StockBalanceReportRow {
   lotId: string;
   code: string;
@@ -24,9 +37,10 @@ export interface StockBalanceReportRow {
   usable: number;
   stockVersion: number | null;
   lastMovementAt: string | null;
-  status: "current" | "untracked" | "expired" | "withdrawn";
+  status: StockBalanceStatus;
 }
 export interface StockBalanceReport {
+  filters: { lotCode: string | null; status: StockBalanceStatus | null };
   tenantId: string;
   facilityId: string;
   generatedAt: string;
@@ -35,14 +49,36 @@ export interface StockBalanceReport {
 }
 export class StockBalanceReportRegistry {
   constructor(private readonly repository: SterileRepository) {}
-  async get(scope: SterileScope): Promise<StockBalanceReport> {
+  async get(
+    scope: SterileScope,
+    filters: StockBalanceFilters = {},
+  ): Promise<StockBalanceReport> {
     const s = scopeOf(scope);
+    if (
+      !filters ||
+      typeof filters !== "object" ||
+      Array.isArray(filters) ||
+      Object.keys(filters).some((k) => !["lotCode", "status"].includes(k)) ||
+      (filters.status !== undefined &&
+        !stockBalanceStatuses.includes(filters.status))
+    )
+      throw new SterileError("INVALID_REQUEST");
+    const lotCode =
+        filters.lotCode === undefined ? null : codeOf(filters.lotCode),
+      selectedStatus = filters.status ?? null;
     return this.repository.transaction(s, async (tx) => {
       const generatedAt = new Date().toISOString(),
         today = generatedAt.slice(0, 10),
         items: StockBalanceReportRow[] = [];
       for (let page = 1; ; page++) {
-        const lots = await tx.listConsumables(page);
+        const selected = lotCode
+          ? await tx.findConsumableByCode(lotCode)
+          : null;
+        const lots = lotCode
+          ? selected
+            ? [selected]
+            : []
+          : await tx.listConsumables(page);
         for (const lot of lots.slice(0, 50)) {
           const stock = await tx.findConsumableStock(lot.id),
             withdrawn = !!lot.withdrawal,
@@ -53,6 +89,7 @@ export class StockBalanceReportRegistry {
                 : !stock
                   ? "untracked"
                   : "current";
+          if (selectedStatus !== null && status !== selectedStatus) continue;
           items.push({
             lotId: lot.id,
             code: lot.code,
@@ -86,6 +123,7 @@ export class StockBalanceReportRegistry {
         tenantId: s.tenantId,
         facilityId: s.facilityId,
         generatedAt,
+        filters: { lotCode, status: selectedStatus },
         unit: "each",
         items,
       };

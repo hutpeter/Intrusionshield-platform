@@ -1958,3 +1958,73 @@ test("balance report HTTP is scoped and strict, persists ledger values, and rege
     0,
   );
 });
+
+test("balance report HTTP filters expose canonical applied status/lot and reject malformed or duplicate queries", async (t) => {
+  const f = await httpFixture(t),
+    current = await (
+      await f.call("/preview/consumable-stock-example", {
+        requestId: randomUUID(),
+      })
+    ).json(),
+    withdrawn = await (
+      await f.call("/preview/consumable-stock-example", {
+        requestId: randomUUID(),
+      })
+    ).json();
+  await fundLotHttp(f, current, 10);
+  await f.login("reviewer");
+  assert.equal(
+    (
+      await f.call(f.base + "/consumables/" + withdrawn.id + "/withdraw", {
+        requestId: randomUUID(),
+        version: 1,
+        reason: "SIMULATED",
+        reference: "NOTICE",
+        confirmed: true,
+      })
+    ).status,
+    200,
+  );
+  const path = f.base + "/consumables/balance-report";
+  let res = await f.call(path + "?status=withdrawn");
+  assert.equal(res.status, 200);
+  let r = await res.json();
+  assert.equal(r.items.length, 1);
+  assert.equal(r.items[0].lotId, withdrawn.id);
+  assert.equal(r.items[0].usable, 0);
+  assert.deepEqual(r.filters, { lotCode: null, status: "withdrawn" });
+  r = await (
+    await f.call(
+      path + "?lotCode=" + current.code.toLowerCase() + "&status=current",
+    )
+  ).json();
+  assert.equal(r.items.length, 1);
+  assert.equal(r.items[0].available, 10);
+  assert.equal(r.filters.lotCode, current.code);
+  assert.equal(
+    (
+      await (
+        await f.call(path + "?lotCode=" + current.code + "&status=withdrawn")
+      ).json()
+    ).items.length,
+    0,
+  );
+  assert.equal(
+    (await (await f.call(path + "?lotCode=UNKNOWN")).json()).items.length,
+    0,
+  );
+  for (const q of [
+    "?status=unknown",
+    "?status=",
+    "?lotCode=",
+    "?lotCode=bad%20code",
+    "?status=current&status=expired",
+    "?lotCode=A&lotCode=B",
+    "?action=receive",
+    "?lotId=" + current.id,
+  ])
+    assert.equal((await f.call(path + q)).status, 400);
+  const all = await (await f.call(path)).json();
+  assert.deepEqual(all.filters, { lotCode: null, status: null });
+  assert.equal(all.items.length, 2);
+});

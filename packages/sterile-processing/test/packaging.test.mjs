@@ -1514,4 +1514,92 @@ test("balance reports include every catalogue page with one stable row per lot a
   );
   assert.equal(f.repo.state.consumableStock.length, 0);
   assert.deepEqual((await registry.get(f.s)).items, r.items);
+  assert.equal(
+    (await registry.get(f.s, { status: "untracked" })).items.length,
+    53,
+  );
+  assert.equal(
+    (await registry.get(f.s, { lotCode: "BAL-052", status: "untracked" }))
+      .items[0].code,
+    "BAL-052",
+  );
+});
+
+test("balance filters use exact scoped codes and intersect with exclusive status without rewriting balances", async () => {
+  const { ConsumableRegistry, StockBalanceReportRegistry } =
+      await import("../dist/index.js"),
+    f = await fixture(),
+    lots = new ConsumableRegistry(f.repo),
+    a = await lots.register(f.s, lotInput({ code: "BAL-FILTER-A" })),
+    prefix = await lots.register(f.s, lotInput({ code: "BAL-FILTER-AA" })),
+    expired = await lots.register(
+      f.s,
+      lotInput({ code: "BAL-FILTER-EXPIRED", expiresOn: "2020-01-01" }),
+    ),
+    withdrawn = await lots.register(
+      f.s,
+      lotInput({ code: "BAL-FILTER-WITHDRAWN", expiresOn: "2020-01-01" }),
+    );
+  await fundLots(f, [a], 10);
+  await lots.withdraw(f.s, withdrawn.id, {
+    requestId: randomUUID(),
+    version: 1,
+    reason: "SIMULATED",
+    reference: "NOTICE",
+    confirmed: true,
+  });
+  const registry = new StockBalanceReportRegistry(f.repo),
+    before = structuredClone(f.repo.state),
+    expected = {
+      current: a.id,
+      untracked: prefix.id,
+      expired: expired.id,
+      withdrawn: withdrawn.id,
+    };
+  for (const status of Object.keys(expected)) {
+    const r = await registry.get(f.s, { status });
+    assert.equal(r.items.length, 1);
+    assert.equal(r.items[0].lotId, expected[status]);
+    assert.deepEqual(r.filters, { lotCode: null, status });
+  }
+  const exact = await registry.get(f.s, {
+    lotCode: " bal-filter-a ",
+    status: "current",
+  });
+  assert.equal(exact.items.length, 1);
+  assert.equal(exact.items[0].available, 10);
+  assert.equal(exact.items[0].usable, 10);
+  assert.deepEqual(exact.filters, { lotCode: a.code, status: "current" });
+  assert.equal(
+    (await registry.get(f.s, { lotCode: a.code, status: "withdrawn" })).items
+      .length,
+    0,
+  );
+  assert.equal(
+    (await registry.get(f.s, { lotCode: "NOT-FOUND" })).items.length,
+    0,
+  );
+  assert.equal(
+    (
+      await registry.get(
+        { ...f.s, facilityId: randomUUID() },
+        { lotCode: a.code },
+      )
+    ).items.length,
+    0,
+  );
+  assert.equal((await registry.get(f.s)).items.length, 4);
+  for (const filters of [
+    { status: "unknown" },
+    { status: "" },
+    { status: null },
+    { lotCode: "" },
+    { lotCode: "bad code" },
+    { lotCode: "x".repeat(101) },
+    { lotCode: null },
+    { lotId: a.id },
+    null,
+  ])
+    await fail(registry.get(f.s, filters), "INVALID_REQUEST");
+  assert.deepEqual(f.repo.state, before);
 });

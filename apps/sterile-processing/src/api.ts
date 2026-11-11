@@ -344,15 +344,35 @@ function validStockCountReview(
   );
 }
 export const api = {
-  stockBalanceReport: async (s: Session, signal: AbortSignal) => {
+  stockBalanceReport: async (
+    s: Session,
+    signal: AbortSignal,
+    filters: import("@intrusionshield/sterile-processing").StockBalanceFilters = {},
+  ) => {
     const r = await scoped(
       s,
       call<import("@intrusionshield/sterile-processing").StockBalanceReport>(
-        base(s) + "/consumables/balance-report",
+        base(s) +
+          "/consumables/balance-report" +
+          (filters.lotCode !== undefined || filters.status !== undefined
+            ? "?" +
+              new URLSearchParams({
+                ...(filters.lotCode === undefined
+                  ? {}
+                  : { lotCode: filters.lotCode }),
+                ...(filters.status === undefined
+                  ? {}
+                  : { status: filters.status }),
+              }).toString()
+            : ""),
         signal,
       ),
     );
     if (
+      !r.filters ||
+      r.filters.lotCode !==
+        (filters.lotCode?.trim().normalize("NFC").toUpperCase() ?? null) ||
+      r.filters.status !== (filters.status ?? null) ||
       r.unit !== "each" ||
       !Number.isFinite(Date.parse(r.generatedAt)) ||
       !Array.isArray(r.items) ||
@@ -366,6 +386,8 @@ export const api = {
               ? "untracked"
               : "current";
         return (
+          (r.filters.lotCode !== null && x.code !== r.filters.lotCode) ||
+          (r.filters.status !== null && x.status !== r.filters.status) ||
           [
             x.lotId,
             x.code,

@@ -365,4 +365,9 @@ Exact lot-code and movement-type filters now intersect with report dates. Snapsh
 
 ## Current stock balance report and CSV — preview delivered
 
-Complete per-lot recorded balance snapshots now distinguish available from usable stock and retain expired/withdrawn/untracked lots. CSV exports the entire displayed snapshot. U-STOCKBAL-01 remains pending. Physical verification, backfill, location/product totals, production scale and spreadsheet import remain deferred. See [STOCK-BALANCE-REPORT.md](STOCK-BALANCE-REPORT.md). Asset reuse remains intended; RSP-ISS-001 stays parked.
+Complete per-lot recorded balance snapshots now distinguish available from usable stock and retain expired/withdrawn/untracked lots. CSV exports the entire displayed snapshot. U-STOCKBAL-01 passed November 11, 2026 from the uploaded seven-lot balance CSV. Physical verification, backfill, location/product totals, production scale and spreadsheet import remain deferred. See [STOCK-BALANCE-REPORT.md](STOCK-BALANCE-REPORT.md). Asset reuse remains intended; RSP-ISS-001 stays parked.
+
+
+## Stock balance report filters — preview delivered
+
+Exact lot-code and exclusive recorded-status filters now preserve canonical applied filters in the report and CSV. Quantities and usable rules remain unchanged. U-BALFILTER-01 remains pending. Separate ledger-presence/multi-select, product grouping, production-scale querying and wider spreadsheet acceptance remain deferred. See [STOCK-BALANCE-FILTERS.md](STOCK-BALANCE-FILTERS.md). Asset reuse remains intended; RSP-ISS-001 stays parked.

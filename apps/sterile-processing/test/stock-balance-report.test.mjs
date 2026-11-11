@@ -27,6 +27,7 @@ test("balance CSV preserves all snapshot rows, signed adjustments, untracked bla
     r = {
       tenantId: "tenant",
       facilityId: "facility",
+      filters: { lotCode: null, status: null },
       generatedAt: "2026-11-11T12:00:00Z",
       unit: "each",
       items: Array.from({ length: 53 }, (_, i) => ({
@@ -44,6 +45,14 @@ test("balance CSV preserves all snapshot rows, signed adjustments, untracked bla
   assert.ok(csv.includes('"net_adjustments","available","usable"'));
   assert.ok(csv.includes('"\'-2","8","8","2"'));
   assert.ok(csv.includes(r.generatedAt));
+  assert.ok(csv.includes('"filter_lot_code","filter_status"'));
+  assert.ok(
+    stockBalanceReportCsv({
+      ...r,
+      filters: { lotCode: "LOT", status: "current" },
+      items: [item],
+    }).includes('"LOT","current"\r\n'),
+  );
   r.items = [
     {
       ...item,

@@ -27,6 +27,8 @@ export function stockBalanceReportCsv(r: StockBalanceReport): string {
       "stock_version",
       "last_movement_utc",
       "recorded_status",
+      "filter_lot_code",
+      "filter_status",
     ],
   ];
   for (const x of r.items)
@@ -55,6 +57,8 @@ export function stockBalanceReportCsv(r: StockBalanceReport): string {
       x.stockVersion,
       x.lastMovementAt,
       x.status,
+      r.filters?.lotCode,
+      r.filters?.status,
     ]);
   return (
     "\ufeff" +

@@ -824,10 +824,27 @@ export function createSterileApp(
     return true;
   }
   app.get(prefix + "/consumables/balance-report", async (req, res) => {
-    noQuery(req);
+    if (
+      Object.keys(req.query).some((k) => !["lotCode", "status"].includes(k)) ||
+      (req.query.lotCode !== undefined &&
+        typeof req.query.lotCode !== "string") ||
+      (req.query.status !== undefined && typeof req.query.status !== "string")
+    )
+      throw new SterileError("INVALID_REQUEST");
     res.json(
       await new StockBalanceReportRegistry(dependencies.repository!).get(
         res.locals.scope,
+        {
+          ...(req.query.lotCode === undefined
+            ? {}
+            : { lotCode: req.query.lotCode as string }),
+          ...(req.query.status === undefined
+            ? {}
+            : {
+                status: req.query
+                  .status as import("@intrusionshield/sterile-processing").StockBalanceStatus,
+              }),
+        },
       ),
     );
   });

@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import type { StockBalanceReport as Report } from "@intrusionshield/sterile-processing";
+import type {
+  StockBalanceReport as Report,
+  StockBalanceStatus,
+} from "@intrusionshield/sterile-processing";
 import { api, ApiError, type Session } from "./api";
 import { labels, type Language } from "./text";
 import { stockBalanceReportLabels } from "./stock-balance-report-text";
@@ -23,6 +26,8 @@ export function StockBalanceReport({
 }) {
   const t = stockBalanceReportLabels(language),
     c = labels(language),
+    [lotCode, setLotCode] = useState(""),
+    [status, setStatus] = useState<StockBalanceStatus | "">(""),
     [report, setReport] = useState<Report | null>(null),
     [loading, setLoading] = useState(false),
     [error, setError] = useState<unknown>(null),
@@ -34,13 +39,16 @@ export function StockBalanceReport({
     return () => onBusy(false);
   }, [loading, onBusy]);
   async function generate() {
-    if (loading || blocked) return;
+    if (loading || blocked || pending.current) return;
     const a = new AbortController();
     pending.current = a;
     setLoading(true);
     setError(null);
     try {
-      const r = await api.stockBalanceReport(session, a.signal);
+      const r = await api.stockBalanceReport(session, a.signal, {
+        ...(lotCode.trim() ? { lotCode: lotCode.trim() } : {}),
+        ...(status ? { status } : {}),
+      });
       if (!a.signal.aborted) {
         setReport(r);
         setPage(1);
@@ -77,9 +85,62 @@ export function StockBalanceReport({
         </button>
       </div>
       <p className="readonly-note">{t.note}</p>
-      <button disabled={blocked || loading} onClick={() => void generate()}>
-        {t.generate}
-      </button>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          void generate();
+        }}
+      >
+        <fieldset disabled={blocked || loading}>
+          <div className="form-grid">
+            <label>
+              {t.lotFilter}
+              <input
+                maxLength={100}
+                value={lotCode}
+                onChange={(e) => setLotCode(e.target.value)}
+                list="balance-lot-codes"
+              />
+              <datalist id="balance-lot-codes">
+                {[...new Set(report?.items.map((x) => x.code) ?? [])].map(
+                  (code) => (
+                    <option key={code} value={code} />
+                  ),
+                )}
+              </datalist>
+            </label>
+            <label>
+              {t.status}
+              <select
+                aria-label={t.status}
+                value={status}
+                onChange={(e) =>
+                  setStatus(e.target.value as StockBalanceStatus | "")
+                }
+              >
+                <option value="">{t.allStatuses}</option>
+                {(
+                  ["current", "expired", "withdrawn", "untracked"] as const
+                ).map((v) => (
+                  <option key={v} value={v}>
+                    {t[v]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <button>{t.generate}</button>
+          <button
+            type="button"
+            onClick={() => {
+              setLotCode("");
+              setStatus("");
+            }}
+          >
+            {t.clear}
+          </button>
+        </fieldset>
+      </form>
       <button disabled={blocked || loading || !report} onClick={download}>
         {t.download}
       </button>
@@ -95,6 +156,10 @@ export function StockBalanceReport({
         <>
           <p>
             {t.snapshot}: {report.generatedAt} · {report.items.length}
+          </p>
+          <p>
+            {t.applied}: {report.filters.lotCode ?? t.allLots} ·{" "}
+            {report.filters.status ? t[report.filters.status] : t.allStatuses}
           </p>
           {!report.items.length ? (
             <p>{t.empty}</p>

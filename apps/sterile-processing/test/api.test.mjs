@@ -1736,6 +1736,7 @@ test("balance report client validates conservation, usable restrictions, scope a
     value = {
       tenantId: session.tenantId,
       facilityId: session.facilityId,
+      filters: { lotCode: null, status: null },
       generatedAt: "2026-11-11T12:00:00Z",
       unit: "each",
       items: [row],
@@ -1782,5 +1783,64 @@ test("balance report client validates conservation, usable restrictions, scope a
   assert.equal(
     (await api.stockBalanceReport(session, signal())).items[0].stockRecorded,
     false,
+  );
+});
+
+test("balance report client rejects mismatched applied filters and rows outside the selected exact lot or status", async (t) => {
+  const row = {
+      lotId: "lot",
+      code: "LOT-X",
+      kind: "wrap",
+      name: "Wrap",
+      lotNumber: "M1",
+      supplier: "Supplier",
+      supplierReference: "REF",
+      expiresOn: "2099-01-01",
+      stockRecorded: true,
+      withdrawn: true,
+      received: 5,
+      used: 0,
+      quarantined: 0,
+      discarded: 0,
+      adjustments: 0,
+      available: 5,
+      usable: 0,
+      stockVersion: 1,
+      lastMovementAt: "2026-11-10T12:00:00Z",
+      status: "withdrawn",
+    },
+    value = {
+      tenantId: session.tenantId,
+      facilityId: session.facilityId,
+      generatedAt: "2026-11-11T12:00:00Z",
+      unit: "each",
+      filters: { lotCode: "LOT-X", status: "withdrawn" },
+      items: [row],
+    },
+    paths = [];
+  fake(t, async (path) => {
+    paths.push(path);
+    return response(value);
+  });
+  const filters = { lotCode: " lot-x ", status: "withdrawn" };
+  assert.equal(
+    (await api.stockBalanceReport(session, signal(), filters)).items.length,
+    1,
+  );
+  assert.ok(paths.at(-1).includes("lotCode=+lot-x+&status=withdrawn"));
+  value.filters.status = "current";
+  await assert.rejects(api.stockBalanceReport(session, signal(), filters));
+  value.filters.status = "withdrawn";
+  row.code = "LOT-XX";
+  await assert.rejects(api.stockBalanceReport(session, signal(), filters));
+  row.code = "LOT-X";
+  row.withdrawn = false;
+  row.status = "current";
+  row.usable = 5;
+  await assert.rejects(api.stockBalanceReport(session, signal(), filters));
+  value.items = [];
+  assert.equal(
+    (await api.stockBalanceReport(session, signal(), filters)).items.length,
+    0,
   );
 });

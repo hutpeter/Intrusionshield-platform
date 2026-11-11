@@ -979,6 +979,13 @@ Developer: 426 scoped tests (222 domain, 151 HTTP/SQLite, 53 web), builds and Ch
 
 ## Current owner check — stock balance CSV
 
-**U-STOCKBAL-01 pending:** Consumable lots → Stock balance report → Generate stock balance report → Export stock balances CSV. Confirm received, used, quarantined, discarded, net adjustments, available and usable columns, with one row per lot. No stock change is requested. This is the only owner check. U-STOCKFILTER-01 passed November 11 from the uploaded filtered adjustment CSV.
+**U-STOCKBAL-01 passed November 11, 2026:** owner uploaded the balance CSV with seven unique lots and all required quantities. Count lot received 10/net adjustments −2/available and usable 8; withdrawn lot usable 0; all rows conserve balances. Original check: Consumable lots → Stock balance report → Generate stock balance report → Export stock balances CSV. Confirm received, used, quarantined, discarded, net adjustments, available and usable columns, with one row per lot. No stock change is requested. This is the only owner check. U-STOCKFILTER-01 passed November 11 from the uploaded filtered adjustment CSV.
 
 Developer November 11, 2026: 431 scoped tests (224 domain, 152 HTTP/SQLite, 55 web), builds and Chromium balances/untracked/signed adjustment/frozen CSV/regeneration/source checks passed. Physical verification, grouping, backfill, production scale and regional spreadsheet acceptance remain deferred. U-TRACE-01 and original U-LOANER-01 remain pending; RSP-ISS-001 stays parked. See [STOCK-BALANCE-REPORT.md](STOCK-BALANCE-REPORT.md).
+
+
+## Current owner check — stock balance filters
+
+**U-BALFILTER-01 pending:** Consumable lots → Stock balance report → Recorded status: Withdrawn → Generate stock balance report → Export stock balances CSV. Leave exact lot code blank. Expect only withdrawn rows, with CSV recorded_status/filter_status `withdrawn`. This is the only owner check; no stock movement is requested. U-STOCKBAL-01 passed November 11 from the uploaded seven-lot balance CSV.
+
+Developer: 434 scoped tests (225 domain, 153 HTTP/SQLite, 56 web), builds and Chromium exact lot/status intersection, filtered snapshot/CSV, clear/regenerate and empty intersection checks passed. Physical verification, broader grouping/multi-select, production scale and regional spreadsheet acceptance remain deferred. U-TRACE-01 and original U-LOANER-01 remain pending; RSP-ISS-001 stays parked. See [STOCK-BALANCE-FILTERS.md](STOCK-BALANCE-FILTERS.md).
