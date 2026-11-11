@@ -1023,6 +1023,8 @@ Owner evidence: the November 11 screenshot shows Reports hub selected with the g
 
 ## Current owner check — saved report presets
 
-**U-REPORTPRESET-01 pending:** Reports hub → Consumable expiry report → enter Preset name “Expiry 30 days” → Save preset → Back to Reports hub → Run preset. Keep default filters; expect automatic generation with thirty days. This is the only owner check for this build. U-REPORTSHUB-01 passed November 11 from the owner screenshot.
+**U-REPORTPRESET-01 passed November 11, 2026:** Reports hub → Consumable expiry report → enter Preset name “Expiry 30 days” → Save preset → Back to Reports hub → Run preset. Keep default filters; expect automatic generation with thirty days. This is the only owner check for this build. U-REPORTSHUB-01 passed November 11 from the owner screenshot.
 
 Developer: 64 web tests, web build and Chromium all-four save/run/CSV, fresh timestamps, persistence, deletion, scope separation, input validation, blocked/corrupt storage, localization/mobile and existing hub navigation/print checks passed. No stock mutations. Backend unchanged; previous 228 domain/155 HTTP tests not rerun. Server/shared preferences, relative movement dates, editing/rename, cross-tab transactions, broader acceptance and production scale remain deferred. U-TRACE-01/original U-LOANER-01 remain unconfirmed; RSP-ISS-001 parked. See [REPORT-PRESETS.md](REPORT-PRESETS.md).
+
+Owner acceptance November 11, 2026: “everything worked” confirms the requested U-REPORTPRESET-01 expiry preset save → return to hub → run route. Other automated checks remain developer evidence; deferred acceptance items remain unchanged.

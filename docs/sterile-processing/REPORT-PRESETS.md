@@ -10,8 +10,10 @@ Balance presets retain exact lot/status; movement presets retain exact lot/actio
 
 64 web tests and the web build passed. New tests cover scope isolation, malformed storage, unique names/limits, unsupported settings and UTC window validation. Chromium checked saving and running all four report types, restored query parameters, fresh timestamps on repeated runs, CSV snapshot metadata, refresh persistence, duplicate names, actor separation, deletion, ES/FR/mobile, storage quota denial and corrupt data. No domain writes or browser errors occurred. Existing hub generation/CSV/printing/back, source lot links, unsaved-form guard and auditor access checks passed again. The presets hub screenshot was visually inspected. Backend unchanged; prior 228 domain and 155 HTTP/SQLite checks were not rerun for this UI-only feature.
 
-## Single owner check — U-REPORTPRESET-01 pending
+## Single owner check — U-REPORTPRESET-01 passed November 11, 2026
 
 Reports hub → Consumable expiry report → enter Preset name “Expiry 30 days” → Save preset → Back to Reports hub → Run preset for that name. Keep default filters. Confirm the report generates automatically with the thirty-day horizon. This is the only owner check for this build; no stock movement is requested.
 
 U-REPORTSHUB-01 passed from the owner's seven-lot balance screenshot. Broader owner testing, cross-device/shared/server presets, editing/renaming, relative movement windows, concurrent transactional preferences and production scale remain deferred. Future Ruby Asset Management reuse remains intended. U-TRACE-01 and original U-LOANER-01 remain unconfirmed; RSP-ISS-001 stays parked.
+
+Owner acceptance November 11, 2026: “everything worked” confirms the requested U-REPORTPRESET-01 expiry preset save → return to hub → run route. Other automated checks remain developer evidence; deferred acceptance items remain unchanged.

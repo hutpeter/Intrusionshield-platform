@@ -397,4 +397,6 @@ Owner evidence: the November 11 screenshot shows Reports hub selected with the g
 
 ## Saved report presets — preview delivered
 
-Reports hub stores named filter setups per browser/user/facility. Run preset fetches a fresh report, preserving server scoping and snapshot export behavior. U-REPORTPRESET-01 pending, one owner route only. Server/shared preferences, editing/rename, relative movement windows, transaction-safe simultaneous tab edits and production scale remain deferred. See [REPORT-PRESETS.md](REPORT-PRESETS.md). Asset reuse remains intended; RSP-ISS-001 parked.
+Reports hub stores named filter setups per browser/user/facility. Run preset fetches a fresh report, preserving server scoping and snapshot export behavior. U-REPORTPRESET-01 passed November 11, 2026, one owner route only. Server/shared preferences, editing/rename, relative movement windows, transaction-safe simultaneous tab edits and production scale remain deferred. See [REPORT-PRESETS.md](REPORT-PRESETS.md). Asset reuse remains intended; RSP-ISS-001 parked.
+
+Owner acceptance November 11, 2026: “everything worked” confirms the requested U-REPORTPRESET-01 expiry preset save → return to hub → run route. Other automated checks remain developer evidence; deferred acceptance items remain unchanged.
