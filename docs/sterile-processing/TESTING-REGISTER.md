@@ -1007,6 +1007,13 @@ Developer: 442 scoped tests (228 domain, 155 HTTP/SQLite, 59 web), builds and Ch
 
 ## Current owner check — printable stock report
 
-**U-STOCKPRINT-01 pending:** Consumable lots → Stock balance report → Generate stock balance report → Print report / save PDF → choose Save as PDF. Expect report title, snapshot time and applied filters in the PDF. This is the only owner check. U-EXPFILTER-01 passed November 11 from the uploaded filtered expiry CSV.
+**U-STOCKPRINT-01 passed November 11, 2026:** owner uploaded a readable seven-page PDF containing seven records, snapshot 2026-11-11T18:56:52.550Z, All lots / All statuses. Original check: Consumable lots → Stock balance report → Generate stock balance report → Print report / save PDF → choose Save as PDF. Expect report title, snapshot time and applied filters in the PDF. This is the only owner check. U-EXPFILTER-01 passed November 11 from the uploaded filtered expiry CSV.
 
 Developer: 61 web tests and web build passed; backend unchanged (228 domain/155 HTTP tests passed on the preceding build and were not rerun). Chromium generated four landscape PDFs with all 53 records beyond the screen page, saved filter metadata, literal source text, no clipping, no new source fetches and clean after-print restoration. Physical printers, other engines, archival standards and very large documents remain deferred. U-TRACE-01 and original U-LOANER-01 remain pending; RSP-ISS-001 stays parked. See [STOCK-REPORT-PRINTING.md](STOCK-REPORT-PRINTING.md).
+
+
+## Current owner check — Reports hub
+
+**U-REPORTSHUB-01 pending:** Reports hub (left sidebar) → Stock balance report → Generate stock balance report. Confirm four hub cards and the generated balance snapshot. This is the only owner check for this build. U-STOCKPRINT-01 passed November 11 from the uploaded seven-page PDF.
+
+Developer: 61 web tests, web build and Chromium all-four report generation/CSV/print/back, exact lot routing, original entry points, localization/mobile, unsaved-form guard and auditor access passed without stock writes. Backend unchanged; preceding 228 domain/155 HTTP tests were not rerun. Broader manual acceptance and production scale remain deferred. U-TRACE-01 and original U-LOANER-01 remain unconfirmed; RSP-ISS-001 stays parked. See [REPORTS-HUB.md](REPORTS-HUB.md).

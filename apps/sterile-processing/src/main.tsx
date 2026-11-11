@@ -1,3 +1,5 @@
+import { ReportsHub } from "./ReportsHub";
+import { reportsHubLabels } from "./reports-hub-text";
 import { PerformanceWorkspace } from "./Performance";
 import { ConsumablesWorkspace } from "./Consumables";
 import { consumableLabels } from "./consumable-text";
@@ -282,6 +284,7 @@ function Workspace({
   onExpired: () => void;
 }) {
   const [tab, setTab] = useState<
+      | "reports"
       | "consumables"
       | "performance"
       | "equipment"
@@ -355,6 +358,7 @@ function Workspace({
     void (async () => {
       try {
         if (
+          tab === "reports" ||
           tab === "consumables" ||
           tab === "performance" ||
           tab === "equipment" ||
@@ -454,6 +458,7 @@ function Workspace({
   }
   function navigate(
     target:
+      | "reports"
       | "consumables"
       | "performance"
       | "equipment"
@@ -700,6 +705,13 @@ function Workspace({
             {consumableLabels(language).title}
           </button>
           <button
+            aria-current={tab === "reports" ? "page" : undefined}
+            disabled={busy}
+            onClick={() => navigate("reports")}
+          >
+            {reportsHubLabels(language).title}
+          </button>
+          <button
             aria-current={tab === "performance" ? "page" : undefined}
             disabled={busy}
             onClick={() => navigate("performance")}
@@ -785,7 +797,8 @@ function Workspace({
             {recallLabels(language).blocked} · {detail.recall.caseCode}
           </p>
         )}
-        {tab !== "consumables" &&
+        {tab !== "reports" &&
+          tab !== "consumables" &&
           tab !== "performance" &&
           tab !== "equipment" &&
           tab !== "procedures" &&
@@ -1162,6 +1175,25 @@ function Workspace({
               })
             }
             onBusy={setTrayBusy}
+          />
+        )}
+        {tab === "reports" && (
+          <ReportsHub
+            key={trayReset}
+            session={session}
+            language={language}
+            blocked={blocked}
+            onExpired={onExpired}
+            onBusy={setTrayBusy}
+            onOpenLot={(id) =>
+              guard(() => {
+                setDashboardTarget({ workspace: "consumables", id });
+                setTab("consumables");
+                setSelected(null);
+                setPage(1);
+                setNotice(null);
+              })
+            }
           />
         )}
         {tab === "performance" && (

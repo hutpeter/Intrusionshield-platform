@@ -385,4 +385,9 @@ Exact lot-code and expiry-status filters now intersect with the UTC horizon and 
 
 ## Printable stock report snapshots — preview delivered
 
-Balances, movements, replenishment and expiry reports now print the full saved snapshot with scope/time/filters and wrapping field tables. U-STOCKPRINT-01 remains pending. Physical printers, non-Chromium engines, archival PDF standards and production-scale documents remain deferred. See [STOCK-REPORT-PRINTING.md](STOCK-REPORT-PRINTING.md). Asset reuse remains intended; RSP-ISS-001 stays parked.
+Balances, movements, replenishment and expiry reports now print the full saved snapshot with scope/time/filters and wrapping field tables. U-STOCKPRINT-01 passed November 11, 2026 from the owner’s seven-page PDF. Physical printers, non-Chromium engines, archival PDF standards and production-scale documents remain deferred. See [STOCK-REPORT-PRINTING.md](STOCK-REPORT-PRINTING.md). Asset reuse remains intended; RSP-ISS-001 stays parked.
+
+
+## Reports hub — preview delivered
+
+Four existing stock reports now have a shared sidebar entry. Generation, saved snapshot CSV/printing and lot links reuse the existing components and scoped permissions. U-REPORTSHUB-01 pending, one owner route only. Broader acceptance and production scale remain deferred. See [REPORTS-HUB.md](REPORTS-HUB.md). Future Asset reuse remains intended; RSP-ISS-001 stays parked.

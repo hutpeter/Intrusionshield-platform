@@ -8,9 +8,9 @@ The print header includes report title, snapshot time, tenant/facility IDs, opti
 
 Print content is built with DOM text nodes from typed report models. Supplied product names, reasons and evidence remain literal text. No HTML injection, popup window, remote service or new permission is needed. The native browser print dialog controls the destination, including **Save as PDF**. After print/cancel, the isolated tree is removed and the original document title restored. It stays hidden on screen while native print preview is active.
 
-## One owner check — U-STOCKPRINT-01 pending
+## One owner check — U-STOCKPRINT-01 passed November 11, 2026
 
-Update/restart, then **Consumable lots → Stock balance report → Generate stock balance report → Print report / save PDF**. Select **Save as PDF** in the browser dialog. Confirm the PDF shows the stock balance report title, snapshot time and applied filters. This is the only owner check; other reports, long histories and print cleanup are developer-verified.
+Owner PDF confirmed the title, snapshot time, filters and seven readable records across seven pages. Original check: **Consumable lots → Stock balance report → Generate stock balance report → Print report / save PDF**. Select **Save as PDF** in the browser dialog. Confirm the PDF shows the stock balance report title, snapshot time and applied filters. This is the only owner check; other reports, long histories and print cleanup are developer-verified.
 
 ## Verification and deferred work
 
@@ -18,4 +18,4 @@ Developer November 11, 2026: 61 web tests and the web build passed. The 228 doma
 
 Chromium generated PDFs for all four reports with 53 records each while the UI was on page two and inputs contained unapplied edits. Text extraction confirmed all 53 record codes in each PDF and no app navigation; layout checks found no horizontal cell overflow. PDF inspection confirmed A4 landscape. Supplied HTML-like text stayed literal with no injected nodes or execution. Source request counts did not increase during printing. After-print cleanup restored the screen/title. A first PDF page was rendered and visually inspected for wrapping/readability.
 
-U-EXPFILTER-01 passed from the owner's uploaded CSV. U-STOCKPRINT-01 remains pending. Physical printers, non-Chromium print engines, browser header/footer preferences, very large production documents, archival PDF standards and broader manual acceptance remain deferred. Future Ruby Asset Management reuse remains intended. U-TRACE-01 and original U-LOANER-01 remain unconfirmed; RSP-ISS-001 stays parked.
+U-EXPFILTER-01 passed from the owner's uploaded CSV. U-STOCKPRINT-01 passed from the owner’s uploaded seven-page PDF (snapshot 2026-11-11T18:56:52.550Z, seven records, All lots / All statuses). Physical printers, non-Chromium print engines, browser header/footer preferences, very large production documents, archival PDF standards and broader manual acceptance remain deferred. Future Ruby Asset Management reuse remains intended. U-TRACE-01 and original U-LOANER-01 remain unconfirmed; RSP-ISS-001 stays parked.

@@ -1281,3 +1281,9 @@ td {
   .stock-report-print-root .stock-print-fields :is(th, td) { padding: 2mm; border: 0.2mm solid #aaa; min-width: 0; max-width: none; white-space: pre-wrap; overflow-wrap: anywhere; text-align: left; vertical-align: top; color: #111; font-size: 9pt; letter-spacing: normal; text-transform: none; }
   .stock-report-print-root .stock-print-fields th { background: #f4f4f4; font-weight: bold; }
 }
+
+.reports-hub-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 18px; }
+.reports-hub-grid > .panel { margin: 0; display: flex; flex-direction: column; gap: 12px; }
+.reports-hub-grid h2 { margin: 0; }
+.reports-hub-grid p { flex: 1; margin: 0; }
+.reports-hub-grid button { align-self: flex-start; }
