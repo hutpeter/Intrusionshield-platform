@@ -344,6 +344,78 @@ function validStockCountReview(
   );
 }
 export const api = {
+  stockBalanceReport: async (s: Session, signal: AbortSignal) => {
+    const r = await scoped(
+      s,
+      call<import("@intrusionshield/sterile-processing").StockBalanceReport>(
+        base(s) + "/consumables/balance-report",
+        signal,
+      ),
+    );
+    if (
+      r.unit !== "each" ||
+      !Number.isFinite(Date.parse(r.generatedAt)) ||
+      !Array.isArray(r.items) ||
+      new Set(r.items.map((x) => x.lotId)).size !== r.items.length ||
+      r.items.some((x) => {
+        const status = x.withdrawn
+          ? "withdrawn"
+          : x.expiresOn < r.generatedAt.slice(0, 10)
+            ? "expired"
+            : !x.stockRecorded
+              ? "untracked"
+              : "current";
+        return (
+          [
+            x.lotId,
+            x.code,
+            x.kind,
+            x.name,
+            x.lotNumber,
+            x.supplier,
+            x.supplierReference,
+            x.expiresOn,
+          ].some((v) => typeof v !== "string") ||
+          !["wrap", "pouch", "indicator"].includes(x.kind) ||
+          !/^\d{4}-\d{2}-\d{2}$/.test(x.expiresOn) ||
+          !Number.isFinite(Date.parse(x.expiresOn)) ||
+          typeof x.stockRecorded !== "boolean" ||
+          typeof x.withdrawn !== "boolean" ||
+          [
+            x.received,
+            x.used,
+            x.quarantined,
+            x.discarded,
+            x.available,
+            x.usable,
+          ].some((n) => !Number.isSafeInteger(n) || n < 0) ||
+          !Number.isSafeInteger(x.adjustments) ||
+          x.received + x.adjustments !==
+            x.available + x.used + x.quarantined + x.discarded ||
+          x.status !== status ||
+          x.usable !== (status === "current" ? x.available : 0) ||
+          (x.stockRecorded
+            ? !Number.isSafeInteger(x.stockVersion) ||
+              x.stockVersion! < 1 ||
+              typeof x.lastMovementAt !== "string" ||
+              !Number.isFinite(Date.parse(x.lastMovementAt))
+            : x.stockVersion !== null ||
+              x.lastMovementAt !== null ||
+              [
+                x.received,
+                x.used,
+                x.quarantined,
+                x.discarded,
+                x.available,
+                x.adjustments,
+              ].some((n) => n !== 0))
+        );
+      })
+    )
+      throw new ApiError(503, "SERVICE_UNAVAILABLE");
+    return r;
+  },
+
   stockMovementReport: async (
     s: Session,
     from: string,

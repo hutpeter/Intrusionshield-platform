@@ -311,3 +311,5 @@ export * from "./stock-reconciliation.js";
 export * from "./replenishment.js";
 
 export * from "./stock-movement-report.js";
+
+export * from "./stock-balance-report.js";

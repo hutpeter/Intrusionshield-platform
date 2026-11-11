@@ -1709,3 +1709,78 @@ test("movement report client validates applied filters and rejects rows outside 
     0,
   );
 });
+
+test("balance report client validates conservation, usable restrictions, scope and absent-ledger semantics", async (t) => {
+  const row = {
+      lotId: "lot",
+      code: "LOT",
+      kind: "wrap",
+      name: "Wrap",
+      lotNumber: "M1",
+      supplier: "Supplier",
+      supplierReference: "REF",
+      expiresOn: "2099-01-01",
+      stockRecorded: true,
+      withdrawn: false,
+      received: 10,
+      used: 0,
+      quarantined: 0,
+      discarded: 0,
+      adjustments: -2,
+      available: 8,
+      usable: 8,
+      stockVersion: 2,
+      lastMovementAt: "2026-11-10T12:00:00Z",
+      status: "current",
+    },
+    value = {
+      tenantId: session.tenantId,
+      facilityId: session.facilityId,
+      generatedAt: "2026-11-11T12:00:00Z",
+      unit: "each",
+      items: [row],
+    };
+  fake(t, async () => response(value));
+  assert.equal(
+    (await api.stockBalanceReport(session, signal())).items[0].usable,
+    8,
+  );
+  value.facilityId = "other";
+  await assert.rejects(api.stockBalanceReport(session, signal()));
+  value.facilityId = session.facilityId;
+  value.items = [row, row];
+  await assert.rejects(api.stockBalanceReport(session, signal()));
+  value.items = [row];
+  row.available = 9;
+  await assert.rejects(api.stockBalanceReport(session, signal()));
+  row.available = 8;
+  row.withdrawn = true;
+  row.status = "withdrawn";
+  await assert.rejects(api.stockBalanceReport(session, signal()));
+  row.usable = 0;
+  assert.equal(
+    (await api.stockBalanceReport(session, signal())).items[0].available,
+    8,
+  );
+  row.withdrawn = false;
+  row.expiresOn = "2026-11-10";
+  row.status = "expired";
+  assert.equal(
+    (await api.stockBalanceReport(session, signal())).items[0].usable,
+    0,
+  );
+  row.usable = 8;
+  await assert.rejects(api.stockBalanceReport(session, signal()));
+  row.usable = 0;
+  row.stockRecorded = false;
+  await assert.rejects(api.stockBalanceReport(session, signal()));
+  row.stockVersion = null;
+  row.lastMovementAt = null;
+  row.received = 0;
+  row.adjustments = 0;
+  row.available = 0;
+  assert.equal(
+    (await api.stockBalanceReport(session, signal())).items[0].stockRecorded,
+    false,
+  );
+});

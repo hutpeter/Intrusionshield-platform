@@ -1,3 +1,5 @@
+import { StockBalanceReport } from "./StockBalanceReport";
+import { stockBalanceReportLabels } from "./stock-balance-report-text";
 import { StockMovementReport } from "./StockMovementReport";
 import { stockMovementReportLabels } from "./stock-movement-report-text";
 import { Replenishment } from "./Replenishment";
@@ -49,6 +51,7 @@ export function ConsumablesWorkspace({
   openId?: string;
   openCountId?: string;
 }) {
+  const [showBalanceReport, setShowBalanceReport] = useState(false);
   const [showMovementReport, setShowMovementReport] = useState(false);
   const [showReplenishment, setShowReplenishment] = useState(false),
     [reportBusy, setReportBusy] = useState(false);
@@ -327,6 +330,7 @@ export function ConsumablesWorkspace({
         <button
           disabled={busy}
           onClick={() => {
+            setShowBalanceReport(false);
             setShowMovementReport(false);
             setShowReplenishment(true);
           }}
@@ -338,12 +342,59 @@ export function ConsumablesWorkspace({
         <button
           disabled={busy}
           onClick={() => {
+            setShowBalanceReport(false);
             setShowReplenishment(false);
             setShowMovementReport(true);
           }}
         >
           {stockMovementReportLabels(language).title}
         </button>
+      )}
+      {!form && !decision && !stockLot && !policyLot && (
+        <button
+          disabled={busy}
+          onClick={() => {
+            setShowMovementReport(false);
+            setShowReplenishment(false);
+            setShowBalanceReport(true);
+          }}
+        >
+          {stockBalanceReportLabels(language).title}
+        </button>
+      )}
+      {showBalanceReport && (
+        <StockBalanceReport
+          session={session}
+          language={language}
+          blocked={busy || stockDirty || policyDirty || !!form}
+          onBusy={setReportBusy}
+          onExpired={onExpired}
+          onClose={() => setShowBalanceReport(false)}
+          onOpen={(id) => {
+            if (pending.current) return;
+            const a = new AbortController();
+            pending.current = a;
+            setReportBusy(true);
+            void api
+              .consumableRecord(session, id, a.signal)
+              .then((lot) => {
+                if (!a.signal.aborted) {
+                  setStockLot({ lot });
+                  setShowBalanceReport(false);
+                }
+              })
+              .catch((e) => {
+                if (!a.signal.aborted) {
+                  if (e instanceof ApiError && e.status === 401) onExpired();
+                  else setError(e);
+                }
+              })
+              .finally(() => {
+                if (!a.signal.aborted) setReportBusy(false);
+                pending.current = null;
+              });
+          }}
+        />
       )}
       {showMovementReport && (
         <StockMovementReport

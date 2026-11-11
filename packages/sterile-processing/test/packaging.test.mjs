@@ -1365,3 +1365,153 @@ test("movement filters match exact canonical lot codes and action intersections 
     await fail(registry.report(f.s, from, to, filters), "INVALID_REQUEST");
   assert.deepEqual(f.repo.state, before);
 });
+
+test("current balance report preserves conservation, signed adjustments and recorded quantities while applying expiry/withdrawal usable rules", async () => {
+  const {
+      ConsumableRegistry,
+      ConsumableStockRegistry,
+      StockReconciliationRegistry,
+      StockBalanceReportRegistry,
+      consumeStock,
+    } = await import("../dist/index.js"),
+    f = await fixture(),
+    lots = new ConsumableRegistry(f.repo),
+    stock = new ConsumableStockRegistry(f.repo),
+    counts = new StockReconciliationRegistry(f.repo),
+    today = new Date().toISOString().slice(0, 10);
+  const current = await lots.register(
+      f.s,
+      lotInput({ code: "BAL-CURRENT", expiresOn: today }),
+    ),
+    expired = await lots.register(
+      f.s,
+      lotInput({ code: "BAL-EXPIRED", expiresOn: "2020-01-01" }),
+    ),
+    withdrawn = await lots.register(f.s, lotInput({ code: "BAL-WITHDRAWN" })),
+    untracked = await lots.register(f.s, lotInput({ code: "BAL-UNTRACKED" }));
+  await fundLots(f, [current, withdrawn], 20);
+  // Receipt on a past-expiry lot is rejected by normal stock gates; preserve a ledger that later expires.
+  const expiredSource = await lots.register(
+    f.s,
+    lotInput({ code: "BAL-EXPIRING" }),
+  );
+  await fundLots(f, [expiredSource], 7);
+  f.repo.state.consumables.find((x) => x.id === expiredSource.id).expiresOn =
+    "2020-01-01";
+  await f.repo.transaction(f.s, (tx) =>
+    consumeStock(
+      tx,
+      f.s,
+      [current],
+      [{ lotId: current.id, quantity: 2 }],
+      new Date().toISOString(),
+      randomUUID(),
+      { id: randomUUID(), code: "BAL-PACK" },
+    ),
+  );
+  for (const [action, version, quantity] of [
+    ["quarantine", 2, 3],
+    ["discard", 3, 1],
+    ["discard_quarantined", 4, 2],
+  ])
+    await stock.record(f.s, current.id, action, {
+      requestId: randomUUID(),
+      version,
+      quantity,
+      reason: "SIMULATED",
+      reference: "EVIDENCE",
+      confirmed: true,
+    });
+  const count = await counts.record(f.s, current.id, {
+    requestId: randomUUID(),
+    stockVersion: 5,
+    countedAvailable: 12,
+    reason: "COUNT",
+    reference: "EVIDENCE",
+    confirmed: true,
+  });
+  await counts.decide(
+    { ...f.s, actorId: randomUUID() },
+    current.id,
+    count.id,
+    "approve",
+    {
+      requestId: randomUUID(),
+      version: 1,
+      reason: "REVIEW",
+      reference: "REF",
+      confirmed: true,
+    },
+  );
+  await lots.withdraw(f.s, withdrawn.id, {
+    requestId: randomUUID(),
+    version: 1,
+    reason: "WITHDRAW",
+    reference: "REF",
+    confirmed: true,
+  });
+  const before = structuredClone(f.repo.state),
+    registry = new StockBalanceReportRegistry(f.repo),
+    r = await registry.get(f.s),
+    get = (id) => r.items.find((x) => x.lotId === id);
+  assert.equal(r.items.length, 5);
+  assert.equal(get(current.id).status, "current");
+  assert.equal(get(current.id).usable, 12);
+  assert.deepEqual(
+    [
+      get(current.id).received,
+      get(current.id).used,
+      get(current.id).quarantined,
+      get(current.id).discarded,
+      get(current.id).adjustments,
+      get(current.id).available,
+    ],
+    [20, 2, 1, 3, -2, 12],
+  );
+  assert.equal(get(expiredSource.id).available, 7);
+  assert.equal(get(expiredSource.id).usable, 0);
+  assert.equal(get(expiredSource.id).status, "expired");
+  assert.equal(get(withdrawn.id).available, 20);
+  assert.equal(get(withdrawn.id).usable, 0);
+  assert.equal(get(withdrawn.id).status, "withdrawn");
+  assert.equal(get(withdrawn.id).withdrawn, true);
+  assert.equal(get(untracked.id).stockRecorded, false);
+  assert.equal(get(untracked.id).status, "untracked");
+  assert.equal(get(untracked.id).stockVersion, null);
+  assert.equal(get(untracked.id).lastMovementAt, null);
+  assert.equal(get(untracked.id).received, 0);
+  assert.equal(get(expired.id).status, "expired");
+  assert.equal(get(expired.id).stockRecorded, false);
+  for (const x of r.items)
+    assert.equal(
+      x.received + x.adjustments,
+      x.available + x.used + x.quarantined + x.discarded,
+    );
+  assert.deepEqual(f.repo.state, before);
+  assert.equal(
+    (await registry.get({ ...f.s, facilityId: randomUUID() })).items.length,
+    0,
+  );
+});
+test("balance reports include every catalogue page with one stable row per lot and no fabricated ledger", async () => {
+  const { ConsumableRegistry, StockBalanceReportRegistry } =
+      await import("../dist/index.js"),
+    f = await fixture(),
+    lots = new ConsumableRegistry(f.repo);
+  for (let i = 0; i < 53; i++)
+    await lots.register(
+      f.s,
+      lotInput({ code: "BAL-" + String(i).padStart(3, "0") }),
+    );
+  const registry = new StockBalanceReportRegistry(f.repo),
+    r = await registry.get(f.s);
+  assert.equal(r.items.length, 53);
+  assert.equal(new Set(r.items.map((x) => x.lotId)).size, 53);
+  assert.equal(r.items[0].code, "BAL-000");
+  assert.equal(r.items.at(-1).code, "BAL-052");
+  assert.ok(
+    r.items.every((x) => x.status === "untracked" && x.stockVersion === null),
+  );
+  assert.equal(f.repo.state.consumableStock.length, 0);
+  assert.deepEqual((await registry.get(f.s)).items, r.items);
+});

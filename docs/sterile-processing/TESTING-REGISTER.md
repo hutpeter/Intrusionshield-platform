@@ -972,6 +972,13 @@ Developer: 423 scoped tests (221 domain, 150 HTTP/SQLite, 52 web), builds and Ch
 
 ## Current owner check — stock movement filters
 
-**U-STOCKFILTER-01 pending:** Consumable lots → Stock movement report → Movement type: Approved count adjustment → Generate stock movement report → Export stock movements CSV. Leave exact lot code blank. Expect only adjustment rows and CSV action/filter_action `adjustment`. This is the only owner check. U-STOCKHIST-01 passed November 10 from the supplied eight-row movement CSV.
+**U-STOCKFILTER-01 passed November 11, 2026:** owner uploaded the filtered CSV with one adjustment row, blank lot filter, filter_action adjustment, quantity/change −2 and available after 8. Original check: Consumable lots → Stock movement report → Movement type: Approved count adjustment → Generate stock movement report → Export stock movements CSV. Leave exact lot code blank. Expect only adjustment rows and CSV action/filter_action `adjustment`. This is the only owner check. U-STOCKHIST-01 passed November 10 from the supplied eight-row movement CSV.
 
 Developer: 426 scoped tests (222 domain, 151 HTTP/SQLite, 53 web), builds and Chromium exact lot/type intersection, canonical filters, filtered CSV and clear/regenerate checks passed. Source history remains unchanged. Physical verification, grouping/multi-select, production scale and regional spreadsheet acceptance remain deferred. U-TRACE-01 and original U-LOANER-01 remain pending; RSP-ISS-001 stays parked. See [STOCK-MOVEMENT-FILTERS.md](STOCK-MOVEMENT-FILTERS.md).
+
+
+## Current owner check — stock balance CSV
+
+**U-STOCKBAL-01 pending:** Consumable lots → Stock balance report → Generate stock balance report → Export stock balances CSV. Confirm received, used, quarantined, discarded, net adjustments, available and usable columns, with one row per lot. No stock change is requested. This is the only owner check. U-STOCKFILTER-01 passed November 11 from the uploaded filtered adjustment CSV.
+
+Developer November 11, 2026: 431 scoped tests (224 domain, 152 HTTP/SQLite, 55 web), builds and Chromium balances/untracked/signed adjustment/frozen CSV/regeneration/source checks passed. Physical verification, grouping, backfill, production scale and regional spreadsheet acceptance remain deferred. U-TRACE-01 and original U-LOANER-01 remain pending; RSP-ISS-001 stays parked. See [STOCK-BALANCE-REPORT.md](STOCK-BALANCE-REPORT.md).

@@ -360,4 +360,9 @@ Read-only UTC reports now preserve receipts, usage, quarantine/disposal and sign
 
 ## Stock movement report filters — preview delivered
 
-Exact lot-code and movement-type filters now intersect with report dates. Snapshot/CSV preserve canonical applied filters. U-STOCKFILTER-01 remains pending. Multi-select, supplier/product grouping, production-scale querying and broader spreadsheet acceptance remain deferred. See [STOCK-MOVEMENT-FILTERS.md](STOCK-MOVEMENT-FILTERS.md). Asset reuse remains intended; RSP-ISS-001 stays parked.
+Exact lot-code and movement-type filters now intersect with report dates. Snapshot/CSV preserve canonical applied filters. U-STOCKFILTER-01 passed November 11, 2026 from the uploaded filtered movement CSV. Multi-select, supplier/product grouping, production-scale querying and broader spreadsheet acceptance remain deferred. See [STOCK-MOVEMENT-FILTERS.md](STOCK-MOVEMENT-FILTERS.md). Asset reuse remains intended; RSP-ISS-001 stays parked.
+
+
+## Current stock balance report and CSV — preview delivered
+
+Complete per-lot recorded balance snapshots now distinguish available from usable stock and retain expired/withdrawn/untracked lots. CSV exports the entire displayed snapshot. U-STOCKBAL-01 remains pending. Physical verification, backfill, location/product totals, production scale and spreadsheet import remain deferred. See [STOCK-BALANCE-REPORT.md](STOCK-BALANCE-REPORT.md). Asset reuse remains intended; RSP-ISS-001 stays parked.

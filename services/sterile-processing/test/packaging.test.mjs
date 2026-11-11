@@ -1892,3 +1892,69 @@ test("movement report HTTP filters are strict, scoped, canonical and intersect w
     assert.equal((await f.call(path + suffix)).status, 400);
   assert.equal((await (await f.call(path)).json()).items.length, 3);
 });
+
+test("balance report HTTP is scoped and strict, persists ledger values, and regenerates independently of earlier snapshots", async (t) => {
+  const f = await httpFixture(t),
+    lot = await (
+      await f.call("/preview/consumable-stock-example", {
+        requestId: randomUUID(),
+      })
+    ).json();
+  await fundLotHttp(f, lot, 10);
+  const path = f.base + "/consumables/balance-report";
+  let initial;
+  for (const role of ["operator", "reviewer", "viewer"]) {
+    await f.login(role);
+    const res = await f.call(path);
+    assert.equal(res.status, 200);
+    const r = await res.json(),
+      row = r.items.find((x) => x.lotId === lot.id);
+    assert.equal(r.unit, "each");
+    assert.equal(row.available, 10);
+    assert.equal(row.usable, 10);
+    assert.equal(row.received, 10);
+    assert.equal(row.adjustments, 0);
+    assert.equal(row.stockVersion, 1);
+    assert.equal(row.stockRecorded, true);
+    initial = r;
+  }
+  assert.equal((await f.call(path + "?page=1")).status, 400);
+  assert.equal(
+    (await f.call(path.replace(f.session.facilityId, randomUUID()))).status,
+    404,
+  );
+  await f.login("operator");
+  await f.call(f.base + "/consumables/" + lot.id + "/stock/receive", {
+    requestId: randomUUID(),
+    version: 1,
+    quantity: 2,
+    reason: "RECEIPT",
+    reference: "REF",
+    confirmed: true,
+  });
+  assert.equal(initial.items.find((x) => x.lotId === lot.id).available, 10);
+  assert.equal(
+    (await (await f.call(path)).json()).items.find((x) => x.lotId === lot.id)
+      .available,
+    12,
+  );
+  const { StockBalanceReportRegistry } =
+      await import("@intrusionshield/sterile-processing"),
+    reopened = new PreviewSqliteRepository(f.file);
+  t.after(() => reopened.close());
+  assert.equal(
+    (await new StockBalanceReportRegistry(reopened).get(f.session)).items.find(
+      (x) => x.lotId === lot.id,
+    ).received,
+    12,
+  );
+  assert.equal(
+    (
+      await new StockBalanceReportRegistry(reopened).get({
+        ...f.session,
+        tenantId: randomUUID(),
+      })
+    ).items.length,
+    0,
+  );
+});

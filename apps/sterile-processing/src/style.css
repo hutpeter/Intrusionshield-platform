@@ -1252,3 +1252,7 @@ td {
 .stock-movement-report-table td { min-width: 100px; }
 .stock-movement-report-table td:nth-child(2) { min-width: 240px; }
 .stock-movement-report-table td:first-child { min-width: 170px; }
+
+.stock-balance-report-table { min-width: 2900px; }
+.stock-balance-report-table td { min-width: 100px; }
+.stock-balance-report-table td:first-child { min-width: 240px; }

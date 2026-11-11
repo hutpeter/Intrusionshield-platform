@@ -1,5 +1,6 @@
 import express from "express";
 import {
+  StockBalanceReportRegistry,
   StockMovementReportRegistry,
   ReplenishmentRegistry,
   StockReconciliationRegistry,
@@ -822,6 +823,14 @@ export function createSterileApp(
     }
     return true;
   }
+  app.get(prefix + "/consumables/balance-report", async (req, res) => {
+    noQuery(req);
+    res.json(
+      await new StockBalanceReportRegistry(dependencies.repository!).get(
+        res.locals.scope,
+      ),
+    );
+  });
   app.get(prefix + "/consumables/movement-report", async (req, res) => {
     if (
       Object.keys(req.query).some(

@@ -340,3 +340,8 @@ Consumable lots → **Stock movement report → Generate stock movement report �
 ### Stock movement report filters
 
 Consumable lots → Stock movement report now includes **Exact lot code**, **Movement type** and **Clear filters**. Generate to apply input changes; CSV exports only the matching displayed snapshot. See [STOCK-MOVEMENT-FILTERS.md](STOCK-MOVEMENT-FILTERS.md) for U-STOCKFILTER-01, the only owner check for this build.
+
+
+### Current stock balance CSV
+
+Consumable lots → **Stock balance report → Generate stock balance report → Export stock balances CSV**. The report includes all registered lots with separate available/usable quantities and recorded ledger status. See [STOCK-BALANCE-REPORT.md](STOCK-BALANCE-REPORT.md) for U-STOCKBAL-01, the only owner check for this build.
