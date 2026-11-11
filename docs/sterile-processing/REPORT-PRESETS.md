@@ -19,3 +19,5 @@ U-REPORTSHUB-01 passed from the owner's seven-lot balance screenshot. Broader ow
 Owner acceptance November 11, 2026: “everything worked” confirms the requested U-REPORTPRESET-01 expiry preset save → return to hub → run route. Other automated checks remain developer evidence; deferred acceptance items remain unchanged.
 
 Relative movement date support is documented in [RELATIVE-MOVEMENT-PRESETS.md](RELATIVE-MOVEMENT-PRESETS.md). Existing fixed presets remain valid.
+
+Saved entries now support Edit preset and Update preset; see [EDIT-REPORT-PRESETS.md](EDIT-REPORT-PRESETS.md). Existing identity and report type are preserved.

@@ -1035,3 +1035,10 @@ Owner acceptance November 11, 2026: “everything worked” confirms the request
 **U-RELATIVEMOVE-01 pending:** Reports hub → Stock movement report → Date range (UTC): Last 7 days → name “Last 7 days” → Save preset → Back to Reports hub → Run preset. Confirm automatic generation for seven UTC days including today. This is the only owner check for this build. U-REPORTPRESET-01 passed November 11 from the owner's “everything worked” response.
 
 Developer: 66 web tests, web build, UTC boundary/legacy storage tests and Chromium relative generation/reruns, saved query filters, frozen CSV/print, current fixed-date limits, localization/mobile passed. No stock writes. Backend unchanged; prior 228 domain/155 HTTP checks not rerun. Additional windows, scheduling, shared/server preferences, production scale and broader manual acceptance remain deferred. U-TRACE-01/original U-LOANER-01 remain unconfirmed; RSP-ISS-001 parked. See [RELATIVE-MOVEMENT-PRESETS.md](RELATIVE-MOVEMENT-PRESETS.md).
+
+
+## Current owner check — edit and rename report presets
+
+**U-EDITPRESET-01 pending:** Reports hub → Edit preset on the saved Last 7 days movement preset → select Last 30 days and rename to “Last 30 days” → Update preset → Close movement report → Run preset. Expect one renamed entry and automatic generation covering thirty UTC days including today. This is the only owner check for this build.
+
+Developer: 68 web tests, web build and Chromium all-four edit/rename/run, stable identity/count, cancellation, duplicate names, blocked storage, stale/deleted edits, persistence, scope separation, localization/mobile and existing preset/relative-date regressions passed. Backend unchanged; prior 228 domain/155 HTTP checks not rerun. Shared/server preferences, additional windows, scheduling, simultaneous edit transactions and production scale remain deferred. Earlier owner screenshot confirms seven-day movement output (November 5–11, eight movements); full U-RELATIVEMOVE-01 preset route remains unconfirmed. U-TRACE-01 and original U-LOANER-01 remain unconfirmed; RSP-ISS-001 parked. See [EDIT-REPORT-PRESETS.md](EDIT-REPORT-PRESETS.md).

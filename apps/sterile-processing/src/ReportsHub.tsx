@@ -1,5 +1,6 @@
 import {
   addPreset,
+  updatePreset,
   readPresets,
   presetScope,
   type ReportPreset,
@@ -39,6 +40,7 @@ export function ReportsHub({
     [reportBusy, setReportBusy] = useState(false),
     [initialPreset, setInitialPreset] = useState<PresetSettings | undefined>(),
     [runKey, setRunKey] = useState(0),
+    [editingPreset, setEditingPreset] = useState<ReportPreset | undefined>(),
     [stored, setStored] = useState(() => {
       try {
         const key = presetScope(session);
@@ -83,6 +85,7 @@ export function ReportsHub({
     let current: ReportPreset[];
     try {
       current = readPresets(localStorage, stored.key);
+      setStored({ ...stored, presets: current });
     } catch {
       setPresetNotice("storage");
       return false;
@@ -105,8 +108,20 @@ export function ReportsHub({
   }
   const props = {
     initialPreset,
+    editingPresetName: editingPreset?.name,
+    runOnOpen: !editingPreset,
     onSavePreset: (name: string, settings: PresetSettings) => {
       try {
+        if (editingPreset) {
+          let updated: ReportPreset | undefined;
+          const saved = persist((current) => {
+            const next = updatePreset(current, editingPreset, name, settings);
+            updated = next.find((p) => p.id === editingPreset.id);
+            return next;
+          });
+          if (saved) setEditingPreset(updated);
+          return saved;
+        }
         return persist((current) =>
           addPreset(current, name, settings, crypto.randomUUID()),
         );
@@ -122,6 +137,7 @@ export function ReportsHub({
     onClose: () => {
       setSelected(null);
       setInitialPreset(undefined);
+      setEditingPreset(undefined);
     },
     onOpen: onOpenLot,
   };
@@ -138,9 +154,10 @@ export function ReportsHub({
             onClick={() => {
               setSelected(null);
               setInitialPreset(undefined);
+              setEditingPreset(undefined);
             }}
           >
-            {t.back}
+            {editingPreset ? pt.cancel : t.back}
           </button>
         )}
       </div>
@@ -173,12 +190,24 @@ export function ReportsHub({
                 <button
                   disabled={busy}
                   onClick={() => {
+                    setEditingPreset(undefined);
                     setInitialPreset(preset.settings);
                     setRunKey((k) => k + 1);
                     setSelected(preset.settings.report);
                   }}
                 >
                   {pt.run}
+                </button>
+                <button
+                  disabled={busy}
+                  onClick={() => {
+                    setEditingPreset(preset);
+                    setInitialPreset(preset.settings);
+                    setRunKey((k) => k + 1);
+                    setSelected(preset.settings.report);
+                  }}
+                >
+                  {pt.edit}
                 </button>
                 <button
                   disabled={busy}
@@ -206,6 +235,7 @@ export function ReportsHub({
                   disabled={busy}
                   onClick={() => {
                     setInitialPreset(undefined);
+                    setEditingPreset(undefined);
                     setRunKey((k) => k + 1);
                     setSelected(report.id);
                   }}

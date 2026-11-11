@@ -405,3 +405,8 @@ Owner acceptance November 11, 2026: “everything worked” confirms the request
 ## Relative movement presets — preview delivered
 
 Last 7 days / Last 30 days resolve current inclusive UTC dates on every generation or preset run. Fixed presets remain compatible; CSV/PDF retain the generated snapshot dates. U-RELATIVEMOVE-01 pending, single owner route. Additional windows, scheduling, shared preferences and production scale remain deferred. See [RELATIVE-MOVEMENT-PRESETS.md](RELATIVE-MOVEMENT-PRESETS.md). Asset reuse remains intended; RSP-ISS-001 parked.
+
+
+## Edit and rename report presets — preview delivered
+
+Edit preset loads saved filters/name without fetching report data. Update preset preserves the existing ID and rejects invalid names/filters, observed stale/deleted targets and failed storage. Run still fetches fresh data. U-EDITPRESET-01 pending, single owner route. Shared/server preferences, simultaneous transactional edits, scheduling and production scale remain deferred. See [EDIT-REPORT-PRESETS.md](EDIT-REPORT-PRESETS.md). Asset reuse remains intended; RSP-ISS-001 parked.

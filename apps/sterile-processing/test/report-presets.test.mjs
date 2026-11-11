@@ -5,6 +5,7 @@ import {
   validSettings,
   readPresets,
   addPreset,
+  updatePreset,
   movementWindow,
 } from "../src/report-presets.ts";
 const balance = { report: "balances", lotCode: "LOT", status: "withdrawn" };
@@ -167,4 +168,65 @@ test("legacy fixed and relative presets round trip together without storing reso
     { ...relative, action: "unsupported" },
   ])
     assert.equal(validSettings(settings), false);
+});
+
+test("editing preserves identity, position and other presets, supports rename and fixed/relative changes", () => {
+  const old = {
+    id: "movement",
+    name: "Week",
+    settings: { report: "movements", lotCode: "", action: "", range: "last7" },
+  };
+  const other = { id: "balance", name: "Balances", settings: balance };
+  const original = [other, old];
+  const copy = structuredClone(original);
+  const settings = {
+    report: "movements",
+    lotCode: "EXACT",
+    action: "adjustment",
+    from: "2026-11-01",
+    through: "2026-11-05",
+  };
+  const updated = updatePreset(original, old, " Month review ", settings);
+  assert.deepEqual(updated, [
+    other,
+    { id: "movement", name: "Month review", settings },
+  ]);
+  assert.deepEqual(original, copy);
+  assert.deepEqual(
+    updatePreset(updated, updated[1], "Month review", {
+      ...old.settings,
+      range: "last30",
+    })[1].settings,
+    { ...old.settings, range: "last30" },
+  );
+  // An update is allowed when the collection is already at the creation limit.
+  const full = Array.from({ length: 100 }, (_, i) => ({
+    ...other,
+    id: "id" + i,
+    name: "name" + i,
+  }));
+  assert.equal(updatePreset(full, full[50], "Renamed", balance).length, 100);
+});
+test("editing rejects conflicting names, changed/deleted records, invalid settings and report-type changes", () => {
+  const old = { id: "one", name: "First", settings: balance },
+    other = {
+      id: "two",
+      name: "Second",
+      settings: { report: "replenishment" },
+    };
+  for (const [entries, name, settings] of [
+    [[old, other], "second", balance],
+    [[old, other], "  ", balance],
+    [[old, other], "x".repeat(81), balance],
+    [[other], "New", balance],
+    [[{ ...old, name: "Changed" }, other], "New", balance],
+    [
+      [{ ...old, settings: { ...balance, status: "current" } }, other],
+      "New",
+      balance,
+    ],
+    [[old, other], "New", { report: "replenishment" }],
+    [[old, other], "New", { ...balance, status: "unsupported" }],
+  ])
+    assert.throws(() => updatePreset(entries, old, name, settings));
 });

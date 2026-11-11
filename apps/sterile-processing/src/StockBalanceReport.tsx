@@ -20,6 +20,8 @@ export function StockBalanceReport({
   onClose,
   onOpen,
   initialPreset,
+  editingPresetName,
+  runOnOpen = true,
   onSavePreset,
 }: PresetOptions & {
   session: Session;
@@ -74,7 +76,7 @@ export function StockBalanceReport({
     }
   }
   useEffect(() => {
-    if (!initialPreset) return;
+    if (!initialPreset || !runOnOpen) return;
     const timer = setTimeout(() => void generate(), 0);
     return () => clearTimeout(timer);
   }, []);
@@ -103,6 +105,7 @@ export function StockBalanceReport({
       {onSavePreset && (
         <SaveReportPreset
           language={language}
+          editingPresetName={editingPresetName}
           disabled={blocked || loading}
           settings={{ report: "balances", lotCode: lotCode.trim(), status }}
           onSave={onSavePreset}

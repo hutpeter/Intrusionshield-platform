@@ -17,6 +17,8 @@ export function Replenishment({
   onClose,
   onOpen,
   initialPreset,
+  editingPresetName,
+  runOnOpen = true,
   onSavePreset,
 }: PresetOptions & {
   session: Session;
@@ -62,7 +64,7 @@ export function Replenishment({
     }
   }
   useEffect(() => {
-    if (!initialPreset) return;
+    if (!initialPreset || !runOnOpen) return;
     const timer = setTimeout(() => void generate(), 0);
     return () => clearTimeout(timer);
   }, []);
@@ -91,6 +93,7 @@ export function Replenishment({
       {onSavePreset && (
         <SaveReportPreset
           language={language}
+          editingPresetName={editingPresetName}
           disabled={blocked || loading}
           settings={{ report: "replenishment" }}
           onSave={onSavePreset}

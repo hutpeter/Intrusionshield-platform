@@ -380,3 +380,8 @@ Open a report from Reports hub, choose input filters, name it and Save preset. B
 ### Relative movement dates
 
 Reports hub → Stock movement report → Date range (UTC) offers Fixed dates, Last 7 days and Last 30 days. Relative presets recalculate at each run, including today in UTC. Existing fixed presets remain supported. See [RELATIVE-MOVEMENT-PRESETS.md](RELATIVE-MOVEMENT-PRESETS.md) for the single U-RELATIVEMOVE-01 owner check.
+
+
+### Edit or rename report presets
+
+Reports hub → Edit preset loads the saved name and filters without a query. Use Update preset to save, then close the report and Run preset for fresh data. Cancel editing discards unsaved edits. See [EDIT-REPORT-PRESETS.md](EDIT-REPORT-PRESETS.md) for the single U-EDITPRESET-01 owner check.

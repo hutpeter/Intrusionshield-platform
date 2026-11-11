@@ -20,6 +20,8 @@ export function ConsumableExpiryReport({
   onClose,
   onOpen,
   initialPreset,
+  editingPresetName,
+  runOnOpen = true,
   onSavePreset,
 }: PresetOptions & {
   session: Session;
@@ -82,7 +84,7 @@ export function ConsumableExpiryReport({
     }
   }
   useEffect(() => {
-    if (!initialPreset) return;
+    if (!initialPreset || !runOnOpen) return;
     const timer = setTimeout(() => void generate(), 0);
     return () => clearTimeout(timer);
   }, []);
@@ -111,6 +113,7 @@ export function ConsumableExpiryReport({
       {onSavePreset && (
         <SaveReportPreset
           language={language}
+          editingPresetName={editingPresetName}
           disabled={blocked || loading}
           settings={{
             report: "expiry",

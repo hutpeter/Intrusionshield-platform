@@ -158,3 +158,26 @@ export function addPreset(
     throw new Error("invalid");
   return [...existing, { id, name, settings }];
 }
+
+// Updates target the same identity and reject stale or deleted edits.
+export function updatePreset(
+  existing: ReportPreset[],
+  expected: ReportPreset,
+  name: string,
+  settings: PresetSettings,
+): ReportPreset[] {
+  const index = existing.findIndex((p) => p.id === expected.id);
+  if (
+    index < 0 ||
+    JSON.stringify(existing[index]) !== JSON.stringify(expected) ||
+    settings.report !== expected.settings.report
+  )
+    throw new Error("stale");
+  const updated = addPreset(
+    existing.filter((p) => p.id !== expected.id),
+    name,
+    settings,
+    expected.id,
+  ).at(-1)!;
+  return existing.map((p, i) => (i === index ? updated : p));
+}
