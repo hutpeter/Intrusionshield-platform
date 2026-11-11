@@ -370,3 +370,8 @@ After generating any stock report, use **Print report / save PDF**. The full dis
 ### Reports hub
 
 Use **Reports hub** in the left sidebar to choose balances, movements, replenishment or expiry, then Generate. Existing Consumable lots entry points remain available. See [REPORTS-HUB.md](REPORTS-HUB.md) for the single U-REPORTSHUB-01 owner check.
+
+
+### Saved report presets
+
+Open a report from Reports hub, choose input filters, name it and Save preset. Back to Reports hub → Run preset generates a fresh snapshot automatically. Presets are saved only in this browser for the current user/facility; movement dates stay fixed. See [REPORT-PRESETS.md](REPORT-PRESETS.md) for the single U-REPORTPRESET-01 owner check.

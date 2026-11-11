@@ -10,6 +10,8 @@ November 11, 2026: 61 web tests and the web build passed. Chromium checked all f
 
 ## One owner check
 
-U-REPORTSHUB-01 pending: update/restart, then Reports hub (left sidebar) → Stock balance report → Generate stock balance report. Confirm the hub contains four report cards and the balance snapshot opens. No stock mutation is needed.
+U-REPORTSHUB-01 passed November 11, 2026: update/restart, then Reports hub (left sidebar) → Stock balance report → Generate stock balance report. Confirm the hub contains four report cards and the balance snapshot opens. No stock mutation is needed.
 
 U-STOCKPRINT-01 passed November 11 from the owner’s seven-page stock balance PDF. Broader owner acceptance, physical printers, other print engines, production scale and Asset Management integration remain deferred. The shared report foundations remain candidates for future Ruby Asset Management reuse. U-TRACE-01 and original U-LOANER-01 remain unconfirmed; RSP-ISS-001 stays parked.
+
+Owner evidence: the November 11 screenshot shows Reports hub selected with the generated seven-lot balance snapshot (2026-11-11T20:04:28.530Z), All lots / All statuses. This confirms the hub-to-balances route; other hub routes remain developer-verified.

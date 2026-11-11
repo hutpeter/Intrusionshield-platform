@@ -1014,6 +1014,15 @@ Developer: 61 web tests and web build passed; backend unchanged (228 domain/155 
 
 ## Current owner check — Reports hub
 
-**U-REPORTSHUB-01 pending:** Reports hub (left sidebar) → Stock balance report → Generate stock balance report. Confirm four hub cards and the generated balance snapshot. This is the only owner check for this build. U-STOCKPRINT-01 passed November 11 from the uploaded seven-page PDF.
+**U-REPORTSHUB-01 passed November 11, 2026:** Reports hub (left sidebar) → Stock balance report → Generate stock balance report. Confirm four hub cards and the generated balance snapshot. This is the only owner check for this build. U-STOCKPRINT-01 passed November 11 from the uploaded seven-page PDF.
 
 Developer: 61 web tests, web build and Chromium all-four report generation/CSV/print/back, exact lot routing, original entry points, localization/mobile, unsaved-form guard and auditor access passed without stock writes. Backend unchanged; preceding 228 domain/155 HTTP tests were not rerun. Broader manual acceptance and production scale remain deferred. U-TRACE-01 and original U-LOANER-01 remain unconfirmed; RSP-ISS-001 stays parked. See [REPORTS-HUB.md](REPORTS-HUB.md).
+
+Owner evidence: the November 11 screenshot shows Reports hub selected with the generated seven-lot balance snapshot (2026-11-11T20:04:28.530Z), All lots / All statuses. This confirms the hub-to-balances route; other hub routes remain developer-verified.
+
+
+## Current owner check — saved report presets
+
+**U-REPORTPRESET-01 pending:** Reports hub → Consumable expiry report → enter Preset name “Expiry 30 days” → Save preset → Back to Reports hub → Run preset. Keep default filters; expect automatic generation with thirty days. This is the only owner check for this build. U-REPORTSHUB-01 passed November 11 from the owner screenshot.
+
+Developer: 64 web tests, web build and Chromium all-four save/run/CSV, fresh timestamps, persistence, deletion, scope separation, input validation, blocked/corrupt storage, localization/mobile and existing hub navigation/print checks passed. No stock mutations. Backend unchanged; previous 228 domain/155 HTTP tests not rerun. Server/shared preferences, relative movement dates, editing/rename, cross-tab transactions, broader acceptance and production scale remain deferred. U-TRACE-01/original U-LOANER-01 remain unconfirmed; RSP-ISS-001 parked. See [REPORT-PRESETS.md](REPORT-PRESETS.md).

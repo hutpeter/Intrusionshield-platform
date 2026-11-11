@@ -1,3 +1,4 @@
+import { SaveReportPreset, type PresetOptions } from "./SaveReportPreset";
 import { printStockReport } from "./stock-report-print";
 import { replenishmentPrintModel } from "./stock-report-print-model";
 import { stockPrintLabels } from "./stock-report-print-text";
@@ -15,7 +16,9 @@ export function Replenishment({
   onExpired,
   onClose,
   onOpen,
-}: {
+  initialPreset,
+  onSavePreset,
+}: PresetOptions & {
   session: Session;
   language: Language;
   blocked: boolean;
@@ -58,6 +61,11 @@ export function Replenishment({
       pending.current = null;
     }
   }
+  useEffect(() => {
+    if (!initialPreset) return;
+    const timer = setTimeout(() => void generate(), 0);
+    return () => clearTimeout(timer);
+  }, []);
   function download() {
     if (!report || loading || blocked) return;
     const url = URL.createObjectURL(
@@ -80,6 +88,14 @@ export function Replenishment({
         </button>
       </div>
       <p className="readonly-note">{t.note}</p>
+      {onSavePreset && (
+        <SaveReportPreset
+          language={language}
+          disabled={blocked || loading}
+          settings={{ report: "replenishment" }}
+          onSave={onSavePreset}
+        />
+      )}
       <button disabled={blocked || loading} onClick={() => void generate()}>
         {t.refresh}
       </button>

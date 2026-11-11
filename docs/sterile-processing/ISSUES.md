@@ -390,4 +390,11 @@ Balances, movements, replenishment and expiry reports now print the full saved s
 
 ## Reports hub — preview delivered
 
-Four existing stock reports now have a shared sidebar entry. Generation, saved snapshot CSV/printing and lot links reuse the existing components and scoped permissions. U-REPORTSHUB-01 pending, one owner route only. Broader acceptance and production scale remain deferred. See [REPORTS-HUB.md](REPORTS-HUB.md). Future Asset reuse remains intended; RSP-ISS-001 stays parked.
+Four existing stock reports now have a shared sidebar entry. Generation, saved snapshot CSV/printing and lot links reuse the existing components and scoped permissions. U-REPORTSHUB-01 passed November 11, 2026, one owner route only. Broader acceptance and production scale remain deferred. See [REPORTS-HUB.md](REPORTS-HUB.md). Future Asset reuse remains intended; RSP-ISS-001 stays parked.
+
+Owner evidence: the November 11 screenshot shows Reports hub selected with the generated seven-lot balance snapshot (2026-11-11T20:04:28.530Z), All lots / All statuses. This confirms the hub-to-balances route; other hub routes remain developer-verified.
+
+
+## Saved report presets — preview delivered
+
+Reports hub stores named filter setups per browser/user/facility. Run preset fetches a fresh report, preserving server scoping and snapshot export behavior. U-REPORTPRESET-01 pending, one owner route only. Server/shared preferences, editing/rename, relative movement windows, transaction-safe simultaneous tab edits and production scale remain deferred. See [REPORT-PRESETS.md](REPORT-PRESETS.md). Asset reuse remains intended; RSP-ISS-001 parked.

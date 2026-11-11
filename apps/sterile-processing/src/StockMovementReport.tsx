@@ -1,3 +1,4 @@
+import { SaveReportPreset, type PresetOptions } from "./SaveReportPreset";
 import { printStockReport } from "./stock-report-print";
 import { stockMovementPrintModel } from "./stock-report-print-model";
 import { stockPrintLabels } from "./stock-report-print-text";
@@ -20,7 +21,9 @@ export function StockMovementReport({
   onExpired,
   onClose,
   onOpen,
-}: {
+  initialPreset,
+  onSavePreset,
+}: PresetOptions & {
   session: Session;
   language: Language;
   blocked: boolean;
@@ -31,10 +34,22 @@ export function StockMovementReport({
 }) {
   const t = stockMovementReportLabels(language),
     c = labels(language),
-    [from, setFrom] = useState(() => day(Date.now() - 6 * dayMs)),
-    [through, setThrough] = useState(() => day(Date.now())),
-    [lotCode, setLotCode] = useState(""),
-    [action, setAction] = useState<StockAction | "">(""),
+    [from, setFrom] = useState(() =>
+      initialPreset?.report === "movements"
+        ? initialPreset.from
+        : day(Date.now() - 6 * dayMs),
+    ),
+    [through, setThrough] = useState(() =>
+      initialPreset?.report === "movements"
+        ? initialPreset.through
+        : day(Date.now()),
+    ),
+    [lotCode, setLotCode] = useState(
+      initialPreset?.report === "movements" ? initialPreset.lotCode : "",
+    ),
+    [action, setAction] = useState<StockAction | "">(
+      initialPreset?.report === "movements" ? initialPreset.action : "",
+    ),
     [report, setReport] = useState<Report | null>(null),
     [page, setPage] = useState(1),
     [loading, setLoading] = useState(false),
@@ -72,6 +87,11 @@ export function StockMovementReport({
       pending.current = null;
     }
   }
+  useEffect(() => {
+    if (!initialPreset) return;
+    const timer = setTimeout(() => void generate(), 0);
+    return () => clearTimeout(timer);
+  }, []);
   function download() {
     if (busy || !report) return;
     const url = URL.createObjectURL(
@@ -94,6 +114,20 @@ export function StockMovementReport({
         </button>
       </div>
       <p className="readonly-note">{t.note}</p>
+      {onSavePreset && (
+        <SaveReportPreset
+          language={language}
+          disabled={blocked || loading}
+          settings={{
+            report: "movements",
+            lotCode: lotCode.trim(),
+            action,
+            from,
+            through,
+          }}
+          onSave={onSavePreset}
+        />
+      )}
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -118,7 +152,11 @@ export function StockMovementReport({
                 required
                 type="date"
                 min={from}
-                max={day(Date.now())}
+                max={
+                  initialPreset?.report === "movements"
+                    ? initialPreset.through
+                    : day(Date.now())
+                }
                 value={through}
                 onChange={(e) => setThrough(e.target.value)}
               />

@@ -1179,7 +1179,7 @@ function Workspace({
         )}
         {tab === "reports" && (
           <ReportsHub
-            key={trayReset}
+            key={`${trayReset}:${session.tenantId}:${session.facilityId}:${session.actorId}`}
             session={session}
             language={language}
             blocked={blocked}

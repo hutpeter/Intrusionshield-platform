@@ -1,3 +1,11 @@
+import {
+  addPreset,
+  readPresets,
+  presetScope,
+  type ReportPreset,
+  type PresetSettings,
+} from "./report-presets";
+import { presetLabels } from "./report-preset-text";
 import { useEffect, useState } from "react";
 import type { Session } from "./api";
 import type { Language } from "./text";
@@ -29,6 +37,19 @@ export function ReportsHub({
   const t = reportsHubLabels(language),
     [selected, setSelected] = useState<ReportId | null>(null),
     [reportBusy, setReportBusy] = useState(false),
+    [initialPreset, setInitialPreset] = useState<PresetSettings | undefined>(),
+    [runKey, setRunKey] = useState(0),
+    [stored, setStored] = useState(() => {
+      try {
+        const key = presetScope(session);
+        return { key, presets: readPresets(localStorage, key), failed: false };
+      } catch {
+        return { key: "", presets: [] as ReportPreset[], failed: true };
+      }
+    }),
+    [presetNotice, setPresetNotice] = useState<"deleted" | "storage" | null>(
+      null,
+    ),
     busy = blocked || reportBusy;
   useEffect(() => {
     onBusy(reportBusy);
@@ -56,13 +77,52 @@ export function ReportsHub({
       description: t.expiry,
     },
   ];
+  const pt = presetLabels(language);
+  function persist(update: (current: ReportPreset[]) => ReportPreset[]) {
+    if (stored.failed) return false;
+    let current: ReportPreset[];
+    try {
+      current = readPresets(localStorage, stored.key);
+    } catch {
+      setPresetNotice("storage");
+      return false;
+    }
+    let presets: ReportPreset[];
+    try {
+      presets = update(current);
+    } catch {
+      return false;
+    }
+    try {
+      localStorage.setItem(stored.key, JSON.stringify(presets));
+      setStored({ ...stored, presets });
+      setPresetNotice(null);
+      return true;
+    } catch {
+      setPresetNotice("storage");
+      return false;
+    }
+  }
   const props = {
+    initialPreset,
+    onSavePreset: (name: string, settings: PresetSettings) => {
+      try {
+        return persist((current) =>
+          addPreset(current, name, settings, crypto.randomUUID()),
+        );
+      } catch {
+        return false;
+      }
+    },
     session,
     language,
     blocked,
     onBusy: setReportBusy,
     onExpired,
-    onClose: () => setSelected(null),
+    onClose: () => {
+      setSelected(null);
+      setInitialPreset(undefined);
+    },
     onOpen: onOpenLot,
   };
   return (
@@ -73,33 +133,99 @@ export function ReportsHub({
           <p>{t.intro}</p>
         </div>
         {selected && (
-          <button disabled={busy} onClick={() => setSelected(null)}>
+          <button
+            disabled={busy}
+            onClick={() => {
+              setSelected(null);
+              setInitialPreset(undefined);
+            }}
+          >
             {t.back}
           </button>
         )}
       </div>
       {!selected ? (
-        <div className="reports-hub-grid">
-          {reports.map((report) => (
-            <article className="panel" key={report.id}>
-              <h2>{report.title}</h2>
-              <p>{report.description}</p>
-              <button
-                aria-label={report.title}
-                disabled={busy}
-                onClick={() => setSelected(report.id)}
-              >
-                {t.open}
-              </button>
-            </article>
-          ))}
-        </div>
+        <>
+          <section className="panel" aria-label={pt.title}>
+            <h2>{pt.title}</h2>
+            <p>{pt.note}</p>
+            {(stored.failed || presetNotice) && (
+              <p role="status">
+                {pt[stored.failed ? "storage" : presetNotice!]}
+              </p>
+            )}
+            {!stored.presets.length && !stored.failed && <p>{pt.empty}</p>}
+            {stored.presets.map((preset) => (
+              <article className="preset-row" key={preset.id}>
+                <div>
+                  <h3>{preset.name}</h3>
+                  <p>
+                    {
+                      reports.find((r) => r.id === preset.settings.report)
+                        ?.title
+                    }
+                  </p>
+                </div>
+                <button
+                  disabled={busy}
+                  onClick={() => {
+                    setInitialPreset(preset.settings);
+                    setRunKey((k) => k + 1);
+                    setSelected(preset.settings.report);
+                  }}
+                >
+                  {pt.run}
+                </button>
+                <button
+                  disabled={busy}
+                  onClick={() => {
+                    if (
+                      persist((current) =>
+                        current.filter((p) => p.id !== preset.id),
+                      )
+                    )
+                      setPresetNotice("deleted");
+                  }}
+                >
+                  {pt.remove}
+                </button>
+              </article>
+            ))}
+          </section>
+          <div className="reports-hub-grid">
+            {reports.map((report) => (
+              <article className="panel" key={report.id}>
+                <h2>{report.title}</h2>
+                <p>{report.description}</p>
+                <button
+                  aria-label={report.title}
+                  disabled={busy}
+                  onClick={() => {
+                    setInitialPreset(undefined);
+                    setRunKey((k) => k + 1);
+                    setSelected(report.id);
+                  }}
+                >
+                  {t.open}
+                </button>
+              </article>
+            ))}
+          </div>
+        </>
       ) : (
         <>
-          {selected === "balances" && <StockBalanceReport {...props} />}{" "}
-          {selected === "movements" && <StockMovementReport {...props} />}{" "}
-          {selected === "replenishment" && <Replenishment {...props} />}{" "}
-          {selected === "expiry" && <ConsumableExpiryReport {...props} />}
+          {selected === "balances" && (
+            <StockBalanceReport key={runKey} {...props} />
+          )}{" "}
+          {selected === "movements" && (
+            <StockMovementReport key={runKey} {...props} />
+          )}{" "}
+          {selected === "replenishment" && (
+            <Replenishment key={runKey} {...props} />
+          )}{" "}
+          {selected === "expiry" && (
+            <ConsumableExpiryReport key={runKey} {...props} />
+          )}
         </>
       )}
     </section>

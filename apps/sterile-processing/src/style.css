@@ -1287,3 +1287,10 @@ td {
 .reports-hub-grid h2 { margin: 0; }
 .reports-hub-grid p { flex: 1; margin: 0; }
 .reports-hub-grid button { align-self: flex-start; }
+
+.preset-row {display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:12px 0;border-top:1px solid #dbe4e1;}
+.preset-row > div {flex:1;min-width:160px;overflow-wrap:anywhere;}
+.preset-row h3, .preset-row p {margin:4px 0;}
+.preset-save {margin:16px 0;}
+.preset-save fieldset {display:flex;flex-wrap:wrap;align-items:end;gap:12px;}
+.preset-save label {flex:1;min-width:160px;}

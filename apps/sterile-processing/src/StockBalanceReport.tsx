@@ -1,3 +1,4 @@
+import { SaveReportPreset, type PresetOptions } from "./SaveReportPreset";
 import { printStockReport } from "./stock-report-print";
 import { stockBalancePrintModel } from "./stock-report-print-model";
 import { stockPrintLabels } from "./stock-report-print-text";
@@ -18,7 +19,9 @@ export function StockBalanceReport({
   onExpired,
   onClose,
   onOpen,
-}: {
+  initialPreset,
+  onSavePreset,
+}: PresetOptions & {
   session: Session;
   language: Language;
   blocked: boolean;
@@ -29,8 +32,12 @@ export function StockBalanceReport({
 }) {
   const t = stockBalanceReportLabels(language),
     c = labels(language),
-    [lotCode, setLotCode] = useState(""),
-    [status, setStatus] = useState<StockBalanceStatus | "">(""),
+    [lotCode, setLotCode] = useState(
+      initialPreset?.report === "balances" ? initialPreset.lotCode : "",
+    ),
+    [status, setStatus] = useState<StockBalanceStatus | "">(
+      initialPreset?.report === "balances" ? initialPreset.status : "",
+    ),
     [report, setReport] = useState<Report | null>(null),
     [loading, setLoading] = useState(false),
     [error, setError] = useState<unknown>(null),
@@ -66,6 +73,11 @@ export function StockBalanceReport({
       pending.current = null;
     }
   }
+  useEffect(() => {
+    if (!initialPreset) return;
+    const timer = setTimeout(() => void generate(), 0);
+    return () => clearTimeout(timer);
+  }, []);
   function download() {
     if (!report || loading || blocked) return;
     const url = URL.createObjectURL(
@@ -88,6 +100,14 @@ export function StockBalanceReport({
         </button>
       </div>
       <p className="readonly-note">{t.note}</p>
+      {onSavePreset && (
+        <SaveReportPreset
+          language={language}
+          disabled={blocked || loading}
+          settings={{ report: "balances", lotCode: lotCode.trim(), status }}
+          onSave={onSavePreset}
+        />
+      )}
       <form
         onSubmit={(e) => {
           e.preventDefault();

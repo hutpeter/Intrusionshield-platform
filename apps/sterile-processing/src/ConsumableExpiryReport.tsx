@@ -1,3 +1,4 @@
+import { SaveReportPreset, type PresetOptions } from "./SaveReportPreset";
 import { printStockReport } from "./stock-report-print";
 import { consumableExpiryPrintModel } from "./stock-report-print-model";
 import { stockPrintLabels } from "./stock-report-print-text";
@@ -18,7 +19,9 @@ export function ConsumableExpiryReport({
   onExpired,
   onClose,
   onOpen,
-}: {
+  initialPreset,
+  onSavePreset,
+}: PresetOptions & {
   session: Session;
   language: Language;
   blocked: boolean;
@@ -29,9 +32,15 @@ export function ConsumableExpiryReport({
 }) {
   const t = consumableExpiryReportLabels(language),
     c = labels(language),
-    [horizon, setHorizon] = useState("30"),
-    [lotCode, setLotCode] = useState(""),
-    [status, setStatus] = useState<ConsumableExpiryStatus | "">(""),
+    [horizon, setHorizon] = useState(
+      initialPreset?.report === "expiry" ? initialPreset.horizon : "30",
+    ),
+    [lotCode, setLotCode] = useState(
+      initialPreset?.report === "expiry" ? initialPreset.lotCode : "",
+    ),
+    [status, setStatus] = useState<ConsumableExpiryStatus | "">(
+      initialPreset?.report === "expiry" ? initialPreset.status : "",
+    ),
     [report, setReport] = useState<Report | null>(null),
     [loading, setLoading] = useState(false),
     [error, setError] = useState<unknown>(null),
@@ -72,6 +81,11 @@ export function ConsumableExpiryReport({
       pending.current = null;
     }
   }
+  useEffect(() => {
+    if (!initialPreset) return;
+    const timer = setTimeout(() => void generate(), 0);
+    return () => clearTimeout(timer);
+  }, []);
   function download() {
     if (!report || loading || blocked) return;
     const url = URL.createObjectURL(
@@ -94,6 +108,19 @@ export function ConsumableExpiryReport({
         </button>
       </div>
       <p className="readonly-note">{t.note}</p>
+      {onSavePreset && (
+        <SaveReportPreset
+          language={language}
+          disabled={blocked || loading}
+          settings={{
+            report: "expiry",
+            lotCode: lotCode.trim(),
+            status,
+            horizon,
+          }}
+          onSave={onSavePreset}
+        />
+      )}
       <form
         onSubmit={(e) => {
           e.preventDefault();
