@@ -400,3 +400,8 @@ Owner evidence: the November 11 screenshot shows Reports hub selected with the g
 Reports hub stores named filter setups per browser/user/facility. Run preset fetches a fresh report, preserving server scoping and snapshot export behavior. U-REPORTPRESET-01 passed November 11, 2026, one owner route only. Server/shared preferences, editing/rename, relative movement windows, transaction-safe simultaneous tab edits and production scale remain deferred. See [REPORT-PRESETS.md](REPORT-PRESETS.md). Asset reuse remains intended; RSP-ISS-001 parked.
 
 Owner acceptance November 11, 2026: “everything worked” confirms the requested U-REPORTPRESET-01 expiry preset save → return to hub → run route. Other automated checks remain developer evidence; deferred acceptance items remain unchanged.
+
+
+## Relative movement presets — preview delivered
+
+Last 7 days / Last 30 days resolve current inclusive UTC dates on every generation or preset run. Fixed presets remain compatible; CSV/PDF retain the generated snapshot dates. U-RELATIVEMOVE-01 pending, single owner route. Additional windows, scheduling, shared preferences and production scale remain deferred. See [RELATIVE-MOVEMENT-PRESETS.md](RELATIVE-MOVEMENT-PRESETS.md). Asset reuse remains intended; RSP-ISS-001 parked.

@@ -5,6 +5,7 @@ import {
   validSettings,
   readPresets,
   addPreset,
+  movementWindow,
 } from "../src/report-presets.ts";
 const balance = { report: "balances", lotCode: "LOT", status: "withdrawn" };
 test("presets are isolated by tenant, facility and actor; missing scope is rejected", () => {
@@ -104,4 +105,66 @@ test("round trip stores filters, rejects duplicate names and malformed storage w
       "p101",
     ),
   );
+});
+
+test("relative movement windows use inclusive UTC days across midnight, leap years and month/year boundaries", () => {
+  const base = { report: "movements", lotCode: "EXACT", action: "adjustment" };
+  for (const [now, range, from, through] of [
+    ["2026-11-11T23:59:59.999Z", "last7", "2026-11-05", "2026-11-11"],
+    ["2026-11-12T00:00:00.000Z", "last7", "2026-11-06", "2026-11-12"],
+    ["2026-01-01T00:30:00.000Z", "last30", "2025-12-03", "2026-01-01"],
+    ["2024-03-01T00:00:00.000Z", "last7", "2024-02-24", "2024-03-01"],
+    ["2026-11-11T23:30:00-05:00", "last30", "2026-10-14", "2026-11-12"],
+  ]) {
+    const settings = { ...base, range };
+    assert.equal(validSettings(settings), true);
+    assert.deepEqual(movementWindow(settings, Date.parse(now)), {
+      from,
+      through,
+    });
+  }
+  const fixed = { ...base, from: "2026-01-01", through: "2026-01-07" };
+  assert.deepEqual(movementWindow(fixed, Date.parse("2027-01-01")), {
+    from: fixed.from,
+    through: fixed.through,
+  });
+});
+test("legacy fixed and relative presets round trip together without storing resolved dates", () => {
+  const fixed = {
+    report: "movements",
+    lotCode: "",
+    action: "",
+    from: "2026-11-01",
+    through: "2026-11-11",
+  };
+  const relative = {
+    report: "movements",
+    lotCode: "LOT",
+    action: "receive",
+    range: "last30",
+  };
+  const saved = addPreset(
+    addPreset([], "Fixed", fixed, "fixed"),
+    "Rolling",
+    relative,
+    "rolling",
+  );
+  assert.deepEqual(
+    readPresets({ getItem: () => JSON.stringify(saved) }, "key"),
+    saved,
+  );
+  assert.deepEqual(Object.keys(saved[1].settings).sort(), [
+    "action",
+    "lotCode",
+    "range",
+    "report",
+  ]);
+  for (const settings of [
+    { ...relative, range: "last90" },
+    { ...relative, range: 7 },
+    { ...relative, from: "2026-01-01" },
+    { ...fixed, range: "last7" },
+    { ...relative, action: "unsupported" },
+  ])
+    assert.equal(validSettings(settings), false);
 });

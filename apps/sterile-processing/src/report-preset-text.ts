@@ -1,7 +1,7 @@
 import type { Language } from "./text";
 const en = {
   title: "Saved report presets",
-  note: "Saved in this browser for your user and facility. Filters only; Run preset fetches a fresh snapshot. Movement dates stay fixed. Clearing browser data removes presets.",
+  note: "Saved in this browser for your user and facility. Filters only; Run preset fetches a fresh snapshot. Movement presets support fixed or relative UTC dates. Clearing browser data removes presets.",
   name: "Preset name",
   save: "Save preset",
   run: "Run preset",
@@ -16,7 +16,7 @@ const en = {
 };
 const es: typeof en = {
   title: "Configuraciones de informes guardadas",
-  note: "Guardadas en este navegador para su usuario y centro. Solo filtros; Ejecutar obtiene una instantánea nueva. Las fechas de movimientos son fijas. Borrar los datos del navegador elimina las configuraciones.",
+  note: "Guardadas en este navegador para su usuario y centro. Solo filtros; Ejecutar obtiene una instantánea nueva. Los movimientos admiten fechas UTC fijas o relativas. Borrar los datos del navegador elimina las configuraciones.",
   name: "Nombre de configuración",
   save: "Guardar configuración",
   run: "Ejecutar configuración",
@@ -31,7 +31,7 @@ const es: typeof en = {
 };
 const fr: typeof en = {
   title: "Préréglages de rapports enregistrés",
-  note: "Enregistrés dans ce navigateur pour votre utilisateur et établissement. Filtres seuls ; Exécuter récupère un nouvel instantané. Les dates de mouvements restent fixes. Effacer les données du navigateur supprime les préréglages.",
+  note: "Enregistrés dans ce navigateur pour votre utilisateur et établissement. Filtres seuls ; Exécuter récupère un nouvel instantané. Les mouvements acceptent des dates UTC fixes ou relatives. Effacer les données du navigateur supprime les préréglages.",
   name: "Nom du préréglage",
   save: "Enregistrer le préréglage",
   run: "Exécuter le préréglage",

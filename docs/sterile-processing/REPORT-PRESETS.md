@@ -4,7 +4,7 @@ Reports hub now saves named filter setups for balances, movements, expiry and re
 
 Presets live in browser local storage, separated by tenant, facility and actor. They do not synchronize to other browsers/devices and are removed by clearing browser data. The screen states this limitation. Names are unique ignoring case, trimmed, one–80 characters, with at most 100 presets per scope. Unsupported/corrupt data and blocked storage are reported without silently replacing stored entries. Mutations reread storage to preserve intervening saves from another tab; fully simultaneous cross-tab edits are not transactional.
 
-Balance presets retain exact lot/status; movement presets retain exact lot/action and fixed inclusive UTC dates (at most ninety days). Expiry presets retain lot/status and a one–365 day horizon, recalculated on the run date. Replenishment has no input filters and reruns the current planning report. Existing server permissions, response validation and snapshot export/print semantics remain in force. Presets are browser preferences, not server audit records. EN/ES/FR labels and narrow layouts are supported. Existing Consumable lots report entry points do not show preset controls.
+Balance presets retain exact lot/status; movement presets retain exact lot/action and either fixed inclusive UTC dates (at most ninety days) or a relative Last 7 days / Last 30 days period. Expiry presets retain lot/status and a one–365 day horizon, recalculated on the run date. Replenishment has no input filters and reruns the current planning report. Existing server permissions, response validation and snapshot export/print semantics remain in force. Presets are browser preferences, not server audit records. EN/ES/FR labels and narrow layouts are supported. Existing Consumable lots report entry points do not show preset controls.
 
 ## Verification — November 11, 2026
 
@@ -14,6 +14,8 @@ Balance presets retain exact lot/status; movement presets retain exact lot/actio
 
 Reports hub → Consumable expiry report → enter Preset name “Expiry 30 days” → Save preset → Back to Reports hub → Run preset for that name. Keep default filters. Confirm the report generates automatically with the thirty-day horizon. This is the only owner check for this build; no stock movement is requested.
 
-U-REPORTSHUB-01 passed from the owner's seven-lot balance screenshot. Broader owner testing, cross-device/shared/server presets, editing/renaming, relative movement windows, concurrent transactional preferences and production scale remain deferred. Future Ruby Asset Management reuse remains intended. U-TRACE-01 and original U-LOANER-01 remain unconfirmed; RSP-ISS-001 stays parked.
+U-REPORTSHUB-01 passed from the owner's seven-lot balance screenshot. Broader owner testing, cross-device/shared/server presets, editing/renaming, additional relative movement windows, concurrent transactional preferences and production scale remain deferred. Future Ruby Asset Management reuse remains intended. U-TRACE-01 and original U-LOANER-01 remain unconfirmed; RSP-ISS-001 stays parked.
 
 Owner acceptance November 11, 2026: “everything worked” confirms the requested U-REPORTPRESET-01 expiry preset save → return to hub → run route. Other automated checks remain developer evidence; deferred acceptance items remain unchanged.
+
+Relative movement date support is documented in [RELATIVE-MOVEMENT-PRESETS.md](RELATIVE-MOVEMENT-PRESETS.md). Existing fixed presets remain valid.

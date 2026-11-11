@@ -375,3 +375,8 @@ Use **Reports hub** in the left sidebar to choose balances, movements, replenish
 ### Saved report presets
 
 Open a report from Reports hub, choose input filters, name it and Save preset. Back to Reports hub → Run preset generates a fresh snapshot automatically. Presets are saved only in this browser for the current user/facility; movement dates stay fixed. See [REPORT-PRESETS.md](REPORT-PRESETS.md) for the single U-REPORTPRESET-01 owner check.
+
+
+### Relative movement dates
+
+Reports hub → Stock movement report → Date range (UTC) offers Fixed dates, Last 7 days and Last 30 days. Relative presets recalculate at each run, including today in UTC. Existing fixed presets remain supported. See [RELATIVE-MOVEMENT-PRESETS.md](RELATIVE-MOVEMENT-PRESETS.md) for the single U-RELATIVEMOVE-01 owner check.

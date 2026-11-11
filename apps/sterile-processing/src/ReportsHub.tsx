@@ -164,6 +164,10 @@ export function ReportsHub({
                       reports.find((r) => r.id === preset.settings.report)
                         ?.title
                     }
+                    {preset.settings.report === "movements" &&
+                      ("range" in preset.settings
+                        ? ` · ${stockMovementReportLabels(language)[preset.settings.range]}`
+                        : ` · ${preset.settings.from} — ${preset.settings.through} (UTC)`)}
                   </p>
                 </div>
                 <button

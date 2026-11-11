@@ -1,6 +1,12 @@
 import type { Language } from "./text";
 const en = {
   title: "Stock movement report",
+  range: "Date range (UTC)",
+  fixed: "Fixed dates",
+  last7: "Last 7 days",
+  last30: "Last 30 days",
+  rangeNote:
+    "Relative ranges include today in UTC and recalculate on each generation. Exports retain the generated dates.",
   lotFilter: "Exact lot code (blank includes all lots)",
   actionFilter: "Movement type",
   allLots: "All lots",
@@ -46,6 +52,12 @@ const en = {
 };
 const es: typeof en = {
   title: "Informe de movimientos de existencias",
+  range: "Período (UTC)",
+  fixed: "Fechas fijas",
+  last7: "Últimos 7 días",
+  last30: "Últimos 30 días",
+  rangeNote:
+    "Los períodos relativos incluyen hoy en UTC y se recalculan al generar. Las exportaciones conservan las fechas generadas.",
   lotFilter: "Código exacto del lote (vacío incluye todos)",
   actionFilter: "Tipo de movimiento",
   allLots: "Todos los lotes",
@@ -90,6 +102,12 @@ const es: typeof en = {
   adjustment: "Ajuste de recuento aprobado",
 };
 const fr: typeof en = {
+  range: "Période (UTC)",
+  fixed: "Dates fixes",
+  last7: "7 derniers jours",
+  last30: "30 derniers jours",
+  rangeNote:
+    "Les périodes relatives incluent aujourd’hui en UTC et sont recalculées à chaque génération. Les exports conservent les dates générées.",
   title: "Rapport des mouvements de stock",
   lotFilter: "Code exact du lot (vide pour tous)",
   actionFilter: "Type de mouvement",

@@ -1,3 +1,8 @@
+import {
+  movementWindow,
+  type MovementRange,
+  type MovementPresetSettings,
+} from "./report-presets";
 import { SaveReportPreset, type PresetOptions } from "./SaveReportPreset";
 import { printStockReport } from "./stock-report-print";
 import { stockMovementPrintModel } from "./stock-report-print-model";
@@ -34,16 +39,20 @@ export function StockMovementReport({
 }) {
   const t = stockMovementReportLabels(language),
     c = labels(language),
-    [from, setFrom] = useState(() =>
-      initialPreset?.report === "movements"
-        ? initialPreset.from
-        : day(Date.now() - 6 * dayMs),
+    [initialWindow] = useState(() =>
+      movementWindow(
+        initialPreset?.report === "movements"
+          ? initialPreset
+          : { report: "movements", lotCode: "", action: "", range: "last7" },
+      ),
     ),
-    [through, setThrough] = useState(() =>
-      initialPreset?.report === "movements"
-        ? initialPreset.through
-        : day(Date.now()),
+    [range, setRange] = useState<MovementRange>(
+      initialPreset?.report === "movements" && "range" in initialPreset
+        ? initialPreset.range
+        : "fixed",
     ),
+    [from, setFrom] = useState(initialWindow.from),
+    [through, setThrough] = useState(initialWindow.through),
     [lotCode, setLotCode] = useState(
       initialPreset?.report === "movements" ? initialPreset.lotCode : "",
     ),
@@ -61,6 +70,10 @@ export function StockMovementReport({
     onBusy(loading);
     return () => onBusy(false);
   }, [loading, onBusy]);
+  const settings: MovementPresetSettings =
+    range === "fixed"
+      ? { report: "movements", lotCode: lotCode.trim(), action, from, through }
+      : { report: "movements", lotCode: lotCode.trim(), action, range };
   async function generate() {
     if (busy || pending.current) return;
     const a = new AbortController();
@@ -68,8 +81,11 @@ export function StockMovementReport({
     setLoading(true);
     setError(null);
     try {
-      const to = day(Date.parse(through + "T00:00:00.000Z") + dayMs),
-        r = await api.stockMovementReport(session, from, to, a.signal, {
+      const window = movementWindow(settings);
+      setFrom(window.from);
+      setThrough(window.through);
+      const to = day(Date.parse(window.through + "T00:00:00.000Z") + dayMs),
+        r = await api.stockMovementReport(session, window.from, to, a.signal, {
           ...(lotCode.trim() ? { lotCode: lotCode.trim() } : {}),
           ...(action ? { action } : {}),
         });
@@ -118,13 +134,7 @@ export function StockMovementReport({
         <SaveReportPreset
           language={language}
           disabled={blocked || loading}
-          settings={{
-            report: "movements",
-            lotCode: lotCode.trim(),
-            action,
-            from,
-            through,
-          }}
+          settings={settings}
           onSave={onSavePreset}
         />
       )}
@@ -135,11 +145,38 @@ export function StockMovementReport({
         }}
       >
         <fieldset disabled={busy}>
+          <label>
+            {t.range}
+            <select
+              aria-label={t.range}
+              value={range}
+              onChange={(e) => {
+                const value = e.target.value as MovementRange;
+                setRange(value);
+                if (value !== "fixed") {
+                  const window = movementWindow({
+                    report: "movements",
+                    lotCode: "",
+                    action: "",
+                    range: value,
+                  });
+                  setFrom(window.from);
+                  setThrough(window.through);
+                }
+              }}
+            >
+              <option value="fixed">{t.fixed}</option>
+              <option value="last7">{t.last7}</option>
+              <option value="last30">{t.last30}</option>
+            </select>
+          </label>
+          <p>{t.rangeNote}</p>
           <div className="form-grid">
             <label>
               {t.from}
               <input
                 required
+                disabled={range !== "fixed"}
                 type="date"
                 max={through}
                 value={from}
@@ -150,13 +187,10 @@ export function StockMovementReport({
               {t.through}
               <input
                 required
+                disabled={range !== "fixed"}
                 type="date"
                 min={from}
-                max={
-                  initialPreset?.report === "movements"
-                    ? initialPreset.through
-                    : day(Date.now())
-                }
+                max={day(Date.now())}
                 value={through}
                 onChange={(e) => setThrough(e.target.value)}
               />

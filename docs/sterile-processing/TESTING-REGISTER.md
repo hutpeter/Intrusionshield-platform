@@ -1028,3 +1028,10 @@ Owner evidence: the November 11 screenshot shows Reports hub selected with the g
 Developer: 64 web tests, web build and Chromium all-four save/run/CSV, fresh timestamps, persistence, deletion, scope separation, input validation, blocked/corrupt storage, localization/mobile and existing hub navigation/print checks passed. No stock mutations. Backend unchanged; previous 228 domain/155 HTTP tests not rerun. Server/shared preferences, relative movement dates, editing/rename, cross-tab transactions, broader acceptance and production scale remain deferred. U-TRACE-01/original U-LOANER-01 remain unconfirmed; RSP-ISS-001 parked. See [REPORT-PRESETS.md](REPORT-PRESETS.md).
 
 Owner acceptance November 11, 2026: “everything worked” confirms the requested U-REPORTPRESET-01 expiry preset save → return to hub → run route. Other automated checks remain developer evidence; deferred acceptance items remain unchanged.
+
+
+## Current owner check — relative movement presets
+
+**U-RELATIVEMOVE-01 pending:** Reports hub → Stock movement report → Date range (UTC): Last 7 days → name “Last 7 days” → Save preset → Back to Reports hub → Run preset. Confirm automatic generation for seven UTC days including today. This is the only owner check for this build. U-REPORTPRESET-01 passed November 11 from the owner's “everything worked” response.
+
+Developer: 66 web tests, web build, UTC boundary/legacy storage tests and Chromium relative generation/reruns, saved query filters, frozen CSV/print, current fixed-date limits, localization/mobile passed. No stock writes. Backend unchanged; prior 228 domain/155 HTTP checks not rerun. Additional windows, scheduling, shared/server preferences, production scale and broader manual acceptance remain deferred. U-TRACE-01/original U-LOANER-01 remain unconfirmed; RSP-ISS-001 parked. See [RELATIVE-MOVEMENT-PRESETS.md](RELATIVE-MOVEMENT-PRESETS.md).

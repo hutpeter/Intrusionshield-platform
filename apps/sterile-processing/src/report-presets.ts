@@ -3,8 +3,8 @@ import type {
   StockBalanceStatus,
   ConsumableExpiryStatus,
 } from "@intrusionshield/sterile-processing";
-export type PresetSettings =
-  | { report: "balances"; lotCode: string; status: StockBalanceStatus | "" }
+export type MovementRange = "fixed" | "last7" | "last30";
+export type MovementPresetSettings =
   | {
       report: "movements";
       lotCode: string;
@@ -12,6 +12,32 @@ export type PresetSettings =
       from: string;
       through: string;
     }
+  | {
+      report: "movements";
+      lotCode: string;
+      action: StockAction | "";
+      range: "last7" | "last30";
+    };
+export function movementWindow(
+  settings: MovementPresetSettings,
+  now = Date.now(),
+): { from: string; through: string } {
+  if (!("range" in settings))
+    return { from: settings.from, through: settings.through };
+  const through = new Date(now).toISOString().slice(0, 10);
+  const days = settings.range === "last7" ? 7 : 30;
+  return {
+    from: new Date(
+      Date.parse(through + "T00:00:00.000Z") - (days - 1) * 86400000,
+    )
+      .toISOString()
+      .slice(0, 10),
+    through,
+  };
+}
+export type PresetSettings =
+  | { report: "balances"; lotCode: string; status: StockBalanceStatus | "" }
+  | MovementPresetSettings
   | {
       report: "expiry";
       lotCode: string;
@@ -67,7 +93,6 @@ export function validSettings(v: unknown): v is PresetSettings {
     );
   if (x.report === "movements")
     return (
-      Object.keys(x).length === 5 &&
       member(x.action, [
         "",
         "receive",
@@ -77,10 +102,12 @@ export function validSettings(v: unknown): v is PresetSettings {
         "discard_quarantined",
         "adjustment",
       ]) &&
-      validDay(x.from) &&
-      validDay(x.through) &&
-      Date.parse(x.through) >= Date.parse(x.from) &&
-      Date.parse(x.through) - Date.parse(x.from) < 90 * 86400000
+      ((Object.keys(x).length === 4 && member(x.range, ["last7", "last30"])) ||
+        (Object.keys(x).length === 5 &&
+          validDay(x.from) &&
+          validDay(x.through) &&
+          Date.parse(x.through) >= Date.parse(x.from) &&
+          Date.parse(x.through) - Date.parse(x.from) < 90 * 86400000))
     );
   return false;
 }
