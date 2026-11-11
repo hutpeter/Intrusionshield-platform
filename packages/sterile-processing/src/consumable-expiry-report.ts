@@ -1,4 +1,5 @@
 import {
+  codeOf,
   SterileError,
   type SterileScope,
   type SterileRepository,
@@ -7,12 +8,18 @@ import {
   StockBalanceReportRegistry,
   type StockBalanceReportRow,
 } from "./stock-balance-report.js";
+export type ConsumableExpiryStatus = "expired" | "expiring";
+export interface ConsumableExpiryFilters {
+  lotCode?: string;
+  status?: ConsumableExpiryStatus;
+}
 export interface ConsumableExpiryRow {
   balance: StockBalanceReportRow;
   daysToExpiry: number;
-  status: "expired" | "expiring";
+  status: ConsumableExpiryStatus;
 }
 export interface ConsumableExpiryReport {
+  filters: { lotCode: string | null; status: ConsumableExpiryStatus | null };
   tenantId: string;
   facilityId: string;
   generatedAt: string;
@@ -28,6 +35,7 @@ export class ConsumableExpiryReportRegistry {
   async get(
     scope: SterileScope,
     horizonDays = 30,
+    filters: ConsumableExpiryFilters = {},
   ): Promise<ConsumableExpiryReport> {
     if (
       !Number.isSafeInteger(horizonDays) ||
@@ -35,8 +43,21 @@ export class ConsumableExpiryReportRegistry {
       horizonDays > 365
     )
       throw new SterileError("INVALID_REQUEST");
+    if (
+      !filters ||
+      typeof filters !== "object" ||
+      Array.isArray(filters) ||
+      Object.keys(filters).some((k) => !["lotCode", "status"].includes(k)) ||
+      (filters.status !== undefined &&
+        !["expired", "expiring"].includes(filters.status))
+    )
+      throw new SterileError("INVALID_REQUEST");
+    const lotCode =
+        filters.lotCode === undefined ? null : codeOf(filters.lotCode),
+      selectedStatus = filters.status ?? null;
     const snapshot = await new StockBalanceReportRegistry(this.repository).get(
         scope,
+        lotCode === null ? {} : { lotCode },
       ),
       asOfDay = snapshot.generatedAt.slice(0, 10),
       throughDay = new Date(Date.parse(asOfDay) + horizonDays * dayMs)
@@ -52,11 +73,9 @@ export class ConsumableExpiryReportRegistry {
         continue;
       const daysToExpiry =
         (Date.parse(balance.expiresOn) - Date.parse(asOfDay)) / dayMs;
-      items.push({
-        balance,
-        daysToExpiry,
-        status: daysToExpiry < 0 ? "expired" : "expiring",
-      });
+      const status = daysToExpiry < 0 ? "expired" : "expiring";
+      if (selectedStatus !== null && status !== selectedStatus) continue;
+      items.push({ balance, daysToExpiry, status });
     }
     items.sort(
       (a, b) =>
@@ -72,6 +91,7 @@ export class ConsumableExpiryReportRegistry {
       asOfDay,
       throughDay,
       horizonDays,
+      filters: { lotCode, status: selectedStatus },
       items,
     };
   }

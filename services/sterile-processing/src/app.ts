@@ -826,16 +826,32 @@ export function createSterileApp(
   }
   app.get(prefix + "/consumables/expiry-report", async (req, res) => {
     if (
-      Object.keys(req.query).some((k) => k !== "days") ||
+      Object.keys(req.query).some(
+        (k) => !["days", "lotCode", "status"].includes(k),
+      ) ||
       (req.query.days !== undefined &&
         (typeof req.query.days !== "string" ||
-          !/^[1-9]\d{0,2}$/.test(req.query.days)))
+          !/^[1-9]\d{0,2}$/.test(req.query.days))) ||
+      (req.query.lotCode !== undefined &&
+        typeof req.query.lotCode !== "string") ||
+      (req.query.status !== undefined && typeof req.query.status !== "string")
     )
       throw new SterileError("INVALID_REQUEST");
     res.json(
       await new ConsumableExpiryReportRegistry(dependencies.repository!).get(
         res.locals.scope,
         req.query.days === undefined ? 30 : Number(req.query.days),
+        {
+          ...(req.query.lotCode === undefined
+            ? {}
+            : { lotCode: req.query.lotCode as string }),
+          ...(req.query.status === undefined
+            ? {}
+            : {
+                status: req.query
+                  .status as import("@intrusionshield/sterile-processing").ConsumableExpiryStatus,
+              }),
+        },
       ),
     );
   });

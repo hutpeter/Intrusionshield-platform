@@ -26,6 +26,8 @@ export function consumableExpiryReportCsv(r: ConsumableExpiryReport): string {
       "withdrawn",
       "stock_version",
       "last_movement_utc",
+      "filter_lot_code",
+      "filter_expiry_status",
     ],
   ];
   for (const x of r.items) {
@@ -54,6 +56,8 @@ export function consumableExpiryReportCsv(r: ConsumableExpiryReport): string {
       b.withdrawn,
       b.stockVersion,
       b.lastMovementAt,
+      r.filters?.lotCode,
+      r.filters?.status,
     ]);
   }
   return (

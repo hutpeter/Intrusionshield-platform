@@ -1873,6 +1873,7 @@ test("expiry report client rejects wrong scope/horizons, inconsistent expiry, em
       tenantId: session.tenantId,
       facilityId: session.facilityId,
       generatedAt: "2026-11-11T12:00:00Z",
+      filters: { lotCode: null, status: null },
       asOfDay: "2026-11-11",
       throughDay: "2026-12-11",
       horizonDays: 30,
@@ -1912,6 +1913,76 @@ test("expiry report client rejects wrong scope/horizons, inconsistent expiry, em
   value.items = [];
   assert.equal(
     (await api.consumableExpiryReport(session, 30, signal())).items.length,
+    0,
+  );
+});
+
+test("expiry client validates applied filters and rejects out-of-filter rows without confusing withdrawal and expiry status", async (t) => {
+  const balance = {
+      lotId: "lot",
+      code: "LOT-A",
+      kind: "wrap",
+      name: "Wrap",
+      lotNumber: "M1",
+      supplier: "Supplier",
+      supplierReference: "REF",
+      expiresOn: "2026-11-13",
+      stockRecorded: true,
+      withdrawn: true,
+      received: 5,
+      used: 0,
+      quarantined: 0,
+      discarded: 0,
+      adjustments: 0,
+      available: 5,
+      usable: 0,
+      stockVersion: 1,
+      lastMovementAt: "2026-11-10T12:00:00Z",
+      status: "withdrawn",
+    },
+    row = { balance, daysToExpiry: 2, status: "expiring" },
+    value = {
+      tenantId: session.tenantId,
+      facilityId: session.facilityId,
+      generatedAt: "2026-11-11T12:00:00Z",
+      asOfDay: "2026-11-11",
+      throughDay: "2026-12-11",
+      horizonDays: 30,
+      unit: "each",
+      filters: { lotCode: "LOT-A", status: "expiring" },
+      items: [row],
+    },
+    paths = [];
+  fake(t, async (path) => {
+    paths.push(path);
+    return response(value);
+  });
+  const filters = { lotCode: " lot-a ", status: "expiring" };
+  assert.equal(
+    (await api.consumableExpiryReport(session, 30, signal(), filters)).items
+      .length,
+    1,
+  );
+  assert.ok(paths.at(-1).includes("lotCode=%20lot-a%20&status=expiring"));
+  value.filters.status = "expired";
+  await assert.rejects(
+    api.consumableExpiryReport(session, 30, signal(), filters),
+  );
+  value.filters.status = "expiring";
+  balance.code = "LOT-AA";
+  await assert.rejects(
+    api.consumableExpiryReport(session, 30, signal(), filters),
+  );
+  balance.code = "LOT-A";
+  row.status = "expired";
+  await assert.rejects(
+    api.consumableExpiryReport(session, 30, signal(), filters),
+  );
+  row.status = "expiring";
+  value.items = [];
+  assert.equal(
+    (await api.consumableExpiryReport(session, 30, signal(), filters)).items
+      .length,
     0,
   );
 });

@@ -355,3 +355,8 @@ Consumable lots → Stock balance report now includes **Exact lot code**, **Reco
 ### Consumable expiry report CSV
 
 Consumable lots → **Consumable expiry report → Generate expiry report → Export expiry CSV**. Default thirty UTC days, adjustable one–365; includes expired lots and positive available/quarantined stock. See [CONSUMABLE-EXPIRY-REPORT.md](CONSUMABLE-EXPIRY-REPORT.md) for U-EXPIRY-01, the only owner check for this build.
+
+
+### Consumable expiry filters
+
+Consumable lots → Consumable expiry report now includes **Exact lot code**, **Expiry status** and **Clear filters**. Generate to apply edits; clearing filters preserves the horizon and requires generation to replace the snapshot. See [CONSUMABLE-EXPIRY-FILTERS.md](CONSUMABLE-EXPIRY-FILTERS.md) for U-EXPFILTER-01, the only owner check for this build.

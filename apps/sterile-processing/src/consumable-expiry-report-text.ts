@@ -1,6 +1,11 @@
 import type { Language } from "./text";
 const en = {
   title: "Consumable expiry report",
+  lotFilter: "Exact lot code (blank includes all lots)",
+  allLots: "All lots",
+  allStatuses: "All expiry statuses",
+  applied: "Applied filters",
+  clear: "Clear filters",
   generate: "Generate expiry report",
   download: "Export expiry CSV",
   close: "Close expiry report",
@@ -9,7 +14,7 @@ const en = {
   asOf: "As of UTC day",
   through: "Includes expiry through",
   empty:
-    "No recorded available or quarantined stock matches this expiry window.",
+    "No recorded available or quarantined stock matches this expiry window and filters.",
   code: "Lot code",
   expiry: "Expiry day (UTC)",
   days: "Days to expiry",
@@ -31,10 +36,15 @@ const en = {
   previous: "Previous",
   next: "Next",
   page: "Page",
-  note: "Expired lots plus lots expiring within the selected UTC horizon, with positive recorded available or quarantined stock. The expiry day is included; negative days mean already expired. Withdrawn lots stay flagged and unusable. CSV exports every row of the displayed snapshot; generate again after changing the horizon.",
+  note: "Expired lots plus lots expiring within the selected UTC horizon, with positive recorded available or quarantined stock. The expiry day is included; negative days mean already expired. Withdrawn lots stay flagged and unusable. CSV exports every row of the displayed snapshot; generate again after changing the horizon or filters.",
 };
 const es: typeof en = {
   title: "Informe de caducidad de consumibles",
+  lotFilter: "Código exacto del lote (vacío incluye todos)",
+  allLots: "Todos los lotes",
+  allStatuses: "Todos los estados de caducidad",
+  applied: "Filtros aplicados",
+  clear: "Limpiar filtros",
   generate: "Generar informe de caducidad",
   download: "Exportar CSV de caducidad",
   close: "Cerrar informe de caducidad",
@@ -43,7 +53,7 @@ const es: typeof en = {
   asOf: "Día de referencia UTC",
   through: "Incluye caducidad hasta",
   empty:
-    "No hay existencias disponibles o en cuarentena que coincidan con este horizonte.",
+    "No hay existencias disponibles o en cuarentena que coincidan con este horizonte y filtros.",
   code: "Código de lote",
   expiry: "Caducidad (UTC)",
   days: "Días hasta caducidad",
@@ -65,10 +75,15 @@ const es: typeof en = {
   previous: "Anterior",
   next: "Siguiente",
   page: "Página",
-  note: "Lotes caducados o que caducan dentro del horizonte UTC, con saldo disponible o en cuarentena positivo. Se incluye el día de caducidad; días negativos indican caducidad pasada. Los lotes retirados siguen identificados y no utilizables. El CSV exporta toda la instantánea; genere de nuevo al cambiar el horizonte.",
+  note: "Lotes caducados o que caducan dentro del horizonte UTC, con saldo disponible o en cuarentena positivo. Se incluye el día de caducidad; días negativos indican caducidad pasada. Los lotes retirados siguen identificados y no utilizables. El CSV exporta toda la instantánea; genere de nuevo al cambiar el horizonte o filtros.",
 };
 const fr: typeof en = {
   title: "Rapport de péremption des consommables",
+  lotFilter: "Code exact du lot (vide pour tous)",
+  allLots: "Tous les lots",
+  allStatuses: "Tous les états de péremption",
+  applied: "Filtres appliqués",
+  clear: "Effacer les filtres",
   generate: "Générer le rapport de péremption",
   download: "Exporter le CSV de péremption",
   close: "Fermer le rapport de péremption",
@@ -77,7 +92,7 @@ const fr: typeof en = {
   asOf: "Jour de référence UTC",
   through: "Péremption incluse jusqu’au",
   empty:
-    "Aucun stock disponible ou en quarantaine ne correspond à cet horizon.",
+    "Aucun stock disponible ou en quarantaine ne correspond à cet horizon et aux filtres.",
   code: "Code du lot",
   expiry: "Péremption (UTC)",
   days: "Jours avant péremption",
@@ -99,7 +114,7 @@ const fr: typeof en = {
   previous: "Précédent",
   next: "Suivant",
   page: "Page",
-  note: "Lots périmés ou expirant dans l’horizon UTC, avec stock disponible ou en quarantaine positif. Jour de péremption inclus ; jours négatifs pour les lots périmés. Les lots retirés restent signalés et inutilisables. Le CSV exporte tout l’instantané ; générer de nouveau après modification de l’horizon.",
+  note: "Lots périmés ou expirant dans l’horizon UTC, avec stock disponible ou en quarantaine positif. Jour de péremption inclus ; jours négatifs pour les lots périmés. Les lots retirés restent signalés et inutilisables. Le CSV exporte tout l’instantané ; générer de nouveau après modification de l’horizon ou des filtres.",
 };
 export const consumableExpiryReportLabels = (l: Language) =>
   ({ en, es, fr })[l];

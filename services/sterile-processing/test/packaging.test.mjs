@@ -2075,7 +2075,7 @@ test("expiry HTTP report is scoped, strict and includes quarantine-only stock at
     "?days=3e1",
     "?days=",
     "?days=30&days=1",
-    "?lotCode=LOT",
+    "?lotId=LOT",
     "?days[x]=30",
   ])
     assert.equal((await f.call(path + q)).status, 400);
@@ -2101,4 +2101,65 @@ test("expiry HTTP report is scoped, strict and includes quarantine-only stock at
     ).items.length,
     0,
   );
+});
+
+test("expiry HTTP filters retain canonical applied scope/status and reject duplicate or unsupported query values", async (t) => {
+  const f = await httpFixture(t);
+  await f.login("reviewer");
+  const a = await (
+    await f.call("/preview/consumable-alert-example", {
+      requestId: randomUUID(),
+    })
+  ).json();
+  await f.call("/preview/consumable-alert-example", {
+    requestId: randomUUID(),
+  });
+  await f.call(f.base + "/consumables/" + a.id + "/withdraw", {
+    requestId: randomUUID(),
+    version: 1,
+    reason: "SIMULATED",
+    reference: "NOTICE",
+    confirmed: true,
+  });
+  const path = f.base + "/consumables/expiry-report";
+  const r = await (
+    await f.call(
+      path + "?days=30&lotCode=" + a.code.toLowerCase() + "&status=expiring",
+    )
+  ).json();
+  assert.equal(r.items.length, 1);
+  assert.equal(r.items[0].balance.lotId, a.id);
+  assert.equal(r.items[0].balance.withdrawn, true);
+  assert.equal(r.items[0].balance.usable, 0);
+  assert.deepEqual(r.filters, { lotCode: a.code, status: "expiring" });
+  assert.equal(
+    (await (await f.call(path + "?status=expired")).json()).items.length,
+    0,
+  );
+  assert.equal(
+    (
+      await (
+        await f.call(path + "?lotCode=" + a.code + "&days=2&status=expiring")
+      ).json()
+    ).items.length,
+    0,
+  );
+  assert.equal(
+    (await (await f.call(path + "?lotCode=UNKNOWN")).json()).items.length,
+    0,
+  );
+  for (const query of [
+    "?status=",
+    "?status=withdrawn",
+    "?status=EXPIRING",
+    "?lotCode=",
+    "?lotCode=bad%20code",
+    "?lotCode=A&lotCode=B",
+    "?status=expired&status=expiring",
+    "?action=use",
+  ])
+    assert.equal((await f.call(path + query)).status, 400);
+  const all = await (await f.call(path)).json();
+  assert.equal(all.items.length, 2);
+  assert.deepEqual(all.filters, { lotCode: null, status: null });
 });

@@ -407,17 +407,30 @@ export const api = {
     s: Session,
     days: number,
     signal: AbortSignal,
+    filters: import("@intrusionshield/sterile-processing").ConsumableExpiryFilters = {},
   ) => {
     const r = await scoped(
       s,
       call<
         import("@intrusionshield/sterile-processing").ConsumableExpiryReport
       >(
-        base(s) + "/consumables/expiry-report?days=" + encodeURIComponent(days),
+        base(s) +
+          "/consumables/expiry-report?days=" +
+          encodeURIComponent(days) +
+          (filters.lotCode === undefined
+            ? ""
+            : "&lotCode=" + encodeURIComponent(filters.lotCode)) +
+          (filters.status === undefined
+            ? ""
+            : "&status=" + encodeURIComponent(filters.status)),
         signal,
       ),
     );
     if (
+      !r.filters ||
+      r.filters.lotCode !==
+        (filters.lotCode?.trim().normalize("NFC").toUpperCase() ?? null) ||
+      r.filters.status !== (filters.status ?? null) ||
       r.unit !== "each" ||
       typeof r.generatedAt !== "string" ||
       !Number.isFinite(Date.parse(r.generatedAt)) ||
@@ -436,6 +449,9 @@ export const api = {
         (x) =>
           !x ||
           invalidStockBalanceRow(x.balance, r.generatedAt) ||
+          (r.filters.lotCode !== null &&
+            x.balance.code !== r.filters.lotCode) ||
+          (r.filters.status !== null && x.status !== r.filters.status) ||
           !x.balance.stockRecorded ||
           x.balance.available + x.balance.quarantined <= 0 ||
           x.balance.expiresOn > r.throughDay ||

@@ -1730,4 +1730,128 @@ test("expiry report retains every matching lot beyond catalogue and display page
   assert.ok(
     r.items.every((x) => x.status === "expiring" && x.balance.available === 1),
   );
+  const registry = new ConsumableExpiryReportRegistry(f.repo);
+  assert.equal(
+    (await registry.get(f.s, 30, { status: "expiring" })).items.length,
+    53,
+  );
+  assert.equal(
+    (
+      await registry.get(f.s, 30, {
+        lotCode: "EXP-PAGE-052",
+        status: "expiring",
+      })
+    ).items[0].balance.code,
+    "EXP-PAGE-052",
+  );
+});
+
+test("expiry filters intersect exact scoped codes, expiry status and horizon independently of withdrawal and quarantine", async () => {
+  const {
+      ConsumableRegistry,
+      ConsumableStockRegistry,
+      ConsumableExpiryReportRegistry,
+    } = await import("../dist/index.js"),
+    f = await fixture(),
+    lots = new ConsumableRegistry(f.repo),
+    stock = new ConsumableStockRegistry(f.repo),
+    today = new Date().toISOString().slice(0, 10),
+    day = (n) =>
+      new Date(Date.parse(today) + n * 86400000).toISOString().slice(0, 10);
+  async function make(code, n) {
+    const lot = await lots.register(
+      f.s,
+      lotInput({ code, expiresOn: "2099-01-01" }),
+    );
+    await fundLots(f, [lot], 5);
+    f.repo.state.consumables.find((x) => x.id === lot.id).expiresOn = day(n);
+    return lot;
+  }
+  const expired = await make("EXP-FILTER-A", -1),
+    prefix = await make("EXP-FILTER-AA", 2),
+    withdrawn = await make("EXP-FILTER-W", 2),
+    q = await make("EXP-FILTER-Q", 2);
+  await make("EXP-FILTER-OUT", 31);
+  await lots.withdraw(f.s, withdrawn.id, {
+    requestId: randomUUID(),
+    version: 1,
+    reason: "SIMULATED",
+    reference: "NOTICE",
+    confirmed: true,
+  });
+  await stock.record(f.s, q.id, "quarantine", {
+    requestId: randomUUID(),
+    version: 1,
+    quantity: 5,
+    reason: "SIMULATED",
+    reference: "REF",
+    confirmed: true,
+  });
+  f.repo.state.consumables.find((x) => x.id === q.id).expiresOn = day(-2);
+  const before = structuredClone(f.repo.state),
+    registry = new ConsumableExpiryReportRegistry(f.repo);
+  const past = await registry.get(f.s, 30, { status: "expired" });
+  assert.equal(past.items.length, 2);
+  assert.ok(past.items.every((x) => x.status === "expired"));
+  assert.deepEqual(past.filters, { lotCode: null, status: "expired" });
+  const upcoming = await registry.get(f.s, 30, { status: "expiring" });
+  assert.equal(upcoming.items.length, 2);
+  assert.equal(
+    upcoming.items.find((x) => x.balance.lotId === withdrawn.id).balance
+      .withdrawn,
+    true,
+  );
+  assert.equal(
+    upcoming.items.find((x) => x.balance.lotId === withdrawn.id).balance.usable,
+    0,
+  );
+  const exact = await registry.get(f.s, 30, {
+    lotCode: " exp-filter-a ",
+    status: "expired",
+  });
+  assert.equal(exact.items.length, 1);
+  assert.equal(exact.items[0].balance.lotId, expired.id);
+  assert.equal(exact.items[0].balance.available, 5);
+  assert.deepEqual(exact.filters, { lotCode: expired.code, status: "expired" });
+  assert.equal(
+    (await registry.get(f.s, 30, { lotCode: prefix.code, status: "expired" }))
+      .items.length,
+    0,
+  );
+  assert.equal(
+    (await registry.get(f.s, 1, { lotCode: prefix.code, status: "expiring" }))
+      .items.length,
+    0,
+  );
+  assert.equal(
+    (await registry.get(f.s, 30, { lotCode: "UNKNOWN" })).items.length,
+    0,
+  );
+  assert.equal(
+    (
+      await registry.get({ ...f.s, facilityId: randomUUID() }, 30, {
+        lotCode: expired.code,
+      })
+    ).items.length,
+    0,
+  );
+  const quarantine = await registry.get(f.s, 30, {
+    lotCode: q.code,
+    status: "expired",
+  });
+  assert.equal(quarantine.items[0].balance.available, 0);
+  assert.equal(quarantine.items[0].balance.quarantined, 5);
+  for (const filters of [
+    { lotCode: "" },
+    { lotCode: "bad code" },
+    { lotCode: "x".repeat(101) },
+    { status: "" },
+    { status: "withdrawn" },
+    { status: null },
+    { lotCode: null },
+    { lotId: expired.id },
+    null,
+  ])
+    await fail(registry.get(f.s, 30, filters), "INVALID_REQUEST");
+  assert.deepEqual(f.repo.state, before);
 });

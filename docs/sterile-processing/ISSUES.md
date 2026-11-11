@@ -375,4 +375,9 @@ Exact lot-code and exclusive recorded-status filters now preserve canonical appl
 
 ## Consumable expiry report and CSV — preview delivered
 
-Expired and approaching-expiry lots with positive available/quarantine stock now appear in a scoped report with an adjustable UTC horizon. Withdrawn stock remains flagged and unusable. CSV exports the displayed snapshot. U-EXPIRY-01 remains pending. Physical verification, aggregation, production-scale querying and notifications remain deferred. See [CONSUMABLE-EXPIRY-REPORT.md](CONSUMABLE-EXPIRY-REPORT.md). Asset reuse remains intended; RSP-ISS-001 stays parked.
+Expired and approaching-expiry lots with positive available/quarantine stock now appear in a scoped report with an adjustable UTC horizon. Withdrawn stock remains flagged and unusable. CSV exports the displayed snapshot. U-EXPIRY-01 passed November 11, 2026 from the uploaded two-lot expiry CSV. Physical verification, aggregation, production-scale querying and notifications remain deferred. See [CONSUMABLE-EXPIRY-REPORT.md](CONSUMABLE-EXPIRY-REPORT.md). Asset reuse remains intended; RSP-ISS-001 stays parked.
+
+
+## Consumable expiry report filters — preview delivered
+
+Exact lot-code and expiry-status filters now intersect with the UTC horizon and preserve applied filters in CSV. Quantities, quarantine and withdrawal semantics remain unchanged. U-EXPFILTER-01 remains pending. Multi-select/grouping, production-scale querying, broader spreadsheet acceptance and notifications remain deferred. See [CONSUMABLE-EXPIRY-FILTERS.md](CONSUMABLE-EXPIRY-FILTERS.md). Asset reuse remains intended; RSP-ISS-001 stays parked.

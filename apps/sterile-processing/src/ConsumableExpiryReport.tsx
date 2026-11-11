@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import type { ConsumableExpiryReport as Report } from "@intrusionshield/sterile-processing";
+import type {
+  ConsumableExpiryReport as Report,
+  ConsumableExpiryStatus,
+} from "@intrusionshield/sterile-processing";
 import { api, ApiError, type Session } from "./api";
 import { labels, type Language } from "./text";
 import { consumableExpiryReportLabels } from "./consumable-expiry-report-text";
@@ -24,6 +27,8 @@ export function ConsumableExpiryReport({
   const t = consumableExpiryReportLabels(language),
     c = labels(language),
     [horizon, setHorizon] = useState("30"),
+    [lotCode, setLotCode] = useState(""),
+    [status, setStatus] = useState<ConsumableExpiryStatus | "">(""),
     [report, setReport] = useState<Report | null>(null),
     [loading, setLoading] = useState(false),
     [error, setError] = useState<unknown>(null),
@@ -45,6 +50,10 @@ export function ConsumableExpiryReport({
         session,
         Number(horizon),
         a.signal,
+        {
+          ...(lotCode.trim() ? { lotCode: lotCode.trim() } : {}),
+          ...(status ? { status } : {}),
+        },
       );
       if (!a.signal.aborted) {
         setReport(r);
@@ -101,7 +110,51 @@ export function ConsumableExpiryReport({
               onChange={(e) => setHorizon(e.target.value)}
             />
           </label>
+          <div className="form-grid">
+            <label>
+              {t.lotFilter}
+              <input
+                maxLength={100}
+                value={lotCode}
+                onChange={(e) => setLotCode(e.target.value)}
+                list="expiry-lot-codes"
+              />
+              <datalist id="expiry-lot-codes">
+                {[
+                  ...new Set(report?.items.map((x) => x.balance.code) ?? []),
+                ].map((code) => (
+                  <option key={code} value={code} />
+                ))}
+              </datalist>
+            </label>
+            <label>
+              {t.status}
+              <select
+                aria-label={t.status}
+                value={status}
+                onChange={(e) =>
+                  setStatus(e.target.value as ConsumableExpiryStatus | "")
+                }
+              >
+                <option value="">{t.allStatuses}</option>
+                {(["expired", "expiring"] as const).map((v) => (
+                  <option key={v} value={v}>
+                    {t[v]}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
           <button>{t.generate}</button>
+          <button
+            type="button"
+            onClick={() => {
+              setLotCode("");
+              setStatus("");
+            }}
+          >
+            {t.clear}
+          </button>
         </fieldset>
       </form>
       <button disabled={blocked || loading || !report} onClick={download}>
@@ -123,6 +176,10 @@ export function ConsumableExpiryReport({
           <p>
             {t.asOf}: {report.asOfDay} · {t.through}: {report.throughDay} ·{" "}
             {report.horizonDays}
+          </p>
+          <p>
+            {t.applied}: {report.filters.lotCode ?? t.allLots} ·{" "}
+            {report.filters.status ? t[report.filters.status] : t.allStatuses}
           </p>
           {!report.items.length ? (
             <p>{t.empty}</p>

@@ -22,6 +22,7 @@ test("expiry CSV exports every frozen row and UTC horizon with signed days, quar
       tenantId: "tenant",
       facilityId: "facility",
       generatedAt: "2026-11-11T12:00:00Z",
+      filters: { lotCode: null, status: null },
       asOfDay: "2026-11-11",
       throughDay: "2026-12-11",
       horizonDays: 30,
@@ -41,6 +42,14 @@ test("expiry CSV exports every frozen row and UTC horizon with signed days, quar
   assert.ok(csv.includes('"2026-11-11","2026-12-11","30"'));
   assert.ok(csv.includes('"\'-1","expired","0","3","0","true"'));
   assert.ok(csv.includes(r.generatedAt));
+  assert.ok(csv.includes('"filter_lot_code","filter_expiry_status"'));
+  assert.ok(
+    consumableExpiryReportCsv({
+      ...r,
+      filters: { lotCode: "LOT", status: "expired" },
+      items: [{ balance, daysToExpiry: -1, status: "expired" }],
+    }).includes('"LOT","expired"\r\n'),
+  );
   assert.equal(
     consumableExpiryReportCsv({ ...r, items: [] }).split("\r\n").length,
     2,

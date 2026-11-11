@@ -993,6 +993,13 @@ Developer: 434 scoped tests (225 domain, 153 HTTP/SQLite, 56 web), builds and Ch
 
 ## Current owner check — consumable expiry CSV
 
-**U-EXPIRY-01 pending:** Consumable lots → Consumable expiry report → Generate expiry report → Export expiry CSV, keeping default thirty UTC days. Confirm expiry day, days to expiry, expiry status, available and quarantined columns. This is the only owner check; no stock mutation is requested. U-BALFILTER-01 passed November 11 from the uploaded withdrawn balance CSV.
+**U-EXPIRY-01 passed November 11, 2026:** owner uploaded the expiry CSV with two lots expiring November 13, two days remaining, available/usable 5 and quarantined 0, in the thirty-day window through December 11. Original check: Consumable lots → Consumable expiry report → Generate expiry report → Export expiry CSV, keeping default thirty UTC days. Confirm expiry day, days to expiry, expiry status, available and quarantined columns. This is the only owner check; no stock mutation is requested. U-BALFILTER-01 passed November 11 from the uploaded withdrawn balance CSV.
 
 Developer: 439 scoped tests (227 domain, 154 HTTP/SQLite, 58 web), builds and Chromium horizon/rows/CSV snapshot/regeneration/source checks passed. Physical verification, aggregation, production scale, regional spreadsheet import and proactive notifications remain deferred. U-TRACE-01 and original U-LOANER-01 remain pending; RSP-ISS-001 stays parked. See [CONSUMABLE-EXPIRY-REPORT.md](CONSUMABLE-EXPIRY-REPORT.md).
+
+
+## Current owner check — consumable expiry filters
+
+**U-EXPFILTER-01 pending:** Consumable lots → Consumable expiry report → Expiry status: Approaching expiry → Generate expiry report → Export expiry CSV. Keep thirty days and leave lot blank. Expect expiry_status/filter_expiry_status `expiring`, filter_lot_code blank. This is the only owner check; no stock movement is requested. U-EXPIRY-01 passed November 11 from the uploaded two-lot expiry CSV.
+
+Developer: 442 scoped tests (228 domain, 155 HTTP/SQLite, 59 web), builds and Chromium exact lot/status/horizon intersection, canonical filters, filtered frozen CSV, clear/regenerate and empty export checks passed. Physical verification, grouping/multi-select, production scale, regional spreadsheet import and notifications remain deferred. U-TRACE-01 and original U-LOANER-01 remain pending; RSP-ISS-001 stays parked. See [CONSUMABLE-EXPIRY-FILTERS.md](CONSUMABLE-EXPIRY-FILTERS.md).
