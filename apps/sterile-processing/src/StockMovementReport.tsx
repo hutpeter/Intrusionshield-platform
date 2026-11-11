@@ -1,3 +1,6 @@
+import { printStockReport } from "./stock-report-print";
+import { stockMovementPrintModel } from "./stock-report-print-model";
+import { stockPrintLabels } from "./stock-report-print-text";
 import { useEffect, useRef, useState } from "react";
 import type {
   StockMovementReport as Report,
@@ -175,6 +178,22 @@ export function StockMovementReport({
       </form>
       <button disabled={busy || !report} onClick={download}>
         {t.download}
+      </button>
+      <button
+        disabled={blocked || loading || !report}
+        onClick={() => {
+          if (!report || blocked || loading) return;
+          try {
+            printStockReport(
+              stockMovementPrintModel(report, language, session.facilityName),
+              language,
+            );
+          } catch (e) {
+            setError(e);
+          }
+        }}
+      >
+        {stockPrintLabels(language).print}
       </button>
       {loading && <p role="status">{c.loading}</p>}
       {!!error && (

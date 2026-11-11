@@ -1260,3 +1260,24 @@ td {
 .consumable-expiry-report-table { min-width: 2400px; }
 .consumable-expiry-report-table td { min-width: 100px; }
 .consumable-expiry-report-table td:first-child { min-width: 240px; }
+
+.stock-report-print-root { display: none; }
+@page stock-report { size: A4 landscape; margin: 12mm; }
+@media print {
+  body:has(.stock-report-print-root) { margin: 0 !important; background: white !important; }
+  body:has(.stock-report-print-root) > :not(.stock-report-print-root) { display: none !important; }
+  .stock-report-print-root { display: block; page: stock-report; max-width: 273mm; margin: 0 auto; padding: 0; background: white; color: #111; font: 9pt/1.35 Arial, sans-serif; }
+  .stock-report-print-root h1 { font-size: 17pt; margin: 0 0 3mm; }
+  .stock-report-print-root > p { margin: 2mm 0; }
+  .stock-print-metadata { display: grid; grid-template-columns: 1fr 1fr; gap: 1mm 5mm; margin: 4mm 0; }
+  .stock-print-metadata > div { display: grid; grid-template-columns: 34mm 1fr; gap: 2mm; break-inside: avoid; }
+  .stock-print-metadata dt { font-weight: bold; }
+  .stock-print-metadata dd { margin: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+  .stock-print-record { break-inside: avoid; margin: 5mm 0; }
+  .stock-print-record h2 { font-size: 11pt; margin: 2mm 0; overflow-wrap: anywhere; break-after: avoid; }
+  .stock-report-print-root .stock-print-fields { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 9pt; }
+  .stock-print-fields .stock-print-label { width: 18%; }
+  .stock-print-fields .stock-print-value { width: 32%; }
+  .stock-report-print-root .stock-print-fields :is(th, td) { padding: 2mm; border: 0.2mm solid #aaa; min-width: 0; max-width: none; white-space: pre-wrap; overflow-wrap: anywhere; text-align: left; vertical-align: top; color: #111; font-size: 9pt; letter-spacing: normal; text-transform: none; }
+  .stock-report-print-root .stock-print-fields th { background: #f4f4f4; font-weight: bold; }
+}

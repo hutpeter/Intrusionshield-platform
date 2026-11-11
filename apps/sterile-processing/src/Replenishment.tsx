@@ -1,3 +1,6 @@
+import { printStockReport } from "./stock-report-print";
+import { replenishmentPrintModel } from "./stock-report-print-model";
+import { stockPrintLabels } from "./stock-report-print-text";
 import { useEffect, useRef, useState } from "react";
 import type { ReplenishmentReport } from "@intrusionshield/sterile-processing";
 import { api, ApiError, type Session } from "./api";
@@ -82,6 +85,22 @@ export function Replenishment({
       </button>
       <button disabled={blocked || loading || !report} onClick={download}>
         {t.download}
+      </button>
+      <button
+        disabled={blocked || loading || !report}
+        onClick={() => {
+          if (!report || blocked || loading) return;
+          try {
+            printStockReport(
+              replenishmentPrintModel(report, language, session.facilityName),
+              language,
+            );
+          } catch (e) {
+            setError(e);
+          }
+        }}
+      >
+        {stockPrintLabels(language).print}
       </button>
       {loading && <p role="status">{c.loading}</p>}
       {!!error && (

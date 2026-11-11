@@ -1000,6 +1000,13 @@ Developer: 439 scoped tests (227 domain, 154 HTTP/SQLite, 58 web), builds and Ch
 
 ## Current owner check — consumable expiry filters
 
-**U-EXPFILTER-01 pending:** Consumable lots → Consumable expiry report → Expiry status: Approaching expiry → Generate expiry report → Export expiry CSV. Keep thirty days and leave lot blank. Expect expiry_status/filter_expiry_status `expiring`, filter_lot_code blank. This is the only owner check; no stock movement is requested. U-EXPIRY-01 passed November 11 from the uploaded two-lot expiry CSV.
+**U-EXPFILTER-01 passed November 11, 2026:** owner uploaded two filtered expiry rows with expiry_status/filter_expiry_status expiring, blank lot filter, thirty days, two days remaining, available/usable 5 and quarantined 0. Original check: Consumable lots → Consumable expiry report → Expiry status: Approaching expiry → Generate expiry report → Export expiry CSV. Keep thirty days and leave lot blank. Expect expiry_status/filter_expiry_status `expiring`, filter_lot_code blank. This is the only owner check; no stock movement is requested. U-EXPIRY-01 passed November 11 from the uploaded two-lot expiry CSV.
 
 Developer: 442 scoped tests (228 domain, 155 HTTP/SQLite, 59 web), builds and Chromium exact lot/status/horizon intersection, canonical filters, filtered frozen CSV, clear/regenerate and empty export checks passed. Physical verification, grouping/multi-select, production scale, regional spreadsheet import and notifications remain deferred. U-TRACE-01 and original U-LOANER-01 remain pending; RSP-ISS-001 stays parked. See [CONSUMABLE-EXPIRY-FILTERS.md](CONSUMABLE-EXPIRY-FILTERS.md).
+
+
+## Current owner check — printable stock report
+
+**U-STOCKPRINT-01 pending:** Consumable lots → Stock balance report → Generate stock balance report → Print report / save PDF → choose Save as PDF. Expect report title, snapshot time and applied filters in the PDF. This is the only owner check. U-EXPFILTER-01 passed November 11 from the uploaded filtered expiry CSV.
+
+Developer: 61 web tests and web build passed; backend unchanged (228 domain/155 HTTP tests passed on the preceding build and were not rerun). Chromium generated four landscape PDFs with all 53 records beyond the screen page, saved filter metadata, literal source text, no clipping, no new source fetches and clean after-print restoration. Physical printers, other engines, archival standards and very large documents remain deferred. U-TRACE-01 and original U-LOANER-01 remain pending; RSP-ISS-001 stays parked. See [STOCK-REPORT-PRINTING.md](STOCK-REPORT-PRINTING.md).

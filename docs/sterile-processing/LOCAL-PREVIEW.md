@@ -360,3 +360,8 @@ Consumable lots → **Consumable expiry report → Generate expiry report → Ex
 ### Consumable expiry filters
 
 Consumable lots → Consumable expiry report now includes **Exact lot code**, **Expiry status** and **Clear filters**. Generate to apply edits; clearing filters preserves the horizon and requires generation to replace the snapshot. See [CONSUMABLE-EXPIRY-FILTERS.md](CONSUMABLE-EXPIRY-FILTERS.md) for U-EXPFILTER-01, the only owner check for this build.
+
+
+### Printable stock reports
+
+After generating any stock report, use **Print report / save PDF**. The full displayed snapshot prints across pages, including saved filters/time, independent of screen paging or unapplied inputs. See [STOCK-REPORT-PRINTING.md](STOCK-REPORT-PRINTING.md) for U-STOCKPRINT-01, the only owner check for this build.

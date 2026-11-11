@@ -1,3 +1,6 @@
+import { printStockReport } from "./stock-report-print";
+import { stockBalancePrintModel } from "./stock-report-print-model";
+import { stockPrintLabels } from "./stock-report-print-text";
 import { useEffect, useRef, useState } from "react";
 import type {
   StockBalanceReport as Report,
@@ -143,6 +146,22 @@ export function StockBalanceReport({
       </form>
       <button disabled={blocked || loading || !report} onClick={download}>
         {t.download}
+      </button>
+      <button
+        disabled={blocked || loading || !report}
+        onClick={() => {
+          if (!report || blocked || loading) return;
+          try {
+            printStockReport(
+              stockBalancePrintModel(report, language, session.facilityName),
+              language,
+            );
+          } catch (e) {
+            setError(e);
+          }
+        }}
+      >
+        {stockPrintLabels(language).print}
       </button>
       {loading && <p role="status">{c.loading}</p>}
       {!!error && (

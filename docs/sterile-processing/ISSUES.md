@@ -380,4 +380,9 @@ Expired and approaching-expiry lots with positive available/quarantine stock now
 
 ## Consumable expiry report filters — preview delivered
 
-Exact lot-code and expiry-status filters now intersect with the UTC horizon and preserve applied filters in CSV. Quantities, quarantine and withdrawal semantics remain unchanged. U-EXPFILTER-01 remains pending. Multi-select/grouping, production-scale querying, broader spreadsheet acceptance and notifications remain deferred. See [CONSUMABLE-EXPIRY-FILTERS.md](CONSUMABLE-EXPIRY-FILTERS.md). Asset reuse remains intended; RSP-ISS-001 stays parked.
+Exact lot-code and expiry-status filters now intersect with the UTC horizon and preserve applied filters in CSV. Quantities, quarantine and withdrawal semantics remain unchanged. U-EXPFILTER-01 passed November 11, 2026 from the uploaded filtered expiry CSV. Multi-select/grouping, production-scale querying, broader spreadsheet acceptance and notifications remain deferred. See [CONSUMABLE-EXPIRY-FILTERS.md](CONSUMABLE-EXPIRY-FILTERS.md). Asset reuse remains intended; RSP-ISS-001 stays parked.
+
+
+## Printable stock report snapshots — preview delivered
+
+Balances, movements, replenishment and expiry reports now print the full saved snapshot with scope/time/filters and wrapping field tables. U-STOCKPRINT-01 remains pending. Physical printers, non-Chromium engines, archival PDF standards and production-scale documents remain deferred. See [STOCK-REPORT-PRINTING.md](STOCK-REPORT-PRINTING.md). Asset reuse remains intended; RSP-ISS-001 stays parked.

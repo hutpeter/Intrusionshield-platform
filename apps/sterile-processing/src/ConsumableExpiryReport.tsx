@@ -1,3 +1,6 @@
+import { printStockReport } from "./stock-report-print";
+import { consumableExpiryPrintModel } from "./stock-report-print-model";
+import { stockPrintLabels } from "./stock-report-print-text";
 import { useEffect, useRef, useState } from "react";
 import type {
   ConsumableExpiryReport as Report,
@@ -159,6 +162,26 @@ export function ConsumableExpiryReport({
       </form>
       <button disabled={blocked || loading || !report} onClick={download}>
         {t.download}
+      </button>
+      <button
+        disabled={blocked || loading || !report}
+        onClick={() => {
+          if (!report || blocked || loading) return;
+          try {
+            printStockReport(
+              consumableExpiryPrintModel(
+                report,
+                language,
+                session.facilityName,
+              ),
+              language,
+            );
+          } catch (e) {
+            setError(e);
+          }
+        }}
+      >
+        {stockPrintLabels(language).print}
       </button>
       {loading && <p role="status">{c.loading}</p>}
       {!!error && (
