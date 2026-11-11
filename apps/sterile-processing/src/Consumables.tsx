@@ -1,3 +1,5 @@
+import { ConsumableExpiryReport } from "./ConsumableExpiryReport";
+import { consumableExpiryReportLabels } from "./consumable-expiry-report-text";
 import { StockBalanceReport } from "./StockBalanceReport";
 import { stockBalanceReportLabels } from "./stock-balance-report-text";
 import { StockMovementReport } from "./StockMovementReport";
@@ -51,6 +53,7 @@ export function ConsumablesWorkspace({
   openId?: string;
   openCountId?: string;
 }) {
+  const [showExpiryReport, setShowExpiryReport] = useState(false);
   const [showBalanceReport, setShowBalanceReport] = useState(false);
   const [showMovementReport, setShowMovementReport] = useState(false);
   const [showReplenishment, setShowReplenishment] = useState(false),
@@ -330,6 +333,7 @@ export function ConsumablesWorkspace({
         <button
           disabled={busy}
           onClick={() => {
+            setShowExpiryReport(false);
             setShowBalanceReport(false);
             setShowMovementReport(false);
             setShowReplenishment(true);
@@ -342,6 +346,7 @@ export function ConsumablesWorkspace({
         <button
           disabled={busy}
           onClick={() => {
+            setShowExpiryReport(false);
             setShowBalanceReport(false);
             setShowReplenishment(false);
             setShowMovementReport(true);
@@ -354,6 +359,7 @@ export function ConsumablesWorkspace({
         <button
           disabled={busy}
           onClick={() => {
+            setShowExpiryReport(false);
             setShowMovementReport(false);
             setShowReplenishment(false);
             setShowBalanceReport(true);
@@ -361,6 +367,53 @@ export function ConsumablesWorkspace({
         >
           {stockBalanceReportLabels(language).title}
         </button>
+      )}
+      {!form && !decision && !stockLot && !policyLot && (
+        <button
+          disabled={busy}
+          onClick={() => {
+            setShowMovementReport(false);
+            setShowReplenishment(false);
+            setShowBalanceReport(false);
+            setShowExpiryReport(true);
+          }}
+        >
+          {consumableExpiryReportLabels(language).title}
+        </button>
+      )}
+      {showExpiryReport && (
+        <ConsumableExpiryReport
+          session={session}
+          language={language}
+          blocked={busy || stockDirty || policyDirty || !!form}
+          onBusy={setReportBusy}
+          onExpired={onExpired}
+          onClose={() => setShowExpiryReport(false)}
+          onOpen={(id) => {
+            if (pending.current) return;
+            const a = new AbortController();
+            pending.current = a;
+            setReportBusy(true);
+            void api
+              .consumableRecord(session, id, a.signal)
+              .then((lot) => {
+                if (!a.signal.aborted) {
+                  setStockLot({ lot });
+                  setShowExpiryReport(false);
+                }
+              })
+              .catch((e) => {
+                if (!a.signal.aborted) {
+                  if (e instanceof ApiError && e.status === 401) onExpired();
+                  else setError(e);
+                }
+              })
+              .finally(() => {
+                if (!a.signal.aborted) setReportBusy(false);
+                pending.current = null;
+              });
+          }}
+        />
       )}
       {showBalanceReport && (
         <StockBalanceReport

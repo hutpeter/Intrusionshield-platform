@@ -1844,3 +1844,74 @@ test("balance report client rejects mismatched applied filters and rows outside 
     0,
   );
 });
+
+test("expiry report client rejects wrong scope/horizons, inconsistent expiry, empty stock and unusable-state mismatches", async (t) => {
+  const balance = {
+      lotId: "lot",
+      code: "LOT",
+      kind: "wrap",
+      name: "Wrap",
+      lotNumber: "M1",
+      supplier: "Supplier",
+      supplierReference: "REF",
+      expiresOn: "2026-11-13",
+      stockRecorded: true,
+      withdrawn: false,
+      received: 5,
+      used: 0,
+      quarantined: 5,
+      discarded: 0,
+      adjustments: 0,
+      available: 0,
+      usable: 0,
+      stockVersion: 2,
+      lastMovementAt: "2026-11-10T12:00:00Z",
+      status: "current",
+    },
+    row = { balance, daysToExpiry: 2, status: "expiring" },
+    value = {
+      tenantId: session.tenantId,
+      facilityId: session.facilityId,
+      generatedAt: "2026-11-11T12:00:00Z",
+      asOfDay: "2026-11-11",
+      throughDay: "2026-12-11",
+      horizonDays: 30,
+      unit: "each",
+      items: [row],
+    };
+  fake(t, async () => response(value));
+  assert.equal(
+    (await api.consumableExpiryReport(session, 30, signal())).items[0].balance
+      .quarantined,
+    5,
+  );
+  await assert.rejects(api.consumableExpiryReport(session, 7, signal()));
+  value.facilityId = "other";
+  await assert.rejects(api.consumableExpiryReport(session, 30, signal()));
+  value.facilityId = session.facilityId;
+  row.daysToExpiry = 3;
+  await assert.rejects(api.consumableExpiryReport(session, 30, signal()));
+  row.daysToExpiry = 2;
+  row.status = "expired";
+  await assert.rejects(api.consumableExpiryReport(session, 30, signal()));
+  row.status = "expiring";
+  value.items = [row, row];
+  await assert.rejects(api.consumableExpiryReport(session, 30, signal()));
+  value.items = [row];
+  balance.quarantined = 0;
+  balance.received = 0;
+  await assert.rejects(api.consumableExpiryReport(session, 30, signal()));
+  balance.quarantined = 5;
+  balance.received = 5;
+  balance.usable = 5;
+  await assert.rejects(api.consumableExpiryReport(session, 30, signal()));
+  balance.usable = 0;
+  value.throughDay = "2026-12-12";
+  await assert.rejects(api.consumableExpiryReport(session, 30, signal()));
+  value.throughDay = "2026-12-11";
+  value.items = [];
+  assert.equal(
+    (await api.consumableExpiryReport(session, 30, signal())).items.length,
+    0,
+  );
+});

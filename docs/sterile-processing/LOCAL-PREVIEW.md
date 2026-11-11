@@ -350,3 +350,8 @@ Consumable lots → **Stock balance report → Generate stock balance report →
 ### Stock balance report filters
 
 Consumable lots → Stock balance report now includes **Exact lot code**, **Recorded status** and **Clear filters**. Generate to apply changes; CSV preserves the displayed applied filters. See [STOCK-BALANCE-FILTERS.md](STOCK-BALANCE-FILTERS.md) for U-BALFILTER-01, the only owner check for this build.
+
+
+### Consumable expiry report CSV
+
+Consumable lots → **Consumable expiry report → Generate expiry report → Export expiry CSV**. Default thirty UTC days, adjustable one–365; includes expired lots and positive available/quarantined stock. See [CONSUMABLE-EXPIRY-REPORT.md](CONSUMABLE-EXPIRY-REPORT.md) for U-EXPIRY-01, the only owner check for this build.

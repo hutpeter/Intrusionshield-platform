@@ -986,6 +986,13 @@ Developer November 11, 2026: 431 scoped tests (224 domain, 152 HTTP/SQLite, 55 w
 
 ## Current owner check — stock balance filters
 
-**U-BALFILTER-01 pending:** Consumable lots → Stock balance report → Recorded status: Withdrawn → Generate stock balance report → Export stock balances CSV. Leave exact lot code blank. Expect only withdrawn rows, with CSV recorded_status/filter_status `withdrawn`. This is the only owner check; no stock movement is requested. U-STOCKBAL-01 passed November 11 from the uploaded seven-lot balance CSV.
+**U-BALFILTER-01 passed November 11, 2026:** owner uploaded a one-row withdrawn balance CSV; recorded_status/filter_status both withdrawn, lot filter blank, usable 0. Original check: Consumable lots → Stock balance report → Recorded status: Withdrawn → Generate stock balance report → Export stock balances CSV. Leave exact lot code blank. Expect only withdrawn rows, with CSV recorded_status/filter_status `withdrawn`. This is the only owner check; no stock movement is requested. U-STOCKBAL-01 passed November 11 from the uploaded seven-lot balance CSV.
 
 Developer: 434 scoped tests (225 domain, 153 HTTP/SQLite, 56 web), builds and Chromium exact lot/status intersection, filtered snapshot/CSV, clear/regenerate and empty intersection checks passed. Physical verification, broader grouping/multi-select, production scale and regional spreadsheet acceptance remain deferred. U-TRACE-01 and original U-LOANER-01 remain pending; RSP-ISS-001 stays parked. See [STOCK-BALANCE-FILTERS.md](STOCK-BALANCE-FILTERS.md).
+
+
+## Current owner check — consumable expiry CSV
+
+**U-EXPIRY-01 pending:** Consumable lots → Consumable expiry report → Generate expiry report → Export expiry CSV, keeping default thirty UTC days. Confirm expiry day, days to expiry, expiry status, available and quarantined columns. This is the only owner check; no stock mutation is requested. U-BALFILTER-01 passed November 11 from the uploaded withdrawn balance CSV.
+
+Developer: 439 scoped tests (227 domain, 154 HTTP/SQLite, 58 web), builds and Chromium horizon/rows/CSV snapshot/regeneration/source checks passed. Physical verification, aggregation, production scale, regional spreadsheet import and proactive notifications remain deferred. U-TRACE-01 and original U-LOANER-01 remain pending; RSP-ISS-001 stays parked. See [CONSUMABLE-EXPIRY-REPORT.md](CONSUMABLE-EXPIRY-REPORT.md).

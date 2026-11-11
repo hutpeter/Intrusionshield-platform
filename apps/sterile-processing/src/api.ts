@@ -343,7 +343,114 @@ function validStockCountReview(
         r.currentAvailable !== r.recordedAvailable)
   );
 }
+function invalidStockBalanceRow(
+  x: import("@intrusionshield/sterile-processing").StockBalanceReportRow,
+  generatedAt: string,
+) {
+  if (!x || typeof x !== "object") return true;
+
+  const status = x.withdrawn
+    ? "withdrawn"
+    : x.expiresOn < generatedAt.slice(0, 10)
+      ? "expired"
+      : !x.stockRecorded
+        ? "untracked"
+        : "current";
+  return (
+    [
+      x.lotId,
+      x.code,
+      x.kind,
+      x.name,
+      x.lotNumber,
+      x.supplier,
+      x.supplierReference,
+      x.expiresOn,
+    ].some((v) => typeof v !== "string") ||
+    !["wrap", "pouch", "indicator"].includes(x.kind) ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(x.expiresOn) ||
+    !Number.isFinite(Date.parse(x.expiresOn)) ||
+    typeof x.stockRecorded !== "boolean" ||
+    typeof x.withdrawn !== "boolean" ||
+    [
+      x.received,
+      x.used,
+      x.quarantined,
+      x.discarded,
+      x.available,
+      x.usable,
+    ].some((n) => !Number.isSafeInteger(n) || n < 0) ||
+    !Number.isSafeInteger(x.adjustments) ||
+    x.received + x.adjustments !==
+      x.available + x.used + x.quarantined + x.discarded ||
+    x.status !== status ||
+    x.usable !== (status === "current" ? x.available : 0) ||
+    (x.stockRecorded
+      ? !Number.isSafeInteger(x.stockVersion) ||
+        x.stockVersion! < 1 ||
+        typeof x.lastMovementAt !== "string" ||
+        !Number.isFinite(Date.parse(x.lastMovementAt))
+      : x.stockVersion !== null ||
+        x.lastMovementAt !== null ||
+        [
+          x.received,
+          x.used,
+          x.quarantined,
+          x.discarded,
+          x.available,
+          x.adjustments,
+        ].some((n) => n !== 0))
+  );
+}
 export const api = {
+  consumableExpiryReport: async (
+    s: Session,
+    days: number,
+    signal: AbortSignal,
+  ) => {
+    const r = await scoped(
+      s,
+      call<
+        import("@intrusionshield/sterile-processing").ConsumableExpiryReport
+      >(
+        base(s) + "/consumables/expiry-report?days=" + encodeURIComponent(days),
+        signal,
+      ),
+    );
+    if (
+      r.unit !== "each" ||
+      typeof r.generatedAt !== "string" ||
+      !Number.isFinite(Date.parse(r.generatedAt)) ||
+      r.horizonDays !== days ||
+      !Number.isSafeInteger(r.horizonDays) ||
+      r.horizonDays < 1 ||
+      r.horizonDays > 365 ||
+      r.asOfDay !== r.generatedAt.slice(0, 10) ||
+      !Number.isFinite(Date.parse(r.asOfDay)) ||
+      r.throughDay !==
+        new Date(Date.parse(r.asOfDay) + r.horizonDays * 86400000)
+          .toISOString()
+          .slice(0, 10) ||
+      !Array.isArray(r.items) ||
+      r.items.some(
+        (x) =>
+          !x ||
+          invalidStockBalanceRow(x.balance, r.generatedAt) ||
+          !x.balance.stockRecorded ||
+          x.balance.available + x.balance.quarantined <= 0 ||
+          x.balance.expiresOn > r.throughDay ||
+          !Number.isSafeInteger(x.daysToExpiry) ||
+          x.daysToExpiry !==
+            (Date.parse(x.balance.expiresOn) - Date.parse(r.asOfDay)) /
+              86400000 ||
+          x.status !== (x.daysToExpiry < 0 ? "expired" : "expiring"),
+      ) ||
+      new Set(r.items.map((x) => x.balance.lotId)).size !== r.items.length
+    )
+      throw new ApiError(503, "SERVICE_UNAVAILABLE");
+    return r;
+  },
+
   stockBalanceReport: async (
     s: Session,
     signal: AbortSignal,
@@ -377,62 +484,12 @@ export const api = {
       !Number.isFinite(Date.parse(r.generatedAt)) ||
       !Array.isArray(r.items) ||
       new Set(r.items.map((x) => x.lotId)).size !== r.items.length ||
-      r.items.some((x) => {
-        const status = x.withdrawn
-          ? "withdrawn"
-          : x.expiresOn < r.generatedAt.slice(0, 10)
-            ? "expired"
-            : !x.stockRecorded
-              ? "untracked"
-              : "current";
-        return (
+      r.items.some(
+        (x) =>
           (r.filters.lotCode !== null && x.code !== r.filters.lotCode) ||
           (r.filters.status !== null && x.status !== r.filters.status) ||
-          [
-            x.lotId,
-            x.code,
-            x.kind,
-            x.name,
-            x.lotNumber,
-            x.supplier,
-            x.supplierReference,
-            x.expiresOn,
-          ].some((v) => typeof v !== "string") ||
-          !["wrap", "pouch", "indicator"].includes(x.kind) ||
-          !/^\d{4}-\d{2}-\d{2}$/.test(x.expiresOn) ||
-          !Number.isFinite(Date.parse(x.expiresOn)) ||
-          typeof x.stockRecorded !== "boolean" ||
-          typeof x.withdrawn !== "boolean" ||
-          [
-            x.received,
-            x.used,
-            x.quarantined,
-            x.discarded,
-            x.available,
-            x.usable,
-          ].some((n) => !Number.isSafeInteger(n) || n < 0) ||
-          !Number.isSafeInteger(x.adjustments) ||
-          x.received + x.adjustments !==
-            x.available + x.used + x.quarantined + x.discarded ||
-          x.status !== status ||
-          x.usable !== (status === "current" ? x.available : 0) ||
-          (x.stockRecorded
-            ? !Number.isSafeInteger(x.stockVersion) ||
-              x.stockVersion! < 1 ||
-              typeof x.lastMovementAt !== "string" ||
-              !Number.isFinite(Date.parse(x.lastMovementAt))
-            : x.stockVersion !== null ||
-              x.lastMovementAt !== null ||
-              [
-                x.received,
-                x.used,
-                x.quarantined,
-                x.discarded,
-                x.available,
-                x.adjustments,
-              ].some((n) => n !== 0))
-        );
-      })
+          invalidStockBalanceRow(x, r.generatedAt),
+      )
     )
       throw new ApiError(503, "SERVICE_UNAVAILABLE");
     return r;

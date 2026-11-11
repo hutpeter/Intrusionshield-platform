@@ -1,5 +1,6 @@
 import express from "express";
 import {
+  ConsumableExpiryReportRegistry,
   StockBalanceReportRegistry,
   StockMovementReportRegistry,
   ReplenishmentRegistry,
@@ -823,6 +824,21 @@ export function createSterileApp(
     }
     return true;
   }
+  app.get(prefix + "/consumables/expiry-report", async (req, res) => {
+    if (
+      Object.keys(req.query).some((k) => k !== "days") ||
+      (req.query.days !== undefined &&
+        (typeof req.query.days !== "string" ||
+          !/^[1-9]\d{0,2}$/.test(req.query.days)))
+    )
+      throw new SterileError("INVALID_REQUEST");
+    res.json(
+      await new ConsumableExpiryReportRegistry(dependencies.repository!).get(
+        res.locals.scope,
+        req.query.days === undefined ? 30 : Number(req.query.days),
+      ),
+    );
+  });
   app.get(prefix + "/consumables/balance-report", async (req, res) => {
     if (
       Object.keys(req.query).some((k) => !["lotCode", "status"].includes(k)) ||

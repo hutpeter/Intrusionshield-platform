@@ -370,4 +370,9 @@ Complete per-lot recorded balance snapshots now distinguish available from usabl
 
 ## Stock balance report filters — preview delivered
 
-Exact lot-code and exclusive recorded-status filters now preserve canonical applied filters in the report and CSV. Quantities and usable rules remain unchanged. U-BALFILTER-01 remains pending. Separate ledger-presence/multi-select, product grouping, production-scale querying and wider spreadsheet acceptance remain deferred. See [STOCK-BALANCE-FILTERS.md](STOCK-BALANCE-FILTERS.md). Asset reuse remains intended; RSP-ISS-001 stays parked.
+Exact lot-code and exclusive recorded-status filters now preserve canonical applied filters in the report and CSV. Quantities and usable rules remain unchanged. U-BALFILTER-01 passed November 11, 2026 from the uploaded filtered balance CSV. Separate ledger-presence/multi-select, product grouping, production-scale querying and wider spreadsheet acceptance remain deferred. See [STOCK-BALANCE-FILTERS.md](STOCK-BALANCE-FILTERS.md). Asset reuse remains intended; RSP-ISS-001 stays parked.
+
+
+## Consumable expiry report and CSV — preview delivered
+
+Expired and approaching-expiry lots with positive available/quarantine stock now appear in a scoped report with an adjustable UTC horizon. Withdrawn stock remains flagged and unusable. CSV exports the displayed snapshot. U-EXPIRY-01 remains pending. Physical verification, aggregation, production-scale querying and notifications remain deferred. See [CONSUMABLE-EXPIRY-REPORT.md](CONSUMABLE-EXPIRY-REPORT.md). Asset reuse remains intended; RSP-ISS-001 stays parked.

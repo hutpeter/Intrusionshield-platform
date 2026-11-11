@@ -2028,3 +2028,77 @@ test("balance report HTTP filters expose canonical applied status/lot and reject
   assert.deepEqual(all.filters, { lotCode: null, status: null });
   assert.equal(all.items.length, 2);
 });
+
+test("expiry HTTP report is scoped, strict and includes quarantine-only stock at the inclusive horizon without changing ledger", async (t) => {
+  const f = await httpFixture(t);
+  await f.login("reviewer");
+  const lot = await (
+    await f.call("/preview/consumable-alert-example", {
+      requestId: randomUUID(),
+    })
+  ).json();
+  assert.equal(
+    (
+      await f.call(f.base + "/consumables/" + lot.id + "/stock/quarantine", {
+        requestId: randomUUID(),
+        version: 1,
+        quantity: 5,
+        reason: "SIMULATED quarantine",
+        reference: "REF",
+        confirmed: true,
+      })
+    ).status,
+    201,
+  );
+  const path = f.base + "/consumables/expiry-report";
+  for (const role of ["operator", "reviewer", "viewer"]) {
+    await f.login(role);
+    const res = await f.call(path);
+    assert.equal(res.status, 200);
+    const r = await res.json();
+    assert.equal(r.horizonDays, 30);
+    assert.equal(r.items.length, 1);
+    assert.equal(r.items[0].balance.lotId, lot.id);
+    assert.equal(r.items[0].balance.available, 0);
+    assert.equal(r.items[0].balance.quarantined, 5);
+    assert.equal(r.items[0].balance.stockVersion, 2);
+    assert.equal(r.items[0].daysToExpiry, 3);
+  }
+  assert.equal((await (await f.call(path + "?days=1")).json()).items.length, 0);
+  assert.equal((await (await f.call(path + "?days=3")).json()).items.length, 1);
+  for (const q of [
+    "?days=0",
+    "?days=366",
+    "?days=1.5",
+    "?days=-1",
+    "?days=01",
+    "?days=3e1",
+    "?days=",
+    "?days=30&days=1",
+    "?lotCode=LOT",
+    "?days[x]=30",
+  ])
+    assert.equal((await f.call(path + q)).status, 400);
+  assert.equal(
+    (await f.call(path.replace(f.session.facilityId, randomUUID()))).status,
+    404,
+  );
+  const { ConsumableExpiryReportRegistry } =
+      await import("@intrusionshield/sterile-processing"),
+    reopened = new PreviewSqliteRepository(f.file);
+  t.after(() => reopened.close());
+  assert.equal(
+    (await new ConsumableExpiryReportRegistry(reopened).get(f.session)).items[0]
+      .balance.quarantined,
+    5,
+  );
+  assert.equal(
+    (
+      await new ConsumableExpiryReportRegistry(reopened).get({
+        ...f.session,
+        tenantId: randomUUID(),
+      })
+    ).items.length,
+    0,
+  );
+});

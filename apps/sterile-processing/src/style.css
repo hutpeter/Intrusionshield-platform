@@ -1256,3 +1256,7 @@ td {
 .stock-balance-report-table { min-width: 2900px; }
 .stock-balance-report-table td { min-width: 100px; }
 .stock-balance-report-table td:first-child { min-width: 240px; }
+
+.consumable-expiry-report-table { min-width: 2400px; }
+.consumable-expiry-report-table td { min-width: 100px; }
+.consumable-expiry-report-table td:first-child { min-width: 240px; }

@@ -1603,3 +1603,131 @@ test("balance filters use exact scoped codes and intersect with exclusive status
     await fail(registry.get(f.s, filters), "INVALID_REQUEST");
   assert.deepEqual(f.repo.state, before);
 });
+
+test("expiry report includes expired/today/horizon-edge available or quarantine stock, flags withdrawal and excludes empty/untracked lots", async () => {
+  const {
+      ConsumableRegistry,
+      ConsumableStockRegistry,
+      ConsumableExpiryReportRegistry,
+      consumeStock,
+    } = await import("../dist/index.js"),
+    f = await fixture(),
+    lots = new ConsumableRegistry(f.repo),
+    stock = new ConsumableStockRegistry(f.repo),
+    today = new Date().toISOString().slice(0, 10),
+    day = (n) =>
+      new Date(Date.parse(today) + n * 86400000).toISOString().slice(0, 10);
+  async function make(code, offset, n) {
+    const lot = await lots.register(
+      f.s,
+      lotInput({ code, expiresOn: "2099-01-01" }),
+    );
+    if (n) await fundLots(f, [lot], n);
+    f.repo.state.consumables.find((x) => x.id === lot.id).expiresOn =
+      day(offset);
+    return lot;
+  }
+  const expired = await make("EXP-OLD", -1, 4),
+    due = await make("EXP-TODAY", 0, 5),
+    edge = await make("EXP-EDGE", 30, 6),
+    outside = await make("EXP-OUT", 31, 7),
+    quarantine = await make("EXP-Q", 4, 3),
+    withdrawn = await make("EXP-W", 5, 2),
+    used = await make("EXP-USED", 2, 3),
+    discarded = await make("EXP-DISCARD", 2, 3);
+  await make("EXP-NO-LEDGER", 0, 0);
+  await stock.record(f.s, quarantine.id, "quarantine", {
+    requestId: randomUUID(),
+    version: 1,
+    quantity: 3,
+    reason: "SIMULATED",
+    reference: "REF",
+    confirmed: true,
+  });
+  await lots.withdraw(f.s, withdrawn.id, {
+    requestId: randomUUID(),
+    version: 1,
+    reason: "SIMULATED",
+    reference: "NOTICE",
+    confirmed: true,
+  });
+  await f.repo.transaction(f.s, (tx) =>
+    consumeStock(
+      tx,
+      f.s,
+      [used],
+      [{ lotId: used.id, quantity: 3 }],
+      new Date().toISOString(),
+      randomUUID(),
+      { id: randomUUID(), code: "EXP-PACK" },
+    ),
+  );
+  await stock.record(f.s, discarded.id, "discard", {
+    requestId: randomUUID(),
+    version: 1,
+    quantity: 3,
+    reason: "SIMULATED",
+    reference: "REF",
+    confirmed: true,
+  });
+  f.repo.state.consumables.find((x) => x.id === discarded.id).expiresOn =
+    day(-1);
+  const before = structuredClone(f.repo.state),
+    registry = new ConsumableExpiryReportRegistry(f.repo),
+    r = await registry.get(f.s),
+    get = (id) => r.items.find((x) => x.balance.lotId === id);
+  assert.equal(r.asOfDay, today);
+  assert.equal(r.throughDay, day(30));
+  assert.equal(r.horizonDays, 30);
+  assert.equal(r.items.length, 5);
+  assert.equal(r.items[0].balance.lotId, expired.id);
+  assert.equal(get(expired.id).status, "expired");
+  assert.equal(get(expired.id).daysToExpiry, -1);
+  assert.equal(get(expired.id).balance.usable, 0);
+  assert.equal(get(due.id).daysToExpiry, 0);
+  assert.equal(get(due.id).status, "expiring");
+  assert.equal(get(due.id).balance.usable, 5);
+  assert.equal(get(edge.id).daysToExpiry, 30);
+  assert.equal(get(outside.id), undefined);
+  assert.equal(get(quarantine.id).balance.available, 0);
+  assert.equal(get(quarantine.id).balance.quarantined, 3);
+  assert.equal(get(withdrawn.id).balance.withdrawn, true);
+  assert.equal(get(withdrawn.id).balance.usable, 0);
+  assert.equal(get(withdrawn.id).status, "expiring");
+  assert.equal(get(used.id), undefined);
+  assert.equal(get(discarded.id), undefined);
+  assert.equal((await registry.get(f.s, 1)).items.length, 2);
+  assert.equal((await registry.get(f.s, 365)).items.length, 6);
+  assert.equal(
+    (await registry.get({ ...f.s, facilityId: randomUUID() }, 30)).items.length,
+    0,
+  );
+  for (const days of [0, 366, -1, 1.5, "30", null, NaN, Infinity])
+    await fail(registry.get(f.s, days), "INVALID_REQUEST");
+  assert.deepEqual(f.repo.state, before);
+});
+test("expiry report retains every matching lot beyond catalogue and display pages", async () => {
+  const { ConsumableRegistry, ConsumableExpiryReportRegistry } =
+      await import("../dist/index.js"),
+    f = await fixture(),
+    lots = new ConsumableRegistry(f.repo),
+    expiry = new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10);
+  for (let i = 0; i < 53; i++) {
+    const lot = await lots.register(
+      f.s,
+      lotInput({
+        code: "EXP-PAGE-" + String(i).padStart(3, "0"),
+        expiresOn: expiry,
+      }),
+    );
+    await fundLots(f, [lot], 1);
+  }
+  const r = await new ConsumableExpiryReportRegistry(f.repo).get(f.s);
+  assert.equal(r.items.length, 53);
+  assert.equal(new Set(r.items.map((x) => x.balance.lotId)).size, 53);
+  assert.equal(r.items[0].balance.code, "EXP-PAGE-000");
+  assert.equal(r.items.at(-1).balance.code, "EXP-PAGE-052");
+  assert.ok(
+    r.items.every((x) => x.status === "expiring" && x.balance.available === 1),
+  );
+});

@@ -313,3 +313,5 @@ export * from "./replenishment.js";
 export * from "./stock-movement-report.js";
 
 export * from "./stock-balance-report.js";
+
+export * from "./consumable-expiry-report.js";
