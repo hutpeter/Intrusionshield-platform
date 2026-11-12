@@ -441,3 +441,8 @@ The replenishment snapshot now defaults to supplier headings with per-lot sugges
 All suppliers is the default; an exact supplier filters the saved snapshot, CSV and print immediately. CSV adds filter_supplier; presets/portable JSON retain optional supplier selection. Absent suppliers remain selected with empty results. U-SUPPLIERFILTER-01 passed November 12, 2026, single owner route. U-SUPPLIERREPLEN-01 passed from the November 12 screenshot. Multi-select, supplier identity, totals, purchasing, server-side filtering and production scale remain deferred. See [SUPPLIER-REPLENISHMENT-FILTER.md](SUPPLIER-REPLENISHMENT-FILTER.md). Asset reuse remains intended; RSP-ISS-001 parked.
 
 Owner evidence November 12, 2026: uploaded ruby-replenishment-by-supplier-filtered-2026-11-12.csv contains two rows, both supplier/filter_supplier DEMO-SUPPLIER, snapshot 2026-11-12T16:03:30.443Z, unit each. One row has available 5/minimum 10/target 20/suggested 15; the other retains blank target/suggestion and target_not_set. U-SUPPLIERFILTER-01 passed. Other pending acceptance and deferred items remain unchanged.
+
+
+## Replenishment planning-status filter — preview delivered
+
+All statuses is the default; Suggested, Target not set and Expired intersect with supplier selection on the saved snapshot. CSV/print carry both filters and presets/portable JSON retain optional planningStatus. Per-lot classifications/quantities are unchanged. U-REPLENSTATUS-01 pending, single owner route. Purchasing, multi-select, totals, supplier identity, server-side filtering and production scale remain deferred. See [REPLENISHMENT-STATUS-FILTER.md](REPLENISHMENT-STATUS-FILTER.md). Asset reuse remains intended; RSP-ISS-001 parked.

@@ -1,5 +1,6 @@
 import {
   filterSupplierReplenishment,
+  type PlanningStatus,
   supplierReplenishmentGroups,
   supplierReplenishmentCsv,
 } from "./supplier-replenishment";
@@ -46,14 +47,22 @@ export function Replenishment({
         ? (initialPreset.supplier ?? "")
         : "",
     ),
+    [planningStatus, setPlanningStatus] = useState<PlanningStatus | "">(
+      initialPreset?.report === "replenishment"
+        ? (initialPreset.planningStatus ?? "")
+        : "",
+    ),
     pending = useRef<AbortController | null>(null);
   const allGroups = useMemo(
     () => supplierReplenishmentGroups(report?.items ?? []),
     [report],
   );
   const filteredReport = useMemo(
-    () => (report ? filterSupplierReplenishment(report, supplier) : null),
-    [report, supplier],
+    () =>
+      report
+        ? filterSupplierReplenishment(report, supplier, planningStatus)
+        : null,
+    [report, supplier, planningStatus],
   );
   const groups = useMemo(
     () => supplierReplenishmentGroups(filteredReport?.items ?? []),
@@ -104,8 +113,8 @@ export function Replenishment({
         new Blob(
           [
             bySupplier
-              ? supplierReplenishmentCsv(report, supplier)
-              : replenishmentCsv(filteredReport!, supplier),
+              ? supplierReplenishmentCsv(report, supplier, planningStatus)
+              : replenishmentCsv(filteredReport!, supplier, planningStatus),
           ],
           {
             type: "text/csv;charset=utf-8",
@@ -114,7 +123,7 @@ export function Replenishment({
       ),
       a = document.createElement("a");
     a.href = url;
-    a.download = `ruby-replenishment-${bySupplier ? "by-supplier-" : ""}${supplier ? "filtered-" : ""}${report.generatedAt.slice(0, 10)}.csv`;
+    a.download = `ruby-replenishment-${bySupplier ? "by-supplier-" : ""}${supplier || planningStatus ? "filtered-" : ""}${report.generatedAt.slice(0, 10)}.csv`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 0);
   }
@@ -135,6 +144,7 @@ export function Replenishment({
           settings={{
             report: "replenishment",
             ...(supplier ? { supplier } : {}),
+            ...(planningStatus ? { planningStatus } : {}),
           }}
           onSave={onSavePreset}
         />
@@ -155,7 +165,17 @@ export function Replenishment({
               language,
               session.facilityName,
             );
-            model.metadata.push([t.supplierFilter, supplier || t.allSuppliers]);
+            model.metadata.push(
+              [t.supplierFilter, supplier || t.allSuppliers],
+              [
+                t.planningStatusFilter,
+                planningStatus
+                  ? planningStatus === "suggested"
+                    ? t.suggestedStatus
+                    : t[planningStatus]
+                  : t.allStatuses,
+              ],
+            );
             printStockReport(model, language);
           } catch (e) {
             setError(e);
@@ -194,6 +214,23 @@ export function Replenishment({
           ))}
         </select>
       </label>
+      <label>
+        {t.planningStatusFilter}
+        <select
+          aria-label={t.planningStatusFilter}
+          disabled={blocked || loading}
+          value={planningStatus}
+          onChange={(e) => {
+            setPlanningStatus(e.target.value as PlanningStatus | "");
+            setPage(1);
+          }}
+        >
+          <option value="">{t.allStatuses}</option>
+          <option value="suggested">{t.suggestedStatus}</option>
+          <option value="target_not_set">{t.target_not_set}</option>
+          <option value="expired">{t.expired}</option>
+        </select>
+      </label>
       <p>{t.supplierFilterNote}</p>
       <label>
         {t.view}
@@ -220,13 +257,21 @@ export function Replenishment({
             {t.supplierFilter}: {supplier || t.allSuppliers} · {t.sourceLots}:{" "}
             {report.items.length}
           </p>
+          <p>
+            {t.planningStatusFilter}:{" "}
+            {planningStatus
+              ? planningStatus === "suggested"
+                ? t.suggestedStatus
+                : t[planningStatus]
+              : t.allStatuses}
+          </p>
           {bySupplier && (
             <p>
               {t.supplierCount}: {groups.length}
             </p>
           )}
           {!filteredReport!.items.length ? (
-            <p>{supplier ? t.filteredEmpty : t.empty}</p>
+            <p>{supplier || planningStatus ? t.filteredEmpty : t.empty}</p>
           ) : (
             <>
               <div className="table-scroll">

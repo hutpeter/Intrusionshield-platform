@@ -178,10 +178,10 @@ export function ReportsHub({
                 reports.find((r) => r.id === id)?.title ?? id
               }
               filterSummary={(s) => {
-                if (s.report === "replenishment")
-                  return (
-                    s.supplier ?? replenishmentLabels(language).allSuppliers
-                  );
+                if (s.report === "replenishment") {
+                  const t = replenishmentLabels(language);
+                  return `${s.supplier ?? t.allSuppliers} · ${s.planningStatus ? (s.planningStatus === "suggested" ? t.suggestedStatus : t[s.planningStatus]) : t.allStatuses}`;
+                }
                 if (s.report === "balances") {
                   const t = stockBalanceReportLabels(language);
                   return `${s.lotCode || t.allLots} · ${s.status ? t[s.status] : t.allStatuses}`;

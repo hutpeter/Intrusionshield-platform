@@ -196,3 +196,32 @@ test("supplier-specific replenishment presets transfer with the exact filter and
     ),
   );
 });
+
+test("portable replenishment presets preserve canonical planning status with supplier and reject unknown values", () => {
+  const source = [
+    {
+      id: "source",
+      name: "Actionable",
+      settings: {
+        report: "replenishment",
+        supplier: "Vendor",
+        planningStatus: "suggested",
+      },
+    },
+  ];
+  const portable = parsePresetFile(exportPresetFile(source));
+  const imported = importPresetFile([], portable, () => "new");
+  assert.deepEqual(imported[0].settings, source[0].settings);
+  assert.equal(imported[0].id, "new");
+  for (const planningStatus of ["all", "", null])
+    assert.throws(() =>
+      parsePresetFile(
+        bundle([
+          {
+            name: "Bad",
+            settings: { report: "replenishment", planningStatus },
+          },
+        ]),
+      ),
+    );
+});

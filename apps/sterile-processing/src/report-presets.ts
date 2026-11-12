@@ -2,6 +2,7 @@ import type {
   StockAction,
   StockBalanceStatus,
   ConsumableExpiryStatus,
+  ReplenishmentReport,
 } from "@intrusionshield/sterile-processing";
 export type MovementRange = "fixed" | "last7" | "last30";
 export type MovementPresetSettings =
@@ -44,7 +45,11 @@ export type PresetSettings =
       status: ConsumableExpiryStatus | "";
       horizon: string;
     }
-  | { report: "replenishment"; supplier?: string };
+  | {
+      report: "replenishment";
+      supplier?: string;
+      planningStatus?: ReplenishmentReport["items"][number]["status"];
+    };
 export type ReportPreset = {
   id: string;
   name: string;
@@ -77,11 +82,16 @@ export function validSettings(v: unknown): v is PresetSettings {
   const x = v as Record<string, unknown>;
   if (x.report === "replenishment")
     return (
-      Object.keys(x).length === 1 ||
-      (Object.keys(x).length === 2 &&
-        typeof x.supplier === "string" &&
-        !!x.supplier.trim() &&
-        x.supplier.length <= 200)
+      Object.hasOwn(x, "report") &&
+      Object.keys(x).every((key) =>
+        ["report", "supplier", "planningStatus"].includes(key),
+      ) &&
+      (!Object.hasOwn(x, "supplier") ||
+        (typeof x.supplier === "string" &&
+          !!x.supplier.trim() &&
+          x.supplier.length <= 200)) &&
+      (!Object.hasOwn(x, "planningStatus") ||
+        member(x.planningStatus, ["suggested", "target_not_set", "expired"]))
     );
   if (typeof x.lotCode !== "string" || x.lotCode.length > 100) return false;
   if (x.report === "balances")

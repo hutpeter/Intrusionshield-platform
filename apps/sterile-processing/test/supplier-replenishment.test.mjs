@@ -176,3 +176,85 @@ test("filtered CSV includes only selected supplier rows with preserved statuses 
   );
   assert.equal(supplierReplenishmentCsv(snapshot, "").split("\r\n").length, 5);
 });
+
+test("planning status intersects exact supplier selection without changing snapshot values", async () => {
+  const { filterSupplierReplenishment } =
+    await import("../src/supplier-replenishment.ts");
+  const snapshot = {
+    ...report,
+    items: [
+      { ...item, lotId: "suggested" },
+      {
+        ...item,
+        lotId: "missing",
+        targetStock: null,
+        suggestedQuantity: null,
+        status: "target_not_set",
+      },
+      {
+        ...item,
+        lotId: "expired",
+        expiresOn: "2000-01-01",
+        suggestedQuantity: null,
+        status: "expired",
+      },
+      { ...item, lotId: "other", supplier: "Other" },
+    ],
+  };
+  const copy = structuredClone(snapshot);
+  for (const status of ["suggested", "target_not_set", "expired"]) {
+    const selected = filterSupplierReplenishment(snapshot, "Vendor", status);
+    assert.equal(selected.items.length, 1);
+    assert.equal(selected.items[0].status, status);
+    assert.equal(selected.generatedAt, snapshot.generatedAt);
+  }
+  assert.equal(
+    filterSupplierReplenishment(snapshot, "", "suggested").items.length,
+    2,
+  );
+  assert.equal(
+    filterSupplierReplenishment(snapshot, "Other", "expired").items.length,
+    0,
+  );
+  assert.equal(
+    filterSupplierReplenishment(snapshot, "Vendor", "").items.length,
+    3,
+  );
+  assert.deepEqual(snapshot, copy);
+});
+test("combined-filter CSV contains every matching lot and explicit canonical supplier/status metadata", () => {
+  const snapshot = {
+    ...report,
+    items: Array.from({ length: 54 }, (_, i) => ({
+      ...item,
+      lotId: "id" + i,
+      code: "LOT" + i,
+      ...(i < 52
+        ? {}
+        : {
+            supplier: "Other",
+            status: "expired",
+            expiresOn: "2000-01-01",
+            suggestedQuantity: null,
+          }),
+    })),
+  };
+  const csv = supplierReplenishmentCsv(snapshot, "Vendor", "suggested");
+  assert.equal(csv.split("\r\n").length, 54);
+  assert.ok(csv.includes('"filter_supplier","filter_planning_status"'));
+  assert.ok(csv.includes('"LOT51"'));
+  assert.ok(!csv.includes('"LOT52"'));
+  assert.equal(csv.match(/"Vendor","suggested"/g).length, 52);
+  const expired = supplierReplenishmentCsv(snapshot, "Other", "expired");
+  assert.equal(expired.split("\r\n").length, 4);
+  assert.ok(expired.includes('"","expired","Other","expired"'));
+  assert.equal(
+    supplierReplenishmentCsv(snapshot, "Vendor", "expired").split("\r\n")
+      .length,
+    2,
+  );
+  assert.equal(
+    supplierReplenishmentCsv(snapshot, "", "").split("\r\n").length,
+    56,
+  );
+});

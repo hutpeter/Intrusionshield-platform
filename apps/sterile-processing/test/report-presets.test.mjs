@@ -254,3 +254,49 @@ test("replenishment presets retain an optional exact supplier while legacy All s
   ])
     assert.equal(validSettings(settings), false);
 });
+
+test("planning-status replenishment presets retain combined filters and accept legacy definitions", () => {
+  for (const planningStatus of ["suggested", "target_not_set", "expired"]) {
+    for (const settings of [
+      { report: "replenishment", planningStatus },
+      { report: "replenishment", supplier: "Vendor", planningStatus },
+    ]) {
+      assert.equal(validSettings(settings), true);
+      const saved = addPreset([], "Plan", settings, "id");
+      assert.deepEqual(
+        readPresets({ getItem: () => JSON.stringify(saved) }, "key"),
+        saved,
+      );
+    }
+  }
+  assert.equal(validSettings({ report: "replenishment" }), true);
+  assert.equal(
+    validSettings({ report: "replenishment", supplier: "Vendor" }),
+    true,
+  );
+  for (const settings of [
+    { report: "replenishment", planningStatus: "" },
+    { report: "replenishment", planningStatus: "all" },
+    { report: "replenishment", planningStatus: null },
+    { report: "replenishment", planningStatus: "suggested", supplier: "" },
+    {
+      report: "replenishment",
+      planningStatus: "expired",
+      supplier: "Vendor",
+      extra: true,
+    },
+  ])
+    assert.equal(validSettings(settings), false);
+  const old = {
+    id: "plan",
+    name: "Plan",
+    settings: { report: "replenishment", supplier: "Vendor" },
+  };
+  assert.equal(
+    updatePreset([old], old, "Plan", {
+      ...old.settings,
+      planningStatus: "suggested",
+    })[0].settings.planningStatus,
+    "suggested",
+  );
+});

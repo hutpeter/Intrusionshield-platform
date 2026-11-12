@@ -2,11 +2,13 @@ import type { Language } from "./text";
 const en = {
   title: "Replenishment report",
   supplierFilter: "Supplier filter",
+  planningStatusFilter: "Planning status filter",
+  allStatuses: "All statuses",
   allSuppliers: "All suppliers",
   sourceLots: "All lots in snapshot",
-  filteredEmpty: "No low-stock lots for this supplier in this snapshot.",
+  filteredEmpty: "No low-stock lots match these supplier and status filters.",
   supplierFilterNote:
-    "Generate to load or refresh suppliers and stock data. Selection applies immediately to this snapshot, CSV and print.",
+    "Generate to load or refresh suppliers and stock data. Supplier and status selections apply immediately to this snapshot, CSV and print.",
   view: "Report view",
   bySupplier: "By supplier",
   allLots: "All lots",
@@ -43,12 +45,14 @@ const en = {
 const es: typeof en = {
   title: "Informe de reposición",
   supplierFilter: "Filtro de proveedor",
+  planningStatusFilter: "Filtro de estado de planificación",
+  allStatuses: "Todos los estados",
   allSuppliers: "Todos los proveedores",
   sourceLots: "Todos los lotes de la instantánea",
   filteredEmpty:
-    "No hay lotes con existencias bajas para este proveedor en esta instantánea.",
+    "No hay lotes con existencias bajas que coincidan con estos filtros de proveedor y estado.",
   supplierFilterNote:
-    "Genere para cargar o actualizar proveedores y existencias. La selección se aplica de inmediato a esta instantánea, CSV e impresión.",
+    "Genere para cargar o actualizar proveedores y existencias. Las selecciones de proveedor y estado se aplican de inmediato a esta instantánea, CSV e impresión.",
   view: "Vista del informe",
   bySupplier: "Por proveedor",
   allLots: "Todos los lotes",
@@ -85,12 +89,14 @@ const es: typeof en = {
 const fr: typeof en = {
   title: "Rapport de réapprovisionnement",
   supplierFilter: "Filtre fournisseur",
+  planningStatusFilter: "Filtre d’état de planification",
+  allStatuses: "Tous les états",
   allSuppliers: "Tous les fournisseurs",
   sourceLots: "Tous les lots de l’instantané",
   filteredEmpty:
-    "Aucun lot à stock faible pour ce fournisseur dans cet instantané.",
+    "Aucun lot à stock faible ne correspond à ces filtres fournisseur et état.",
   supplierFilterNote:
-    "Générez pour charger ou actualiser les fournisseurs et les stocks. La sélection s’applique immédiatement à cet instantané, au CSV et à l’impression.",
+    "Générez pour charger ou actualiser les fournisseurs et les stocks. Les sélections du fournisseur et de l’état s’appliquent immédiatement à cet instantané, au CSV et à l’impression.",
   view: "Vue du rapport",
   bySupplier: "Par fournisseur",
   allLots: "Tous les lots",

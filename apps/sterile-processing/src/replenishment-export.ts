@@ -3,6 +3,7 @@ import { csvCell } from "./trace-export.ts";
 export function replenishmentCsv(
   r: ReplenishmentReport,
   supplierFilter?: string,
+  planningStatusFilter?: ReplenishmentReport["items"][number]["status"] | "",
 ): string {
   const rows: unknown[][] = [
     [
@@ -25,6 +26,7 @@ export function replenishmentCsv(
       "suggested_quantity",
       "planning_status",
       ...(supplierFilter === undefined ? [] : ["filter_supplier"]),
+      ...(planningStatusFilter === undefined ? [] : ["filter_planning_status"]),
     ],
   ];
   for (const x of r.items)
@@ -48,6 +50,7 @@ export function replenishmentCsv(
       x.suggestedQuantity,
       x.status,
       ...(supplierFilter === undefined ? [] : [supplierFilter]),
+      ...(planningStatusFilter === undefined ? [] : [planningStatusFilter]),
     ]);
   return (
     "\ufeff" +

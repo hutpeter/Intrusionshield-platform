@@ -1,6 +1,7 @@
 import type { ReplenishmentReport } from "@intrusionshield/sterile-processing";
 import { replenishmentCsv } from "./replenishment-export.ts";
 type Row = ReplenishmentReport["items"][number];
+export type PlanningStatus = Row["status"];
 const compare = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
 export function supplierReplenishmentGroups(
   items: readonly Row[],
@@ -23,17 +24,27 @@ export function supplierReplenishmentGroups(
 export function filterSupplierReplenishment(
   report: ReplenishmentReport,
   supplier: string,
+  planningStatus: PlanningStatus | "" = "",
 ): ReplenishmentReport {
   return {
     ...report,
-    items: report.items.filter((row) => !supplier || row.supplier === supplier),
+    items: report.items.filter(
+      (row) =>
+        (!supplier || row.supplier === supplier) &&
+        (!planningStatus || row.status === planningStatus),
+    ),
   };
 }
 export function supplierReplenishmentCsv(
   report: ReplenishmentReport,
   supplierFilter?: string,
+  planningStatusFilter?: PlanningStatus | "",
 ): string {
-  const selected = filterSupplierReplenishment(report, supplierFilter ?? "");
+  const selected = filterSupplierReplenishment(
+    report,
+    supplierFilter ?? "",
+    planningStatusFilter ?? "",
+  );
   return replenishmentCsv(
     {
       ...selected,
@@ -42,5 +53,6 @@ export function supplierReplenishmentCsv(
       ),
     },
     supplierFilter,
+    planningStatusFilter,
   );
 }

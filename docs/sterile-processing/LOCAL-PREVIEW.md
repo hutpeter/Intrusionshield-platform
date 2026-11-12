@@ -405,3 +405,8 @@ Reports hub → Replenishment report → Generate replenishment report defaults 
 ### Supplier replenishment filter
 
 Generate the replenishment report to load supplier choices, then choose Supplier filter (default All suppliers). Selection applies immediately to grouped/flat rows, full CSV and print, using the existing snapshot. Saved presets remember the selection. See [SUPPLIER-REPLENISHMENT-FILTER.md](SUPPLIER-REPLENISHMENT-FILTER.md) for the single U-SUPPLIERFILTER-01 owner check.
+
+
+### Replenishment planning status
+
+Generate the replenishment report, then select Planning status filter alongside Supplier filter. Both apply immediately to the current snapshot, grouped/flat views, complete CSV and print; presets remember them. All statuses is the default. See [REPLENISHMENT-STATUS-FILTER.md](REPLENISHMENT-STATUS-FILTER.md) for the single U-REPLENSTATUS-01 owner check.
