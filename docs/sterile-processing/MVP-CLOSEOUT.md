@@ -8,6 +8,16 @@ with manually recorded processing evidence**. It is not a clinical deployment.
 Optional report features are now frozen. No further feature increment is needed
 to finish this MVP review.
 
+**Owner evidence received November 12, 2026; development paused.** The screenshot
+shows the returned-package report loaded with nine linked records, 17 events,
+Current holds and blocks (including the return block), and the Linked records
+table. This establishes the core owner trace smoke result. Source links and the
+expanded Recorded events section are below the captured viewport and are not
+independently owner-confirmed. Their developer coverage remains recorded below.
+The local MVP is closed for this bounded demonstration review; this is not full
+U-TRACE-01, broader manual or clinical production acceptance. No additional owner
+check or feature work is requested before the assessment.
+
 ## Scope and developer result
 
 | Included in this MVP | Closeout evidence |
@@ -51,7 +61,7 @@ readiness documentation were added. Existing records were not reset or migrated.
 
 ## One remaining owner check, then pause
 
-**U-MVP-01 pending (also closes U-TRACE-01 if passed):** In the existing local
+**U-MVP-01 core smoke confirmed; remaining visual detail deferred:** In the existing local
 preview, enter as Demo operator → **Traceability and reports** →
 **Trace latest returned package**. Expect a returned package with linked workflow
 records, **Current holds and blocks**, **Source links** and **Recorded events**.
@@ -63,11 +73,15 @@ If no returned package is available, report that result rather than creating a
 new demonstration batch or assuming a pass. A reproducible failure on an existing
 supported journey is an MVP blocker to fix before closure.
 
-**Stop condition:** developer checks above pass, the owner confirms U-MVP-01,
+**Original stop condition:** developer checks above pass, the owner confirms U-MVP-01,
 and there is no unresolved blocker in this supported local journey. Then mark
 the local demonstration MVP accepted and pause development. A response of “p”
 alone is not acceptance. No new feature, migration, integration or production
 release follows automatically. Assess the next phase separately with the owner.
+
+Closeout disposition: the owner's screenshot satisfies the core supported-path
+smoke check. Preserve the unseen lower-section checks as deferred evidence rather
+than claiming they passed or extending development. Pause now as requested.
 
 ## Explicitly deferred assessment backlog
 

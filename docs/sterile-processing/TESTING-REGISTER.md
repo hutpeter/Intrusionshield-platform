@@ -2,6 +2,14 @@
 
 ## MVP closeout — November 12, 2026 (current)
 
+**Owner evidence and pause:** screenshot received November 12 shows the returned
+package trace, nine linked records, 17 events, Current holds and blocks including
+the return block, and Linked records. U-MVP-01 core smoke is confirmed and local
+MVP development is paused for assessment. Source links and the expanded Recorded
+events section are below the screenshot viewport; those owner visual checks and
+full U-TRACE-01 remain deferred, not passed. No further owner check is requested
+now. This closes the bounded local demonstration review, not clinical acceptance.
+
 The owner requested an MVP followed by a pause. Optional feature work is frozen;
 the bounded local fictional-data scope and stop condition are recorded in
 [MVP-CLOSEOUT.md](MVP-CLOSEOUT.md). This section supersedes older statements that
@@ -18,7 +26,7 @@ returned-package trace, current blocks, CSV and unknown-code stale-report cleari
 This is a connected HTTP journey plus browser trace smoke, not a new full manual
 UI or Windows/clinical acceptance run. No product behavior or owner data changed.
 
-**U-MVP-01 pending:** Demo operator → Traceability and reports → Trace latest
+**Original U-MVP-01 instruction (disposition above):** Demo operator → Traceability and reports → Trace latest
 returned package. Expect linked records, Current holds and blocks, Source links
 and Recorded events. This is the only owner check requested. A confirmed pass
 also closes original U-TRACE-01; “p” alone does not. If a returned package is
