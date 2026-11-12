@@ -1,5 +1,9 @@
 # Standalone instrument-management preview
 
+**November 12 MVP closeout:** optional feature work is frozen. See
+[MVP-CLOSEOUT.md](MVP-CLOSEOUT.md) for the supported local scope, developer
+verification, one final owner trace check and the pause/assessment boundary.
+
 November 3, 2026. Development branch: `feature/sterile-processing-preview`, based
 on the published standalone foundation branch. This increment adds an actual
 Spanish-first web application and a durable **dummy-data development preview**.

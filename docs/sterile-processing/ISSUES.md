@@ -1,5 +1,11 @@
 # Ruby Sterile Processing — issues log
 
+**November 12, 2026:** see [MVP-CLOSEOUT.md](MVP-CLOSEOUT.md) for the fixed local
+demonstration MVP boundary and deferred assessment backlog. Optional feature work
+is frozen pending the final owner check and pause. Production gates below remain
+open; RSP-ISS-001 stays parked. Older delivery/status notes are historical and
+must be read with their later updates and the testing register.
+
 Updated November 8, 2026. Deferred requirements are recorded here so development
 can continue without losing them. Deferral is not implementation or acceptance.
 Keep test execution status in [TESTING-REGISTER.md](TESTING-REGISTER.md).

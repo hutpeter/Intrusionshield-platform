@@ -1,5 +1,35 @@
 # Testing register — Ruby Sterile Processing
 
+## MVP closeout — November 12, 2026 (current)
+
+The owner requested an MVP followed by a pause. Optional feature work is frozen;
+the bounded local fictional-data scope and stop condition are recorded in
+[MVP-CLOSEOUT.md](MVP-CLOSEOUT.md). This section supersedes older statements that
+the main connected stages are not implemented; it does not supersede pending
+owner/clinical acceptance or resolve every deferred exception.
+
+**Developer passed:** 228 domain + 157 HTTP/SQLite + 87 web tests (472), four
+launcher-command tests and the web build. The service suite includes two new
+normal-command integrated SQLite tests: the receive-to-return/reprocess journey
+with failed-cleaning retry, review/issue gates, linked history and restart; and
+failed/aborted cycle denial plus recall/recovery/quarantine with persistent issue
+blocks. Chromium then read the first journey's restarted records through latest
+returned-package trace, current blocks, CSV and unknown-code stale-report clearing.
+This is a connected HTTP journey plus browser trace smoke, not a new full manual
+UI or Windows/clinical acceptance run. No product behavior or owner data changed.
+
+**U-MVP-01 pending:** Demo operator → Traceability and reports → Trace latest
+returned package. Expect linked records, Current holds and blocks, Source links
+and Recorded events. This is the only owner check requested. A confirmed pass
+also closes original U-TRACE-01; “p” alone does not. If a returned package is
+unavailable or the route fails, record that result and investigate before closure.
+After a pass with no supported-path blocker, accept the local demonstration MVP
+and pause development for assessment. U-LOANER-01 and all other unconfirmed owner
+checks remain unconfirmed; broader manual/production validation is deferred.
+RSP-ISS-001 remains explicitly parked and required before clinical production.
+
+## Historical register
+
 Updated November 5, 2026. This is the continuing register for every increment of
 this application. Update it with each build and after each user-reported result.
 It distinguishes automated verification from the owner's manual verification.
