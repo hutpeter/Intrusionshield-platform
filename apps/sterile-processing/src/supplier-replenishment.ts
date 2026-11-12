@@ -56,3 +56,18 @@ export function supplierReplenishmentCsv(
     planningStatusFilter,
   );
 }
+
+// Full snapshot counts for the selected supplier, across all planning statuses.
+export function replenishmentStatusCounts(
+  report: ReplenishmentReport,
+  supplier = "",
+): Record<PlanningStatus, number> {
+  const counts: Record<PlanningStatus, number> = {
+    suggested: 0,
+    target_not_set: 0,
+    expired: 0,
+  };
+  for (const row of report.items)
+    if (!supplier || row.supplier === supplier) counts[row.status]++;
+  return counts;
+}

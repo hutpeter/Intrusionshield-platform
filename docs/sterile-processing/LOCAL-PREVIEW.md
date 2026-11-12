@@ -410,3 +410,8 @@ Generate the replenishment report to load supplier choices, then choose Supplier
 ### Replenishment planning status
 
 Generate the replenishment report, then select Planning status filter alongside Supplier filter. Both apply immediately to the current snapshot, grouped/flat views, complete CSV and print; presets remember them. All statuses is the default. See [REPLENISHMENT-STATUS-FILTER.md](REPLENISHMENT-STATUS-FILTER.md) for the single U-REPLENSTATUS-01 owner check.
+
+
+### Replenishment summary counts
+
+Generate the replenishment report to show three status-count cards. Counts cover the selected supplier across every page and all planning statuses; the table also applies its status filter. CSV and print continue to follow table filters. See [REPLENISHMENT-SUMMARY.md](REPLENISHMENT-SUMMARY.md) for the single U-REPLENSUMMARY-01 owner check.

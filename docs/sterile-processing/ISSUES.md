@@ -448,3 +448,8 @@ Owner evidence November 12, 2026: uploaded ruby-replenishment-by-supplier-filter
 All statuses is the default; Suggested, Target not set and Expired intersect with supplier selection on the saved snapshot. CSV/print carry both filters and presets/portable JSON retain optional planningStatus. Per-lot classifications/quantities are unchanged. U-REPLENSTATUS-01 passed November 12, 2026, single owner route. Purchasing, multi-select, totals, supplier identity, server-side filtering and production scale remain deferred. See [REPLENISHMENT-STATUS-FILTER.md](REPLENISHMENT-STATUS-FILTER.md). Asset reuse remains intended; RSP-ISS-001 parked.
 
 Owner evidence November 12, 2026: ruby-replenishment-by-supplier-filtered-2026-11-12 (3).csv contains one row with supplier/filter_supplier DEMO-SUPPLIER and planning_status/filter_planning_status target_not_set, target/suggested quantity blank, snapshot 2026-11-12T17:51:22.418Z. This confirms U-REPLENSTATUS-01. Earlier uploads lacked either the new column or a selected status and did not pass the check. Other deferred/pending items remain unchanged.
+
+
+## Replenishment status summary — preview delivered
+
+Three cards count suggested, target-not-set and expired lots in the selected supplier's full snapshot across all planning statuses. The table/export retain their own combined filters; counts do not sum suggested quantities. U-REPLENSUMMARY-01 pending, single owner check. Summary exports/click actions, server aggregation, supplier identity, purchasing and production scale remain deferred. See [REPLENISHMENT-SUMMARY.md](REPLENISHMENT-SUMMARY.md). Asset reuse remains intended; RSP-ISS-001 parked.

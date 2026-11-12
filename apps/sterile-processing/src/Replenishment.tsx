@@ -1,5 +1,6 @@
 import {
   filterSupplierReplenishment,
+  replenishmentStatusCounts,
   type PlanningStatus,
   supplierReplenishmentGroups,
   supplierReplenishmentCsv,
@@ -56,6 +57,10 @@ export function Replenishment({
   const allGroups = useMemo(
     () => supplierReplenishmentGroups(report?.items ?? []),
     [report],
+  );
+  const counts = useMemo(
+    () => (report ? replenishmentStatusCounts(report, supplier) : null),
+    [report, supplier],
   );
   const filteredReport = useMemo(
     () =>
@@ -270,6 +275,24 @@ export function Replenishment({
               {t.supplierCount}: {groups.length}
             </p>
           )}
+          <section aria-label={t.summaryTitle}>
+            <h3>{t.summaryTitle}</h3>
+            <p>{t.summaryNote}</p>
+            <dl className="replenishment-summary">
+              <div>
+                <dt>{t.summarySuggested}</dt>
+                <dd>{counts!.suggested}</dd>
+              </div>
+              <div>
+                <dt>{t.summaryMissing}</dt>
+                <dd>{counts!.target_not_set}</dd>
+              </div>
+              <div>
+                <dt>{t.summaryExpired}</dt>
+                <dd>{counts!.expired}</dd>
+              </div>
+            </dl>
+          </section>
           {!filteredReport!.items.length ? (
             <p>{supplier || planningStatus ? t.filteredEmpty : t.empty}</p>
           ) : (

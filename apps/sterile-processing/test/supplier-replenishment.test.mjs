@@ -258,3 +258,95 @@ test("combined-filter CSV contains every matching lot and explicit canonical sup
     56,
   );
 });
+
+test("status summary counts full-snapshot lots by selected supplier, including rows beyond pagination", async () => {
+  const { replenishmentStatusCounts } =
+    await import("../src/supplier-replenishment.ts");
+  const snapshot = {
+    ...report,
+    items: Array.from({ length: 53 }, (_, i) => ({
+      ...item,
+      lotId: "id" + i,
+      code: "LOT" + i,
+      supplier: i === 52 ? "Other" : "Vendor",
+      status: i === 52 ? "expired" : i === 51 ? "target_not_set" : "suggested",
+      targetStock: i === 51 ? null : 20,
+      suggestedQuantity: i < 51 ? 15 : null,
+    })),
+  };
+  const original = structuredClone(snapshot);
+  assert.deepEqual(replenishmentStatusCounts(snapshot), {
+    suggested: 51,
+    target_not_set: 1,
+    expired: 1,
+  });
+  assert.deepEqual(replenishmentStatusCounts(snapshot, "Vendor"), {
+    suggested: 51,
+    target_not_set: 1,
+    expired: 0,
+  });
+  assert.deepEqual(replenishmentStatusCounts(snapshot, "Other"), {
+    suggested: 0,
+    target_not_set: 0,
+    expired: 1,
+  });
+  assert.deepEqual(snapshot, original);
+});
+test("summary uses exact supplier names and counts lots rather than suggested quantities", async () => {
+  const { replenishmentStatusCounts } =
+    await import("../src/supplier-replenishment.ts");
+  const snapshot = {
+    ...report,
+    items: [
+      { ...item, lotId: "one", supplier: "Vendor", suggestedQuantity: 15 },
+      { ...item, lotId: "two", supplier: "Vendor", suggestedQuantity: 1000000 },
+      {
+        ...item,
+        lotId: "case",
+        supplier: "vendor",
+        status: "target_not_set",
+        targetStock: null,
+        suggestedQuantity: null,
+      },
+      {
+        ...item,
+        lotId: "space",
+        supplier: "Vendor ",
+        status: "expired",
+        targetStock: null,
+        suggestedQuantity: null,
+      },
+    ],
+  };
+  assert.deepEqual(replenishmentStatusCounts(snapshot, "Vendor"), {
+    suggested: 2,
+    target_not_set: 0,
+    expired: 0,
+  });
+  assert.deepEqual(replenishmentStatusCounts(snapshot, "vendor"), {
+    suggested: 0,
+    target_not_set: 1,
+    expired: 0,
+  });
+  assert.deepEqual(replenishmentStatusCounts(snapshot, "Vendor "), {
+    suggested: 0,
+    target_not_set: 0,
+    expired: 1,
+  });
+});
+test("empty or absent supplier summaries return three explicit zero counts without altering frozen rows", async () => {
+  const { replenishmentStatusCounts } =
+    await import("../src/supplier-replenishment.ts");
+  const zero = { suggested: 0, target_not_set: 0, expired: 0 };
+  assert.deepEqual(replenishmentStatusCounts(report), zero);
+  const snapshot = Object.freeze({
+    ...report,
+    items: Object.freeze([Object.freeze({ ...item })]),
+  });
+  assert.deepEqual(replenishmentStatusCounts(snapshot, "missing"), zero);
+  assert.deepEqual(replenishmentStatusCounts(snapshot), {
+    suggested: 1,
+    target_not_set: 0,
+    expired: 0,
+  });
+});

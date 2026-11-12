@@ -1,6 +1,12 @@
 import type { Language } from "./text";
 const en = {
   title: "Replenishment report",
+  summaryTitle: "Planning status summary",
+  summarySuggested: "Suggested lots",
+  summaryMissing: "Target not set",
+  summaryExpired: "Expired lots",
+  summaryNote:
+    "Counts cover the selected supplier across all planning statuses and every page of this snapshot. The table also applies the planning-status filter. Quantities remain per lot.",
   supplierFilter: "Supplier filter",
   planningStatusFilter: "Planning status filter",
   allStatuses: "All statuses",
@@ -44,6 +50,12 @@ const en = {
 };
 const es: typeof en = {
   title: "Informe de reposición",
+  summaryTitle: "Resumen de estados de planificación",
+  summarySuggested: "Lotes con reposición sugerida",
+  summaryMissing: "Sin objetivo",
+  summaryExpired: "Lotes caducados",
+  summaryNote:
+    "Los recuentos abarcan el proveedor seleccionado, todos los estados de planificación y todas las páginas de esta instantánea. La tabla también aplica el filtro de estado. Las cantidades se mantienen por lote.",
   supplierFilter: "Filtro de proveedor",
   planningStatusFilter: "Filtro de estado de planificación",
   allStatuses: "Todos los estados",
@@ -88,6 +100,12 @@ const es: typeof en = {
 };
 const fr: typeof en = {
   title: "Rapport de réapprovisionnement",
+  summaryTitle: "Résumé des états de planification",
+  summarySuggested: "Lots avec réapprovisionnement suggéré",
+  summaryMissing: "Cible non définie",
+  summaryExpired: "Lots périmés",
+  summaryNote:
+    "Les nombres couvrent le fournisseur sélectionné, tous les états de planification et toutes les pages de cet instantané. Le tableau applique aussi le filtre d’état. Les quantités restent par lot.",
   supplierFilter: "Filtre fournisseur",
   planningStatusFilter: "Filtre d’état de planification",
   allStatuses: "Tous les états",
