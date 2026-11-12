@@ -10,8 +10,10 @@ The table, full CSV and print retain their combined supplier/status filters and 
 
 87 web tests and the web build passed. New tests cover full counts beyond fifty lots, exact supplier names, per-lot rather than quantity counting, status precedence, immutability and explicit zero states. Chromium checked the live snapshot against its response plus a 60-lot/three-supplier fixture, every-page counts, supplier changes, count stability across table status filters and flat/group views, empty intersections, unchanged filtered CSV/print, no refetch, fresh generation, missing/empty suppliers and ES/FR/mobile. Existing planning-status/preset/transfer regression checks passed. Screenshot inspected. No stock writes or browser errors. Backend unchanged; preceding 228 domain and 155 HTTP/SQLite suites were not rerun for this UI-only feature.
 
-## One owner check — U-REPLENSUMMARY-01 pending
+## One owner check — U-REPLENSUMMARY-01 passed November 12, 2026
 
 Reports hub → Replenishment report → Generate replenishment report. Keep All suppliers and All statuses. Confirm the three summary counts against the displayed lots. For the current November 12 two-lot demo: Suggested lots 1, Target not set 1, Expired lots 0. This is the only owner check; no CSV or stock movement is requested.
 
 U-REPLENSTATUS-01 passed November 12 from the uploaded one-row combined-filter CSV. Clickable summary cards, summary export/print, supplier identity, purchasing, cross-product totals, server-side aggregation and production scale remain deferred. Ruby Asset Management reuse remains intended; U-TRACE-01/original U-LOANER-01 remain unconfirmed and RSP-ISS-001 stays parked.
+
+Owner screenshot November 12, 2026 confirms U-REPLENSUMMARY-01: All suppliers / All statuses, two lots and one supplier, summary Suggested lots 1 / Target not set 1 / Expired lots 0, snapshot 2026-11-12T19:36:24.435Z. Counts agree with the visible lot statuses. Other pending acceptance and deferred items remain unchanged.

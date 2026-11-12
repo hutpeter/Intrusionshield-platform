@@ -452,4 +452,6 @@ Owner evidence November 12, 2026: ruby-replenishment-by-supplier-filtered-2026-1
 
 ## Replenishment status summary — preview delivered
 
-Three cards count suggested, target-not-set and expired lots in the selected supplier's full snapshot across all planning statuses. The table/export retain their own combined filters; counts do not sum suggested quantities. U-REPLENSUMMARY-01 pending, single owner check. Summary exports/click actions, server aggregation, supplier identity, purchasing and production scale remain deferred. See [REPLENISHMENT-SUMMARY.md](REPLENISHMENT-SUMMARY.md). Asset reuse remains intended; RSP-ISS-001 parked.
+Three cards count suggested, target-not-set and expired lots in the selected supplier's full snapshot across all planning statuses. The table/export retain their own combined filters; counts do not sum suggested quantities. U-REPLENSUMMARY-01 passed November 12, 2026, single owner check. Summary exports/click actions, server aggregation, supplier identity, purchasing and production scale remain deferred. See [REPLENISHMENT-SUMMARY.md](REPLENISHMENT-SUMMARY.md). Asset reuse remains intended; RSP-ISS-001 parked.
+
+Owner screenshot November 12, 2026 confirms U-REPLENSUMMARY-01: All suppliers / All statuses, two lots and one supplier, summary Suggested lots 1 / Target not set 1 / Expired lots 0, snapshot 2026-11-12T19:36:24.435Z. Counts agree with the visible lot statuses. Other pending acceptance and deferred items remain unchanged.
