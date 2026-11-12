@@ -385,3 +385,8 @@ Reports hub → Stock movement report → Date range (UTC) offers Fixed dates, L
 ### Edit or rename report presets
 
 Reports hub → Edit preset loads the saved name and filters without a query. Use Update preset to save, then close the report and Run preset for fresh data. Cancel editing discards unsaved edits. See [EDIT-REPORT-PRESETS.md](EDIT-REPORT-PRESETS.md) for the single U-EDITPRESET-01 owner check.
+
+
+### Transfer report presets
+
+Reports hub → Export presets JSON downloads names and filters. Choose presets JSON file opens a review with filter summaries and duplicate-name flags. Import new presets appends only new entries to the current browser/user/facility after confirmation; Cancel import leaves storage unchanged. See [REPORT-PRESET-TRANSFER.md](REPORT-PRESET-TRANSFER.md) for the single U-PRESETTRANSFER-01 owner check.

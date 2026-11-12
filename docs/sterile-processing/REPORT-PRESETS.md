@@ -21,3 +21,5 @@ Owner acceptance November 11, 2026: “everything worked” confirms the request
 Relative movement date support is documented in [RELATIVE-MOVEMENT-PRESETS.md](RELATIVE-MOVEMENT-PRESETS.md). Existing fixed presets remain valid.
 
 Saved entries now support Edit preset and Update preset; see [EDIT-REPORT-PRESETS.md](EDIT-REPORT-PRESETS.md). Existing identity and report type are preserved.
+
+Preset portability is now available through a reviewed JSON export/import flow; see [REPORT-PRESET-TRANSFER.md](REPORT-PRESET-TRANSFER.md). This is manual transfer rather than shared/server synchronization.

@@ -1,3 +1,6 @@
+import { transferLabels } from "./report-transfer-text";
+import { ReportPresetTransfer } from "./ReportPresetTransfer";
+import { exportPresetFile, importPresetFile } from "./report-preset-transfer";
 import {
   addPreset,
   updatePreset,
@@ -38,6 +41,7 @@ export function ReportsHub({
   const t = reportsHubLabels(language),
     [selected, setSelected] = useState<ReportId | null>(null),
     [reportBusy, setReportBusy] = useState(false),
+    [transferBusy, setTransferBusy] = useState(false),
     [initialPreset, setInitialPreset] = useState<PresetSettings | undefined>(),
     [runKey, setRunKey] = useState(0),
     [editingPreset, setEditingPreset] = useState<ReportPreset | undefined>(),
@@ -52,11 +56,11 @@ export function ReportsHub({
     [presetNotice, setPresetNotice] = useState<"deleted" | "storage" | null>(
       null,
     ),
-    busy = blocked || reportBusy;
+    busy = blocked || reportBusy || transferBusy;
   useEffect(() => {
-    onBusy(reportBusy);
+    onBusy(reportBusy || transferBusy);
     return () => onBusy(false);
-  }, [reportBusy, onBusy]);
+  }, [reportBusy, transferBusy, onBusy]);
   const reports: { id: ReportId; title: string; description: string }[] = [
     {
       id: "balances",
@@ -166,6 +170,44 @@ export function ReportsHub({
           <section className="panel" aria-label={pt.title}>
             <h2>{pt.title}</h2>
             <p>{pt.note}</p>
+            <ReportPresetTransfer
+              language={language}
+              disabled={busy || stored.failed}
+              presets={stored.presets}
+              onBusy={setTransferBusy}
+              reportTitle={(id) =>
+                reports.find((r) => r.id === id)?.title ?? id
+              }
+              filterSummary={(s) => {
+                if (s.report === "replenishment")
+                  return transferLabels(language).noFilters;
+                if (s.report === "balances") {
+                  const t = stockBalanceReportLabels(language);
+                  return `${s.lotCode || t.allLots} · ${s.status ? t[s.status] : t.allStatuses}`;
+                }
+                if (s.report === "expiry") {
+                  const t = consumableExpiryReportLabels(language);
+                  return `${s.lotCode || t.allLots} · ${s.status ? t[s.status] : t.allStatuses} · ${t.horizon}: ${s.horizon}`;
+                }
+                const t = stockMovementReportLabels(language);
+                return `${s.lotCode || t.allLots} · ${s.action ? t[s.action] : t.allActions} · ${"range" in s ? t[s.range] : `${s.from} — ${s.through} (UTC)`}`;
+              }}
+              onExport={() => {
+                try {
+                  const presets = readPresets(localStorage, stored.key);
+                  setStored({ ...stored, presets });
+                  return exportPresetFile(presets);
+                } catch {
+                  setPresetNotice("storage");
+                  return null;
+                }
+              }}
+              onImport={(presets) =>
+                persist((current) =>
+                  importPresetFile(current, presets, () => crypto.randomUUID()),
+                )
+              }
+            />
             {(stored.failed || presetNotice) && (
               <p role="status">
                 {pt[stored.failed ? "storage" : presetNotice!]}
