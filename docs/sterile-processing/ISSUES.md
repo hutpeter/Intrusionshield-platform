@@ -421,4 +421,9 @@ Versioned JSON transfers names and filters without scope, IDs or snapshots. Impo
 
 ## Preset export had no visual feedback — preview fix delivered
 
-Owner found and uploaded the JSON after reporting that the button appeared inactive; the file validated with three presets. Export now shows Download requested and a filename/direct link, explains the empty disabled state and retains the prepared file until replacement/navigation. U-PRESETEXPORTFEEDBACK-01 pending, single click owner check. Automatic download completion/location remains browser controlled. The earlier transfer check remains unconfirmed beyond successful export. See [REPORT-PRESET-TRANSFER.md](REPORT-PRESET-TRANSFER.md). RSP-ISS-001 parked.
+Owner found and uploaded the JSON after reporting that the button appeared inactive; the file validated with three presets. Export now shows Download requested and a filename/direct link, explains the empty disabled state and retains the prepared file until replacement/navigation. U-PRESETEXPORTFEEDBACK-01 passed November 12, 2026, single click owner check. Automatic download completion/location remains browser controlled. The earlier transfer check remains unconfirmed beyond successful export. See [REPORT-PRESET-TRANSFER.md](REPORT-PRESET-TRANSFER.md). RSP-ISS-001 parked.
+
+
+## Extra export link encouraged duplicate downloads — preview refinement delivered
+
+Owner confirmed automatic export and visible feedback but noted the second link downloaded another copy. Export is now the sole action; the filename is plain text and the confirmation directs users to browser Downloads. U-SINGLEPRESETEXPORT-01 pending, single-click check. U-PRESETEXPORTFEEDBACK-01 passed November 12 from the screenshot/confirmation. See [REPORT-PRESET-TRANSFER.md](REPORT-PRESET-TRANSFER.md). Deferred items unchanged; RSP-ISS-001 parked.

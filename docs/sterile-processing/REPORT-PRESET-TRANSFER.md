@@ -25,4 +25,13 @@ The UI now says Download requested, displays the filename with a direct Download
 
 73 web tests and the preview build passed. Chromium suppressed the scripted anchor click and verified that feedback and filename still appeared, the direct link downloaded the correct JSON, normal exports still worked, previous URLs were revoked only on replacement/navigation, storage errors did not claim success, and ES/FR/mobile layouts worked. Existing transfer/import regression checks passed. No stock writes or browser errors. Screenshot inspected. Backend unchanged; previous domain/HTTP suites not rerun for this UI feedback fix.
 
-Single owner check U-PRESETEXPORTFEEDBACK-01 pending: Reports hub → Export presets JSON. Confirm the visible Download requested message and filename/link. No repeat import test is requested for this build. Browser-specific save locations/prompts remain controlled by browser settings; U-TRACE-01/original U-LOANER-01 remain unconfirmed and RSP-ISS-001 stays parked.
+Single owner check U-PRESETEXPORTFEEDBACK-01 passed November 12, 2026: Reports hub → Export presets JSON. Confirm the visible Download requested message and filename/link. No repeat import test is requested for this build. Browser-specific save locations/prompts remain controlled by browser settings; U-TRACE-01/original U-LOANER-01 remain unconfirmed and RSP-ISS-001 stays parked.
+
+
+## Single export action follow-up — November 12, 2026
+
+Owner confirmed the automatic download and supplied a screenshot showing the requested feedback, satisfying U-PRESETEXPORTFEEDBACK-01. They also noted that clicking the additional download link created a duplicate file. The link is now removed: Export presets JSON is the only download action. The filename is plain text; Download requested points to browser Downloads without suggesting a second action. The preceding direct-link description is superseded. File preparation, URL cleanup, empty/error states, import validation and saved presets remain unchanged.
+
+73 web tests and the preview build passed. Chromium observed exactly one download per Export click, validated the downloaded JSON, clicked the plain filename without creating another download, confirmed no download anchors remain, and checked repeated explicit exports, failure/empty states, EN/ES/FR and mobile layout. No stock writes or browser errors. Backend unchanged; no repeat domain/HTTP suites needed for this presentation-only correction.
+
+Single owner check U-SINGLEPRESETEXPORT-01 pending: Reports hub → Export presets JSON once. Confirm one download plus a plain filename and confirmation text, without another download link. U-PRESETTRANSFER-01 remains unconfirmed beyond export. Other deferred items remain unchanged.

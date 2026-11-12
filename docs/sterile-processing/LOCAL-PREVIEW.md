@@ -394,4 +394,4 @@ Reports hub → Export presets JSON downloads names and filters. Choose presets 
 
 ### Preset export feedback
 
-Export presets JSON now shows Download requested and a filename/direct download link. Check browser Downloads (Ctrl+J in Windows Chrome) if no save dialog appears; use the link to retry. An empty preset list explains why export is disabled. The one owner check for this fix is U-PRESETEXPORTFEEDBACK-01 in [REPORT-PRESET-TRANSFER.md](REPORT-PRESET-TRANSFER.md).
+Export presets JSON now requests one download and shows Download requested plus a plain filename. Check browser Downloads (Ctrl+J in Windows Chrome) if no save dialog appears. No additional download link is shown. An empty preset list explains why export is disabled. The current one-click owner check is U-SINGLEPRESETEXPORT-01 in [REPORT-PRESET-TRANSFER.md](REPORT-PRESET-TRANSFER.md).

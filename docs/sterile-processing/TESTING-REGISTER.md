@@ -1055,6 +1055,13 @@ Developer: 73 web tests, web build and Chromium portable export/destination impo
 
 ## Current owner check — preset export feedback
 
-**U-PRESETEXPORTFEEDBACK-01 pending:** Reports hub → Export presets JSON. Confirm visible Download requested text plus the JSON filename/link. This is the only owner check for this fix.
+**U-PRESETEXPORTFEEDBACK-01 passed November 12, 2026:** Reports hub → Export presets JSON. Confirm visible Download requested text plus the JSON filename/link. This is the only owner check for this fix.
 
 Owner's uploaded ruby-report-presets-2026-11-12.json validated successfully with three presets, confirming the prior export worked but lacked visual feedback. U-PRESETTRANSFER-01 remains unconfirmed beyond export; duplicate review was not evidenced. Developer: 73 web tests, preview build, Chromium suppressed-auto/manual-link download, normal export, actual JSON content, object URL replacement/navigation cleanup, empty-state explanation, failed storage, localization/mobile and transfer/import regressions passed. Backend unchanged; previous domain/HTTP tests not rerun. No stock writes. U-TRACE-01/original U-LOANER-01 remain unconfirmed; RSP-ISS-001 parked. See [REPORT-PRESET-TRANSFER.md](REPORT-PRESET-TRANSFER.md).
+
+
+## Current owner check — single preset export action
+
+**U-SINGLEPRESETEXPORT-01 pending:** Reports hub → Export presets JSON once. Expect one download, a plain filename and confirmation text, with no second download link. This is the only owner check for this refinement.
+
+Owner screenshot and confirmation satisfy U-PRESETEXPORTFEEDBACK-01, but highlighted that clicking its additional link created a duplicate. That link is removed. Developer: 73 web tests, preview build and Chromium one-download-per-click, noninteractive filename, valid JSON, explicit repeated export, empty/failure states and ES/FR/mobile checks passed without stock writes. Backend unchanged; no repeated domain/HTTP checks for this presentation-only change. U-PRESETTRANSFER-01 remains unconfirmed beyond export; U-TRACE-01/original U-LOANER-01 remain unconfirmed and RSP-ISS-001 parked. See [REPORT-PRESET-TRANSFER.md](REPORT-PRESET-TRANSFER.md).

@@ -4,9 +4,8 @@ const en = {
   filters: "Filters",
   noFilters: "No input filters",
   export: "Export presets JSON",
-  exportRequested:
-    "Download requested. Check your browser’s Downloads. If no file appears, use the download link above.",
-  downloadFile: "Download JSON file",
+  exportRequested: "Download requested. Check your browser’s Downloads.",
+  filename: "File",
   noPresets: "Save a report preset first to enable export.",
   file: "Choose presets JSON file",
   review: "Review import",
@@ -36,9 +35,8 @@ const es: typeof en = {
   filters: "Filtros",
   noFilters: "Sin filtros de entrada",
   export: "Exportar configuraciones JSON",
-  exportRequested:
-    "Descarga solicitada. Revise las descargas del navegador. Si no aparece el archivo, use el enlace de descarga de arriba.",
-  downloadFile: "Descargar archivo JSON",
+  exportRequested: "Descarga solicitada. Revise las descargas del navegador.",
+  filename: "Archivo",
   noPresets:
     "Guarde una configuración de informe para habilitar la exportación.",
   file: "Elegir archivo JSON de configuraciones",
@@ -70,8 +68,8 @@ const fr: typeof en = {
   noFilters: "Aucun filtre de saisie",
   export: "Exporter les préréglages JSON",
   exportRequested:
-    "Téléchargement demandé. Vérifiez les téléchargements du navigateur. Si aucun fichier n’apparaît, utilisez le lien ci-dessus.",
-  downloadFile: "Télécharger le fichier JSON",
+    "Téléchargement demandé. Vérifiez les téléchargements du navigateur.",
+  filename: "Fichier",
   noPresets: "Enregistrez un préréglage de rapport pour activer l’export.",
   file: "Choisir un fichier JSON de préréglages",
   review: "Vérifier l’import",

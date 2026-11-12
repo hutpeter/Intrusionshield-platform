@@ -113,13 +113,7 @@ export function ReportPresetTransfer({
       {!presets.length && <p>{t.noPresets}</p>}
       {download && (
         <p>
-          <a
-            href={download.url}
-            download={download.name}
-            aria-label={t.downloadFile}
-          >
-            {t.downloadFile}: {download.name}
-          </a>
+          {t.filename}: {download.name}
         </p>
       )}
       <label>
