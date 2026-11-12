@@ -459,4 +459,6 @@ Owner screenshot November 12, 2026 confirms U-REPLENSUMMARY-01: All suppliers / 
 
 ## Replenishment summary card actions — preview delivered
 
-Summary cards now apply the existing status filter with supplier retention, page-one reset, selected styling and native keyboard activation. Counts remain across all statuses for the selected supplier; CSV/print/presets follow the table selection. U-REPLENCARD-01 pending, single owner check. No source/API/schema changes. Summary exports, purchasing and aggregation remain deferred. See [REPLENISHMENT-SUMMARY.md](REPLENISHMENT-SUMMARY.md). RSP-ISS-001 parked.
+Summary cards now apply the existing status filter with supplier retention, page-one reset, selected styling and native keyboard activation. Counts remain across all statuses for the selected supplier; CSV/print/presets follow the table selection. U-REPLENCARD-01 passed November 12, 2026, single owner check. No source/API/schema changes. Summary exports, purchasing and aggregation remain deferred. See [REPLENISHMENT-SUMMARY.md](REPLENISHMENT-SUMMARY.md). RSP-ISS-001 parked.
+
+Owner screenshot November 12, 2026 confirms U-REPLENCARD-01: DEMO-SUPPLIER retained, Target not set card highlighted and status dropdown synchronized, one matching lot with blank suggestion, summary counts 1/1/0, snapshot 2026-11-12T19:53:40.538Z. Other pending acceptance and deferred items remain unchanged.

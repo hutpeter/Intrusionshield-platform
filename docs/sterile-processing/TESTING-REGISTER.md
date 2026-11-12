@@ -1105,6 +1105,8 @@ Owner screenshot November 12, 2026 confirms U-REPLENSUMMARY-01: All suppliers / 
 
 ## Current owner check — clickable replenishment summary
 
-**U-REPLENCARD-01 pending:** Reports hub → Replenishment report → Generate → select DEMO-SUPPLIER → click the Target not set card. Expect highlighted card, matching status dropdown and one demo lot, retaining the supplier. This is the only owner check; no export/stock mutation requested. U-REPLENSUMMARY-01 passed November 12 from the owner's 1/1/0 screenshot.
+**U-REPLENCARD-01 passed November 12, 2026:** Reports hub → Replenishment report → Generate → select DEMO-SUPPLIER → click the Target not set card. Expect highlighted card, matching status dropdown and one demo lot, retaining the supplier. This is the only owner check; no export/stock mutation requested. U-REPLENSUMMARY-01 passed November 12 from the owner's 1/1/0 screenshot.
 
 Developer: 87 web tests, preview build and Chromium native mouse/keyboard actions, pressed/dropdown sync, supplier retention/paging, zero-count and clear behavior, stable counts/no refetch, CSV/print/preset integration, pending disable, localization/mobile and planning-filter regressions passed. Backend unchanged; previous domain/HTTP suites not rerun for this UI-only interaction. Summary exports, purchasing, aggregation and production scale remain deferred; U-TRACE-01/original U-LOANER-01 remain unconfirmed and RSP-ISS-001 parked. See [REPLENISHMENT-SUMMARY.md](REPLENISHMENT-SUMMARY.md).
+
+Owner screenshot November 12, 2026 confirms U-REPLENCARD-01: DEMO-SUPPLIER retained, Target not set card highlighted and status dropdown synchronized, one matching lot with blank suggestion, summary counts 1/1/0, snapshot 2026-11-12T19:53:40.538Z. Other pending acceptance and deferred items remain unchanged.
