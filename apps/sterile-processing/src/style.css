@@ -1298,3 +1298,5 @@ td {
 .preset-transfer {margin:18px 0;padding:16px;border:1px solid #dbe4e1;border-radius:8px;}
 .preset-transfer input[type=file] {max-width:100%;}
 .preset-transfer td {overflow-wrap:anywhere;}
+
+.supplier-group-heading th {background:#edf5f1;text-align:left;overflow-wrap:anywhere;}

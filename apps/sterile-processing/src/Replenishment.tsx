@@ -1,8 +1,12 @@
+import {
+  supplierReplenishmentGroups,
+  supplierReplenishmentCsv,
+} from "./supplier-replenishment";
 import { SaveReportPreset, type PresetOptions } from "./SaveReportPreset";
 import { printStockReport } from "./stock-report-print";
 import { replenishmentPrintModel } from "./stock-report-print-model";
 import { stockPrintLabels } from "./stock-report-print-text";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { ReplenishmentReport } from "@intrusionshield/sterile-processing";
 import { api, ApiError, type Session } from "./api";
 import { labels, type Language } from "./text";
@@ -35,14 +39,26 @@ export function Replenishment({
     [loading, setLoading] = useState(false),
     [error, setError] = useState<unknown>(null),
     [page, setPage] = useState(1),
+    [bySupplier, setBySupplier] = useState(true),
     pending = useRef<AbortController | null>(null);
+  const groups = useMemo(
+    () => supplierReplenishmentGroups(report?.items ?? []),
+    [report],
+  );
+  const ordered = bySupplier
+    ? groups.flatMap((group) => group.items)
+    : (report?.items ?? []);
+  const pageItems = ordered.slice((page - 1) * 50, page * 50);
+  const pageGroups = bySupplier
+    ? supplierReplenishmentGroups(pageItems)
+    : [{ supplier: "", items: pageItems }];
   useEffect(() => () => pending.current?.abort(), []);
   useEffect(() => {
     onBusy(loading);
     return () => onBusy(false);
   }, [loading, onBusy]);
   async function generate() {
-    if (loading || blocked) return;
+    if (loading || blocked || pending.current) return;
     const a = new AbortController();
     pending.current = a;
     setLoading(true);
@@ -71,13 +87,20 @@ export function Replenishment({
   function download() {
     if (!report || loading || blocked) return;
     const url = URL.createObjectURL(
-        new Blob([replenishmentCsv(report)], {
-          type: "text/csv;charset=utf-8",
-        }),
+        new Blob(
+          [
+            bySupplier
+              ? supplierReplenishmentCsv(report)
+              : replenishmentCsv(report),
+          ],
+          {
+            type: "text/csv;charset=utf-8",
+          },
+        ),
       ),
       a = document.createElement("a");
     a.href = url;
-    a.download = `ruby-replenishment-${report.generatedAt.slice(0, 10)}.csv`;
+    a.download = `ruby-replenishment-${bySupplier ? "by-supplier-" : ""}${report.generatedAt.slice(0, 10)}.csv`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 0);
   }
@@ -103,7 +126,7 @@ export function Replenishment({
         {t.refresh}
       </button>
       <button disabled={blocked || loading || !report} onClick={download}>
-        {t.download}
+        {bySupplier ? t.supplierDownload : t.download}
       </button>
       <button
         disabled={blocked || loading || !report}
@@ -129,11 +152,32 @@ export function Replenishment({
             : c.error}
         </p>
       )}
+      <label>
+        {t.view}
+        <select
+          aria-label={t.view}
+          disabled={blocked || loading}
+          value={bySupplier ? "supplier" : "lots"}
+          onChange={(e) => {
+            setBySupplier(e.target.value === "supplier");
+            setPage(1);
+          }}
+        >
+          <option value="supplier">{t.bySupplier}</option>
+          <option value="lots">{t.allLots}</option>
+        </select>
+      </label>
+      {bySupplier && <p>{t.supplierNote}</p>}
       {report && (
         <>
           <p>
             {t.snapshot}: {report.generatedAt} · {report.items.length}
           </p>
+          {bySupplier && (
+            <p>
+              {t.supplierCount}: {groups.length}
+            </p>
+          )}
           {!report.items.length ? (
             <p>{t.empty}</p>
           ) : (
@@ -145,55 +189,80 @@ export function Replenishment({
                       {[
                         t.code,
                         t.name,
+                        ...(bySupplier ? [t.suggested, t.status] : []),
                         t.lot,
                         t.supplier,
                         t.reference,
                         t.available,
                         t.minimum,
                         t.target,
-                        t.suggested,
+                        ...(!bySupplier ? [t.suggested] : []),
                         t.expiry,
-                        t.status,
+                        ...(!bySupplier ? [t.status] : []),
                       ].map((h) => (
                         <th key={h}>{h}</th>
                       ))}
                       <th>{t.open}</th>
                     </tr>
                   </thead>
-                  <tbody>
-                    {report.items.slice((page - 1) * 50, page * 50).map((x) => (
-                      <tr key={x.lotId}>
-                        <td>{x.code}</td>
-                        <td>
-                          {x.name} · {x.kind}
-                        </td>
-                        <td>{x.lotNumber}</td>
-                        <td>{x.supplier}</td>
-                        <td>{x.supplierReference}</td>
-                        <td>
-                          {x.available}
-                          {!x.stockRecorded && <small>{t.noReceipt}</small>}
-                        </td>
-                        <td>{x.minimumStock}</td>
-                        <td>{x.targetStock ?? "—"}</td>
-                        <td>{x.suggestedQuantity ?? "—"}</td>
-                        <td>{x.expiresOn}</td>
-                        <td>
-                          {x.status === "suggested"
-                            ? t.suggestedStatus
-                            : t[x.status]}
-                        </td>
-                        <td>
-                          <button
-                            disabled={blocked || loading}
-                            onClick={() => onOpen(x.lotId)}
-                          >
-                            {t.open}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
+                  {pageGroups.map((group) => (
+                    <tbody
+                      key={group.supplier}
+                      data-supplier={bySupplier ? group.supplier : undefined}
+                    >
+                      {bySupplier && (
+                        <tr className="supplier-group-heading">
+                          <th colSpan={12} scope="rowgroup">
+                            {t.supplier}: {group.supplier}
+                          </th>
+                        </tr>
+                      )}
+                      {group.items.map((x) => (
+                        <tr key={x.lotId}>
+                          <td>{x.code}</td>
+                          <td>
+                            {x.name} · {x.kind}
+                          </td>
+                          {bySupplier && (
+                            <>
+                              <td>{x.suggestedQuantity ?? "—"}</td>
+                              <td>
+                                {x.status === "suggested"
+                                  ? t.suggestedStatus
+                                  : t[x.status]}
+                              </td>
+                            </>
+                          )}
+                          <td>{x.lotNumber}</td>
+                          <td>{x.supplier}</td>
+                          <td>{x.supplierReference}</td>
+                          <td>
+                            {x.available}
+                            {!x.stockRecorded && <small>{t.noReceipt}</small>}
+                          </td>
+                          <td>{x.minimumStock}</td>
+                          <td>{x.targetStock ?? "—"}</td>
+                          {!bySupplier && <td>{x.suggestedQuantity ?? "—"}</td>}
+                          <td>{x.expiresOn}</td>
+                          {!bySupplier && (
+                            <td>
+                              {x.status === "suggested"
+                                ? t.suggestedStatus
+                                : t[x.status]}
+                            </td>
+                          )}
+                          <td>
+                            <button
+                              disabled={blocked || loading}
+                              onClick={() => onOpen(x.lotId)}
+                            >
+                              {t.open}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  ))}
                 </table>
               </div>
               <div className="pagination">

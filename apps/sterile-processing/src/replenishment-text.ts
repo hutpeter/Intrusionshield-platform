@@ -1,6 +1,13 @@
 import type { Language } from "./text";
 const en = {
   title: "Replenishment report",
+  view: "Report view",
+  bySupplier: "By supplier",
+  allLots: "All lots",
+  supplierCount: "Suppliers in snapshot",
+  supplierDownload: "Export supplier replenishment CSV",
+  supplierNote:
+    "Groups use recorded supplier names. Suggested quantities remain per lot. CSV includes all suppliers and lots in the snapshot.",
   refresh: "Generate replenishment report",
   download: "Export replenishment CSV",
   close: "Close report",
@@ -29,6 +36,13 @@ const en = {
 };
 const es: typeof en = {
   title: "Informe de reposición",
+  view: "Vista del informe",
+  bySupplier: "Por proveedor",
+  allLots: "Todos los lotes",
+  supplierCount: "Proveedores en la instantánea",
+  supplierDownload: "Exportar CSV de reposición por proveedor",
+  supplierNote:
+    "Los grupos usan los nombres de proveedor registrados. Las cantidades sugeridas se mantienen por lote. El CSV incluye todos los proveedores y lotes de la instantánea.",
   refresh: "Generar informe de reposición",
   download: "Exportar CSV de reposición",
   close: "Cerrar informe",
@@ -57,6 +71,13 @@ const es: typeof en = {
 };
 const fr: typeof en = {
   title: "Rapport de réapprovisionnement",
+  view: "Vue du rapport",
+  bySupplier: "Par fournisseur",
+  allLots: "Tous les lots",
+  supplierCount: "Fournisseurs de l’instantané",
+  supplierDownload: "Exporter le CSV de réapprovisionnement par fournisseur",
+  supplierNote:
+    "Les groupes utilisent les noms de fournisseurs enregistrés. Les quantités suggérées restent par lot. Le CSV inclut tous les fournisseurs et lots de l’instantané.",
   refresh: "Générer le rapport de réapprovisionnement",
   download: "Exporter le CSV de réapprovisionnement",
   close: "Fermer le rapport",

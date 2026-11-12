@@ -395,3 +395,8 @@ Reports hub → Export presets JSON downloads names and filters. Choose presets 
 ### Preset export feedback
 
 Export presets JSON now requests one download and shows Download requested plus a plain filename. Check browser Downloads (Ctrl+J in Windows Chrome) if no save dialog appears. No additional download link is shown. An empty preset list explains why export is disabled. The current one-click owner check is U-SINGLEPRESETEXPORT-01 in [REPORT-PRESET-TRANSFER.md](REPORT-PRESET-TRANSFER.md).
+
+
+### Supplier replenishment view
+
+Reports hub → Replenishment report → Generate replenishment report defaults to By supplier. Suggested quantity/status are beside the product, with one supplier heading per visible group. All lots restores the flat view. Export supplier replenishment CSV includes every lot in the saved snapshot. See [SUPPLIER-REPLENISHMENT.md](SUPPLIER-REPLENISHMENT.md) for the single U-SUPPLIERREPLEN-01 owner check.

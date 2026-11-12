@@ -429,3 +429,8 @@ Owner found and uploaded the JSON after reporting that the button appeared inact
 Owner confirmed automatic export and visible feedback but noted the second link downloaded another copy. Export is now the sole action; the filename is plain text and the confirmation directs users to browser Downloads. U-SINGLEPRESETEXPORT-01 pending, single-click check. U-PRESETEXPORTFEEDBACK-01 passed November 12 from the screenshot/confirmation. See [REPORT-PRESET-TRANSFER.md](REPORT-PRESET-TRANSFER.md). Deferred items unchanged; RSP-ISS-001 parked.
 
 Owner acceptance November 12, 2026: “it worked” in response to the duplicate import review/cancel instructions confirms U-PRESETTRANSFER-01 passed. Duplicate names were skipped, confirmation disabled and no new presets added. This does not establish broader browser acceptance or unrelated pending owner checks.
+
+
+## Supplier replenishment view — preview delivered
+
+The replenishment snapshot now defaults to supplier headings with per-lot suggestions/status and a full supplier-ordered CSV. All lots preserves the existing flat view/export. No supplier quantity totals, purchasing actions or stock rule changes. U-SUPPLIERREPLEN-01 pending, single owner check. Catalog identity, cross-lot/product consolidation, purchasing, persisted layout and production scale remain deferred. See [SUPPLIER-REPLENISHMENT.md](SUPPLIER-REPLENISHMENT.md). Asset reuse remains intended; RSP-ISS-001 parked.

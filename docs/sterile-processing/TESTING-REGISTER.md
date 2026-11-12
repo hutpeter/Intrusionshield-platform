@@ -1067,3 +1067,10 @@ Owner's uploaded ruby-report-presets-2026-11-12.json validated successfully with
 Owner screenshot and confirmation satisfy U-PRESETEXPORTFEEDBACK-01, but highlighted that clicking its additional link created a duplicate. That link is removed. Developer: 73 web tests, preview build and Chromium one-download-per-click, noninteractive filename, valid JSON, explicit repeated export, empty/failure states and ES/FR/mobile checks passed without stock writes. Backend unchanged; no repeated domain/HTTP checks for this presentation-only change. U-PRESETTRANSFER-01 subsequently passed November 12, 2026 from owner confirmation of the duplicate import review; U-TRACE-01/original U-LOANER-01 remain unconfirmed and RSP-ISS-001 parked. See [REPORT-PRESET-TRANSFER.md](REPORT-PRESET-TRANSFER.md).
 
 Owner acceptance November 12, 2026: “it worked” in response to the duplicate import review/cancel instructions confirms U-PRESETTRANSFER-01 passed. Duplicate names were skipped, confirmation disabled and no new presets added. This does not establish broader browser acceptance or unrelated pending owner checks.
+
+
+## Current owner check — supplier replenishment view
+
+**U-SUPPLIERREPLEN-01 pending:** Reports hub → Replenishment report → Generate replenishment report. Keep By supplier; confirm supplier headings and each lot's own suggested quantity/status. This is the only owner check for this build. U-PRESETTRANSFER-01 passed November 12 from the owner's duplicate-review confirmation.
+
+Developer: 76 web tests, web build, live generation/source lot link, Chromium 53-lot supplier grouping/paging, full CSV/print, missing/expired values, immutable snapshots/no view refetch, flat view, empty report, localization/mobile and preset create/edit/run regressions passed. No stock writes. Backend unchanged; previous 228 domain/155 HTTP checks not rerun. Supplier catalog identity, cross-lot/product consolidation, purchasing, grouping filters, saved layout and production scale remain deferred. U-TRACE-01/original U-LOANER-01 remain unconfirmed; RSP-ISS-001 parked. See [SUPPLIER-REPLENISHMENT.md](SUPPLIER-REPLENISHMENT.md).
