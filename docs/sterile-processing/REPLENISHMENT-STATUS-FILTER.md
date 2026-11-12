@@ -10,8 +10,10 @@ Saved replenishment presets now optionally retain planningStatus as well as supp
 
 84 web tests and the web build passed. New tests cover status/supplier intersections, All/empty combinations, immutable snapshots, missing and expired values, 52 matching CSV rows beyond the screen page, canonical metadata and legacy/combined preset validation/transfer. Chromium exercised live combined filtering and a live source-lot link, a 55-lot read fixture, all status options, page reset, a full 52-lot filtered CSV/print, blank target/suggestion values, empty intersections/header-only export, clearing filters, no refetch, flat/group views, preset create/edit/run/portable review, empty regeneration retention, ES/FR/mobile and existing supplier/edit/transfer regressions. Screenshot inspected. No stock writes or browser errors. Backend unchanged; prior 228 domain and 155 HTTP/SQLite suites were not rerun for this UI-only feature.
 
-## One owner check — U-REPLENSTATUS-01 pending
+## One owner check — U-REPLENSTATUS-01 passed November 12, 2026
 
 Reports hub → Replenishment report → Generate replenishment report → Supplier filter: DEMO-SUPPLIER → Planning status filter: Target not set → Export supplier replenishment CSV. Expect target_not_set rows only, filter_supplier DEMO-SUPPLIER and filter_planning_status target_not_set; target/suggested quantity stay blank. This is the only owner check; no stock mutation is requested.
 
 U-SUPPLIERFILTER-01 passed November 12 from the uploaded two-row CSV. Supplier catalog identity, multi-select, purchasing, cross-product totals, server-side filtering, broader manual acceptance and production scale remain deferred. Ruby Asset Management reuse remains intended; U-TRACE-01/original U-LOANER-01 remain unconfirmed and RSP-ISS-001 stays parked.
+
+Owner evidence November 12, 2026: ruby-replenishment-by-supplier-filtered-2026-11-12 (3).csv contains one row with supplier/filter_supplier DEMO-SUPPLIER and planning_status/filter_planning_status target_not_set, target/suggested quantity blank, snapshot 2026-11-12T17:51:22.418Z. This confirms U-REPLENSTATUS-01. Earlier uploads lacked either the new column or a selected status and did not pass the check. Other deferred/pending items remain unchanged.
