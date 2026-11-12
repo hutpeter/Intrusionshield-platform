@@ -30,9 +30,12 @@ export function ReportPresetTransfer({
   const t = transferLabels(language),
     [incoming, setIncoming] = useState<PortablePreset[] | null>(null),
     [notice, setNotice] = useState<
-      "invalid" | "failed" | "done" | "exportFailed" | null
+      "invalid" | "failed" | "done" | "exportFailed" | "exportRequested" | null
     >(null),
     [reading, setReading] = useState(false),
+    [download, setDownload] = useState<{ url: string; name: string } | null>(
+      null,
+    ),
     input = useRef<HTMLInputElement>(null),
     request = useRef(0);
   useEffect(
@@ -45,6 +48,12 @@ export function ReportPresetTransfer({
     onBusy(reading);
     return () => onBusy(false);
   }, [reading, onBusy]);
+  useEffect(
+    () => () => {
+      if (download) URL.revokeObjectURL(download.url);
+    },
+    [download],
+  );
   const rows = reviewPresetImport(presets, incoming ?? []),
     ready = rows.filter((p) => !p.duplicate),
     over = presets.length + ready.length > 100;
@@ -74,6 +83,7 @@ export function ReportPresetTransfer({
         disabled={disabled || reading || !presets.length}
         onClick={() => {
           setNotice(null);
+          setDownload(null);
           try {
             const text = onExport();
             if (text === null) throw Error("storage");
@@ -81,10 +91,18 @@ export function ReportPresetTransfer({
               new Blob([text], { type: "application/json;charset=utf-8" }),
             );
             const link = document.createElement("a");
+            const name = `ruby-report-presets-${new Date().toISOString().slice(0, 10)}.json`;
+            setDownload({ url, name });
             link.href = url;
-            link.download = `ruby-report-presets-${new Date().toISOString().slice(0, 10)}.json`;
-            link.click();
-            setTimeout(() => URL.revokeObjectURL(url), 0);
+            link.download = name;
+            link.hidden = true;
+            document.body.appendChild(link);
+            try {
+              link.click();
+            } finally {
+              link.remove();
+            }
+            setNotice("exportRequested");
           } catch {
             setNotice("exportFailed");
           }
@@ -92,6 +110,18 @@ export function ReportPresetTransfer({
       >
         {t.export}
       </button>
+      {!presets.length && <p>{t.noPresets}</p>}
+      {download && (
+        <p>
+          <a
+            href={download.url}
+            download={download.name}
+            aria-label={t.downloadFile}
+          >
+            {t.downloadFile}: {download.name}
+          </a>
+        </p>
+      )}
       <label>
         {t.file}
         <input

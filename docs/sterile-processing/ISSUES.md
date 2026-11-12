@@ -417,3 +417,8 @@ Owner acceptance November 12, 2026: “it worked” confirms the requested edit/
 ## Report preset export/import — preview delivered
 
 Versioned JSON transfers names and filters without scope, IDs or snapshots. Import reviews readable filters and duplicates before explicitly appending new definitions to the destination browser/user/facility. Existing presets are preserved. U-PRESETTRANSFER-01 pending, single owner check. Shared synchronization, overwrite/automatic renaming, scheduling, simultaneous transactional edits and production scale remain deferred. See [REPORT-PRESET-TRANSFER.md](REPORT-PRESET-TRANSFER.md). Asset reuse remains intended; RSP-ISS-001 parked.
+
+
+## Preset export had no visual feedback — preview fix delivered
+
+Owner found and uploaded the JSON after reporting that the button appeared inactive; the file validated with three presets. Export now shows Download requested and a filename/direct link, explains the empty disabled state and retains the prepared file until replacement/navigation. U-PRESETEXPORTFEEDBACK-01 pending, single click owner check. Automatic download completion/location remains browser controlled. The earlier transfer check remains unconfirmed beyond successful export. See [REPORT-PRESET-TRANSFER.md](REPORT-PRESET-TRANSFER.md). RSP-ISS-001 parked.

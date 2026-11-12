@@ -1051,3 +1051,10 @@ Owner acceptance November 12, 2026: “it worked” confirms the requested edit/
 **U-PRESETTRANSFER-01 pending:** Reports hub → Export presets JSON → choose that downloaded file in the same browser/user → confirm Duplicate name — skipped rows and disabled Import new presets → Cancel import. Expect no additional presets. This is the only owner check for this build. U-EDITPRESET-01 passed November 12 from the owner's “it worked” confirmation and thirty-day report screenshot.
 
 Developer: 73 web tests, web build and Chromium portable export/destination import, review/confirmation/cancellation, duplicate/mixed files, literal text, current-scope runs, malformed/oversize input, quota/stale/capacity checks, persistence, localization/mobile and existing preset create/edit/run regressions passed. No stock writes. Backend unchanged; previous 228 domain/155 HTTP checks not rerun. Shared/server synchronization, overwrite/automatic renaming, scheduling, simultaneous transactional edits and production scale remain deferred. U-TRACE-01 and original U-LOANER-01 remain unconfirmed; RSP-ISS-001 parked. See [REPORT-PRESET-TRANSFER.md](REPORT-PRESET-TRANSFER.md).
+
+
+## Current owner check — preset export feedback
+
+**U-PRESETEXPORTFEEDBACK-01 pending:** Reports hub → Export presets JSON. Confirm visible Download requested text plus the JSON filename/link. This is the only owner check for this fix.
+
+Owner's uploaded ruby-report-presets-2026-11-12.json validated successfully with three presets, confirming the prior export worked but lacked visual feedback. U-PRESETTRANSFER-01 remains unconfirmed beyond export; duplicate review was not evidenced. Developer: 73 web tests, preview build, Chromium suppressed-auto/manual-link download, normal export, actual JSON content, object URL replacement/navigation cleanup, empty-state explanation, failed storage, localization/mobile and transfer/import regressions passed. Backend unchanged; previous domain/HTTP tests not rerun. No stock writes. U-TRACE-01/original U-LOANER-01 remain unconfirmed; RSP-ISS-001 parked. See [REPORT-PRESET-TRANSFER.md](REPORT-PRESET-TRANSFER.md).

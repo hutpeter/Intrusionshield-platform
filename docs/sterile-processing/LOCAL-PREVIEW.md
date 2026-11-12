@@ -390,3 +390,8 @@ Reports hub → Edit preset loads the saved name and filters without a query. Us
 ### Transfer report presets
 
 Reports hub → Export presets JSON downloads names and filters. Choose presets JSON file opens a review with filter summaries and duplicate-name flags. Import new presets appends only new entries to the current browser/user/facility after confirmation; Cancel import leaves storage unchanged. See [REPORT-PRESET-TRANSFER.md](REPORT-PRESET-TRANSFER.md) for the single U-PRESETTRANSFER-01 owner check.
+
+
+### Preset export feedback
+
+Export presets JSON now shows Download requested and a filename/direct download link. Check browser Downloads (Ctrl+J in Windows Chrome) if no save dialog appears; use the link to retry. An empty preset list explains why export is disabled. The one owner check for this fix is U-PRESETEXPORTFEEDBACK-01 in [REPORT-PRESET-TRANSFER.md](REPORT-PRESET-TRANSFER.md).

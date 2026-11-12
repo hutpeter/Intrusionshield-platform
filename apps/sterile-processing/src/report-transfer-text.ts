@@ -4,6 +4,10 @@ const en = {
   filters: "Filters",
   noFilters: "No input filters",
   export: "Export presets JSON",
+  exportRequested:
+    "Download requested. Check your browser’s Downloads. If no file appears, use the download link above.",
+  downloadFile: "Download JSON file",
+  noPresets: "Save a report preset first to enable export.",
   file: "Choose presets JSON file",
   review: "Review import",
   note: "Transfer names and filters only. Imported presets belong to your current user and facility in this browser. Review exact lot codes and fixed dates for this facility. Duplicate names are skipped; existing presets are kept.",
@@ -19,7 +23,7 @@ const en = {
   failed:
     "Presets could not be saved. Review the list again; browser storage may be blocked or presets may have changed.",
   exportFailed:
-    "Could not export presets. Browser storage may be blocked or invalid.",
+    "Could not export presets. Check browser storage and download settings.",
   done: "Presets imported.",
   capacity:
     "The new presets would exceed the limit of 100. Cancel and reduce the file or remove saved presets first.",
@@ -32,6 +36,11 @@ const es: typeof en = {
   filters: "Filtros",
   noFilters: "Sin filtros de entrada",
   export: "Exportar configuraciones JSON",
+  exportRequested:
+    "Descarga solicitada. Revise las descargas del navegador. Si no aparece el archivo, use el enlace de descarga de arriba.",
+  downloadFile: "Descargar archivo JSON",
+  noPresets:
+    "Guarde una configuración de informe para habilitar la exportación.",
   file: "Elegir archivo JSON de configuraciones",
   review: "Revisar importación",
   note: "Solo nombres y filtros. Las configuraciones importadas pertenecen al usuario y centro actuales en este navegador. Revise los códigos exactos de lote y las fechas fijas. Los nombres duplicados se omiten; se conservan las configuraciones existentes.",
@@ -47,7 +56,7 @@ const es: typeof en = {
   failed:
     "No se pudo guardar. Revise la lista; el almacenamiento puede estar bloqueado o las configuraciones haber cambiado.",
   exportFailed:
-    "No se pudo exportar. El almacenamiento puede estar bloqueado o ser inválido.",
+    "No se pudo exportar. Revise el almacenamiento y la configuración de descargas del navegador.",
   done: "Configuraciones importadas.",
   capacity:
     "Las nuevas configuraciones superarían el límite de 100. Cancele y reduzca el archivo o elimine configuraciones guardadas.",
@@ -60,6 +69,10 @@ const fr: typeof en = {
   filters: "Filtres",
   noFilters: "Aucun filtre de saisie",
   export: "Exporter les préréglages JSON",
+  exportRequested:
+    "Téléchargement demandé. Vérifiez les téléchargements du navigateur. Si aucun fichier n’apparaît, utilisez le lien ci-dessus.",
+  downloadFile: "Télécharger le fichier JSON",
+  noPresets: "Enregistrez un préréglage de rapport pour activer l’export.",
   file: "Choisir un fichier JSON de préréglages",
   review: "Vérifier l’import",
   note: "Noms et filtres uniquement. Les préréglages importés appartiennent à votre utilisateur et établissement actuels dans ce navigateur. Vérifiez les codes exacts de lot et dates fixes. Les noms en double sont ignorés ; les préréglages existants sont conservés.",
@@ -74,7 +87,8 @@ const fr: typeof en = {
     "Fichier illisible. Utilisez un JSON Ruby version 1, au maximum 128 Ko et 100 préréglages valides.",
   failed:
     "Enregistrement impossible. Revérifiez la liste ; le stockage peut être bloqué ou les préréglages modifiés.",
-  exportFailed: "Export impossible. Le stockage peut être bloqué ou invalide.",
+  exportFailed:
+    "Export impossible. Vérifiez le stockage et les paramètres de téléchargement du navigateur.",
   done: "Préréglages importés.",
   capacity:
     "Les nouveaux préréglages dépasseraient la limite de 100. Annulez et réduisez le fichier ou supprimez des préréglages enregistrés.",
