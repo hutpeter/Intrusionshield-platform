@@ -433,4 +433,9 @@ Owner acceptance November 12, 2026: “it worked” in response to the duplicate
 
 ## Supplier replenishment view — preview delivered
 
-The replenishment snapshot now defaults to supplier headings with per-lot suggestions/status and a full supplier-ordered CSV. All lots preserves the existing flat view/export. No supplier quantity totals, purchasing actions or stock rule changes. U-SUPPLIERREPLEN-01 pending, single owner check. Catalog identity, cross-lot/product consolidation, purchasing, persisted layout and production scale remain deferred. See [SUPPLIER-REPLENISHMENT.md](SUPPLIER-REPLENISHMENT.md). Asset reuse remains intended; RSP-ISS-001 parked.
+The replenishment snapshot now defaults to supplier headings with per-lot suggestions/status and a full supplier-ordered CSV. All lots preserves the existing flat view/export. No supplier quantity totals, purchasing actions or stock rule changes. U-SUPPLIERREPLEN-01 passed November 12, 2026, single owner check. Catalog identity, cross-lot/product consolidation, purchasing, persisted layout and production scale remain deferred. See [SUPPLIER-REPLENISHMENT.md](SUPPLIER-REPLENISHMENT.md). Asset reuse remains intended; RSP-ISS-001 parked.
+
+
+## Supplier replenishment filter — preview delivered
+
+All suppliers is the default; an exact supplier filters the saved snapshot, CSV and print immediately. CSV adds filter_supplier; presets/portable JSON retain optional supplier selection. Absent suppliers remain selected with empty results. U-SUPPLIERFILTER-01 pending, single owner route. U-SUPPLIERREPLEN-01 passed from the November 12 screenshot. Multi-select, supplier identity, totals, purchasing, server-side filtering and production scale remain deferred. See [SUPPLIER-REPLENISHMENT-FILTER.md](SUPPLIER-REPLENISHMENT-FILTER.md). Asset reuse remains intended; RSP-ISS-001 parked.

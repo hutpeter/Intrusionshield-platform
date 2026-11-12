@@ -1071,6 +1071,13 @@ Owner acceptance November 12, 2026: “it worked” in response to the duplicate
 
 ## Current owner check — supplier replenishment view
 
-**U-SUPPLIERREPLEN-01 pending:** Reports hub → Replenishment report → Generate replenishment report. Keep By supplier; confirm supplier headings and each lot's own suggested quantity/status. This is the only owner check for this build. U-PRESETTRANSFER-01 passed November 12 from the owner's duplicate-review confirmation.
+**U-SUPPLIERREPLEN-01 passed November 12, 2026:** Reports hub → Replenishment report → Generate replenishment report. Keep By supplier; confirm supplier headings and each lot's own suggested quantity/status. This is the only owner check for this build. U-PRESETTRANSFER-01 passed November 12 from the owner's duplicate-review confirmation.
 
 Developer: 76 web tests, web build, live generation/source lot link, Chromium 53-lot supplier grouping/paging, full CSV/print, missing/expired values, immutable snapshots/no view refetch, flat view, empty report, localization/mobile and preset create/edit/run regressions passed. No stock writes. Backend unchanged; previous 228 domain/155 HTTP checks not rerun. Supplier catalog identity, cross-lot/product consolidation, purchasing, grouping filters, saved layout and production scale remain deferred. U-TRACE-01/original U-LOANER-01 remain unconfirmed; RSP-ISS-001 parked. See [SUPPLIER-REPLENISHMENT.md](SUPPLIER-REPLENISHMENT.md).
+
+
+## Current owner check — supplier replenishment filter
+
+**U-SUPPLIERFILTER-01 pending:** Reports hub → Replenishment report → Generate replenishment report → Supplier filter: DEMO-SUPPLIER → Export supplier replenishment CSV. Expect only that supplier's rows and filter_supplier DEMO-SUPPLIER. This is the only owner check; no stock mutation. U-SUPPLIERREPLEN-01 passed November 12 from the screenshot showing one supplier, two lots, suggested 15 and an unset target.
+
+Developer: 80 web tests, web build and Chromium live filtering/source link, exact matching/paging, full filtered CSV/print/metadata, immutable/no-refetch snapshots, flat/group view, saved/portable presets, missing supplier/empty export, All suppliers reset, localization/mobile, grouping/edit/transfer regressions passed. Backend unchanged; prior 228 domain/155 HTTP tests not rerun. Supplier catalog identity, multi-select, cross-product totals, purchasing, server-side filtering and production scale remain deferred. U-TRACE-01/original U-LOANER-01 remain unconfirmed; RSP-ISS-001 parked. See [SUPPLIER-REPLENISHMENT-FILTER.md](SUPPLIER-REPLENISHMENT-FILTER.md).

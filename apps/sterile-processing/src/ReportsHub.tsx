@@ -1,4 +1,3 @@
-import { transferLabels } from "./report-transfer-text";
 import { ReportPresetTransfer } from "./ReportPresetTransfer";
 import { exportPresetFile, importPresetFile } from "./report-preset-transfer";
 import {
@@ -180,7 +179,9 @@ export function ReportsHub({
               }
               filterSummary={(s) => {
                 if (s.report === "replenishment")
-                  return transferLabels(language).noFilters;
+                  return (
+                    s.supplier ?? replenishmentLabels(language).allSuppliers
+                  );
                 if (s.report === "balances") {
                   const t = stockBalanceReportLabels(language);
                   return `${s.lotCode || t.allLots} · ${s.status ? t[s.status] : t.allStatuses}`;

@@ -230,3 +230,27 @@ test("editing rejects conflicting names, changed/deleted records, invalid settin
   ])
     assert.throws(() => updatePreset(entries, old, name, settings));
 });
+
+test("replenishment presets retain an optional exact supplier while legacy All suppliers definitions remain valid", () => {
+  for (const settings of [
+    { report: "replenishment" },
+    { report: "replenishment", supplier: "DEMO-SUPPLIER" },
+    { report: "replenishment", supplier: "Vendor " },
+    { report: "replenishment", supplier: "x".repeat(200) },
+  ]) {
+    assert.equal(validSettings(settings), true);
+    const presets = addPreset([], "Planning", settings, "id");
+    assert.deepEqual(
+      readPresets({ getItem: () => JSON.stringify(presets) }, "key"),
+      presets,
+    );
+  }
+  for (const settings of [
+    { report: "replenishment", supplier: "" },
+    { report: "replenishment", supplier: " " },
+    { report: "replenishment", supplier: 3 },
+    { report: "replenishment", supplier: "x".repeat(201) },
+    { report: "replenishment", supplier: "Vendor", extra: true },
+  ])
+    assert.equal(validSettings(settings), false);
+});

@@ -20,11 +20,27 @@ export function supplierReplenishmentGroups(
       ),
     }));
 }
-export function supplierReplenishmentCsv(report: ReplenishmentReport): string {
-  return replenishmentCsv({
+export function filterSupplierReplenishment(
+  report: ReplenishmentReport,
+  supplier: string,
+): ReplenishmentReport {
+  return {
     ...report,
-    items: supplierReplenishmentGroups(report.items).flatMap(
-      (group) => group.items,
-    ),
-  });
+    items: report.items.filter((row) => !supplier || row.supplier === supplier),
+  };
+}
+export function supplierReplenishmentCsv(
+  report: ReplenishmentReport,
+  supplierFilter?: string,
+): string {
+  const selected = filterSupplierReplenishment(report, supplierFilter ?? "");
+  return replenishmentCsv(
+    {
+      ...selected,
+      items: supplierReplenishmentGroups(selected.items).flatMap(
+        (group) => group.items,
+      ),
+    },
+    supplierFilter,
+  );
 }

@@ -1,6 +1,9 @@
 import type { ReplenishmentReport } from "@intrusionshield/sterile-processing";
 import { csvCell } from "./trace-export.ts";
-export function replenishmentCsv(r: ReplenishmentReport): string {
+export function replenishmentCsv(
+  r: ReplenishmentReport,
+  supplierFilter?: string,
+): string {
   const rows: unknown[][] = [
     [
       "tenant_id",
@@ -21,6 +24,7 @@ export function replenishmentCsv(r: ReplenishmentReport): string {
       "target",
       "suggested_quantity",
       "planning_status",
+      ...(supplierFilter === undefined ? [] : ["filter_supplier"]),
     ],
   ];
   for (const x of r.items)
@@ -43,6 +47,7 @@ export function replenishmentCsv(r: ReplenishmentReport): string {
       x.targetStock,
       x.suggestedQuantity,
       x.status,
+      ...(supplierFilter === undefined ? [] : [supplierFilter]),
     ]);
   return (
     "\ufeff" +

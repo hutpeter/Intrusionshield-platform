@@ -1,13 +1,19 @@
 import type { Language } from "./text";
 const en = {
   title: "Replenishment report",
+  supplierFilter: "Supplier filter",
+  allSuppliers: "All suppliers",
+  sourceLots: "All lots in snapshot",
+  filteredEmpty: "No low-stock lots for this supplier in this snapshot.",
+  supplierFilterNote:
+    "Generate to load or refresh suppliers and stock data. Selection applies immediately to this snapshot, CSV and print.",
   view: "Report view",
   bySupplier: "By supplier",
   allLots: "All lots",
-  supplierCount: "Suppliers in snapshot",
+  supplierCount: "Suppliers in view",
   supplierDownload: "Export supplier replenishment CSV",
   supplierNote:
-    "Groups use recorded supplier names. Suggested quantities remain per lot. CSV includes all suppliers and lots in the snapshot.",
+    "Groups use recorded supplier names. Suggested quantities remain per lot. CSV includes all matching lots in the snapshot.",
   refresh: "Generate replenishment report",
   download: "Export replenishment CSV",
   close: "Close report",
@@ -36,13 +42,20 @@ const en = {
 };
 const es: typeof en = {
   title: "Informe de reposición",
+  supplierFilter: "Filtro de proveedor",
+  allSuppliers: "Todos los proveedores",
+  sourceLots: "Todos los lotes de la instantánea",
+  filteredEmpty:
+    "No hay lotes con existencias bajas para este proveedor en esta instantánea.",
+  supplierFilterNote:
+    "Genere para cargar o actualizar proveedores y existencias. La selección se aplica de inmediato a esta instantánea, CSV e impresión.",
   view: "Vista del informe",
   bySupplier: "Por proveedor",
   allLots: "Todos los lotes",
-  supplierCount: "Proveedores en la instantánea",
+  supplierCount: "Proveedores en la vista",
   supplierDownload: "Exportar CSV de reposición por proveedor",
   supplierNote:
-    "Los grupos usan los nombres de proveedor registrados. Las cantidades sugeridas se mantienen por lote. El CSV incluye todos los proveedores y lotes de la instantánea.",
+    "Los grupos usan los nombres de proveedor registrados. Las cantidades sugeridas se mantienen por lote. El CSV incluye todos los lotes coincidentes de la instantánea.",
   refresh: "Generar informe de reposición",
   download: "Exportar CSV de reposición",
   close: "Cerrar informe",
@@ -71,13 +84,20 @@ const es: typeof en = {
 };
 const fr: typeof en = {
   title: "Rapport de réapprovisionnement",
+  supplierFilter: "Filtre fournisseur",
+  allSuppliers: "Tous les fournisseurs",
+  sourceLots: "Tous les lots de l’instantané",
+  filteredEmpty:
+    "Aucun lot à stock faible pour ce fournisseur dans cet instantané.",
+  supplierFilterNote:
+    "Générez pour charger ou actualiser les fournisseurs et les stocks. La sélection s’applique immédiatement à cet instantané, au CSV et à l’impression.",
   view: "Vue du rapport",
   bySupplier: "Par fournisseur",
   allLots: "Tous les lots",
-  supplierCount: "Fournisseurs de l’instantané",
+  supplierCount: "Fournisseurs de la vue",
   supplierDownload: "Exporter le CSV de réapprovisionnement par fournisseur",
   supplierNote:
-    "Les groupes utilisent les noms de fournisseurs enregistrés. Les quantités suggérées restent par lot. Le CSV inclut tous les fournisseurs et lots de l’instantané.",
+    "Les groupes utilisent les noms de fournisseurs enregistrés. Les quantités suggérées restent par lot. Le CSV inclut tous les lots correspondants de l’instantané.",
   refresh: "Générer le rapport de réapprovisionnement",
   download: "Exporter le CSV de réapprovisionnement",
   close: "Fermer le rapport",

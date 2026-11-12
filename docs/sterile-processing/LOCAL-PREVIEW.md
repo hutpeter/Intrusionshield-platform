@@ -400,3 +400,8 @@ Export presets JSON now requests one download and shows Download requested plus 
 ### Supplier replenishment view
 
 Reports hub → Replenishment report → Generate replenishment report defaults to By supplier. Suggested quantity/status are beside the product, with one supplier heading per visible group. All lots restores the flat view. Export supplier replenishment CSV includes every lot in the saved snapshot. See [SUPPLIER-REPLENISHMENT.md](SUPPLIER-REPLENISHMENT.md) for the single U-SUPPLIERREPLEN-01 owner check.
+
+
+### Supplier replenishment filter
+
+Generate the replenishment report to load supplier choices, then choose Supplier filter (default All suppliers). Selection applies immediately to grouped/flat rows, full CSV and print, using the existing snapshot. Saved presets remember the selection. See [SUPPLIER-REPLENISHMENT-FILTER.md](SUPPLIER-REPLENISHMENT-FILTER.md) for the single U-SUPPLIERFILTER-01 owner check.

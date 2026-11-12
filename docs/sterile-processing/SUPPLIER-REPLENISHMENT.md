@@ -10,8 +10,10 @@ Export supplier replenishment CSV writes the full saved snapshot, sorted by supp
 
 76 web tests and the web build passed. New tests cover exact supplier names including case/spacing variants and prototype-like text, stable lot ordering without source mutation, differing products' separate suggestions, missing/expired statuses, all 53 CSV rows, scope/time/unit, empty data and spreadsheet-safe text. Chromium exercised live generation and an exact live lot source link, then a 53-lot/three-supplier read fixture spanning pages. Checks covered repeated group headings, full CSV/print snapshots, per-lot blank targets/suggestions and expired status, literal HTML-like supplier names, view switching without refetching, original flat CSV, empty regeneration and ES/FR/mobile layout. Existing preset create/edit/rename/run regressions passed. Screenshot inspected. No stock writes or browser errors. Backend unchanged; prior 228 domain and 155 HTTP/SQLite suites were not rerun for this UI-only feature.
 
-## One owner check — U-SUPPLIERREPLEN-01 pending
+## One owner check — U-SUPPLIERREPLEN-01 passed November 12, 2026
 
 Reports hub → Replenishment report → Generate replenishment report. Keep Report view: By supplier. Confirm supplier headings and each lot's own suggested quantity/planning status. This is the only owner check; developer tests cover CSV and other views. No stock mutation is needed.
 
 Supplier catalog identity, consolidation across lots/products, purchasing workflows, grouping filters, persisted layout preferences and production-scale querying remain deferred. Future Ruby Asset Management reuse remains intended. U-TRACE-01 and original U-LOANER-01 remain unconfirmed; RSP-ISS-001 stays parked.
+
+Owner screenshot November 12 confirms U-SUPPLIERREPLEN-01: one DEMO-SUPPLIER group, two lots, suggested 15 and an unset-target blank, snapshot 2026-11-12T13:56:50.960Z. Supplier selection, filtered exports and saved supplier presets are now documented in [SUPPLIER-REPLENISHMENT-FILTER.md](SUPPLIER-REPLENISHMENT-FILTER.md); its export metadata update supersedes the original CSV-column description above.

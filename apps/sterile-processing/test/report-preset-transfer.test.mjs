@@ -168,3 +168,31 @@ test("imported display text remains literal data and fixed/relative choices rema
   assert.equal(parsed[1].settings.from, "2026-11-01");
   assert.equal(parsed[2].settings.range, "last7");
 });
+
+test("supplier-specific replenishment presets transfer with the exact filter and no source identity", () => {
+  const source = [
+    {
+      id: "source",
+      name: "Vendor plan",
+      settings: { report: "replenishment", supplier: "Specific Vendor" },
+    },
+  ];
+  const portable = parsePresetFile(exportPresetFile(source));
+  assert.deepEqual(portable, [
+    {
+      name: "Vendor plan",
+      settings: { report: "replenishment", supplier: "Specific Vendor" },
+    },
+  ]);
+  assert.equal(
+    importPresetFile([], portable, () => "new")[0].settings.supplier,
+    "Specific Vendor",
+  );
+  assert.throws(() =>
+    parsePresetFile(
+      bundle([
+        { name: "Bad", settings: { report: "replenishment", supplier: "" } },
+      ]),
+    ),
+  );
+});

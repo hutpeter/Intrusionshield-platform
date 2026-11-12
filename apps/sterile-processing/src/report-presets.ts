@@ -44,7 +44,7 @@ export type PresetSettings =
       status: ConsumableExpiryStatus | "";
       horizon: string;
     }
-  | { report: "replenishment" };
+  | { report: "replenishment"; supplier?: string };
 export type ReportPreset = {
   id: string;
   name: string;
@@ -75,7 +75,14 @@ function validDay(v: unknown): v is string {
 export function validSettings(v: unknown): v is PresetSettings {
   if (!v || typeof v !== "object") return false;
   const x = v as Record<string, unknown>;
-  if (x.report === "replenishment") return Object.keys(x).length === 1;
+  if (x.report === "replenishment")
+    return (
+      Object.keys(x).length === 1 ||
+      (Object.keys(x).length === 2 &&
+        typeof x.supplier === "string" &&
+        !!x.supplier.trim() &&
+        x.supplier.length <= 200)
+    );
   if (typeof x.lotCode !== "string" || x.lotCode.length > 100) return false;
   if (x.report === "balances")
     return (

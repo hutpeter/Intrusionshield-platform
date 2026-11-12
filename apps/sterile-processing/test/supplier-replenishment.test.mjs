@@ -116,3 +116,63 @@ test("supplier CSV includes the entire saved scope and all suppliers beyond the 
   assert.equal(supplierReplenishmentCsv(report).split("\r\n").length, 2);
   assert.deepEqual(supplierReplenishmentGroups([]), []);
 });
+
+test("supplier filter is exact, immutable and uses the full saved snapshot", async () => {
+  const { filterSupplierReplenishment } =
+    await import("../src/supplier-replenishment.ts");
+  const snapshot = {
+    ...report,
+    items: Array.from({ length: 53 }, (_, i) => ({
+      ...item,
+      lotId: "id" + i,
+      code: "LOT" + i,
+      supplier: i === 52 ? "Vendor" : "vendor",
+    })),
+  };
+  const copy = structuredClone(snapshot);
+  const selected = filterSupplierReplenishment(snapshot, "Vendor");
+  assert.equal(selected.items.length, 1);
+  assert.equal(selected.items[0].lotId, "id52");
+  assert.equal(selected.generatedAt, snapshot.generatedAt);
+  assert.equal(selected.facilityId, snapshot.facilityId);
+  assert.equal(filterSupplierReplenishment(snapshot, "").items.length, 53);
+  assert.equal(
+    filterSupplierReplenishment(snapshot, "missing").items.length,
+    0,
+  );
+  assert.equal(
+    filterSupplierReplenishment(snapshot, "Vendor ").items.length,
+    0,
+  );
+  assert.deepEqual(snapshot, copy);
+});
+test("filtered CSV includes only selected supplier rows with preserved statuses and safe filter metadata", () => {
+  const snapshot = {
+    ...report,
+    items: [
+      { ...item, lotId: "first", supplier: "=Vendor" },
+      { ...item, lotId: "second", code: "OTHER", supplier: "Other" },
+      {
+        ...item,
+        lotId: "third",
+        code: "NO-TARGET",
+        supplier: "=Vendor",
+        targetStock: null,
+        suggestedQuantity: null,
+        status: "target_not_set",
+      },
+    ],
+  };
+  const csv = supplierReplenishmentCsv(snapshot, "=Vendor");
+  assert.equal(csv.split("\r\n").length, 4);
+  assert.ok(csv.includes('"filter_supplier"'));
+  assert.ok(!csv.includes('"OTHER"'));
+  assert.ok(csv.includes('"target_not_set","\'=Vendor"'));
+  assert.ok(csv.includes('"15","suggested","\'=Vendor"'));
+  assert.ok(csv.includes(report.generatedAt));
+  assert.equal(
+    supplierReplenishmentCsv(snapshot, "missing").split("\r\n").length,
+    2,
+  );
+  assert.equal(supplierReplenishmentCsv(snapshot, "").split("\r\n").length, 5);
+});

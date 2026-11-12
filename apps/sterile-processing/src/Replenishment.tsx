@@ -1,4 +1,5 @@
 import {
+  filterSupplierReplenishment,
   supplierReplenishmentGroups,
   supplierReplenishmentCsv,
 } from "./supplier-replenishment";
@@ -40,14 +41,27 @@ export function Replenishment({
     [error, setError] = useState<unknown>(null),
     [page, setPage] = useState(1),
     [bySupplier, setBySupplier] = useState(true),
+    [supplier, setSupplier] = useState(
+      initialPreset?.report === "replenishment"
+        ? (initialPreset.supplier ?? "")
+        : "",
+    ),
     pending = useRef<AbortController | null>(null);
-  const groups = useMemo(
+  const allGroups = useMemo(
     () => supplierReplenishmentGroups(report?.items ?? []),
     [report],
   );
+  const filteredReport = useMemo(
+    () => (report ? filterSupplierReplenishment(report, supplier) : null),
+    [report, supplier],
+  );
+  const groups = useMemo(
+    () => supplierReplenishmentGroups(filteredReport?.items ?? []),
+    [filteredReport],
+  );
   const ordered = bySupplier
     ? groups.flatMap((group) => group.items)
-    : (report?.items ?? []);
+    : (filteredReport?.items ?? []);
   const pageItems = ordered.slice((page - 1) * 50, page * 50);
   const pageGroups = bySupplier
     ? supplierReplenishmentGroups(pageItems)
@@ -90,8 +104,8 @@ export function Replenishment({
         new Blob(
           [
             bySupplier
-              ? supplierReplenishmentCsv(report)
-              : replenishmentCsv(report),
+              ? supplierReplenishmentCsv(report, supplier)
+              : replenishmentCsv(filteredReport!, supplier),
           ],
           {
             type: "text/csv;charset=utf-8",
@@ -100,7 +114,7 @@ export function Replenishment({
       ),
       a = document.createElement("a");
     a.href = url;
-    a.download = `ruby-replenishment-${bySupplier ? "by-supplier-" : ""}${report.generatedAt.slice(0, 10)}.csv`;
+    a.download = `ruby-replenishment-${bySupplier ? "by-supplier-" : ""}${supplier ? "filtered-" : ""}${report.generatedAt.slice(0, 10)}.csv`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 0);
   }
@@ -118,7 +132,10 @@ export function Replenishment({
           language={language}
           editingPresetName={editingPresetName}
           disabled={blocked || loading}
-          settings={{ report: "replenishment" }}
+          settings={{
+            report: "replenishment",
+            ...(supplier ? { supplier } : {}),
+          }}
           onSave={onSavePreset}
         />
       )}
@@ -133,10 +150,13 @@ export function Replenishment({
         onClick={() => {
           if (!report || blocked || loading) return;
           try {
-            printStockReport(
-              replenishmentPrintModel(report, language, session.facilityName),
+            const model = replenishmentPrintModel(
+              filteredReport!,
               language,
+              session.facilityName,
             );
+            model.metadata.push([t.supplierFilter, supplier || t.allSuppliers]);
+            printStockReport(model, language);
           } catch (e) {
             setError(e);
           }
@@ -152,6 +172,29 @@ export function Replenishment({
             : c.error}
         </p>
       )}
+      <label>
+        {t.supplierFilter}
+        <select
+          aria-label={t.supplierFilter}
+          disabled={blocked || loading}
+          value={supplier}
+          onChange={(e) => {
+            setSupplier(e.target.value);
+            setPage(1);
+          }}
+        >
+          <option value="">{t.allSuppliers}</option>
+          {supplier && !allGroups.some((g) => g.supplier === supplier) && (
+            <option value={supplier}>{supplier}</option>
+          )}
+          {allGroups.map((g) => (
+            <option key={g.supplier} value={g.supplier}>
+              {g.supplier}
+            </option>
+          ))}
+        </select>
+      </label>
+      <p>{t.supplierFilterNote}</p>
       <label>
         {t.view}
         <select
@@ -171,15 +214,19 @@ export function Replenishment({
       {report && (
         <>
           <p>
-            {t.snapshot}: {report.generatedAt} · {report.items.length}
+            {t.snapshot}: {report.generatedAt} · {filteredReport!.items.length}
+          </p>
+          <p>
+            {t.supplierFilter}: {supplier || t.allSuppliers} · {t.sourceLots}:{" "}
+            {report.items.length}
           </p>
           {bySupplier && (
             <p>
               {t.supplierCount}: {groups.length}
             </p>
           )}
-          {!report.items.length ? (
-            <p>{t.empty}</p>
+          {!filteredReport!.items.length ? (
+            <p>{supplier ? t.filteredEmpty : t.empty}</p>
           ) : (
             <>
               <div className="table-scroll">
@@ -277,7 +324,9 @@ export function Replenishment({
                 </span>
                 <button
                   disabled={
-                    blocked || loading || page * 50 >= report.items.length
+                    blocked ||
+                    loading ||
+                    page * 50 >= filteredReport!.items.length
                   }
                   onClick={() => setPage((p) => p + 1)}
                 >
