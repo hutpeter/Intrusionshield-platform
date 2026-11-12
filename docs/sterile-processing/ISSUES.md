@@ -416,7 +416,7 @@ Owner acceptance November 12, 2026: “it worked” confirms the requested edit/
 
 ## Report preset export/import — preview delivered
 
-Versioned JSON transfers names and filters without scope, IDs or snapshots. Import reviews readable filters and duplicates before explicitly appending new definitions to the destination browser/user/facility. Existing presets are preserved. U-PRESETTRANSFER-01 pending, single owner check. Shared synchronization, overwrite/automatic renaming, scheduling, simultaneous transactional edits and production scale remain deferred. See [REPORT-PRESET-TRANSFER.md](REPORT-PRESET-TRANSFER.md). Asset reuse remains intended; RSP-ISS-001 parked.
+Versioned JSON transfers names and filters without scope, IDs or snapshots. Import reviews readable filters and duplicates before explicitly appending new definitions to the destination browser/user/facility. Existing presets are preserved. U-PRESETTRANSFER-01 passed November 12, 2026, single owner check. Shared synchronization, overwrite/automatic renaming, scheduling, simultaneous transactional edits and production scale remain deferred. See [REPORT-PRESET-TRANSFER.md](REPORT-PRESET-TRANSFER.md). Asset reuse remains intended; RSP-ISS-001 parked.
 
 
 ## Preset export had no visual feedback — preview fix delivered
@@ -427,3 +427,5 @@ Owner found and uploaded the JSON after reporting that the button appeared inact
 ## Extra export link encouraged duplicate downloads — preview refinement delivered
 
 Owner confirmed automatic export and visible feedback but noted the second link downloaded another copy. Export is now the sole action; the filename is plain text and the confirmation directs users to browser Downloads. U-SINGLEPRESETEXPORT-01 pending, single-click check. U-PRESETEXPORTFEEDBACK-01 passed November 12 from the screenshot/confirmation. See [REPORT-PRESET-TRANSFER.md](REPORT-PRESET-TRANSFER.md). Deferred items unchanged; RSP-ISS-001 parked.
+
+Owner acceptance November 12, 2026: “it worked” in response to the duplicate import review/cancel instructions confirms U-PRESETTRANSFER-01 passed. Duplicate names were skipped, confirmation disabled and no new presets added. This does not establish broader browser acceptance or unrelated pending owner checks.
