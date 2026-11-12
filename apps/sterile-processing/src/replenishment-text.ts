@@ -6,7 +6,7 @@ const en = {
   summaryMissing: "Target not set",
   summaryExpired: "Expired lots",
   summaryNote:
-    "Counts cover the selected supplier across all planning statuses and every page of this snapshot. The table also applies the planning-status filter. Quantities remain per lot.",
+    "Counts cover the selected supplier across all planning statuses and every page of this snapshot. Select a card to filter the table; choose All statuses to clear the status filter. Quantities remain per lot.",
   supplierFilter: "Supplier filter",
   planningStatusFilter: "Planning status filter",
   allStatuses: "All statuses",
@@ -55,7 +55,7 @@ const es: typeof en = {
   summaryMissing: "Sin objetivo",
   summaryExpired: "Lotes caducados",
   summaryNote:
-    "Los recuentos abarcan el proveedor seleccionado, todos los estados de planificación y todas las páginas de esta instantánea. La tabla también aplica el filtro de estado. Las cantidades se mantienen por lote.",
+    "Los recuentos abarcan el proveedor seleccionado, todos los estados de planificación y todas las páginas de esta instantánea. Seleccione una tarjeta para filtrar la tabla; elija Todos los estados para quitar el filtro de estado. Las cantidades se mantienen por lote.",
   supplierFilter: "Filtro de proveedor",
   planningStatusFilter: "Filtro de estado de planificación",
   allStatuses: "Todos los estados",
@@ -105,7 +105,7 @@ const fr: typeof en = {
   summaryMissing: "Cible non définie",
   summaryExpired: "Lots périmés",
   summaryNote:
-    "Les nombres couvrent le fournisseur sélectionné, tous les états de planification et toutes les pages de cet instantané. Le tableau applique aussi le filtre d’état. Les quantités restent par lot.",
+    "Les nombres couvrent le fournisseur sélectionné, tous les états de planification et toutes les pages de cet instantané. Sélectionnez une carte pour filtrer le tableau ; choisissez Tous les états pour retirer ce filtre. Les quantités restent par lot.",
   supplierFilter: "Filtre fournisseur",
   planningStatusFilter: "Filtre d’état de planification",
   allStatuses: "Tous les états",

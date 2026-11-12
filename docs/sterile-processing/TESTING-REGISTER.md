@@ -1101,3 +1101,10 @@ Owner evidence November 12, 2026: ruby-replenishment-by-supplier-filtered-2026-1
 Developer: 87 web tests, web build, Chromium live/60-lot full-snapshot counts, supplier selection, page/status/view scope, unchanged filtered CSV/print, no refetch, regeneration, zero states and localization/mobile plus planning/preset/transfer regressions passed. Backend unchanged; prior 228 domain/155 HTTP tests not rerun. Clickable cards, summary exports, supplier identity, purchasing, totals, server aggregation and production scale remain deferred. U-TRACE-01/original U-LOANER-01 remain unconfirmed; RSP-ISS-001 parked. See [REPLENISHMENT-SUMMARY.md](REPLENISHMENT-SUMMARY.md).
 
 Owner screenshot November 12, 2026 confirms U-REPLENSUMMARY-01: All suppliers / All statuses, two lots and one supplier, summary Suggested lots 1 / Target not set 1 / Expired lots 0, snapshot 2026-11-12T19:36:24.435Z. Counts agree with the visible lot statuses. Other pending acceptance and deferred items remain unchanged.
+
+
+## Current owner check — clickable replenishment summary
+
+**U-REPLENCARD-01 pending:** Reports hub → Replenishment report → Generate → select DEMO-SUPPLIER → click the Target not set card. Expect highlighted card, matching status dropdown and one demo lot, retaining the supplier. This is the only owner check; no export/stock mutation requested. U-REPLENSUMMARY-01 passed November 12 from the owner's 1/1/0 screenshot.
+
+Developer: 87 web tests, preview build and Chromium native mouse/keyboard actions, pressed/dropdown sync, supplier retention/paging, zero-count and clear behavior, stable counts/no refetch, CSV/print/preset integration, pending disable, localization/mobile and planning-filter regressions passed. Backend unchanged; previous domain/HTTP suites not rerun for this UI-only interaction. Summary exports, purchasing, aggregation and production scale remain deferred; U-TRACE-01/original U-LOANER-01 remain unconfirmed and RSP-ISS-001 parked. See [REPLENISHMENT-SUMMARY.md](REPLENISHMENT-SUMMARY.md).

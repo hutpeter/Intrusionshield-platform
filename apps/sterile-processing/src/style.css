@@ -1302,6 +1302,9 @@ td {
 .supplier-group-heading th {background:#edf5f1;text-align:left;overflow-wrap:anywhere;}
 
 .replenishment-summary {display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,180px),1fr));gap:12px;margin:16px 0;}
-.replenishment-summary > div {padding:16px;border:1px solid #dbe4e1;border-radius:8px;background:#f6faf8;}
-.replenishment-summary dt {margin:0;overflow-wrap:anywhere;}
-.replenishment-summary dd {margin:8px 0 0;font-size:1.75rem;font-weight:700;color:#176466;}
+.replenishment-summary > button {padding:16px;border:1px solid #dbe4e1;border-radius:8px;background:#f6faf8;text-align:left;display:flex;flex-direction:column;gap:8px;align-items:flex-start;}
+.replenishment-summary span {overflow-wrap:anywhere;}
+.replenishment-summary strong {font-size:1.75rem;font-weight:700;color:#176466;}
+
+.replenishment-summary > button[aria-pressed="true"] {background:#e1f0eb;border:2px solid #176466;padding:15px;}
+.replenishment-summary > button:focus-visible {outline:3px solid #176466;outline-offset:3px;}

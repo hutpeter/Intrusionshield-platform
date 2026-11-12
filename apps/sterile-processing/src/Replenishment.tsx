@@ -278,20 +278,34 @@ export function Replenishment({
           <section aria-label={t.summaryTitle}>
             <h3>{t.summaryTitle}</h3>
             <p>{t.summaryNote}</p>
-            <dl className="replenishment-summary">
-              <div>
-                <dt>{t.summarySuggested}</dt>
-                <dd>{counts!.suggested}</dd>
-              </div>
-              <div>
-                <dt>{t.summaryMissing}</dt>
-                <dd>{counts!.target_not_set}</dd>
-              </div>
-              <div>
-                <dt>{t.summaryExpired}</dt>
-                <dd>{counts!.expired}</dd>
-              </div>
-            </dl>
+            <div
+              className="replenishment-summary"
+              role="group"
+              aria-label={t.summaryTitle}
+            >
+              {(
+                [
+                  ["suggested", t.summarySuggested],
+                  ["target_not_set", t.summaryMissing],
+                  ["expired", t.summaryExpired],
+                ] as const
+              ).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  disabled={blocked || loading}
+                  aria-pressed={planningStatus === value}
+                  aria-label={`${label}: ${counts![value]}`}
+                  onClick={() => {
+                    setPlanningStatus(value);
+                    setPage(1);
+                  }}
+                >
+                  <span>{label}</span>
+                  <strong>{counts![value]}</strong>
+                </button>
+              ))}
+            </div>
           </section>
           {!filteredReport!.items.length ? (
             <p>{supplier || planningStatus ? t.filteredEmpty : t.empty}</p>

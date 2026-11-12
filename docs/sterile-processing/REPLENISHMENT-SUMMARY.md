@@ -14,6 +14,17 @@ The table, full CSV and print retain their combined supplier/status filters and 
 
 Reports hub → Replenishment report → Generate replenishment report. Keep All suppliers and All statuses. Confirm the three summary counts against the displayed lots. For the current November 12 two-lot demo: Suggested lots 1, Target not set 1, Expired lots 0. This is the only owner check; no CSV or stock movement is requested.
 
-U-REPLENSTATUS-01 passed November 12 from the uploaded one-row combined-filter CSV. Clickable summary cards, summary export/print, supplier identity, purchasing, cross-product totals, server-side aggregation and production scale remain deferred. Ruby Asset Management reuse remains intended; U-TRACE-01/original U-LOANER-01 remain unconfirmed and RSP-ISS-001 stays parked.
+U-REPLENSTATUS-01 passed November 12 from the uploaded one-row combined-filter CSV. Summary export/print, supplier identity, purchasing, cross-product totals, server-side aggregation and production scale remain deferred. Ruby Asset Management reuse remains intended; U-TRACE-01/original U-LOANER-01 remain unconfirmed and RSP-ISS-001 stays parked.
 
 Owner screenshot November 12, 2026 confirms U-REPLENSUMMARY-01: All suppliers / All statuses, two lots and one supplier, summary Suggested lots 1 / Target not set 1 / Expired lots 0, snapshot 2026-11-12T19:36:24.435Z. Counts agree with the visible lot statuses. Other pending acceptance and deferred items remain unchanged.
+
+
+## Summary cards apply status filters — November 12, 2026
+
+Suggested lots, Target not set and Expired lots are now native buttons. Activating one sets the existing planning-status selection and resets the table to page one, preserving the supplier. The selected card uses aria-pressed and a visible border/background. Mouse, Enter and Space are supported; cards are disabled during source loading or a blocked session. Zero-count cards remain selectable and show the existing explicit empty result. Selecting an already active card keeps the same filter; All statuses clears it. Counts still cover the selected supplier's full snapshot across all statuses/pages.
+
+CSV, print and saved/portable preset definitions use the same planningStatus state, so they follow the card selection without any schema or source API change. No query or stock movement is triggered by a card click. Existing dropdown changes also update the selected card. EN/ES/FR notes explain the action and clearing it.
+
+87 web tests and the preview build passed. Chromium checked live cards and a 55-lot read fixture, mouse/Enter/Space, dropdown/pressed synchronization, supplier retention, page reset, stable counts/no refetch, zero-count/empty results, All statuses clearing, grouped/flat views, CSV/print/preset runs and disabled controls while a request was held pending. Localization/mobile and existing planning-filter/preset/transfer regression checks passed. Screenshot inspected. No stock writes or browser errors. Backend unchanged; previous domain/HTTP suites were not rerun for this UI-only interaction.
+
+Single owner check U-REPLENCARD-01 pending: Reports hub → Replenishment report → Generate → Supplier filter DEMO-SUPPLIER → click the Target not set summary card. Expect that card highlighted, the status dropdown set to Target not set and one matching demo lot, with DEMO-SUPPLIER retained. This is the only owner check; no export or stock mutation requested. Summary export/print, purchasing and server aggregation remain deferred; prior unconfirmed items and RSP-ISS-001 remain unchanged.

@@ -415,3 +415,8 @@ Generate the replenishment report, then select Planning status filter alongside 
 ### Replenishment summary counts
 
 Generate the replenishment report to show three status-count cards. Counts cover the selected supplier across every page and all planning statuses; the table also applies its status filter. CSV and print continue to follow table filters. See [REPLENISHMENT-SUMMARY.md](REPLENISHMENT-SUMMARY.md) for the single U-REPLENSUMMARY-01 owner check.
+
+
+### Click replenishment summary cards
+
+After generating the report, click Suggested lots, Target not set or Expired lots to apply that status while retaining the supplier. The selected card and dropdown stay synchronized. Enter/Space work; All statuses clears the selection. See [REPLENISHMENT-SUMMARY.md](REPLENISHMENT-SUMMARY.md) for the single U-REPLENCARD-01 owner check.
