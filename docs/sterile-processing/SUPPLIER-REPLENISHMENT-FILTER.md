@@ -12,8 +12,10 @@ Saved replenishment presets can retain optional supplier text (nonblank, at most
 
 80 web tests and the web build passed. New tests cover exact filtering beyond fifty rows, immutable snapshots, absent/All suppliers, per-lot states, CSV filter metadata/escaping, legacy and supplier-specific preset validation, bounds and portable round trips. Chromium covered live filtering/source links, a 54-lot/three-supplier snapshot, page reset, case-distinct suppliers, a 51-lot export/print with filter metadata beyond the screen page, no source refetch, flat/group view, preset save/run/export, missing supplier on regeneration with header-only export, All suppliers reset and ES/FR/mobile. Existing grouping, preset editing and transfer/import regressions passed. Screenshot inspected. No stock writes or browser errors. Backend unchanged; preceding 228 domain and 155 HTTP/SQLite tests were not rerun for this UI-only feature.
 
-## One owner check — U-SUPPLIERFILTER-01 pending
+## One owner check — U-SUPPLIERFILTER-01 passed November 12, 2026
 
 Reports hub → Replenishment report → Generate replenishment report → Supplier filter: DEMO-SUPPLIER → Export supplier replenishment CSV. Confirm rows belong to DEMO-SUPPLIER and the CSV filter_supplier value is DEMO-SUPPLIER. This is the only owner check for this build; no stock mutation is needed.
 
 U-SUPPLIERREPLEN-01 passed from the owner's November 12 screenshot: one supplier, two lots, suggested quantity 15 and an unset-target blank, snapshot 2026-11-12T13:56:50.960Z. Supplier catalog identity, multi-select, cross-product totals, purchasing, server-side filtered querying and production scale remain deferred. Future Ruby Asset Management reuse remains intended; U-TRACE-01 and original U-LOANER-01 remain unconfirmed and RSP-ISS-001 stays parked.
+
+Owner evidence November 12, 2026: uploaded ruby-replenishment-by-supplier-filtered-2026-11-12.csv contains two rows, both supplier/filter_supplier DEMO-SUPPLIER, snapshot 2026-11-12T16:03:30.443Z, unit each. One row has available 5/minimum 10/target 20/suggested 15; the other retains blank target/suggestion and target_not_set. U-SUPPLIERFILTER-01 passed. Other pending acceptance and deferred items remain unchanged.
