@@ -10,8 +10,10 @@ Names remain case-insensitively unique, trimmed, one–80 characters. Invalid fi
 
 68 web tests and the web build passed. New tests cover stable identity/order, rename, fixed-to-relative filter updates, immutability, updates at the hundred-preset limit, duplicate names, invalid settings, report-type changes and changed/deleted edit targets. Chromium exercised edit/rename/save/run for all four reports, no source query on Edit or Update, restored query filters, cancellation, duplicate names, blocked storage, stale/deleted targets, refresh persistence, scope separation and ES/FR/mobile layout. Existing preset and relative-date regression checks passed, including frozen CSV/print metadata. No stock writes or browser errors occurred. The edit form screenshot was visually inspected. Backend unchanged; prior 228 domain and 155 HTTP/SQLite tests were not rerun for this UI feature.
 
-## One owner check — U-EDITPRESET-01 pending
+## One owner check — U-EDITPRESET-01 passed November 12, 2026
 
 Reports hub → Edit preset for your saved Last 7 days movement preset → change Date range (UTC) to Last 30 days and Preset name to “Last 30 days” → Update preset → Close movement report → Run preset for the renamed entry. Confirm one renamed entry and automatic generation over thirty UTC days including today. This is the only owner check; no stock mutation is needed.
 
 Additional relative windows, scheduling, shared/server preferences, transactional simultaneous edits and production scale remain deferred. Future Ruby Asset Management reuse remains intended. U-TRACE-01 and original U-LOANER-01 remain unconfirmed; RSP-ISS-001 stays parked. The earlier owner screenshot confirms November 5–11 movement output with eight movements; it does not independently show the full relative preset save/run route, which remains unconfirmed in U-RELATIVEMOVE-01.
+
+Owner acceptance November 12, 2026: “it worked” confirms the requested edit/rename/update/run check. The accompanying screenshot shows Reports hub selected and a fresh movement snapshot at 2026-11-12T08:55:13.567Z covering October 14–November 12 (thirty inclusive UTC days), eight movements, All lots / All movement types. Other acceptance and deferred items are unchanged.

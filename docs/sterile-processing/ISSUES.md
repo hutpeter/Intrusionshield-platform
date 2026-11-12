@@ -409,4 +409,6 @@ Last 7 days / Last 30 days resolve current inclusive UTC dates on every generati
 
 ## Edit and rename report presets — preview delivered
 
-Edit preset loads saved filters/name without fetching report data. Update preset preserves the existing ID and rejects invalid names/filters, observed stale/deleted targets and failed storage. Run still fetches fresh data. U-EDITPRESET-01 pending, single owner route. Shared/server preferences, simultaneous transactional edits, scheduling and production scale remain deferred. See [EDIT-REPORT-PRESETS.md](EDIT-REPORT-PRESETS.md). Asset reuse remains intended; RSP-ISS-001 parked.
+Edit preset loads saved filters/name without fetching report data. Update preset preserves the existing ID and rejects invalid names/filters, observed stale/deleted targets and failed storage. Run still fetches fresh data. U-EDITPRESET-01 passed November 12, 2026, single owner route. Shared/server preferences, simultaneous transactional edits, scheduling and production scale remain deferred. See [EDIT-REPORT-PRESETS.md](EDIT-REPORT-PRESETS.md). Asset reuse remains intended; RSP-ISS-001 parked.
+
+Owner acceptance November 12, 2026: “it worked” confirms the requested edit/rename/update/run check. The accompanying screenshot shows Reports hub selected and a fresh movement snapshot at 2026-11-12T08:55:13.567Z covering October 14–November 12 (thirty inclusive UTC days), eight movements, All lots / All movement types. Other acceptance and deferred items are unchanged.

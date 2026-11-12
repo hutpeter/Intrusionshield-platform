@@ -1039,6 +1039,8 @@ Developer: 66 web tests, web build, UTC boundary/legacy storage tests and Chromi
 
 ## Current owner check — edit and rename report presets
 
-**U-EDITPRESET-01 pending:** Reports hub → Edit preset on the saved Last 7 days movement preset → select Last 30 days and rename to “Last 30 days” → Update preset → Close movement report → Run preset. Expect one renamed entry and automatic generation covering thirty UTC days including today. This is the only owner check for this build.
+**U-EDITPRESET-01 passed November 12, 2026:** Reports hub → Edit preset on the saved Last 7 days movement preset → select Last 30 days and rename to “Last 30 days” → Update preset → Close movement report → Run preset. Expect one renamed entry and automatic generation covering thirty UTC days including today. This is the only owner check for this build.
 
 Developer: 68 web tests, web build and Chromium all-four edit/rename/run, stable identity/count, cancellation, duplicate names, blocked storage, stale/deleted edits, persistence, scope separation, localization/mobile and existing preset/relative-date regressions passed. Backend unchanged; prior 228 domain/155 HTTP checks not rerun. Shared/server preferences, additional windows, scheduling, simultaneous edit transactions and production scale remain deferred. Earlier owner screenshot confirms seven-day movement output (November 5–11, eight movements); full U-RELATIVEMOVE-01 preset route remains unconfirmed. U-TRACE-01 and original U-LOANER-01 remain unconfirmed; RSP-ISS-001 parked. See [EDIT-REPORT-PRESETS.md](EDIT-REPORT-PRESETS.md).
+
+Owner acceptance November 12, 2026: “it worked” confirms the requested edit/rename/update/run check. The accompanying screenshot shows Reports hub selected and a fresh movement snapshot at 2026-11-12T08:55:13.567Z covering October 14–November 12 (thirty inclusive UTC days), eight movements, All lots / All movement types. Other acceptance and deferred items are unchanged.
