@@ -7,12 +7,18 @@
   "types": "./dist/app.d.ts",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "test": "pnpm --filter @intrusionshield/sterile-processing build && pnpm build && node --test test/*.test.mjs"
+    "test": "pnpm --filter @intrusionshield/sterile-processing build && pnpm build && node --test test/*.test.mjs",
+    "build:account": "pnpm --filter @intrusionshield/authentication-service... build && pnpm --filter @intrusionshield/identity-persistence... build && pnpm --filter @intrusionshield/sterile-processing build && pnpm build",
+    "test:account": "pnpm build:account && pnpm --filter @intrusionshield/sterile-processing-web build && node --test runtime/test/*.test.mjs"
   },
   "dependencies": {
     "@intrusionshield/sterile-processing": "workspace:*",
     "express": "^5.1.0",
-    "jsonwebtoken": "^9.0.2"
+    "jsonwebtoken": "^9.0.2",
+    "@intrusionshield/authentication-service": "workspace:*",
+    "@intrusionshield/database": "workspace:*",
+    "@intrusionshield/identity-persistence": "workspace:*",
+    "@intrusionshield/tenant-configuration": "workspace:*"
   },
   "devDependencies": {
     "@types/express": "^5.0.5",

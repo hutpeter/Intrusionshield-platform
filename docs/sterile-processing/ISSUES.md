@@ -1,5 +1,13 @@
 # Ruby Sterile Processing — issues log
 
+**November 13 account runtime:** [ACCOUNT-RUNTIME.md](ACCOUNT-RUNTIME.md) adds the
+concrete HTTPS loopback launcher, explicit configuration/preflight, Ruby password
+and current-identity composition through a SELECT-only SQL connection, separate
+local workflow/access stores and trusted offline grants. No live identity database
+was contacted. Actual configured sign-in/Windows/TLS/SQL acceptance remains pending;
+web administration, central entitlement integration and independent inspection are
+not completed by this setup. Older composition-only status notes remain historical.
+
 **November 13 browser increment:** [BROWSER-SIGNIN.md](BROWSER-SIGNIN.md) records
 the implemented separate HTTPS sign-in/session/logout composition and localized
 account UI. Configured real-account runtime wiring, access administration and

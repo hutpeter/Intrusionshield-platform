@@ -1,5 +1,29 @@
 # Testing register — Ruby Sterile Processing
 
+## Account runtime composition — November 13, 2026 (current)
+
+Delivered [ACCOUNT-RUNTIME.md](ACCOUNT-RUNTIME.md): explicit HTTPS loopback launcher,
+strict file configuration/preflight, real Ruby password/token/repository composition,
+SELECT-only identity connection, separate persistent local workflow/access stores
+and trusted offline grant changes. Shared SQLite extraction retains preview gates,
+transactions, versions and audit behavior; stored mode markers prevent interchange
+or renamed-copy reuse. No SQL Server migrations, account creation or live SQL calls.
+
+Developer: **175 service regression tests, six account-runtime tests and four
+launcher-dispatch tests passed**, plus account dependency/service builds. Account
+integration uses actual Ruby authentication classes, a fake SQL provider, temporary
+HTTPS and isolated files. It verifies sign-in, wrong password, current suspension,
+workflow persistence and signed-out sessions after restart, bound SELECT queries,
+write refusal, config-only checks, failed-start cleanup and stale offline grants.
+Web code did not change; its previous 89 tests/Chromium results are retained.
+
+**Single owner check deferred until approved configuration exists:** at the configured
+HTTPS URL, sign in with an enrolled account, confirm person/facility and sign out.
+No owner action against the dummy preview verifies real accounts. Actual Windows,
+TLS/browser trust, SQL permissions/schema and live account sign-in remain pending.
+The offline tool is trusted local administration, not authenticated web admin or
+central entitlement integration. Independent inspection remains unimplemented.
+
 ## Browser account sessions — November 13, 2026 (current)
 
 Delivered [account-mode sign-in/session/logout](BROWSER-SIGNIN.md) as an explicit

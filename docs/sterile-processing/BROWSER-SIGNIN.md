@@ -1,5 +1,11 @@
 # Ruby account browser sign-in
 
+**Runnable composition now delivered:** see [ACCOUNT-RUNTIME.md](ACCOUNT-RUNTIME.md)
+for the explicit account launcher, configuration preflight and trusted initial
+access tool. The original composition-only notes below describe the preceding
+increment. Live identity/Windows acceptance still requires approved configuration;
+the dummy preview continues to use its own identities and store.
+
 November 13, 2026 · MVP development increment
 
 The separate account-mode web composition now supports username/password sign-in,

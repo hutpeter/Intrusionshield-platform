@@ -1,5 +1,9 @@
 # Standalone instrument-management preview
 
+For the separate Ruby account launcher, see [ACCOUNT-RUNTIME.md](ACCOUNT-RUNTIME.md).
+The preview command below remains dummy-only; account mode uses different files
+and refuses the preview's port and workflow store. No account is enrolled here.
+
 **November 13:** client-MVP development has resumed with
 [identity/access backend work](IDENTITY-ACCESS.md). The existing dummy preview
 still uses demonstration identities; real browser sign-in is not enabled yet.

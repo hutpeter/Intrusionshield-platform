@@ -716,6 +716,18 @@ importers:
 
   services/sterile-processing:
     dependencies:
+      '@intrusionshield/authentication-service':
+        specifier: workspace:*
+        version: link:../authentication
+      '@intrusionshield/database':
+        specifier: workspace:*
+        version: link:../../packages/database
+      '@intrusionshield/identity-persistence':
+        specifier: workspace:*
+        version: link:../../packages/identity-persistence
+      '@intrusionshield/tenant-configuration':
+        specifier: workspace:*
+        version: link:../../packages/tenant-configuration
       '@intrusionshield/sterile-processing':
         specifier: workspace:*
         version: link:../../packages/sterile-processing

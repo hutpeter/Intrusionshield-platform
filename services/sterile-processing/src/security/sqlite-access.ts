@@ -28,7 +28,9 @@ export class SqliteSterileAccessDirectory implements SterileAccessDirectory {
       parent = dirname(file);
     mkdirSync(parent, { recursive: true, mode: 0o700 });
     if (
-      realpathSync(parent) !== parent ||
+      (process.platform === "win32"
+        ? realpathSync(parent).toLowerCase() !== parent.toLowerCase()
+        : realpathSync(parent) !== parent) ||
       lstatSync(parent).isSymbolicLink() ||
       (process.platform !== "win32" && (lstatSync(parent).mode & 0o077) !== 0)
     )
@@ -51,7 +53,18 @@ export class SqliteSterileAccessDirectory implements SterileAccessDirectory {
     }
     closeSync(fd);
     this.db = new DatabaseSync(file);
-    this.db.exec(`PRAGMA busy_timeout=5000;
+    try {
+      if (
+        this.db
+          .prepare(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name NOT IN ('sterile_user_access','sterile_access_changes') AND name NOT LIKE 'sqlite_%' LIMIT 1",
+          )
+          .get()
+      )
+        throw new Error(
+          "Access storage must be separate from workflow and other databases.",
+        );
+      this.db.exec(`PRAGMA busy_timeout=5000;
       CREATE TABLE IF NOT EXISTS sterile_user_access (
         tenant_id TEXT NOT NULL, actor_id TEXT NOT NULL, version INTEGER NOT NULL,
         payload TEXT NOT NULL, PRIMARY KEY(tenant_id, actor_id));
@@ -60,6 +73,10 @@ export class SqliteSterileAccessDirectory implements SterileAccessDirectory {
         version INTEGER NOT NULL, changed_by TEXT NOT NULL, reason TEXT NOT NULL,
         recorded_at TEXT NOT NULL, payload TEXT NOT NULL,
         UNIQUE(tenant_id, actor_id, version));`);
+    } catch (error) {
+      this.db.close();
+      throw error;
+    }
   }
   async findUser(
     tenantId: string,

@@ -1,0 +1,33 @@
+{
+  "tenantId": "11111111-1111-4111-8111-111111111111",
+  "actorId": "33333333-3333-4333-8333-333333333333",
+  "status": "ACTIVE",
+  "facilities": [
+    {
+      "facilityId": "22222222-2222-4222-8222-222222222222",
+      "capabilityEnabled": true,
+      "permissions": [
+        "dashboard:read",
+        "instruments:read",
+        "trays:read",
+        "processing:read",
+        "packaging:read",
+        "cycles:read",
+        "release:read",
+        "distribution:read",
+        "returns:read",
+        "traceability:read",
+        "recall:read",
+        "procedures:read",
+        "equipment:read",
+        "equipment-incidents:read",
+        "loaners:read",
+        "consumables:read",
+        "reports:read"
+      ]
+    }
+  ],
+  "expectedVersion": 0,
+  "changedBy": "44444444-4444-4444-8444-444444444444",
+  "reason": "Replace with approved access assignment reason"
+}

@@ -11,6 +11,9 @@
     "test": "pnpm -r --if-present run test",
     "clean": "pnpm -r --if-present run clean",
     "lint": "pnpm -r --if-present run lint",
-    "sterile:preview": "node scripts/sterile-preview.mjs"
+    "sterile:preview": "node scripts/sterile-preview.mjs",
+    "sterile:account": "node scripts/sterile-account.mjs",
+    "sterile:account:check": "node scripts/sterile-account-check.mjs",
+    "sterile:account:access": "node scripts/sterile-account-access.mjs"
   }
 }
