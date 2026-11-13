@@ -1,5 +1,13 @@
 # Ruby Sterile Processing — issues log
 
+**November 13 receipt cancellation:** [RECEIPT-CANCELLATION.md](RECEIPT-CANCELLATION.md)
+adds terminal reviewer cancellation for ordinary receipts before cleaning, releasing
+only that receipt's holds while retaining original versions and incident/recall
+blocks. U-CANCEL-01 is pending. Cancellation of source-linked admissions and
+amendments after cleaning remain separate gaps. The older missing-cancellation
+note below is superseded only for this bounded ordinary-receipt workflow.
+U-CORRECTION-01 form/discard was accepted from owner screenshots November 13.
+
 **November 13 receipt corrections:** [RECEIPT-CORRECTIONS.md](RECEIPT-CORRECTIONS.md)
 adds reviewer-only, versioned corrections to descriptive receiving fields before
 cleaning, retaining original evidence and holds. U-CORRECTION-01 is pending.

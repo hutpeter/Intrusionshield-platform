@@ -140,6 +140,7 @@ export function createSterilePreview({
             canWrite: session.role === "operator",
             canInspect: session.role === "reviewer",
             canCorrectReceipt: session.role === "reviewer",
+            canCancelReceipt: session.role === "reviewer",
             canReview: session.role === "reviewer",
             canRecall: session.role === "reviewer",
             canClearRecall: session.role === "reviewer",
@@ -1180,6 +1181,7 @@ export function createSterilePreview({
         ((scope.actorId === actors.operator &&
           permission !== "processing:inspect" &&
           permission !== "processing:correct" &&
+          permission !== "processing:cancel" &&
           permission !== "consumables:reconcile" &&
           permission !== "consumables:policy" &&
           permission !== "consumables:withdraw" &&
@@ -1196,6 +1198,7 @@ export function createSterilePreview({
             (permission.endsWith(":read") ||
               permission === "processing:inspect" ||
               permission === "processing:correct" ||
+              permission === "processing:cancel" ||
               permission === "consumables:reconcile" ||
               permission === "consumables:policy" ||
               permission === "consumables:withdraw" ||

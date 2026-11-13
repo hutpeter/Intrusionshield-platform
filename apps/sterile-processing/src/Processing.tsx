@@ -1,3 +1,4 @@
+import { receiptCanBeCancelled } from "@intrusionshield/sterile-processing/receipt-policy";
 import { EquipmentPicker, EquipmentSnapshot } from "./EquipmentPicker";
 import { ProcedurePicker, ProcedureSnapshot } from "./ProcedurePicker";
 import { ReceivingScan } from "./ReceivingScan";
@@ -16,6 +17,7 @@ import { labels, type Language } from "./text";
 import { processingLabels } from "./processing-text";
 import {
   receiptCanBeCorrected,
+  receiptCancellationText,
   receiptCorrectionText,
   receiptDetailFields,
   receiptHasChanges,
@@ -25,7 +27,7 @@ import {
   independentInspectionText,
 } from "./inspection-policy";
 type Form = {
-  kind: "receive" | "start" | "finish" | "inspect" | "correct";
+  kind: "receive" | "start" | "finish" | "inspect" | "correct" | "cancel";
   requestId: string;
   version?: number;
 };
@@ -78,7 +80,8 @@ export function ProcessingWorkspace({
 }) {
   const t = labels(language),
     p = processingLabels(language),
-    correction = receiptCorrectionText[language];
+    correction = receiptCorrectionText[language],
+    cancellation = receiptCancellationText[language];
   const [selected, setSelected] = useState<string | null>(
       initialRecordId ?? null,
     ),
@@ -104,12 +107,15 @@ export function ProcessingWorkspace({
   const pending = useRef<AbortController | null>(null),
     inspection = useRef<AbortController | null>(null),
     busy = blocked || saving || scanBusy;
+  const amendment = form?.kind === "cancel" ? cancellation : correction;
   const canEditForm =
     form?.kind === "inspect"
       ? session.canInspect
-      : form?.kind === "correct"
-        ? session.canCorrectReceipt
-        : session.canWrite;
+      : form?.kind === "cancel"
+        ? session.canCancelReceipt
+        : form?.kind === "correct"
+          ? session.canCorrectReceipt
+          : session.canWrite;
   useEffect(() => {
     onDirty(!!form);
     return () => onDirty(false);
@@ -218,7 +224,7 @@ export function ProcessingWorkspace({
     setFields((x) => ({
       ...x,
       ...v,
-      ...(form?.kind === "correct" &&
+      ...(["correct", "cancel"].includes(form?.kind ?? "") &&
       Object.keys(v).some((key) => key !== "confirmed")
         ? { confirmed: false }
         : {}),
@@ -261,6 +267,19 @@ export function ProcessingWorkspace({
             )
           : await api.receive(session, receipt, c.signal);
       } else if (!selected || !form.version) return;
+      else if (form.kind === "cancel")
+        item = await api.cancelReceipt(
+          session,
+          selected,
+          {
+            requestId: form.requestId,
+            version: form.version,
+            reason: fields.correctionReason,
+            reference: fields.correctionReference,
+            confirmed: true,
+          },
+          c.signal,
+        );
       else if (form.kind === "correct")
         item = await api.correctReceipt(
           session,
@@ -761,10 +780,19 @@ export function ProcessingWorkspace({
           )}
           {(session.canWrite ||
             session.canInspect ||
-            session.canCorrectReceipt) &&
+            session.canCorrectReceipt ||
+            session.canCancelReceipt) &&
             detail &&
             !past && (
               <>
+                {session.canCancelReceipt && receiptCanBeCancelled(detail) && (
+                  <button
+                    disabled={busy || loading || !!form}
+                    onClick={() => begin("cancel")}
+                  >
+                    {cancellation.title}
+                  </button>
+                )}
                 {session.canCorrectReceipt && receiptCanBeCorrected(detail) && (
                   <button
                     disabled={busy || loading || !!form}
@@ -860,8 +888,8 @@ export function ProcessingWorkspace({
         >
           <div className="panel-heading">
             <h2>
-              {form.kind === "correct"
-                ? correction.title
+              {["correct", "cancel"].includes(form.kind)
+                ? amendment.title
                 : form.kind === "receive"
                   ? p.newReceipt
                   : form.kind === "start"
@@ -879,27 +907,28 @@ export function ProcessingWorkspace({
             </button>
           </div>
           <fieldset disabled={busy}>
-            {form.kind === "correct" && (
+            {["correct", "cancel"].includes(form.kind) && (
               <>
-                <p>{correction.boundary}</p>
+                <p>{amendment.boundary}</p>
                 <div className="form-grid">
-                  {receiptDetailFields.map((key) => (
-                    <label key={key}>
-                      {p[key]}
-                      <input
-                        required={key !== "discrepancies"}
-                        maxLength={
-                          key === "condition" || key === "discrepancies"
-                            ? 500
-                            : 200
-                        }
-                        value={fields[key]}
-                        onChange={(e) => patch({ [key]: e.target.value })}
-                      />
-                    </label>
-                  ))}
+                  {form.kind === "correct" &&
+                    receiptDetailFields.map((key) => (
+                      <label key={key}>
+                        {p[key]}
+                        <input
+                          required={key !== "discrepancies"}
+                          maxLength={
+                            key === "condition" || key === "discrepancies"
+                              ? 500
+                              : 200
+                          }
+                          value={fields[key]}
+                          onChange={(e) => patch({ [key]: e.target.value })}
+                        />
+                      </label>
+                    ))}
                   <label>
-                    {correction.reason}
+                    {amendment.reason}
                     <input
                       required
                       maxLength={500}
@@ -910,7 +939,7 @@ export function ProcessingWorkspace({
                     />
                   </label>
                   <label>
-                    {correction.reference}
+                    {amendment.reference}
                     <input
                       required
                       maxLength={200}
@@ -1263,8 +1292,8 @@ export function ProcessingWorkspace({
                 checked={fields.confirmed}
                 onChange={(e) => patch({ confirmed: e.target.checked })}
               />
-              {form.kind === "correct"
-                ? correction.confirm
+              {["correct", "cancel"].includes(form.kind)
+                ? amendment.confirm
                 : form.kind === "receive"
                   ? p.confirmReceipt
                   : form.kind === "start"
@@ -1291,8 +1320,8 @@ export function ProcessingWorkspace({
             >
               {busy
                 ? t.saving
-                : form.kind === "correct"
-                  ? correction.save
+                : ["correct", "cancel"].includes(form.kind)
+                  ? amendment.save
                   : form.kind === "receive"
                     ? p.saveReceipt
                     : form.kind === "start"
@@ -1390,15 +1419,17 @@ export function ProcessingWorkspace({
                     <span className="timeline-dot" />
                     <div>
                       <strong>
-                        {h.action === "receipt-corrected"
-                          ? correction.history
-                          : h.action === "processing-received"
-                            ? p.receivedAction
-                            : h.action === "cleaning-started"
-                              ? p.startAction
-                              : h.action === "inspection-recorded"
-                                ? p.inspectionAction
-                                : p.finishAction}
+                        {h.action === "receipt-cancelled"
+                          ? cancellation.history
+                          : h.action === "receipt-corrected"
+                            ? correction.history
+                            : h.action === "processing-received"
+                              ? p.receivedAction
+                              : h.action === "cleaning-started"
+                                ? p.startAction
+                                : h.action === "inspection-recorded"
+                                  ? p.inspectionAction
+                                  : p.finishAction}
                       </strong>
                       <time dateTime={h.at}>{date(h.at)}</time>
                       <small>

@@ -704,3 +704,187 @@ test("concurrent correction and cleaning start have one winner with no lost rece
   assert.ok((await f.ir.get(f.s, f.i.id)).processingHold);
   assert.equal((await f.pr.get(f.s, old.id, 1)).source, old.source);
 });
+
+const cancelBody = (version = 1, extra = {}) => ({
+  requestId: randomUUID(),
+  version,
+  reason: "SIMULATED mistaken receipt",
+  reference: "SIMULATED-CANCEL",
+  confirmed: true,
+  ...extra,
+});
+test("cancellation preserves original evidence and independent blocks, releases only its receipt holds and allows fresh receiving", async () => {
+  const f = await fixture(),
+    old = await f.pr.receive(f.s, receipt(f.i.id)),
+    body = cancelBody(),
+    reviewer = { ...f.s, actorId: randomUUID(), personId: randomUUID() };
+  const instrument = f.repo.state.instruments.find((x) => x.id === f.i.id);
+  instrument.incidentHold = { id: randomUUID(), code: "SIMULATED-INCIDENT" };
+  const other = await f.ir.register(f.s, {
+    requestId: randomUUID(),
+    code: "OTHER",
+    instrumentTypeId: f.i.instrumentTypeId,
+    serialNumber: "DEMO",
+  });
+  const otherReceipt = await f.pr.receive(
+    f.s,
+    receipt(other.id, { code: "OTHER-REC" }),
+  );
+  const blocks = structuredClone(f.repo.state.recallBlocks);
+  const saved = await f.pr.cancelReceipt(reviewer, old.id, body);
+  assert.equal(saved.state, "cancelled");
+  assert.equal(saved.version, 2);
+  assert.equal(saved.cancellation.personId, reviewer.personId);
+  assert.deepEqual(await f.pr.get(f.s, old.id, 1), old);
+  assert.deepEqual(saved.instruments, old.instruments);
+  assert.equal(!!(await f.ir.get(f.s, f.i.id)).processingHold, false);
+  assert.deepEqual(
+    f.repo.state.instruments.find((x) => x.id === f.i.id).incidentHold,
+    instrument.incidentHold,
+  );
+  assert.deepEqual(f.repo.state.recallBlocks, blocks);
+  assert.equal(
+    (await f.ir.get(f.s, other.id)).processingHold.episodeId,
+    otherReceipt.id,
+  );
+  assert.deepEqual(await f.pr.cancelReceipt(reviewer, old.id, body), saved);
+  await fails(f.pr.start(f.s, old.id, start(2)), "CONFLICT");
+  await fails(
+    f.pr.correctReceipt(f.s, old.id, receiptCorrection(saved)),
+    "RECEIPT_CORRECTION_BLOCKED",
+  );
+  await fails(f.pr.receive(f.s, receipt(f.i.id, { code: "NEW" })), "CONFLICT");
+  delete f.repo.state.instruments.find((x) => x.id === f.i.id).incidentHold;
+  const fresh = await f.pr.receive(f.s, receipt(f.i.id, { code: "NEW" }));
+  await f.pr.cancelReceipt(reviewer, old.id, body);
+  assert.equal(
+    (await f.ir.get(f.s, f.i.id)).processingHold.episodeId,
+    fresh.id,
+  );
+  const audit = (await f.pr.history(f.s, old.id)).items.find(
+    (x) => x.action === "receipt-cancelled",
+  );
+  assert.equal(audit.actorId, reviewer.actorId);
+  assert.ok(audit.reason.includes(body.reference));
+});
+test("cancellation rejects missing confirmation/evidence, stale/foreign scope, started cleaning and linked admissions without writes", async () => {
+  const f = await fixture(),
+    old = await f.pr.receive(f.s, receipt(f.i.id)),
+    before = structuredClone(f.repo.state);
+  for (const extra of [{ reason: "" }, { reference: "" }, { confirmed: false }])
+    await fails(
+      f.pr.cancelReceipt(f.s, old.id, cancelBody(1, extra)),
+      "INVALID_REQUEST",
+    );
+  await fails(f.pr.cancelReceipt(f.s, old.id, cancelBody(2)), "CONFLICT");
+  await fails(
+    f.pr.cancelReceipt(
+      { ...f.s, facilityId: randomUUID() },
+      old.id,
+      cancelBody(),
+    ),
+    "NOT_FOUND",
+  );
+  await fails(
+    f.pr.cancelReceipt(
+      { ...f.s, tenantId: randomUUID() },
+      old.id,
+      cancelBody(),
+    ),
+    "NOT_FOUND",
+  );
+  assert.deepEqual(f.repo.state, before);
+  for (const key of [
+    "returnSource",
+    "recallSource",
+    "maintenanceSource",
+    "loanerSource",
+    "supersededBy",
+  ]) {
+    f.repo.state.processing.find((x) => x.id === old.id)[key] = {};
+    const snapshot = structuredClone(f.repo.state);
+    await fails(
+      f.pr.cancelReceipt(f.s, old.id, cancelBody()),
+      "RECEIPT_CANCELLATION_BLOCKED",
+    );
+    assert.deepEqual(f.repo.state, snapshot);
+    delete f.repo.state.processing.find((x) => x.id === old.id)[key];
+  }
+  await f.pr.start(f.s, old.id, start(1));
+  await fails(
+    f.pr.cancelReceipt(f.s, old.id, cancelBody(2)),
+    "RECEIPT_CANCELLATION_BLOCKED",
+  );
+});
+test("cancellation rolls back released holds, versions and command receipts when audit fails", async () => {
+  const f = await fixture(),
+    old = await f.pr.receive(f.s, receipt(f.i.id)),
+    before = structuredClone(f.repo.state),
+    body = cancelBody();
+  f.repo.failAudit = true;
+  await assert.rejects(() => f.pr.cancelReceipt(f.s, old.id, body));
+  assert.deepEqual(f.repo.state, before);
+  f.repo.failAudit = false;
+  assert.equal(
+    (await f.pr.cancelReceipt(f.s, old.id, body)).state,
+    "cancelled",
+  );
+});
+test("cleaning start versus cancellation has one winner and matching hold state", async () => {
+  const f = await fixture(),
+    old = await f.pr.receive(f.s, receipt(f.i.id));
+  const results = await Promise.allSettled([
+    f.pr.cancelReceipt(f.s, old.id, cancelBody()),
+    f.pr.start(f.s, old.id, start(1)),
+  ]);
+  assert.equal(results.filter((x) => x.status === "fulfilled").length, 1);
+  assert.equal(
+    results.filter(
+      (x) => x.status === "rejected" && x.reason.code === "CONFLICT",
+    ).length,
+    1,
+  );
+  const saved = await f.pr.get(f.s, old.id),
+    hold = (await f.ir.get(f.s, f.i.id)).processingHold;
+  assert.equal(!!hold, saved.state === "cleaning");
+});
+
+test("cancelling a mistaken receipt leaves an independently applied recall block effective", async () => {
+  const f = await fixture(),
+    old = await f.pr.receive(f.s, receipt(f.i.id)),
+    caseId = randomUUID();
+  f.repo.state.recalls.push({
+    ...f.s,
+    id: caseId,
+    code: "RECALL-CANCEL",
+    state: "open",
+  });
+  f.repo.state.recallInstruments.push({
+    ...f.s,
+    instrumentId: f.i.id,
+    recallId: caseId,
+  });
+  const before = await f.repo.transaction(f.s, (tx) =>
+    tx.findInstrumentRecallBlock(f.i.id),
+  );
+  assert.ok(before);
+  await f.pr.cancelReceipt(f.s, old.id, cancelBody());
+  assert.deepEqual(
+    await f.repo.transaction(f.s, (tx) => tx.findInstrumentRecallBlock(f.i.id)),
+    before,
+  );
+  const a = await f.tr.createAssembly(f.s, {
+    requestId: randomUUID(),
+    definitionId: f.d.id,
+    definitionVersion: 1,
+    code: "BLOCKED",
+  });
+  await fails(
+    f.tr.updateContents(f.s, a.id, {
+      requestId: randomUUID(),
+      version: 1,
+      instrumentIds: [f.i.id],
+    }),
+    "RECALL_BLOCKED",
+  );
+});

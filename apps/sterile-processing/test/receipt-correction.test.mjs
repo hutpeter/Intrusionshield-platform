@@ -4,6 +4,7 @@ import {
   receiptCanBeCorrected,
   receiptHasChanges,
   receiptCorrectionText,
+  receiptCancellationText,
 } from "../src/receipt-correction.ts";
 const record = {
   state: "received",
@@ -23,6 +24,7 @@ test("correction affordance is limited to receipts before any cleaning or inspec
     "inspection_failed",
     "ready_for_assembly",
     "superseded",
+    "cancelled",
   ])
     assert.equal(receiptCanBeCorrected({ ...record, state }), false);
   assert.equal(receiptCanBeCorrected({ ...record, attempts: [{}] }), false);
@@ -38,6 +40,20 @@ test("no-op correction detection matches normalized text and all languages expla
     true,
   );
   for (const text of Object.values(receiptCorrectionText))
+    for (const key of [
+      "title",
+      "reason",
+      "reference",
+      "confirm",
+      "save",
+      "boundary",
+      "history",
+    ])
+      assert.ok(text[key]?.trim());
+});
+
+test("all cancellation languages name the decision and its separate block boundary", () => {
+  for (const text of Object.values(receiptCancellationText))
     for (const key of [
       "title",
       "reason",

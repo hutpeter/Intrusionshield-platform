@@ -1,5 +1,6 @@
 import type { Language } from "./text";
 const es = {
+  cancelled: "Recepción anulada — historial conservado",
   superseded: "Sustituido por nueva recepción — historial conservado",
   example: "Preparar ejemplo ficticio de inspección",
   exampleHelp:
@@ -85,6 +86,7 @@ const es = {
 };
 type Text = Record<keyof typeof es, string>;
 const en: Text = {
+  cancelled: "Receipt cancelled — history retained",
   superseded: "Superseded by new receiving — history retained",
   example: "Prepare fictional inspection example",
   exampleHelp:
@@ -168,6 +170,7 @@ const en: Text = {
   confirm: "Confirm",
 };
 const fr: Text = {
+  cancelled: "Réception annulée — historique conservé",
   superseded: "Remplacé par une nouvelle réception — historique conservé",
   example: "Préparer un exemple fictif d’inspection",
   exampleHelp:

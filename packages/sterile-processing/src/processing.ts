@@ -1,3 +1,5 @@
+import type { CancelReceiptInput } from "./processing-types.js";
+import { receiptCanBeCancelled } from "./receipt-policy.js";
 import { resolveEquipment } from "./equipment.js";
 import { resolveProcedure } from "./procedures.js";
 import { assertLoanerPresent } from "./loaners.js";
@@ -33,6 +35,60 @@ const expected = (v: number) => {
   return v;
 };
 export class ProcessingRegistry extends SterileRegistryBase {
+  async cancelReceipt(
+    scope: SterileScope,
+    id: string,
+    input: CancelReceiptInput,
+  ) {
+    const s = scopeOf(scope),
+      key = sterileUuid(id),
+      version = expected(input.version),
+      reason = field(input.reason, 500),
+      reference = field(input.reference, 200);
+    if (input.confirmed !== true) invalid();
+    return this.command(
+      s,
+      input.requestId,
+      "receipt-cancelled",
+      { ...input, id: key },
+      async (tx, at) => {
+        const old = await tx.findProcessing(key);
+        if (!old) throw new SterileError("NOT_FOUND");
+        if (old.version !== version) throw new SterileError("CONFLICT");
+        if (!receiptCanBeCancelled(old))
+          throw new SterileError("RECEIPT_CANCELLATION_BLOCKED");
+        for (const i of old.instruments) {
+          if ((await tx.findProcessingHold(i.id))?.episodeId !== old.id)
+            throw new SterileError("RECEIPT_CANCELLATION_BLOCKED");
+        }
+        const item: ProcessingEpisode = {
+          ...old,
+          state: "cancelled",
+          version: version + 1,
+          updatedAt: at,
+          cancellation: {
+            reason,
+            reference,
+            at,
+            actorId: s.actorId,
+            ...(s.personId ? { personId: s.personId } : {}),
+          },
+        };
+        await tx.updateProcessing(item, version);
+        await tx.releaseProcessing(item);
+        await this.record(
+          tx,
+          s,
+          item,
+          "receipt-cancelled",
+          input.requestId,
+          at,
+          reason + " · " + reference,
+        );
+        return item;
+      },
+    );
+  }
   async correctReceipt(
     scope: SterileScope,
     id: string,

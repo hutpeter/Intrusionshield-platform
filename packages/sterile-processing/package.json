@@ -25,6 +25,10 @@
     "./equipment-status": {
       "types": "./dist/equipment-status.d.ts",
       "import": "./dist/equipment-status.js"
+    },
+    "./receipt-policy": {
+      "types": "./dist/receipt-policy.d.ts",
+      "import": "./dist/receipt-policy.js"
     }
   },
   "scripts": {

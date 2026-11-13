@@ -55,3 +55,36 @@ export const receiptCorrectionText = {
     history: "Détails de réception corrigés",
   },
 };
+
+export const receiptCancellationText = {
+  en: {
+    title: "Cancel receipt",
+    reason: "Cancellation reason",
+    reference: "Cancellation reference",
+    confirm: "I confirm cancellation of this mistaken receipt.",
+    save: "Confirm receipt cancellation",
+    boundary:
+      "Permanent cancellation before cleaning. This receipt’s receiving holds are removed; recall and incident blocks remain. This does not record cleaning or authorize use. Linked admissions must be resolved through their source workflow.",
+    history: "Receipt cancelled",
+  },
+  es: {
+    title: "Anular recepción",
+    reason: "Motivo de anulación",
+    reference: "Referencia de anulación",
+    confirm: "Confirmo la anulación de esta recepción errónea.",
+    save: "Confirmar anulación de recepción",
+    boundary:
+      "Anulación permanente antes de la limpieza. Solo se eliminan las retenciones de esta recepción; se conservan los bloqueos de retirada e incidente. No registra limpieza ni autoriza el uso. Las admisiones vinculadas requieren su flujo de origen.",
+    history: "Recepción anulada",
+  },
+  fr: {
+    title: "Annuler la réception",
+    reason: "Motif d’annulation",
+    reference: "Référence d’annulation",
+    confirm: "Je confirme l’annulation de cette réception erronée.",
+    save: "Confirmer l’annulation de réception",
+    boundary:
+      "Annulation permanente avant nettoyage. Seuls les blocages de cette réception sont supprimés ; les rappels et incidents restent bloqués. Aucun nettoyage ni usage n’est autorisé. Les admissions liées exigent leur procédure d’origine.",
+    history: "Réception annulée",
+  },
+};

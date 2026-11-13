@@ -19,6 +19,7 @@ import type {
   ProcessingEpisode,
   InspectInput,
   CorrectReceiptInput,
+  CancelReceiptInput,
   SterilePackage,
   PackageSummary,
   PackageInput,
@@ -80,6 +81,7 @@ export interface Session {
   canWrite?: boolean;
   canInspect?: boolean;
   canCorrectReceipt?: boolean;
+  canCancelReceipt?: boolean;
   canReview?: boolean;
   canRecall?: boolean;
   canClearRecall?: boolean;
@@ -168,6 +170,8 @@ async function checkedSession(
     !/^[a-f0-9]{64}$/.test(value.csrf) ||
     !Number.isFinite(value.expiresAt) ||
     (value.canInspect !== undefined && typeof value.canInspect !== "boolean") ||
+    (value.canCancelReceipt !== undefined &&
+      typeof value.canCancelReceipt !== "boolean") ||
     (value.canCorrectReceipt !== undefined &&
       typeof value.canCorrectReceipt !== "boolean") ||
     (value.personId !== undefined &&
@@ -2500,6 +2504,21 @@ export const api = {
       s,
       call<ProcessingEpisode>(
         base(s) + "/processing/" + encodeURIComponent(id) + "/inspect",
+        signal,
+        body,
+        s.csrf,
+      ),
+    ),
+  cancelReceipt: (
+    s: Session,
+    id: string,
+    body: CancelReceiptInput,
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<ProcessingEpisode>(
+        base(s) + "/processing/" + encodeURIComponent(id) + "/cancel-receipt",
         signal,
         body,
         s.csrf,

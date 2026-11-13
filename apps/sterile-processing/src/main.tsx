@@ -1006,7 +1006,8 @@ function Workspace({
           )}
         {session.role === "viewer" &&
           !session.canInspect &&
-          !session.canCorrectReceipt && (
+          !session.canCorrectReceipt &&
+          !session.canCancelReceipt && (
             <p className="readonly-note">{t.viewerNotice}</p>
           )}
         {notice && (

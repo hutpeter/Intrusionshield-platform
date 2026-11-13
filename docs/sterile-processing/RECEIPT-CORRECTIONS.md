@@ -19,9 +19,9 @@ rolls back the correction, version and command receipt. Repeating a successful
 request is idempotent. The optional correction-history field requires no migration
 or reset of existing local stores. At most 50 corrections per receipt are allowed.
 
-This does not provide changes to instrument contents, duplicate/wrong-instrument
-receipt cancellation, post-cleaning amendments, inspection or release decisions.
-Those remain separate correction requirements to assess for the pilot; this
+This does not provide changes to instrument contents, cancellation of linked admissions, post-cleaning amendments, inspection or release decisions.
+Ordinary pre-cleaning receipt cancellation is now covered by
+[RECEIPT-CANCELLATION.md](RECEIPT-CANCELLATION.md). Other gaps remain separate requirements to assess for the pilot; this
 increment does not establish complete MVP or clinical readiness.
 
 ## Developer verification
@@ -33,7 +33,10 @@ permission, original version and holds, attributed history, reload, cancellation
 French labels and mobile layout. Tests used isolated temporary stores and fake SQL;
 no live identity database, owner data or processing equipment was accessed.
 
-## Single owner check — U-CORRECTION-01 (pending)
+## Single owner check — U-CORRECTION-01 (passed November 13, 2026)
+
+Owner screenshots confirm form availability and discard, with the receipt still
+Received at version 1. Save and wider operational acceptance are not inferred.
 
 In the updated preview as **Demo reviewer**, open **Receiving and cleaning**, then
 **View details** on a receipt marked **Received**. Select **Correct receipt details**.

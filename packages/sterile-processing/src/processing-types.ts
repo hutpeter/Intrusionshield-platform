@@ -48,7 +48,22 @@ export interface InspectInput {
   items: InspectionItem[];
   confirmed: boolean;
 }
+export interface CancelReceiptInput {
+  requestId: string;
+  version: number;
+  reason: string;
+  reference: string;
+  confirmed: boolean;
+}
 export interface ProcessingEpisode {
+  cancellation?: {
+    reason: string;
+    reference: string;
+    at: string;
+    actorId: string;
+    personId?: string;
+  };
+
   /** Clerical amendments only; original and corrected values remain in frozen versions. */
   receiptCorrections?: {
     previousVersion: number;
@@ -107,7 +122,8 @@ export interface ProcessingEpisode {
     | "awaiting_inspection"
     | "inspection_failed"
     | "ready_for_assembly"
-    | "superseded";
+    | "superseded"
+    | "cancelled";
   /** Optional for episodes saved before inspection was introduced. */
   inspections?: InspectionRecord[];
   attempts: CleaningAttempt[];

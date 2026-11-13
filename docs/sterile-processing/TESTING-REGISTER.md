@@ -1,5 +1,20 @@
 # Testing register — Ruby Sterile Processing
 
+## Receipt cancellation — November 13, 2026 (current)
+
+Delivered [RECEIPT-CANCELLATION.md](RECEIPT-CANCELLATION.md): separate reviewer
+permission, terminal cancellation of ordinary receipts before cleaning, mandatory
+reason/reference, immutable original/version/audit and release of this receipt's
+holds only. Incident/recall blocks remain effective; source-linked admissions are
+excluded. Developer: **242 domain, 183 service, 95 web and six runtime tests passed**,
+plus core/service/web builds and Chromium save/discard/history/reload/mobile checks.
+No live identity database, owner data or equipment was used.
+
+**U-CANCEL-01 pending:** Demo reviewer → Receiving and cleaning → View details for
+an ordinary Received receipt → Cancel receipt. Check reason/reference/confirmation,
+then Cancel and confirm discarding. Only this short owner check is requested.
+The owner's previously shown loaner receipt intentionally cannot be cancelled here.
+
 ## Receipt corrections — November 13, 2026 (current)
 
 Delivered [RECEIPT-CORRECTIONS.md](RECEIPT-CORRECTIONS.md): reviewer-only correction
@@ -9,7 +24,12 @@ Developer: **237 domain, 181 service, 94 web and six runtime tests passed**, plu
 core/service/web builds and Chromium save/history/permission/cancel/localization/
 mobile checks. No live identity database or owner data was used.
 
-**U-CORRECTION-01 pending:** updated preview → Demo reviewer → Receiving and
+**U-CORRECTION-01 passed November 13, 2026:** owner screenshots show the correction
+form with prefilled fields and reason/reference, then the same loaner receipt in
+Received state, version 1, after discarding. This accepts availability/discard only,
+not saving corrections or operational validation.
+
+Original check instruction: updated preview → Demo reviewer → Receiving and
 cleaning → View details for a Received receipt → Correct receipt details. Check
 prefilled values and reason/reference fields, then Cancel and confirm discarding.
 Only this short owner check is requested. Wrong contents, duplicate receipt

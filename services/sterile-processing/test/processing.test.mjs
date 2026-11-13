@@ -656,3 +656,108 @@ test("separate SQLite connections serialize correction versus cleaning without o
     second.close();
   }
 });
+
+const cancelBody = (version = 1, extra = {}) => ({
+  requestId: randomUUID(),
+  version,
+  reason: "SIMULATED wrong receipt",
+  reference: "SIMULATED-CANCEL",
+  confirmed: true,
+  ...extra,
+});
+test("receipt cancellation HTTP requires separate reviewer permission, trusted payload, CSRF and preserves readable versions", async (t) => {
+  const f = await httpFixture(t),
+    old = await (await f.call(f.base + "/processing", receive(f.i.id))).json(),
+    path = f.base + "/processing/" + old.id + "/cancel-receipt",
+    body = cancelBody();
+  assert.equal((await f.call(path, body)).status, 403);
+  await f.login("viewer");
+  assert.equal((await f.call(path, body)).status, 403);
+  await f.login("reviewer");
+  assert.equal(f.session.canCancelReceipt, true);
+  assert.equal(f.session.canWrite, false);
+  assert.equal(
+    (await f.call(path, body, { "x-sterile-csrf": "" })).status,
+    403,
+  );
+  for (const extra of [
+    { actorId: randomUUID() },
+    { personId: randomUUID() },
+    { instrumentIds: [] },
+    { state: "cancelled" },
+  ])
+    assert.equal((await f.call(path, { ...body, ...extra })).status, 400);
+  assert.equal((await f.call(path + "?extra=true", body)).status, 400);
+  const result = await f.call(path, body);
+  assert.equal(result.status, 200);
+  const saved = await result.json();
+  assert.equal(saved.state, "cancelled");
+  assert.equal(saved.cancellation.actorId, f.session.actorId);
+  assert.equal(saved.cancellation.personId, f.session.personId);
+  assert.deepEqual(await (await f.call(path, body)).json(), saved);
+  assert.equal(
+    (
+      await (
+        await f.call(f.base + "/processing/" + old.id + "/versions/1")
+      ).json()
+    ).state,
+    "received",
+  );
+  assert.equal(
+    !!(await (await f.call(f.base + "/instruments/" + f.i.id)).json())
+      .processingHold,
+    false,
+  );
+  await f.login();
+  assert.equal(
+    (await f.call(f.base + "/processing/" + old.id + "/start", start(2)))
+      .status,
+    409,
+  );
+});
+test("SQLite cancellation rollback, restart and cross-connection start race preserve consistent holds", async (t) => {
+  const f = await sqlFixture(t),
+    p = new ProcessingRegistry(f.repo),
+    old = await p.receive(f.s, receive(f.i.id)),
+    body = cancelBody();
+  const broken = new ProcessingRegistry({
+    transaction: (scope, work) =>
+      f.repo.transaction(scope, (tx) =>
+        work({
+          ...tx,
+          appendAudit: async () => {
+            throw Error("simulated cancellation audit failure");
+          },
+        }),
+      ),
+  });
+  await assert.rejects(
+    () => broken.cancelReceipt(f.s, old.id, body),
+    /simulated/,
+  );
+  assert.equal((await p.get(f.s, old.id)).version, 1);
+  assert.ok((await f.ir.get(f.s, f.i.id)).processingHold);
+  const second = new PreviewSqliteRepository(f.file);
+  try {
+    const results = await Promise.allSettled([
+      p.cancelReceipt(f.s, old.id, body),
+      new ProcessingRegistry(second).start(f.s, old.id, start(1)),
+    ]);
+    assert.equal(results.filter((x) => x.status === "fulfilled").length, 1);
+    assert.equal(
+      results.filter(
+        (x) => x.status === "rejected" && x.reason.code === "CONFLICT",
+      ).length,
+      1,
+    );
+    const saved = await new ProcessingRegistry(second).get(f.s, old.id);
+    assert.equal(saved.state, "cancelled");
+    assert.equal(!!(await f.ir.get(f.s, f.i.id)).processingHold, false);
+    assert.equal(
+      (await new ProcessingRegistry(second).get(f.s, old.id, 1)).state,
+      "received",
+    );
+  } finally {
+    second.close();
+  }
+});

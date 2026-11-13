@@ -1993,6 +1993,7 @@ test("inspection capability and canonical person session fields cannot be malfor
   for (const patch of [
     { canInspect: "true" },
     { canCorrectReceipt: "true" },
+    { canCancelReceipt: "true" },
     { personId: {} },
     { personId: "not-a-uuid" },
   ]) {

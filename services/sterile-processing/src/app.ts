@@ -74,6 +74,7 @@ export interface SterileDependencies {
       | "processing:read"
       | "processing:write"
       | "processing:inspect"
+      | "processing:cancel"
       | "processing:correct"
       | "packaging:read"
       | "packaging:write"
@@ -305,11 +306,15 @@ export function createSterileApp(
                                         ? "processing:read"
                                         : /\/[^/]+\/inspect$/.test(req.path)
                                           ? "processing:inspect"
-                                          : /\/[^/]+\/correct-receipt$/.test(
+                                          : /\/[^/]+\/cancel-receipt$/.test(
                                                 req.path,
                                               )
-                                            ? "processing:correct"
-                                            : "processing:write"
+                                            ? "processing:cancel"
+                                            : /\/[^/]+\/correct-receipt$/.test(
+                                                  req.path,
+                                                )
+                                              ? "processing:correct"
+                                              : "processing:write"
                                       : req.path.startsWith("/tray-")
                                         ? readOnly
                                           ? "trays:read"
@@ -327,7 +332,7 @@ export function createSterileApp(
       res.locals.scope = scope;
       if (
         !readOnly &&
-        /^\/processing\/[^/]+\/(start|finish|inspect|correct-receipt)$/.test(
+        /^\/processing\/[^/]+\/(start|finish|inspect|correct-receipt|cancel-receipt)$/.test(
           req.path,
         ) &&
         !principal.personId
@@ -1813,6 +1818,23 @@ export function createSterileApp(
       ),
     );
   });
+  app.post(prefix + "/processing/:id/cancel-receipt", async (req, res) => {
+    noQuery(req);
+    const v = body(req.body, [
+      "requestId",
+      "version",
+      "reason",
+      "reference",
+      "confirmed",
+    ]);
+    res.json(
+      await processing().cancelReceipt(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        v as unknown as Parameters<ProcessingRegistry["cancelReceipt"]>[2],
+      ),
+    );
+  });
   app.post(prefix + "/processing/:id/correct-receipt", async (req, res) => {
     noQuery(req);
     const v = body(req.body, [
@@ -2687,6 +2709,7 @@ export function createSterileApp(
               SELF_INSPECTION: 409,
               INSPECTION_IDENTITY_REQUIRED: 409,
               RECEIPT_CORRECTION_BLOCKED: 409,
+              RECEIPT_CANCELLATION_BLOCKED: 409,
               PACKAGING_BLOCKED: 409,
               LOAD_BLOCKED: 409,
               REVIEW_BLOCKED: 409,

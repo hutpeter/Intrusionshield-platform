@@ -1,4 +1,6 @@
 const es = {
+  RECEIPT_CANCELLATION_BLOCKED:
+    "La cancelación requiere una recepción ordinaria sin limpieza ni admisión vinculada.",
   RECEIPT_CORRECTION_BLOCKED:
     "La recepción solo puede corregirse antes de iniciar la limpieza. Se conservan el historial y las retenciones.",
   SELF_INSPECTION:
@@ -81,6 +83,8 @@ const es = {
 };
 type Messages = Record<keyof typeof es, string>;
 const en: Messages = {
+  RECEIPT_CANCELLATION_BLOCKED:
+    "Cancellation requires an ordinary received receipt with no cleaning or linked admission.",
   RECEIPT_CORRECTION_BLOCKED:
     "Receipt details can only be corrected before cleaning starts. History and holds are retained.",
   SELF_INSPECTION:
@@ -161,6 +165,8 @@ const en: Messages = {
     "Service unavailable. The change has not been confirmed.",
 };
 const fr: Messages = {
+  RECEIPT_CANCELLATION_BLOCKED:
+    "L’annulation exige une réception ordinaire sans nettoyage ni admission liée.",
   RECEIPT_CORRECTION_BLOCKED:
     "Les détails de réception ne peuvent être corrigés qu’avant le nettoyage. L’historique et les blocages sont conservés.",
   SELF_INSPECTION:
