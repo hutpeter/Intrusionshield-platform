@@ -1,5 +1,13 @@
 # Sterile Processing MVP closeout
 
+**November 13 clarification and resumption:** the owner wanted to pause to assess
+remaining work toward a workable client MVP, not declare that MVP complete.
+The earlier completion wording below is historical and withdrawn as a client-MVP
+status. Development has now resumed, starting with
+[identity and access](IDENTITY-ACCESS.md). Prior test/owner evidence is retained;
+it does not establish real-user or clinical acceptance. Optional report work
+remains frozen while functional MVP gaps are addressed.
+
 November 12, 2026 · `feature/sterile-processing-preview`
 
 The owner requested a bounded MVP followed by a pause to assess the next phase.

@@ -1,5 +1,13 @@
 # Ruby Sterile Processing — issues log
 
+**November 13, 2026:** owner clarified the pause was for an assessment of remaining
+MVP work and has now resumed development. The local closeout below did not complete
+the client MVP. [Identity/access backend increment](IDENTITY-ACCESS.md) adds signed
+Ruby token verification, current account checks and persistent explicit facility
+grants. Browser sign-in, access administration/central policy integration and
+independent inspection remain outstanding. RSP-ISS-001 is still unimplemented;
+optional report development remains frozen.
+
 **November 12, 2026:** see [MVP-CLOSEOUT.md](MVP-CLOSEOUT.md) for the fixed local
 demonstration MVP boundary and deferred assessment backlog. Optional feature work
 is frozen pending the final owner check and pause. Production gates below remain

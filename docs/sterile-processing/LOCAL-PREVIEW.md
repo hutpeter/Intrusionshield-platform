@@ -1,5 +1,10 @@
 # Standalone instrument-management preview
 
+**November 13:** client-MVP development has resumed with
+[identity/access backend work](IDENTITY-ACCESS.md). The existing dummy preview
+still uses demonstration identities; real browser sign-in is not enabled yet.
+The November 12 closeout below describes the historical local demonstration only.
+
 **November 12 MVP closeout:** optional feature work is frozen. See
 [MVP-CLOSEOUT.md](MVP-CLOSEOUT.md) for the supported local scope, developer
 verification, one final owner trace check and the pause/assessment boundary.

@@ -1,5 +1,26 @@
 # Testing register — Ruby Sterile Processing
 
+## MVP development resumed — November 13, 2026 (current)
+
+Owner clarified that the previous pause was to assess remaining functionality,
+not accept a client MVP, and explicitly resumed development. Historical local
+trace evidence below is retained without claiming client/clinical acceptance.
+
+Delivered the first [identity/access backend increment](IDENTITY-ACCESS.md):
+strict verified Ruby USER tokens, current identity/account checks, persisted
+explicit facility permissions, live access revocation and attributed atomic
+access-change history. **170 HTTP/SQLite tests passed (13 new access tests)** and
+service/domain builds passed. The full service suite retains existing preview,
+authorization, persistence, concurrency and connected workflow coverage. No UI
+changed; the web/domain test suites were not repeated for this backend addition.
+The existing domain build was rerun as required by the service suite.
+
+**No owner check for this backend-only increment.** Browser sign-in/session,
+authorized access administration, central entitlement/facility policy integration
+and independent inspection remain outstanding. No production identity/database
+was accessed and the dummy preview remains separate. Optional report work stays
+frozen. Broader pending owner/manual checks are not relabeled passed.
+
 ## MVP closeout — November 12, 2026 (current)
 
 **Owner evidence and pause:** screenshot received November 12 shows the returned
