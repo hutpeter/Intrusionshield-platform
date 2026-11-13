@@ -1599,3 +1599,9 @@ export class MemoryRepository {
     }
   }
 }
+
+/** Fictional, independent inspection actor for workflow fixtures. Not an authorization bypass. */
+export function independentInspector(scope) {
+  const id = "a7f4b902-0101-4be1-8001-000000000005";
+  return { ...scope, actorId: id, personId: id };
+}

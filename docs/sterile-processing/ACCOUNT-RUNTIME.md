@@ -1,5 +1,12 @@
 # Runnable single-machine account setup
 
+**Inspection update:** [INDEPENDENT-INSPECTION.md](INDEPENDENT-INSPECTION.md) adds
+required canonical `personId` enrollment and the separate `processing:inspect`
+permission. The access-change example/tool now require that person field. Legacy
+grants lacking it cannot sign in until an attributed versioned assignment is made;
+an existing assigned mapping cannot be changed or removed. The historical remaining
+scope below predates this inspection increment.
+
 November 13, 2026 · `feature/sterile-processing-preview`
 
 The Ruby account screen now has a concrete launcher and composition. It uses the

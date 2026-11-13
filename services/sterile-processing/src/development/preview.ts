@@ -130,6 +130,7 @@ export function createSterilePreview({
             role: session.role,
             tenantId,
             actorId: actors[session.role],
+            personId: actors[session.role],
             facilityId,
             facilityName: "Centro de demostración",
             timeZone: "America/Lima",
@@ -137,6 +138,7 @@ export function createSterilePreview({
               Object.entries(actors).map(([role, id]) => [id, role]),
             ),
             canWrite: session.role === "operator",
+            canInspect: session.role === "reviewer",
             canReview: session.role === "reviewer",
             canRecall: session.role === "reviewer",
             canClearRecall: session.role === "reviewer",
@@ -1160,7 +1162,12 @@ export function createSterilePreview({
           (r) => tokens[r] === bearer,
         );
         return role
-          ? { tenantId, actorId: actors[role], facilityIds: [facilityId] }
+          ? {
+              tenantId,
+              actorId: actors[role],
+              personId: actors[role],
+              facilityIds: [facilityId],
+            }
           : null;
       },
       authorize: async (scope, capability, permission) =>
@@ -1170,6 +1177,7 @@ export function createSterilePreview({
         fixtureGrants.has("core.authentication") &&
         fixtureGrants.has("core.authorization") &&
         ((scope.actorId === actors.operator &&
+          permission !== "processing:inspect" &&
           permission !== "consumables:reconcile" &&
           permission !== "consumables:policy" &&
           permission !== "consumables:withdraw" &&
@@ -1184,6 +1192,7 @@ export function createSterilePreview({
           (scope.actorId === actors.viewer && permission.endsWith(":read")) ||
           (scope.actorId === actors.reviewer &&
             (permission.endsWith(":read") ||
+              permission === "processing:inspect" ||
               permission === "consumables:reconcile" ||
               permission === "consumables:policy" ||
               permission === "consumables:withdraw" ||

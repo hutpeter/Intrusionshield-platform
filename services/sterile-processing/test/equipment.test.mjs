@@ -290,6 +290,7 @@ test("equipment source authorization is required before a workflow can query rep
       authenticate: async () => ({
         tenantId: s.tenantId,
         actorId: s.actorId,
+        personId: s.actorId,
         facilityIds: [s.facilityId],
       }),
       authorize: async (scope, cap, permission) =>
@@ -575,6 +576,7 @@ test("incident source and recall permissions are checked before any repository a
       authenticate: async () => ({
         tenantId: s.tenantId,
         actorId: s.actorId,
+        personId: s.actorId,
         facilityIds: [s.facilityId],
       }),
       authorize: async (scope, cap, permission) => permission !== denied,

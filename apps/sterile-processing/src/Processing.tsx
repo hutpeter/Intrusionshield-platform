@@ -14,6 +14,10 @@ import type {
 import { api, ApiError, type Session, type Page } from "./api";
 import { labels, type Language } from "./text";
 import { processingLabels } from "./processing-text";
+import {
+  inspectionBlock,
+  independentInspectionText,
+} from "./inspection-policy";
 type Form = {
   kind: "receive" | "start" | "finish" | "inspect";
   requestId: string;
@@ -91,6 +95,8 @@ export function ProcessingWorkspace({
   const pending = useRef<AbortController | null>(null),
     inspection = useRef<AbortController | null>(null),
     busy = blocked || saving || scanBusy;
+  const canEditForm =
+    form?.kind === "inspect" ? session.canInspect : session.canWrite;
   useEffect(() => {
     onDirty(!!form);
     return () => onDirty(false);
@@ -201,7 +207,7 @@ export function ProcessingWorkspace({
         : {}),
     }));
   async function save() {
-    if (!form || busy || !session.canWrite || !fields.confirmed) return;
+    if (!form || busy || !canEditForm || !fields.confirmed) return;
     const c = new AbortController();
     pending.current = c;
     setSaving(true);
@@ -495,7 +501,13 @@ export function ProcessingWorkspace({
           </div>
         </dl>
         {d.state === "awaiting_inspection" && (
-          <p className="readonly-note">{p.pending}</p>
+          <div className="readonly-note">
+            <p>{p.pending}</p>
+            <p>{independentInspectionText[language]}</p>
+            {session.canInspect && inspectionBlock(d, session) && (
+              <p role="status">{t[inspectionBlock(d, session)!]}</p>
+            )}
+          </div>
         )}
       </section>
       <section className="panel">
@@ -705,29 +717,35 @@ export function ProcessingWorkspace({
               {p.newReceipt}
             </button>
           )}
-          {session.canWrite && detail && !past && (
+          {(session.canWrite || session.canInspect) && detail && !past && (
             <>
-              {["received", "cleaning_failed", "inspection_failed"].includes(
-                detail.state,
-              ) && (
+              {session.canWrite &&
+                ["received", "cleaning_failed", "inspection_failed"].includes(
+                  detail.state,
+                ) && (
+                  <button
+                    className="primary"
+                    disabled={busy || loading || !!form}
+                    onClick={() => begin("start")}
+                  >
+                    {detail.state !== "received" ? p.retry : p.start}
+                  </button>
+                )}
+              {session.canInspect && detail.state === "awaiting_inspection" && (
                 <button
                   className="primary"
-                  disabled={busy || loading || !!form}
-                  onClick={() => begin("start")}
-                >
-                  {detail.state !== "received" ? p.retry : p.start}
-                </button>
-              )}
-              {detail.state === "awaiting_inspection" && (
-                <button
-                  className="primary"
-                  disabled={busy || loading || !!form}
+                  disabled={
+                    busy ||
+                    loading ||
+                    !!form ||
+                    inspectionBlock(detail, session) !== null
+                  }
                   onClick={() => begin("inspect")}
                 >
                   {p.inspect}
                 </button>
               )}
-              {detail.state === "cleaning" && (
+              {session.canWrite && detail.state === "cleaning" && (
                 <button
                   className="primary"
                   disabled={busy || loading || !!form}
@@ -777,7 +795,7 @@ export function ProcessingWorkspace({
           <button onClick={() => setDiscard(null)}>{t.keep}</button>
         </section>
       )}
-      {form && session.canWrite && (
+      {form && canEditForm && (
         <form
           className="panel edit-panel"
           onSubmit={(e) => {

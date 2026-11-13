@@ -37,6 +37,7 @@ function setup(t) {
   const user = {
     tenantId: configuration.tenantId,
     actorId,
+    personId: actorId,
     status: "ACTIVE",
     facilities: [
       {
@@ -121,6 +122,7 @@ test("Ruby signed USER token resolves enrolled identity; facility and granular p
     {
       tenantId: f.configuration.tenantId,
       actorId: f.actorId,
+      personId: f.actorId,
       facilityIds: [f.facilityId],
     },
   );
@@ -631,5 +633,40 @@ test("Ruby identity repository failure is not mistaken for a missing account", a
   await assert.rejects(
     () => access.authorize(f.scope, "sterile.core", "instruments:read"),
     /identity unavailable/,
+  );
+});
+
+test("canonical person enrollment is required, shared by aliases and cannot be remapped or removed", async (t) => {
+  const f = setup(t),
+    access = createRubySterileAccess(
+      f.configuration,
+      f.directory,
+      f.identities,
+    );
+  const { personId, ...legacy } = f.user;
+  f.save(legacy);
+  assert.equal(await access.authenticate(f.token()), null);
+  f.save(f.user, 1);
+  assert.equal((await access.authenticate(f.token())).personId, f.actorId);
+  for (const change of [{ ...f.user, personId: randomUUID() }, legacy])
+    assert.throws(() => f.save(change, 2), /person mapping/);
+  assert.equal(
+    (await f.directory.findUser(f.configuration.tenantId, f.actorId)).version,
+    2,
+  );
+  const alias = { ...f.user, actorId: randomUUID() };
+  f.save(alias);
+  assert.equal(
+    (await f.directory.findUser(f.configuration.tenantId, alias.actorId))
+      .personId,
+    f.actorId,
+  );
+  assert.equal(
+    await access.authorize(
+      { ...f.scope, personId: randomUUID() },
+      "sterile.core",
+      "instruments:read",
+    ),
+    false,
   );
 });

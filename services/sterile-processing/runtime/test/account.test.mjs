@@ -166,6 +166,7 @@ async function fixture(t) {
         {
           tenantId,
           actorId,
+          personId: actorId,
           status: "ACTIVE",
           facilities: [
             {
@@ -470,6 +471,7 @@ test("trusted offline grants retain versions and stale-write denial without chan
     change = {
       tenantId: f.input.tenantId,
       actorId: randomUUID(),
+      personId: randomUUID(),
       status: "ACTIVE",
       facilities: [
         {

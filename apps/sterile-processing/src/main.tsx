@@ -1004,7 +1004,7 @@ function Workspace({
               </div>
             </div>
           )}
-        {session.role === "viewer" && (
+        {session.role === "viewer" && !session.canInspect && (
           <p className="readonly-note">{t.viewerNotice}</p>
         )}
         {notice && (

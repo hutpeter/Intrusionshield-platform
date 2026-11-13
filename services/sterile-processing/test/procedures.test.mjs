@@ -287,6 +287,7 @@ test("controlled source selection requires procedure read permission before acce
       authenticate: async () => ({
         tenantId: s.tenantId,
         actorId: s.actorId,
+        personId: s.actorId,
         facilityIds: [s.facilityId],
       }),
       authorize: async (scope, cap, permission) =>

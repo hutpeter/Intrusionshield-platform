@@ -34,6 +34,7 @@ export const sterilePermissions = [
   "trays:write",
   "processing:read",
   "processing:write",
+  "processing:inspect",
   "packaging:read",
   "packaging:write",
   "cycles:read",
@@ -60,6 +61,8 @@ export interface FacilityAccess {
 export interface UserAccess {
   tenantId: string;
   actorId: string;
+  /** Required for account sign-in; absent only on historical, not-yet-upgraded access records. */
+  personId?: string;
   status: "ACTIVE" | "DISABLED";
   version: number;
   facilities: readonly FacilityAccess[];
@@ -179,7 +182,7 @@ export function createRubySterileAccess(
         return null;
       }
       const record = await activeUser(actorId);
-      if (!record) return null;
+      if (!record?.personId) return null;
       const facilityIds = [
         ...new Set(
           record.facilities
@@ -187,12 +190,24 @@ export function createRubySterileAccess(
             .map((grant) => sterileUuid(grant.facilityId)),
         ),
       ];
-      return facilityIds.length ? { tenantId, actorId, facilityIds } : null;
+      return facilityIds.length
+        ? {
+            tenantId,
+            actorId,
+            personId: sterileUuid(record.personId),
+            facilityIds,
+          }
+        : null;
     },
     async authorize(scope: SterileScope, capability, permission) {
       if (scope.tenantId !== tenantId || capability !== "sterile.core")
         return false;
       const record = await activeUser(sterileUuid(scope.actorId));
+      if (
+        !record?.personId ||
+        (scope.personId !== undefined && scope.personId !== record.personId)
+      )
+        return false;
       return (
         record?.facilities.some(
           (grant) =>

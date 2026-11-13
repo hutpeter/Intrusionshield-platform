@@ -107,6 +107,9 @@ export class SqliteSterileAccessDirectory implements SterileAccessDirectory {
       ...structuredClone(input),
       tenantId: sterileUuid(input.tenantId),
       actorId: sterileUuid(input.actorId),
+      ...(input.personId !== undefined
+        ? { personId: sterileUuid(input.personId) }
+        : {}),
       version: change.expectedVersion + 1,
     };
     validate(record);
@@ -123,11 +126,18 @@ export class SqliteSterileAccessDirectory implements SterileAccessDirectory {
     try {
       const existing = this.db
         .prepare(
-          "SELECT version FROM sterile_user_access WHERE tenant_id=? AND actor_id=?",
+          "SELECT version,payload FROM sterile_user_access WHERE tenant_id=? AND actor_id=?",
         )
         .get(record.tenantId, record.actorId);
       if ((existing?.version ?? 0) !== change.expectedVersion)
         throw new Error("Access version conflict.");
+      if (existing) {
+        const previous = JSON.parse(existing.payload as string) as UserAccess;
+        if (previous.personId && previous.personId !== record.personId)
+          throw new Error(
+            "An enrolled account's person mapping cannot be changed or removed.",
+          );
+      }
       const payload = JSON.stringify(record);
       this.db
         .prepare(
@@ -161,6 +171,11 @@ export class SqliteSterileAccessDirectory implements SterileAccessDirectory {
 function validate(record: UserAccess) {
   sterileUuid(record.tenantId);
   sterileUuid(record.actorId);
+  if (
+    record.personId !== undefined &&
+    sterileUuid(record.personId) !== record.personId
+  )
+    throw new Error("Invalid canonical person mapping.");
   if (
     !["ACTIVE", "DISABLED"].includes(record.status) ||
     !Number.isSafeInteger(record.version) ||

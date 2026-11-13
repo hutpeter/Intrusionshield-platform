@@ -1,3 +1,4 @@
+import { fictionalInspector, fictionalBatch } from "./inspection-person.js";
 import { createHash } from "node:crypto";
 import {
   CycleRegistry,
@@ -29,13 +30,14 @@ export async function prepareReviewExample(
       h.slice(17, 20) +
       "-" +
       h.slice(20, 32);
-  return repository.transaction(operatorScope, async (tx) => {
+  return fictionalBatch(repository, operatorScope, async (tx) => {
     const direct: SterileRepository = {
       transaction: async (s, work) => {
         if (
           s.tenantId !== operatorScope.tenantId ||
           s.facilityId !== operatorScope.facilityId ||
-          s.actorId !== operatorScope.actorId
+          (s.actorId !== operatorScope.actorId &&
+            s.actorId !== fictionalInspector(operatorScope).actorId)
         )
           throw Error("Fixture scope mismatch");
         return work(tx);

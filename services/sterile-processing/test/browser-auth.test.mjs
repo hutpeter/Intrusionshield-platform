@@ -49,6 +49,7 @@ async function fixture(t, patch = {}) {
         return {
           tenantId,
           actorId,
+          personId: actorId,
           status: "ACTIVE",
           version: 1,
           facilities: [

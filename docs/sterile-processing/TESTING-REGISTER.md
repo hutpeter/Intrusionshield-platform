@@ -1,5 +1,31 @@
 # Testing register — Ruby Sterile Processing
 
+## Independent inspection — November 13, 2026 (current)
+
+Delivered [INDEPENDENT-INSPECTION.md](INDEPENDENT-INSPECTION.md): dedicated server
+inspection permission, required real-account canonical person enrollment, immutable
+assigned mappings, saved cleaning/inspection person snapshots and transaction-level
+exclusion of all cleaning start/finish participants across retries/aliases. Legacy
+missing person evidence remains held. Inspector-only UI actions work without
+cleaning permission; preview fixtures now attribute inspection to the separate
+reviewer while retaining atomic rollback. Account transactions cannot opt into
+multi-actor fictional batches.
+
+Developer: **233 domain, 178 service, 92 web and six account-runtime tests passed**;
+core/service/web builds passed. Chromium passed operator exclusion, separate
+reviewer form/save, persisted distinct person IDs and mobile layout. This includes
+alias/both-role denial, retry/reinspection/history, mapping locks, spoof/permission
+denial, persistence, no writes on denial, race/idempotency and audit rollback checks.
+No live identity service or owner database was accessed.
+
+**U-INDEPENDENT-01 pending:** updated preview → Demo operator → Receiving and
+cleaning → Prepare fictional inspection example. Expect independent-person
+guidance and no Record inspection action for that operator. This is the only owner
+check. Separate reviewer handoff is developer-verified, not owner accepted.
+RSP-ISS-001's functional rule is now implemented; approved person mapping,
+competency, M-AUTH-01, legacy resolution and clinical acceptance remain pending.
+Other deferred owner checks are unchanged.
+
 ## Account runtime composition — November 13, 2026 (current)
 
 Delivered [ACCOUNT-RUNTIME.md](ACCOUNT-RUNTIME.md): explicit HTTPS loopback launcher,

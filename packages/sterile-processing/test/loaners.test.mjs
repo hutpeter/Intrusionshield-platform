@@ -1,3 +1,4 @@
+import { independentInspector } from "./memory-repository.mjs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -83,7 +84,7 @@ async function inspected(f, r) {
     note: "",
     confirmed: true,
   });
-  return f.p.inspect(f.s, r.episodeId, {
+  return f.p.inspect(independentInspector(f.s), r.episodeId, {
     requestId: randomUUID(),
     version: 3,
     procedure: "INSPECT",

@@ -1,3 +1,4 @@
+import { independentInspector } from "./memory-repository.mjs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -285,7 +286,7 @@ test("maintenance trace shows current hold, evidence and linked receiving; new p
     b(2, { outcome: "passed", evidence: "NEW-CLEAN", note: "" }),
   );
   await f.p.inspect(
-    f.s,
+    independentInspector(f.s),
     id,
     b(3, {
       procedure: "INSPECT",

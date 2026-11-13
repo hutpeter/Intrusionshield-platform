@@ -28,7 +28,7 @@ try {
   if (
     !change ||
     Object.keys(change).sort().join(",") !==
-      "actorId,changedBy,expectedVersion,facilities,reason,status,tenantId"
+      "actorId,changedBy,expectedVersion,facilities,personId,reason,status,tenantId"
   )
     throw new Error("Invalid access change fields.");
   const { changedBy, reason, expectedVersion, ...user } = change;

@@ -36,6 +36,7 @@ import {
 export interface SterilePrincipal {
   tenantId: string;
   actorId: string;
+  personId?: string;
   facilityIds: readonly string[];
 }
 export interface SterileDependencies {
@@ -72,6 +73,7 @@ export interface SterileDependencies {
       | "trays:write"
       | "processing:read"
       | "processing:write"
+      | "processing:inspect"
       | "packaging:read"
       | "packaging:write"
       | "cycles:read"
@@ -155,6 +157,9 @@ export function createSterileApp(
       res.locals.principal = {
         tenantId: sterileUuid(principal.tenantId),
         actorId: sterileUuid(principal.actorId),
+        ...(principal.personId !== undefined
+          ? { personId: sterileUuid(principal.personId) }
+          : {}),
         facilityIds: principal.facilityIds.map(sterileUuid),
       };
       next();
@@ -207,6 +212,9 @@ export function createSterileApp(
       const scope: SterileScope = {
         tenantId: principal.tenantId,
         actorId: principal.actorId,
+        ...(principal.personId !== undefined
+          ? { personId: principal.personId }
+          : {}),
         facilityId,
       };
       const readOnly = req.method === "GET" || req.method === "HEAD";
@@ -294,7 +302,9 @@ export function createSterileApp(
                                     : req.path.startsWith("/processing")
                                       ? readOnly
                                         ? "processing:read"
-                                        : "processing:write"
+                                        : /\/[^/]+\/inspect$/.test(req.path)
+                                          ? "processing:inspect"
+                                          : "processing:write"
                                       : req.path.startsWith("/tray-")
                                         ? readOnly
                                           ? "trays:read"
@@ -310,6 +320,12 @@ export function createSterileApp(
         return;
       }
       res.locals.scope = scope;
+      if (
+        !readOnly &&
+        /^\/processing\/[^/]+\/(start|finish|inspect)$/.test(req.path) &&
+        !principal.personId
+      )
+        throw new SterileError("INSPECTION_IDENTITY_REQUIRED");
       next();
     } catch (error) {
       next(error);
@@ -2640,6 +2656,8 @@ export function createSterileApp(
               ASSEMBLY_INCOMPLETE: 409,
               INSTRUMENT_ASSIGNED: 409,
               PROCESSING_HOLD: 409,
+              SELF_INSPECTION: 409,
+              INSPECTION_IDENTITY_REQUIRED: 409,
               PACKAGING_BLOCKED: 409,
               LOAD_BLOCKED: 409,
               REVIEW_BLOCKED: 409,

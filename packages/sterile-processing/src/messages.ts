@@ -1,4 +1,8 @@
 const es = {
+  SELF_INSPECTION:
+    "Quien haya iniciado o finalizado la limpieza no puede inspeccionar este episodio, incluso con otra cuenta.",
+  INSPECTION_IDENTITY_REQUIRED:
+    "Falta la identidad personal de una limpieza anterior. Se mantiene la retención; solicite una resolución autorizada.",
   INSUFFICIENT_STOCK:
     "Existencias insuficientes. Registre una recepción válida o reduzca la cantidad.",
   CONSUMABLE_WITHDRAWN:
@@ -75,6 +79,10 @@ const es = {
 };
 type Messages = Record<keyof typeof es, string>;
 const en: Messages = {
+  SELF_INSPECTION:
+    "Anyone who started or finished cleaning cannot inspect this episode, including through another account.",
+  INSPECTION_IDENTITY_REQUIRED:
+    "A previous cleaning lacks person-identity evidence. The hold remains; request an authorized resolution.",
   INSUFFICIENT_STOCK:
     "Insufficient stock. Record a valid receipt or reduce the quantity.",
   CONSUMABLE_WITHDRAWN: "Lot withdrawn. It cannot be used in new packaging.",
@@ -149,6 +157,10 @@ const en: Messages = {
     "Service unavailable. The change has not been confirmed.",
 };
 const fr: Messages = {
+  SELF_INSPECTION:
+    "Toute personne ayant commencé ou terminé le nettoyage ne peut pas inspecter cet épisode, même avec un autre compte.",
+  INSPECTION_IDENTITY_REQUIRED:
+    "Un nettoyage antérieur ne comporte pas de preuve d’identité personnelle. Le blocage reste actif ; demandez une résolution autorisée.",
   INSUFFICIENT_STOCK:
     "Stock insuffisant. Enregistrez une réception valide ou réduisez la quantité.",
   CONSUMABLE_WITHDRAWN:

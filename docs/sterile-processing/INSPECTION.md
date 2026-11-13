@@ -1,6 +1,6 @@
 # Inspection after cleaning
 
-November 3, 2026. Standalone fictional-data preview. See the
+Updated November 13, 2026 for independent inspection. Standalone fictional-data preview. See the
 [testing register](TESTING-REGISTER.md) for completed, pending and deferred checks.
 
 ## Update and one short check
@@ -14,18 +14,19 @@ pnpm sterile:preview
 
 Wait for **Ready: http://127.0.0.1:9553**, leave PowerShell running, and refresh.
 
-1. As **Operador demo**, select **Recepción y limpieza**.
-2. Select **Preparar ejemplo ficticio de inspección**. It creates a new fictional
-   instrument, receipt and simulated cleaning, already pending inspection. Existing
-   instruments and trays remain unchanged; this is not actual cleaning evidence.
-3. Select **Registrar inspección**. Enter procedure `INSPECT-DEMO`, version `1`,
-   evidence `EVID-INSP-DEMO`. Set **Limpio**, **Seco**, **Íntegro** and **Funcional**
-   to **Conforme**, check the confirmation, and save.
-4. Expected: **Inspección satisfactoria — disponible para armado**.
+1. As **Demo operator**, open **Receiving and cleaning**.
+2. Click **Prepare fictional inspection example**. It creates one new fictional
+   receipt and simulated cleaning, preserving existing records.
+3. Confirm the independent-person guidance appears and **Record inspection** is
+   unavailable to this operator. That is the only owner check for this build.
 
-This is the only requested manual check for this build. The longer walkthroughs
-and regression checks are tracked as deferred, rather than requiring you to repeat
-receipt and cleaning each time.
+An authorized independent person performs inspection. In the dummy preview,
+**Demo reviewer** has the separate inspection permission without cleaning rights:
+open the new receipt's detail and record the four checks, procedure/version,
+evidence and confirmation. The developer browser walkthrough verified this
+handoff; it is not an additional owner check now. Real-account users need
+`processing:read`, `processing:inspect`, applicable source read permissions and an
+approved canonical person mapping. See [INDEPENDENT-INSPECTION.md](INDEPENDENT-INSPECTION.md).
 
 ## Implemented behavior
 
@@ -43,9 +44,10 @@ receipt and cleaning each time.
 - Each inspection records actor, server time, procedure/version, evidence,
   individual checks, result and the cleaning attempt inspected. Previously saved
   episodes without inspections remain readable. No schema reset is required.
-- Existing processing write authorization governs inspection in this preview;
-  a separate competent-inspector role requires production authorization design.
-  Read-only auditors cannot record inspections or prepare fictional examples.
+- Inspection requires `processing:inspect`, separate from `processing:write`.
+  Everyone who started or finished cleaning in the episode is disqualified, even
+  through an alias account or after retries. Auditors cannot record inspections.
+  Historical identity gaps stay held instead of receiving inferred approval.
 - Fictional preparation is available only in the explicitly opted-in development
   preview. It requires the operator fixture, same-origin session and CSRF token.
   All setup writes are one transaction and retries use the same request key.

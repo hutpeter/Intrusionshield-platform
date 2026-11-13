@@ -1986,3 +1986,22 @@ test("expiry client validates applied filters and rejects out-of-filter rows wit
     0,
   );
 });
+
+test("inspection capability and canonical person session fields cannot be malformed", async (t) => {
+  let value;
+  fake(t, async () => response(value));
+  for (const patch of [
+    { canInspect: "true" },
+    { personId: {} },
+    { personId: "not-a-uuid" },
+  ]) {
+    value = { ...session, ...patch };
+    await assert.rejects(() => api.session(signal()), ApiError);
+  }
+  value = {
+    ...session,
+    canInspect: true,
+    personId: "a7f4b902-0101-4be1-8001-000000000005",
+  };
+  assert.equal((await api.session(signal())).canInspect, true);
+});

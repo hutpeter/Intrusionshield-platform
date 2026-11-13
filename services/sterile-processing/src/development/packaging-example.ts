@@ -1,3 +1,4 @@
+import { fictionalInspector, fictionalBatch } from "./inspection-person.js";
 import { createHash } from "node:crypto";
 import {
   ProcessingRegistry,
@@ -32,13 +33,14 @@ export async function preparePackagingExample(
       h.slice(20, 32)
     );
   };
-  return repository.transaction(scope, async (tx) => {
+  return fictionalBatch(repository, scope, async (tx) => {
     const direct: SterileRepository = {
       transaction: async (s, work) => {
         if (
           s.tenantId !== scope.tenantId ||
           s.facilityId !== scope.facilityId ||
-          s.actorId !== scope.actorId
+          (s.actorId !== scope.actorId &&
+            s.actorId !== fictionalInspector(scope).actorId)
         )
           throw Error("Fixture scope mismatch");
         return work(tx);
@@ -48,7 +50,7 @@ export async function preparePackagingExample(
       p = new ProcessingRegistry(direct),
       trays = new TrayRegistry(direct),
       i = e.instruments[0];
-    await p.inspect(scope, e.id, {
+    await p.inspect(fictionalInspector(scope), e.id, {
       requestId: step("inspection"),
       version: 3,
       procedure: "SIMULATED-INSPECTION",

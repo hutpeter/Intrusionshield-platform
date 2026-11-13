@@ -231,8 +231,10 @@ export class ProcessingRegistry extends SterileRegistryBase {
               equipment,
               startedAt: at,
               startedBy: s.actorId,
+              startedByPersonId: s.personId ?? s.actorId,
               finishedAt: null,
               finishedBy: null,
+              finishedByPersonId: null,
               outcome: null,
               evidence: null,
               note: null,
@@ -292,6 +294,7 @@ export class ProcessingRegistry extends SterileRegistryBase {
                   ...a,
                   finishedAt: at,
                   finishedBy: s.actorId,
+                  finishedByPersonId: s.personId ?? s.actorId,
                   outcome: input.outcome,
                   evidence,
                   note,
@@ -384,6 +387,26 @@ export class ProcessingRegistry extends SterileRegistryBase {
           )
         )
           invalid();
+        const personId = s.personId ?? s.actorId;
+        // Inspect inside the same transaction/version check that saves evidence and releases holds.
+        // Include failed/retried attempts and both start/finish participants, not just the last finisher.
+        for (const attempt of old.attempts) {
+          if (
+            attempt.startedBy === s.actorId ||
+            attempt.finishedBy === s.actorId ||
+            attempt.startedByPersonId === personId ||
+            attempt.finishedByPersonId === personId
+          )
+            throw new SterileError("SELF_INSPECTION");
+          if (!attempt.startedByPersonId || !attempt.finishedByPersonId)
+            throw new SterileError("INSPECTION_IDENTITY_REQUIRED");
+          try {
+            sterileUuid(attempt.startedByPersonId);
+            sterileUuid(attempt.finishedByPersonId);
+          } catch {
+            throw new SterileError("INSPECTION_IDENTITY_REQUIRED");
+          }
+        }
         for (const i of old.instruments) {
           const hold = await tx.findProcessingHold(i.id);
           if (hold?.episodeId !== old.id) throw new SterileError("CONFLICT");
@@ -425,6 +448,7 @@ export class ProcessingRegistry extends SterileRegistryBase {
               outcome,
               at,
               actorId: s.actorId,
+              personId,
             },
           ],
         };

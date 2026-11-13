@@ -184,6 +184,7 @@ async function preparePackage(f, suffix, { retryCleaning = false } = {}) {
     { version: assembly.version, instrumentIds: [instrument.id] },
     409,
   );
+  await f.login("reviewer");
   episode = await f.command(`/processing/${episode.id}/inspect`, {
     version: episode.version,
     procedure: "SIMULATED-INSPECTION",
@@ -197,11 +198,12 @@ async function preparePackage(f, suffix, { retryCleaning = false } = {}) {
         dry: true,
         intact: true,
         functional: true,
-        note: "Fictional inspection; independent inspector rule remains parked",
+        note: "Fictional inspection; independent inspection by a separate person",
       },
     ],
   });
   assert.equal(episode.state, "ready_for_assembly");
+  await f.login("operator");
   assembly = await f.command(`/tray-assemblies/${assembly.id}/contents`, {
     version: assembly.version,
     instrumentIds: [instrument.id],

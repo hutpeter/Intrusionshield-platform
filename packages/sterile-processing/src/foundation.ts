@@ -35,6 +35,8 @@ export interface SterileScope {
   tenantId: string;
   facilityId: string;
   actorId: string;
+  /** Trusted canonical person, assigned by account administration; never a request field. */
+  personId?: string;
 }
 export interface InstrumentType {
   id: string;
@@ -537,6 +539,8 @@ export class SterileError extends Error {
       | "ASSEMBLY_INCOMPLETE"
       | "INSTRUMENT_ASSIGNED"
       | "PROCESSING_HOLD"
+      | "SELF_INSPECTION"
+      | "INSPECTION_IDENTITY_REQUIRED"
       | "PACKAGING_BLOCKED"
       | "LOAD_BLOCKED"
       | "REVIEW_BLOCKED"
@@ -599,6 +603,9 @@ export function scopeOf(value: SterileScope): SterileScope {
     tenantId: sterileUuid(value.tenantId),
     facilityId: sterileUuid(value.facilityId),
     actorId: sterileUuid(value.actorId),
+    ...(value.personId !== undefined
+      ? { personId: sterileUuid(value.personId) }
+      : {}),
   };
 }
 export function field(value: unknown, max: number, required = true): string {

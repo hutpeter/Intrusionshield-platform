@@ -1,3 +1,4 @@
+import { independentInspector } from "../../../packages/sterile-processing/test/memory-repository.mjs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -396,9 +397,10 @@ test("HTTP inspection enforces cleaning, confirmation, exact items, CSRF and vie
       await f.call(f.base + "/processing", receive(f.i.id))
     ).json(),
     path = f.base + "/processing/" + e.id + "/inspect";
-  assert.equal((await f.call(path, inspectBody(f.i.id, 1))).status, 409);
+  assert.equal((await f.call(path, inspectBody(f.i.id, 1))).status, 403);
   await f.call(f.base + "/processing/" + e.id + "/start", start(1));
   await f.call(f.base + "/processing/" + e.id + "/finish", finish(2));
+  await f.login("reviewer");
   assert.equal(
     (await f.call(path, { ...inspectBody(f.i.id), confirmed: false })).status,
     400,
@@ -414,7 +416,7 @@ test("HTTP inspection enforces cleaning, confirmation, exact items, CSRF and vie
   );
   await f.login("viewer");
   assert.equal((await f.call(path, inspectBody(f.i.id))).status, 403);
-  await f.login();
+  await f.login("reviewer");
   const r = await f.call(path, inspectBody(f.i.id));
   assert.equal(r.status, 200);
   assert.equal((await r.json()).state, "ready_for_assembly");
@@ -439,9 +441,15 @@ test("SQLite inspection release and audit are atomic and survive reopening", asy
           }),
         ),
     };
-  await assert.rejects(new ProcessingRegistry(broken).inspect(f.s, e.id, body));
+  await assert.rejects(
+    new ProcessingRegistry(broken).inspect(
+      independentInspector(f.s),
+      e.id,
+      body,
+    ),
+  );
   assert.ok((await f.ir.get(f.s, f.i.id)).processingHold);
-  await p.inspect(f.s, e.id, body);
+  await p.inspect(independentInspector(f.s), e.id, body);
   const r = new PreviewSqliteRepository(f.file);
   try {
     const x = await new ProcessingRegistry(r).get(f.s, e.id);

@@ -9,8 +9,10 @@ export interface CleaningAttempt {
   equipment: string;
   startedAt: string;
   startedBy: string;
+  startedByPersonId?: string;
   finishedAt: string | null;
   finishedBy: string | null;
+  finishedByPersonId?: string | null;
   outcome: "passed" | "failed" | null;
   evidence: string | null;
   note: string | null;
@@ -34,6 +36,7 @@ export interface InspectionRecord {
   outcome: "passed" | "failed";
   at: string;
   actorId: string;
+  personId?: string;
 }
 export interface InspectInput {
   procedureRevisionId?: string;

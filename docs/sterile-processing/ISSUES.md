@@ -1,5 +1,10 @@
 # Ruby Sterile Processing — issues log
 
+**Current November 13 inspection increment:** RSP-ISS-001 now has a dedicated
+inspection permission and canonical-person separation checks. See its current
+entry below and [INDEPENDENT-INSPECTION.md](INDEPENDENT-INSPECTION.md). Earlier
+notes on this page that call the rule parked/unimplemented are historical.
+
 **November 13 account runtime:** [ACCOUNT-RUNTIME.md](ACCOUNT-RUNTIME.md) adds the
 concrete HTTPS loopback launcher, explicit configuration/preflight, Ruby password
 and current-identity composition through a SELECT-only SQL connection, separate
@@ -35,33 +40,36 @@ Keep test execution status in [TESTING-REGISTER.md](TESTING-REGISTER.md).
 
 ## RSP-ISS-001 — Independent inspector role and no self-inspection
 
-- **Status:** Deferred at the owner's explicit request on November 4, 2026.
-- **Source:** Owner feedback after successful inspection smoke check U-INSP-01.
-- **Requirement:** Introduce a specific inspector role/permission. A person who
-  performed cleaning must not inspect or confirm their own work, even if that
-  person also holds the inspector role. Separate role membership alone is not
-  sufficient; enforce separation by verified person identity for the episode.
-- **Current gap:** The development preview uses the operator fixture for cleaning
-  and inspection, authorized through `processing:write`. It records actors but
-  does not enforce independent inspection. The successful smoke check verifies
-  the current screen and saved result, not this separation requirement.
-- **Implementation scope when resumed:** Add an inspection-specific server
-  permission and UI affordances; compare the inspector's verified identity with
-  the relevant cleaning actors. Define treatment of cleaning start versus finish
-  actors, team cleaning, retries, reinspection and multiple accounts belonging
-  to the same person. Retain actor attribution and deny attempted bypasses at
-  the API. Changes to identity mappings must not rewrite historical attribution.
-- **Acceptance checks to add:** Cleaner cannot inspect their own episode; merely
-  granting the cleaner the inspector role does not bypass the restriction;
-  a different authorized inspector can inspect; a different unauthorized person
-  cannot; actor/header/body spoofing and concurrent submissions cannot bypass
-  the rule. Cover failed cleaning, renewed cleaning and reinspection. Verify
-  denied attempts leave holds, versions and saved results unchanged.
-- **Validation gate:** Resolve before production clinical acceptance; not a
-  blocker for the next dummy-data development increment. Do not introduce an
-  override implicitly. Any exception policy needs explicit product approval.
-- **Linked checks:** U-INSP-01 remains passed for the current preview;
-  M-AUTH-01 and independent-inspection acceptance tests remain pending.
+- **Status:** Functional rule implemented November 13, 2026 during the resumed
+  client-MVP work; owner/operational acceptance remains pending. The November 4
+  deferral is historical and no longer describes current inspection behavior.
+- **Delivered:** Dedicated `processing:inspect` permission, separate from cleaning
+  writes. The transaction rejects every person/account that started or finished
+  any cleaning attempt in the episode, including failed/retried attempts. Holding
+  both permissions or signing in through another account for the same person
+  does not bypass the rule. Inspector-only users can inspect without cleaning
+  permission. UI affordances follow those distinct permissions.
+- **Person identity:** Real-account access requires a canonical `personId` assigned
+  from an approved person source by authorized administration. Aliases must share
+  it. Existing assigned mappings cannot be changed or removed through access
+  updates. Cleaning start/finish and inspection retain the person snapshot and
+  account actor at the time of the action. No person value comes from token role
+  claims, request body or caller headers.
+- **Historical records:** Remain readable. Missing/invalid historical cleaning
+  person evidence blocks a new inspection and retains holds; current mappings
+  are not retroactively substituted. No historical facts or old completed
+  inspections are rewritten. A correction/legacy resolution policy is still needed
+  before such records could proceed; no override or backfill is supplied.
+- **Developer evidence:** Domain/API/SQLite tests cover both permissions held by
+  the cleaner, aliases, start/finish participants across retries, reinspection,
+  missing evidence, race/idempotency and unchanged state on denial. Chromium
+  verifies operator exclusion and a separate reviewer completing inspection.
+  See [INDEPENDENT-INSPECTION.md](INDEPENDENT-INSPECTION.md).
+- **Remaining acceptance:** U-INDEPENDENT-01 and broader M-AUTH-01/person-mapping,
+  competency and operational verification are pending. Trusted offline assignment
+  does not prove a human's identity by itself; the administrator must establish
+  that mapping from the approved identity source. Authenticated web administration,
+  person-mapping corrections and clinical sign-off remain separate work.
 
 ## RSP-ISS-002 — Withdrawal and amendment of final review decisions
 

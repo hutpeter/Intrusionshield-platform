@@ -1,3 +1,4 @@
+import { independentInspector } from "./memory-repository.mjs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -130,7 +131,7 @@ test("cleaning and inspection save exact controlled snapshots; later withdrawal 
       draft(f, { code: "INSPECT", stage: "inspection", method: "inspection" }),
     ),
     ins = await f.p.transition(f.s, insDraft.id, "publish", transition(1));
-  e = await f.pr.inspect(f.s, e.id, {
+  e = await f.pr.inspect(independentInspector(f.s), e.id, {
     requestId: randomUUID(),
     version: 5,
     procedure: ins.code,

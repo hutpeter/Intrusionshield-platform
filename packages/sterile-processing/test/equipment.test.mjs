@@ -1,3 +1,4 @@
+import { independentInspector } from "./memory-repository.mjs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -347,7 +348,7 @@ test("washer incident packages follow the exact cleaning attempt in inspection p
         confirmed: true,
       });
     }
-    e = await pr.inspect(s, e.id, {
+    e = await pr.inspect(independentInspector(s), e.id, {
       requestId: randomUUID(),
       version: e.version,
       procedure: "SIMULATED",

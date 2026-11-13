@@ -1,3 +1,4 @@
+import { independentInspector } from "./memory-repository.mjs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -81,7 +82,7 @@ async function fixture({ legacy = false, draft = false } = {}) {
       note: "",
       confirmed: true,
     });
-    e = await pr.inspect(s, e.id, {
+    e = await pr.inspect(independentInspector(s), e.id, {
       requestId: randomUUID(),
       version: 3,
       procedure: "INSPECT-DEMO",
@@ -204,7 +205,7 @@ async function anotherPackage(f) {
     note: "",
     confirmed: true,
   });
-  await f.pr.inspect(f.s, e.id, {
+  await f.pr.inspect(independentInspector(f.s), e.id, {
     requestId: randomUUID(),
     version: 3,
     procedure: "DEMO",
@@ -350,7 +351,7 @@ async function finishAndPack(f, e, source, pack = true) {
     note: "",
     confirmed: true,
   });
-  await f.pr.inspect(f.s, e.id, {
+  await f.pr.inspect(independentInspector(f.s), e.id, {
     requestId: randomUUID(),
     version: 3,
     procedure: "DEMO",

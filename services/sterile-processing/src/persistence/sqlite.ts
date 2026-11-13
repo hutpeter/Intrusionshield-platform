@@ -48,7 +48,10 @@ export class LocalSqliteSterileRepository implements SterileRepository {
   private readonly db: DatabaseSync;
   private queue: Promise<void> = Promise.resolve();
   private closed = false;
-  constructor(filename: string, mode: "preview" | "account") {
+  constructor(
+    filename: string,
+    private readonly mode: "preview" | "account",
+  ) {
     if (
       process.env.NODE_ENV !== "development" ||
       (mode === "preview"
@@ -193,6 +196,19 @@ CREATE INDEX IF NOT EXISTS sp_assignment_assembly ON sp_assignments(tenant_id,fa
     scope: SterileScope,
     work: (tx: SterileTransaction) => Promise<T>,
   ): Promise<T> {
+    return this.transactionForActors(scope, work, [scope.actorId]);
+  }
+  /** Development wrapper only; account transactions always have exactly one authenticated actor. */
+  protected async transactionForActors<T>(
+    scope: SterileScope,
+    work: (tx: SterileTransaction) => Promise<T>,
+    actors: readonly string[],
+  ): Promise<T> {
+    if (
+      this.mode !== "preview" &&
+      (actors.length !== 1 || actors[0] !== scope.actorId)
+    )
+      throw new SterileError("INVALID_REQUEST");
     if (this.closed) throw new Error("Preview storage is closed.");
     const previous = this.queue;
     let release!: () => void;
@@ -1522,7 +1538,7 @@ CREATE INDEX IF NOT EXISTS sp_assignment_assembly ON sp_assignments(tenant_id,fa
         },
         appendAudit: async (event) => {
           own(event);
-          if (event.actorId !== scope.actorId)
+          if (!actors.includes(event.actorId))
             throw new SterileError("INVALID_REQUEST");
           this.db
             .prepare("INSERT INTO sp_audit VALUES(?,?,?,?,?,?)")

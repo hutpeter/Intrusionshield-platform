@@ -1,3 +1,4 @@
+import { fictionalInspector } from "./inspection-person.js";
 import { createHash } from "node:crypto";
 import {
   ReturnRegistry,
@@ -92,7 +93,7 @@ export async function prepareLineageRecallExample(
     note: "Fictional demonstration only",
     confirmed: true,
   });
-  await pr.inspect(operator, e.id, {
+  await pr.inspect(fictionalInspector(operator), e.id, {
     requestId: step("inspection"),
     version: 3,
     procedure: "SIMULATED-INSPECTION",

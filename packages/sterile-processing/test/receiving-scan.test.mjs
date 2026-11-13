@@ -1,3 +1,4 @@
+import { independentInspector } from "./memory-repository.mjs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -76,7 +77,7 @@ test("scanned receiving saves canonical identifiers and holds through cleaning a
     note: "",
     confirmed: true,
   });
-  await f.p.inspect(f.s, e.id, {
+  await f.p.inspect(independentInspector(f.s), e.id, {
     requestId: randomUUID(),
     version: 3,
     procedure: "INSPECT",

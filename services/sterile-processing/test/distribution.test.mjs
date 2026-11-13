@@ -363,6 +363,17 @@ test("staged fictional setup retries resume safely after final-storage audit fai
       await import("../dist/development/distribution-example.js"),
     key = randomUUID(),
     broken = {
+      fictionalTransaction: (s, work) =>
+        f.repo.fictionalTransaction(s, (tx) =>
+          work({
+            ...tx,
+            appendAudit: async (e) => {
+              if (e.action === "package-stored")
+                throw Error("synthetic storage failure");
+              return tx.appendAudit(e);
+            },
+          }),
+        ),
       transaction: (s, work) =>
         f.repo.transaction(s, (tx) =>
           work({

@@ -1,3 +1,4 @@
+import { independentInspector } from "../../../packages/sterile-processing/test/memory-repository.mjs";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
@@ -264,7 +265,7 @@ test("SQLite loaner ownership, receipt and hand-back versions persist; audit fai
     note: "",
     confirmed: true,
   });
-  await p.inspect(s, r.episodeId, {
+  await p.inspect(independentInspector(s), r.episodeId, {
     requestId: randomUUID(),
     version: 3,
     procedure: "INSPECT",
