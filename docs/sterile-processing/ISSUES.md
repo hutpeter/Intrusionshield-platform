@@ -65,7 +65,9 @@ Keep test execution status in [TESTING-REGISTER.md](TESTING-REGISTER.md).
   missing evidence, race/idempotency and unchanged state on denial. Chromium
   verifies operator exclusion and a separate reviewer completing inspection.
   See [INDEPENDENT-INSPECTION.md](INDEPENDENT-INSPECTION.md).
-- **Remaining acceptance:** U-INDEPENDENT-01 and broader M-AUTH-01/person-mapping,
+- **Owner evidence:** U-INDEPENDENT-01 passed November 13 from the screenshot
+  confirming operator exclusion and independent-person guidance on the held receipt.
+- **Remaining acceptance:** Broader M-AUTH-01/person-mapping,
   competency and operational verification are pending. Trusted offline assignment
   does not prove a human's identity by itself; the administrator must establish
   that mapping from the approved identity source. Authenticated web administration,

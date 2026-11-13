@@ -92,7 +92,7 @@ different persisted person IDs and mobile layout. No live identity database or
 owner records were used. Existing large-chunk build guidance remains a performance
 backlog item.
 
-**U-INDEPENDENT-01 pending — only owner check for this build:**
+**U-INDEPENDENT-01 passed November 13, 2026 — only owner check for this build:**
 
 1. Stop the preview with Ctrl+C, then update/start:
 
@@ -110,3 +110,7 @@ The full independent-reviewer handoff is developer-verified and not an additiona
 owner request now. Actual person mapping/competency verification, live identity
 acceptance, broader M-AUTH-01 and clinical sign-off remain pending. The client MVP
 is still in development; no additional reporting features are introduced.
+
+Owner screenshot confirms the fresh fictional receipt at version 3, Awaiting
+inspection — held, independent-person guidance and no operator inspection action.
+It does not establish owner acceptance of reviewer completion or alias controls.

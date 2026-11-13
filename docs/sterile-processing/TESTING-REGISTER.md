@@ -2,6 +2,14 @@
 
 ## Independent inspection — November 13, 2026 (current)
 
+**U-INDEPENDENT-01 passed November 13, 2026:** owner's screenshot shows
+DEMO-INSP-REC-9BDD9F0D-AD75-4D77-BA87-4B5694747ED9, version 3, registered by
+Demo operator, Awaiting inspection — held, the independent-person guidance and
+no Record inspection action in the receipt toolbar. This confirms the requested
+operator exclusion check only. Reviewer completion, aliases and real-account
+person mapping remain developer-verified or pending broader acceptance as stated
+below; this screenshot does not establish their owner acceptance.
+
 Delivered [INDEPENDENT-INSPECTION.md](INDEPENDENT-INSPECTION.md): dedicated server
 inspection permission, required real-account canonical person enrollment, immutable
 assigned mappings, saved cleaning/inspection person snapshots and transaction-level
@@ -18,7 +26,7 @@ alias/both-role denial, retry/reinspection/history, mapping locks, spoof/permiss
 denial, persistence, no writes on denial, race/idempotency and audit rollback checks.
 No live identity service or owner database was accessed.
 
-**U-INDEPENDENT-01 pending:** updated preview → Demo operator → Receiving and
+**U-INDEPENDENT-01 passed (original instruction):** updated preview → Demo operator → Receiving and
 cleaning → Prepare fictional inspection example. Expect independent-person
 guidance and no Record inspection action for that operator. This is the only owner
 check. Separate reviewer handoff is developer-verified, not owner accepted.
