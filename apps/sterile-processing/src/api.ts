@@ -18,6 +18,7 @@ import type {
   TraceRootKind,
   ProcessingEpisode,
   InspectInput,
+  CorrectReceiptInput,
   SterilePackage,
   PackageSummary,
   PackageInput,
@@ -78,6 +79,7 @@ export interface Session {
   actors?: Record<string, "operator" | "viewer" | "reviewer">;
   canWrite?: boolean;
   canInspect?: boolean;
+  canCorrectReceipt?: boolean;
   canReview?: boolean;
   canRecall?: boolean;
   canClearRecall?: boolean;
@@ -166,6 +168,8 @@ async function checkedSession(
     !/^[a-f0-9]{64}$/.test(value.csrf) ||
     !Number.isFinite(value.expiresAt) ||
     (value.canInspect !== undefined && typeof value.canInspect !== "boolean") ||
+    (value.canCorrectReceipt !== undefined &&
+      typeof value.canCorrectReceipt !== "boolean") ||
     (value.personId !== undefined &&
       (typeof value.personId !== "string" ||
         !/^[a-f0-9]{8}-[a-f0-9]{4}-[1-8][a-f0-9]{3}-[89ab][a-f0-9]{3}-[a-f0-9]{12}$/.test(
@@ -2496,6 +2500,21 @@ export const api = {
       s,
       call<ProcessingEpisode>(
         base(s) + "/processing/" + encodeURIComponent(id) + "/inspect",
+        signal,
+        body,
+        s.csrf,
+      ),
+    ),
+  correctReceipt: (
+    s: Session,
+    id: string,
+    body: CorrectReceiptInput,
+    signal: AbortSignal,
+  ) =>
+    scoped(
+      s,
+      call<ProcessingEpisode>(
+        base(s) + "/processing/" + encodeURIComponent(id) + "/correct-receipt",
         signal,
         body,
         s.csrf,

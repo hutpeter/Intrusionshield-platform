@@ -1,5 +1,11 @@
 # Ruby Sterile Processing — issues log
 
+**November 13 receipt corrections:** [RECEIPT-CORRECTIONS.md](RECEIPT-CORRECTIONS.md)
+adds reviewer-only, versioned corrections to descriptive receiving fields before
+cleaning, retaining original evidence and holds. U-CORRECTION-01 is pending.
+Wrong-instrument/duplicate receipt cancellation and post-cleaning/result amendments
+remain unimplemented; this bounded correction path does not close all recovery work.
+
 **Current November 13 inspection increment:** RSP-ISS-001 now has a dedicated
 inspection permission and canonical-person separation checks. See its current
 entry below and [INDEPENDENT-INSPECTION.md](INDEPENDENT-INSPECTION.md). Earlier

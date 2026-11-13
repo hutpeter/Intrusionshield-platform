@@ -74,6 +74,7 @@ export interface SterileDependencies {
       | "processing:read"
       | "processing:write"
       | "processing:inspect"
+      | "processing:correct"
       | "packaging:read"
       | "packaging:write"
       | "cycles:read"
@@ -304,7 +305,11 @@ export function createSterileApp(
                                         ? "processing:read"
                                         : /\/[^/]+\/inspect$/.test(req.path)
                                           ? "processing:inspect"
-                                          : "processing:write"
+                                          : /\/[^/]+\/correct-receipt$/.test(
+                                                req.path,
+                                              )
+                                            ? "processing:correct"
+                                            : "processing:write"
                                       : req.path.startsWith("/tray-")
                                         ? readOnly
                                           ? "trays:read"
@@ -322,7 +327,9 @@ export function createSterileApp(
       res.locals.scope = scope;
       if (
         !readOnly &&
-        /^\/processing\/[^/]+\/(start|finish|inspect)$/.test(req.path) &&
+        /^\/processing\/[^/]+\/(start|finish|inspect|correct-receipt)$/.test(
+          req.path,
+        ) &&
         !principal.personId
       )
         throw new SterileError("INSPECTION_IDENTITY_REQUIRED");
@@ -1806,6 +1813,27 @@ export function createSterileApp(
       ),
     );
   });
+  app.post(prefix + "/processing/:id/correct-receipt", async (req, res) => {
+    noQuery(req);
+    const v = body(req.body, [
+      "requestId",
+      "version",
+      "source",
+      "custodian",
+      "condition",
+      "discrepancies",
+      "reason",
+      "reference",
+      "confirmed",
+    ]);
+    res.json(
+      await processing().correctReceipt(
+        res.locals.scope,
+        sterileUuid(req.params.id),
+        v as unknown as Parameters<ProcessingRegistry["correctReceipt"]>[2],
+      ),
+    );
+  });
   app.post(prefix + "/processing/:id/inspect", async (req, res) => {
     noQuery(req);
     const v = body(
@@ -2658,6 +2686,7 @@ export function createSterileApp(
               PROCESSING_HOLD: 409,
               SELF_INSPECTION: 409,
               INSPECTION_IDENTITY_REQUIRED: 409,
+              RECEIPT_CORRECTION_BLOCKED: 409,
               PACKAGING_BLOCKED: 409,
               LOAD_BLOCKED: 409,
               REVIEW_BLOCKED: 409,

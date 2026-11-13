@@ -527,3 +527,132 @@ test("fictional setup rolls back its catalogue, instrument, episode and holds on
     0,
   );
 });
+
+const correctionBody = (old, patch = {}) => ({
+  requestId: randomUUID(),
+  version: old.version,
+  source: "CORRECTED-DEMO-SOURCE",
+  custodian: old.custodian,
+  condition: old.condition,
+  discrepancies: old.discrepancies,
+  reason: "SIMULATED clerical correction",
+  reference: "SIMULATED-CORRECTION",
+  confirmed: true,
+  ...patch,
+});
+test("receipt correction HTTP is reviewer-authorized, strict/CSRF protected and never releases processing holds", async (t) => {
+  const f = await httpFixture(t),
+    old = await (await f.call(f.base + "/processing", receive(f.i.id))).json(),
+    path = f.base + "/processing/" + old.id + "/correct-receipt",
+    body = correctionBody(old);
+  assert.equal((await f.call(path, body)).status, 403);
+  await f.login("viewer");
+  assert.equal((await f.call(path, body)).status, 403);
+  await f.login("reviewer");
+  assert.equal(f.session.canCorrectReceipt, true);
+  assert.equal(f.session.canWrite, false);
+  assert.equal(
+    (await f.call(path, body, { "x-sterile-csrf": "" })).status,
+    403,
+  );
+  for (const extra of [
+    { instrumentIds: [] },
+    { code: "REPLACEMENT" },
+    { actorId: randomUUID() },
+    { state: "ready_for_assembly" },
+    { personId: randomUUID() },
+  ])
+    assert.equal((await f.call(path, { ...body, ...extra })).status, 400);
+  const response = await f.call(path, body);
+  assert.equal(response.status, 200);
+  const saved = await response.json();
+  assert.equal(saved.version, 2);
+  assert.equal(saved.state, "received");
+  assert.equal(saved.receiptCorrections[0].actorId, f.session.actorId);
+  assert.equal(saved.receiptCorrections[0].personId, f.session.personId);
+  assert.deepEqual(await (await f.call(path, body)).json(), saved);
+  assert.equal(
+    (
+      await (
+        await f.call(f.base + "/processing/" + old.id + "/versions/1")
+      ).json()
+    ).source,
+    old.source,
+  );
+  assert.ok(
+    (await (await f.call(f.base + "/instruments/" + f.i.id)).json())
+      .processingHold,
+  );
+  assert.equal((await f.call(path + "?ignored=true", body)).status, 400);
+  await f.login();
+  await f.call(f.base + "/processing/" + old.id + "/start", start(2));
+  await f.login("reviewer");
+  assert.equal(
+    (
+      await f.call(
+        path,
+        correctionBody(saved, { version: 3, source: "TOO-LATE" }),
+      )
+    ).status,
+    409,
+  );
+});
+test("SQLite receipt corrections survive restart with retained original versions and rollback failed audit writes", async (t) => {
+  const f = await sqlFixture(t),
+    p = new ProcessingRegistry(f.repo),
+    old = await p.receive(f.s, receive(f.i.id)),
+    body = correctionBody(old);
+  const broken = new ProcessingRegistry({
+    transaction: (scope, work) =>
+      f.repo.transaction(scope, (tx) =>
+        work({
+          ...tx,
+          appendAudit: async () => {
+            throw new Error("simulated correction audit failure");
+          },
+        }),
+      ),
+  });
+  await assert.rejects(
+    () => broken.correctReceipt(f.s, old.id, body),
+    /simulated/,
+  );
+  assert.equal((await p.get(f.s, old.id)).version, 1);
+  await assert.rejects(
+    () => p.get(f.s, old.id, 2),
+    (e) => e.code === "NOT_FOUND",
+  );
+  const saved = await p.correctReceipt(f.s, old.id, body),
+    reopened = new PreviewSqliteRepository(f.file);
+  try {
+    const read = new ProcessingRegistry(reopened);
+    assert.deepEqual(await read.get(f.s, old.id), saved);
+    assert.equal((await read.get(f.s, old.id, 1)).source, old.source);
+    assert.ok((await f.ir.get(f.s, f.i.id)).processingHold);
+  } finally {
+    reopened.close();
+  }
+});
+test("separate SQLite connections serialize correction versus cleaning without overwriting either event", async (t) => {
+  const f = await sqlFixture(t),
+    p = new ProcessingRegistry(f.repo),
+    old = await p.receive(f.s, receive(f.i.id)),
+    second = new PreviewSqliteRepository(f.file);
+  try {
+    const results = await Promise.allSettled([
+      p.correctReceipt(f.s, old.id, correctionBody(old)),
+      new ProcessingRegistry(second).start(f.s, old.id, start(1)),
+    ]);
+    assert.equal(results.filter((x) => x.status === "fulfilled").length, 1);
+    assert.equal(
+      results.filter(
+        (x) => x.status === "rejected" && x.reason.code === "CONFLICT",
+      ).length,
+      1,
+    );
+    assert.equal((await p.get(f.s, old.id)).version, 2);
+    assert.ok((await f.ir.get(f.s, f.i.id)).processingHold);
+  } finally {
+    second.close();
+  }
+});

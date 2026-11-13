@@ -35,6 +35,7 @@ export const sterilePermissions = [
   "processing:read",
   "processing:write",
   "processing:inspect",
+  "processing:correct",
   "packaging:read",
   "packaging:write",
   "cycles:read",

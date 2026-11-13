@@ -1,5 +1,20 @@
 # Testing register — Ruby Sterile Processing
 
+## Receipt corrections — November 13, 2026 (current)
+
+Delivered [RECEIPT-CORRECTIONS.md](RECEIPT-CORRECTIONS.md): reviewer-only correction
+of four descriptive receiving fields before cleaning, mandatory reason/reference,
+versioned original/current records, audit attribution and unchanged holds.
+Developer: **237 domain, 181 service, 94 web and six runtime tests passed**, plus
+core/service/web builds and Chromium save/history/permission/cancel/localization/
+mobile checks. No live identity database or owner data was used.
+
+**U-CORRECTION-01 pending:** updated preview → Demo reviewer → Receiving and
+cleaning → View details for a Received receipt → Correct receipt details. Check
+prefilled values and reason/reference fields, then Cancel and confirm discarding.
+Only this short owner check is requested. Wrong contents, duplicate receipt
+cancellation and amendments after cleaning remain outside this increment.
+
 ## Independent inspection — November 13, 2026 (current)
 
 **U-INDEPENDENT-01 passed November 13, 2026:** owner's screenshot shows

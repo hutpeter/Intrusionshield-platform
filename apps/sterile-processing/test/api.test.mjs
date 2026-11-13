@@ -1992,6 +1992,7 @@ test("inspection capability and canonical person session fields cannot be malfor
   fake(t, async () => response(value));
   for (const patch of [
     { canInspect: "true" },
+    { canCorrectReceipt: "true" },
     { personId: {} },
     { personId: "not-a-uuid" },
   ]) {

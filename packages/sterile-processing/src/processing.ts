@@ -23,6 +23,7 @@ import type {
   FinishCleaningInput,
   InspectInput,
   InspectionItem,
+  CorrectReceiptInput,
 } from "./processing-types.js";
 const invalid = (): never => {
   throw new SterileError("INVALID_REQUEST");
@@ -32,6 +33,82 @@ const expected = (v: number) => {
   return v;
 };
 export class ProcessingRegistry extends SterileRegistryBase {
+  async correctReceipt(
+    scope: SterileScope,
+    id: string,
+    input: CorrectReceiptInput,
+  ) {
+    const s = scopeOf(scope),
+      key = sterileUuid(id),
+      version = expected(input.version),
+      source = field(input.source, 200),
+      custodian = field(input.custodian, 200),
+      condition = field(input.condition, 500),
+      discrepancies = field(input.discrepancies, 500, false),
+      reason = field(input.reason, 500),
+      reference = field(input.reference, 200);
+    if (input.confirmed !== true) invalid();
+    return this.command(
+      s,
+      input.requestId,
+      "receipt-corrected",
+      { ...input, id: key },
+      async (tx, at) => {
+        const old = await tx.findProcessing(key);
+        if (!old) throw new SterileError("NOT_FOUND");
+        if (old.version !== version) throw new SterileError("CONFLICT");
+        if (
+          old.state !== "received" ||
+          old.attempts.length ||
+          old.inspections?.length ||
+          (old.receiptCorrections?.length ?? 0) >= 50
+        )
+          throw new SterileError("RECEIPT_CORRECTION_BLOCKED");
+        if (
+          old.source === source &&
+          old.custodian === custodian &&
+          old.condition === condition &&
+          old.discrepancies === discrepancies
+        )
+          invalid();
+        for (const i of old.instruments) {
+          if ((await tx.findProcessingHold(i.id))?.episodeId !== old.id)
+            throw new SterileError("RECEIPT_CORRECTION_BLOCKED");
+        }
+        const item: ProcessingEpisode = {
+          ...old,
+          source,
+          custodian,
+          condition,
+          discrepancies,
+          version: version + 1,
+          updatedAt: at,
+          receiptCorrections: [
+            ...(old.receiptCorrections ?? []),
+            {
+              previousVersion: version,
+              reason,
+              reference,
+              at,
+              actorId: s.actorId,
+              ...(s.personId ? { personId: s.personId } : {}),
+            },
+          ],
+        };
+        await tx.updateProcessing(item, version);
+        await this.record(
+          tx,
+          s,
+          item,
+          "receipt-corrected",
+          input.requestId,
+          at,
+          reason + " · " + reference,
+        );
+        return item;
+      },
+    );
+  }
   async receiveScanned(
     scope: SterileScope,
     input: ScannedReceiveInput,

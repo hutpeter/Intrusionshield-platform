@@ -15,11 +15,17 @@ import { api, ApiError, type Session, type Page } from "./api";
 import { labels, type Language } from "./text";
 import { processingLabels } from "./processing-text";
 import {
+  receiptCanBeCorrected,
+  receiptCorrectionText,
+  receiptDetailFields,
+  receiptHasChanges,
+} from "./receipt-correction";
+import {
   inspectionBlock,
   independentInspectionText,
 } from "./inspection-policy";
 type Form = {
-  kind: "receive" | "start" | "finish" | "inspect";
+  kind: "receive" | "start" | "finish" | "inspect" | "correct";
   requestId: string;
   version?: number;
 };
@@ -29,6 +35,8 @@ const empty = () => ({
   custodian: "",
   condition: "",
   discrepancies: "",
+  correctionReason: "",
+  correctionReference: "",
   instrumentIds: [] as string[],
   pick: "",
   scanned: [] as { instrumentId: string; identifier: string }[],
@@ -69,7 +77,8 @@ export function ProcessingWorkspace({
   initialRecordId?: string;
 }) {
   const t = labels(language),
-    p = processingLabels(language);
+    p = processingLabels(language),
+    correction = receiptCorrectionText[language];
   const [selected, setSelected] = useState<string | null>(
       initialRecordId ?? null,
     ),
@@ -96,7 +105,11 @@ export function ProcessingWorkspace({
     inspection = useRef<AbortController | null>(null),
     busy = blocked || saving || scanBusy;
   const canEditForm =
-    form?.kind === "inspect" ? session.canInspect : session.canWrite;
+    form?.kind === "inspect"
+      ? session.canInspect
+      : form?.kind === "correct"
+        ? session.canCorrectReceipt
+        : session.canWrite;
   useEffect(() => {
     onDirty(!!form);
     return () => onDirty(false);
@@ -179,6 +192,14 @@ export function ProcessingWorkspace({
       });
       setFields({
         ...empty(),
+        ...(kind === "correct" && detail
+          ? {
+              source: detail.source,
+              custodian: detail.custodian,
+              condition: detail.condition,
+              discrepancies: detail.discrepancies,
+            }
+          : {}),
         checks:
           kind === "inspect" && detail
             ? detail.instruments.map((i) => ({
@@ -197,6 +218,10 @@ export function ProcessingWorkspace({
     setFields((x) => ({
       ...x,
       ...v,
+      ...(form?.kind === "correct" &&
+      Object.keys(v).some((key) => key !== "confirmed")
+        ? { confirmed: false }
+        : {}),
       ...(v.instrumentIds
         ? {
             confirmed: false,
@@ -236,6 +261,23 @@ export function ProcessingWorkspace({
             )
           : await api.receive(session, receipt, c.signal);
       } else if (!selected || !form.version) return;
+      else if (form.kind === "correct")
+        item = await api.correctReceipt(
+          session,
+          selected,
+          {
+            requestId: form.requestId,
+            version: form.version,
+            source: fields.source,
+            custodian: fields.custodian,
+            condition: fields.condition,
+            discrepancies: fields.discrepancies,
+            reason: fields.correctionReason,
+            reference: fields.correctionReference,
+            confirmed: true,
+          },
+          c.signal,
+        );
       else if (form.kind === "start")
         item = await api.startCleaning(
           session,
@@ -717,45 +759,58 @@ export function ProcessingWorkspace({
               {p.newReceipt}
             </button>
           )}
-          {(session.canWrite || session.canInspect) && detail && !past && (
-            <>
-              {session.canWrite &&
-                ["received", "cleaning_failed", "inspection_failed"].includes(
-                  detail.state,
-                ) && (
+          {(session.canWrite ||
+            session.canInspect ||
+            session.canCorrectReceipt) &&
+            detail &&
+            !past && (
+              <>
+                {session.canCorrectReceipt && receiptCanBeCorrected(detail) && (
+                  <button
+                    disabled={busy || loading || !!form}
+                    onClick={() => begin("correct")}
+                  >
+                    {correction.title}
+                  </button>
+                )}
+                {session.canWrite &&
+                  ["received", "cleaning_failed", "inspection_failed"].includes(
+                    detail.state,
+                  ) && (
+                    <button
+                      className="primary"
+                      disabled={busy || loading || !!form}
+                      onClick={() => begin("start")}
+                    >
+                      {detail.state !== "received" ? p.retry : p.start}
+                    </button>
+                  )}
+                {session.canInspect &&
+                  detail.state === "awaiting_inspection" && (
+                    <button
+                      className="primary"
+                      disabled={
+                        busy ||
+                        loading ||
+                        !!form ||
+                        inspectionBlock(detail, session) !== null
+                      }
+                      onClick={() => begin("inspect")}
+                    >
+                      {p.inspect}
+                    </button>
+                  )}
+                {session.canWrite && detail.state === "cleaning" && (
                   <button
                     className="primary"
                     disabled={busy || loading || !!form}
-                    onClick={() => begin("start")}
+                    onClick={() => begin("finish")}
                   >
-                    {detail.state !== "received" ? p.retry : p.start}
+                    {p.finish}
                   </button>
                 )}
-              {session.canInspect && detail.state === "awaiting_inspection" && (
-                <button
-                  className="primary"
-                  disabled={
-                    busy ||
-                    loading ||
-                    !!form ||
-                    inspectionBlock(detail, session) !== null
-                  }
-                  onClick={() => begin("inspect")}
-                >
-                  {p.inspect}
-                </button>
-              )}
-              {session.canWrite && detail.state === "cleaning" && (
-                <button
-                  className="primary"
-                  disabled={busy || loading || !!form}
-                  onClick={() => begin("finish")}
-                >
-                  {p.finish}
-                </button>
-              )}
-            </>
-          )}
+              </>
+            )}
         </div>
       </div>
       <p className="readonly-note">{p.boundary}</p>
@@ -805,13 +860,15 @@ export function ProcessingWorkspace({
         >
           <div className="panel-heading">
             <h2>
-              {form.kind === "receive"
-                ? p.newReceipt
-                : form.kind === "start"
-                  ? p.start
-                  : form.kind === "inspect"
-                    ? p.inspect
-                    : p.finish}
+              {form.kind === "correct"
+                ? correction.title
+                : form.kind === "receive"
+                  ? p.newReceipt
+                  : form.kind === "start"
+                    ? p.start
+                    : form.kind === "inspect"
+                      ? p.inspect
+                      : p.finish}
             </h2>
             <button
               type="button"
@@ -822,6 +879,50 @@ export function ProcessingWorkspace({
             </button>
           </div>
           <fieldset disabled={busy}>
+            {form.kind === "correct" && (
+              <>
+                <p>{correction.boundary}</p>
+                <div className="form-grid">
+                  {receiptDetailFields.map((key) => (
+                    <label key={key}>
+                      {p[key]}
+                      <input
+                        required={key !== "discrepancies"}
+                        maxLength={
+                          key === "condition" || key === "discrepancies"
+                            ? 500
+                            : 200
+                        }
+                        value={fields[key]}
+                        onChange={(e) => patch({ [key]: e.target.value })}
+                      />
+                    </label>
+                  ))}
+                  <label>
+                    {correction.reason}
+                    <input
+                      required
+                      maxLength={500}
+                      value={fields.correctionReason}
+                      onChange={(e) =>
+                        patch({ correctionReason: e.target.value })
+                      }
+                    />
+                  </label>
+                  <label>
+                    {correction.reference}
+                    <input
+                      required
+                      maxLength={200}
+                      value={fields.correctionReference}
+                      onChange={(e) =>
+                        patch({ correctionReference: e.target.value })
+                      }
+                    />
+                  </label>
+                </div>
+              </>
+            )}
             {form.kind === "receive" && (
               <>
                 <div className="form-grid">
@@ -1162,13 +1263,15 @@ export function ProcessingWorkspace({
                 checked={fields.confirmed}
                 onChange={(e) => patch({ confirmed: e.target.checked })}
               />
-              {form.kind === "receive"
-                ? p.confirmReceipt
-                : form.kind === "start"
-                  ? p.confirmStart
-                  : form.kind === "inspect"
-                    ? p.confirmInspection
-                    : p.confirmFinish}
+              {form.kind === "correct"
+                ? correction.confirm
+                : form.kind === "receive"
+                  ? p.confirmReceipt
+                  : form.kind === "start"
+                    ? p.confirmStart
+                    : form.kind === "inspect"
+                      ? p.confirmInspection
+                      : p.confirmFinish}
             </label>
           </fieldset>
           <div className="form-footer">
@@ -1180,18 +1283,23 @@ export function ProcessingWorkspace({
                 (form.kind === "start" &&
                   fields.method === "mechanical" &&
                   !fields.equipmentId) ||
-                (form.kind === "receive" && !fields.instrumentIds.length)
+                (form.kind === "receive" && !fields.instrumentIds.length) ||
+                (form.kind === "correct" &&
+                  !!detail &&
+                  !receiptHasChanges(detail, fields))
               }
             >
               {busy
                 ? t.saving
-                : form.kind === "receive"
-                  ? p.saveReceipt
-                  : form.kind === "start"
-                    ? p.start
-                    : form.kind === "inspect"
-                      ? p.inspect
-                      : p.saveResult}
+                : form.kind === "correct"
+                  ? correction.save
+                  : form.kind === "receive"
+                    ? p.saveReceipt
+                    : form.kind === "start"
+                      ? p.start
+                      : form.kind === "inspect"
+                        ? p.inspect
+                        : p.saveResult}
             </button>
           </div>
         </form>
@@ -1282,13 +1390,15 @@ export function ProcessingWorkspace({
                     <span className="timeline-dot" />
                     <div>
                       <strong>
-                        {h.action === "processing-received"
-                          ? p.receivedAction
-                          : h.action === "cleaning-started"
-                            ? p.startAction
-                            : h.action === "inspection-recorded"
-                              ? p.inspectionAction
-                              : p.finishAction}
+                        {h.action === "receipt-corrected"
+                          ? correction.history
+                          : h.action === "processing-received"
+                            ? p.receivedAction
+                            : h.action === "cleaning-started"
+                              ? p.startAction
+                              : h.action === "inspection-recorded"
+                                ? p.inspectionAction
+                                : p.finishAction}
                       </strong>
                       <time dateTime={h.at}>{date(h.at)}</time>
                       <small>

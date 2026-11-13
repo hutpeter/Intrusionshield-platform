@@ -1,4 +1,6 @@
 const es = {
+  RECEIPT_CORRECTION_BLOCKED:
+    "La recepción solo puede corregirse antes de iniciar la limpieza. Se conservan el historial y las retenciones.",
   SELF_INSPECTION:
     "Quien haya iniciado o finalizado la limpieza no puede inspeccionar este episodio, incluso con otra cuenta.",
   INSPECTION_IDENTITY_REQUIRED:
@@ -79,6 +81,8 @@ const es = {
 };
 type Messages = Record<keyof typeof es, string>;
 const en: Messages = {
+  RECEIPT_CORRECTION_BLOCKED:
+    "Receipt details can only be corrected before cleaning starts. History and holds are retained.",
   SELF_INSPECTION:
     "Anyone who started or finished cleaning cannot inspect this episode, including through another account.",
   INSPECTION_IDENTITY_REQUIRED:
@@ -157,6 +161,8 @@ const en: Messages = {
     "Service unavailable. The change has not been confirmed.",
 };
 const fr: Messages = {
+  RECEIPT_CORRECTION_BLOCKED:
+    "Les détails de réception ne peuvent être corrigés qu’avant le nettoyage. L’historique et les blocages sont conservés.",
   SELF_INSPECTION:
     "Toute personne ayant commencé ou terminé le nettoyage ne peut pas inspecter cet épisode, même avec un autre compte.",
   INSPECTION_IDENTITY_REQUIRED:

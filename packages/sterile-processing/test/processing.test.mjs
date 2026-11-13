@@ -574,3 +574,133 @@ test("concurrent independent inspectors cannot save two decisions or lose retain
   );
   assert.equal((await f.pr.get(f.s, e.id)).inspections.length, 1);
 });
+
+const receiptCorrection = (old, patch = {}) => ({
+  requestId: randomUUID(),
+  version: old.version,
+  source: "Corrected source",
+  custodian: old.custodian,
+  condition: old.condition,
+  discrepancies: old.discrepancies,
+  reason: "Fictional entry correction",
+  reference: "SIMULATED-CORRECTION",
+  confirmed: true,
+  ...patch,
+});
+test("receipt correction preserves original identity, contents and holds with versioned attributed evidence", async () => {
+  const f = await fixture(),
+    old = await f.pr.receive(f.s, receipt(f.i.id)),
+    reviewer = { ...f.s, actorId: randomUUID(), personId: randomUUID() },
+    hold = (await f.ir.get(f.s, f.i.id)).processingHold,
+    body = receiptCorrection(old);
+  const saved = await f.pr.correctReceipt(reviewer, old.id, body);
+  assert.equal(saved.version, 2);
+  assert.equal(saved.state, "received");
+  assert.equal(saved.source, "Corrected source");
+  for (const key of [
+    "id",
+    "code",
+    "createdAt",
+    "receivedBy",
+    "instruments",
+    "attempts",
+    "inspections",
+  ])
+    assert.deepEqual(saved[key], old[key]);
+  assert.deepEqual((await f.ir.get(f.s, f.i.id)).processingHold, hold);
+  assert.equal((await f.pr.get(f.s, old.id, 1)).source, old.source);
+  assert.equal(saved.receiptCorrections[0].previousVersion, 1);
+  assert.equal(saved.receiptCorrections[0].personId, reviewer.personId);
+  const audit = (await f.pr.history(f.s, old.id)).items.find(
+    (e) => e.action === "receipt-corrected",
+  );
+  assert.equal(audit.actorId, reviewer.actorId);
+  assert.ok(audit.reason.includes("SIMULATED-CORRECTION"));
+  assert.deepEqual(await f.pr.correctReceipt(reviewer, old.id, body), saved);
+  await f.pr.start(f.s, old.id, start(2));
+  await f.pr.correctReceipt(reviewer, old.id, body);
+  assert.equal((await f.pr.get(f.s, old.id)).state, "cleaning");
+  await fails(
+    f.pr.correctReceipt(
+      reviewer,
+      old.id,
+      receiptCorrection(saved, { version: 3, source: "Too late" }),
+    ),
+    "RECEIPT_CORRECTION_BLOCKED",
+  );
+});
+test("invalid, no-op, stale and foreign-scope corrections cannot change any receipt or hold", async () => {
+  const f = await fixture(),
+    old = await f.pr.receive(f.s, receipt(f.i.id)),
+    before = structuredClone(f.repo.state);
+  for (const patch of [
+    { reason: "" },
+    { reference: "" },
+    { confirmed: false },
+    { source: old.source },
+    { custodian: "" },
+  ])
+    await fails(
+      f.pr.correctReceipt(f.s, old.id, receiptCorrection(old, patch)),
+      "INVALID_REQUEST",
+    );
+  await fails(
+    f.pr.correctReceipt(f.s, old.id, receiptCorrection(old, { version: 2 })),
+    "CONFLICT",
+  );
+  await fails(
+    f.pr.correctReceipt(
+      { ...f.s, facilityId: randomUUID() },
+      old.id,
+      receiptCorrection(old),
+    ),
+    "NOT_FOUND",
+  );
+  assert.deepEqual(f.repo.state, before);
+});
+test("receipt correction audit failure rolls back current record, snapshots, receipt and holds before successful retry", async () => {
+  const f = await fixture(),
+    old = await f.pr.receive(f.s, receipt(f.i.id)),
+    before = structuredClone(f.repo.state),
+    body = receiptCorrection(old);
+  const broken = new ProcessingRegistry({
+    transaction: (scope, work) =>
+      f.repo.transaction(scope, (tx) =>
+        work({
+          ...tx,
+          appendAudit: async () => {
+            throw new Error("simulated correction audit failure");
+          },
+        }),
+      ),
+  });
+  await assert.rejects(
+    () => broken.correctReceipt(f.s, old.id, body),
+    /simulated/,
+  );
+  assert.deepEqual(f.repo.state, before);
+  assert.equal((await f.pr.correctReceipt(f.s, old.id, body)).version, 2);
+});
+test("concurrent correction and cleaning start have one winner with no lost receipt evidence", async () => {
+  const f = await fixture(),
+    old = await f.pr.receive(f.s, receipt(f.i.id));
+  const results = await Promise.allSettled([
+    f.pr.correctReceipt(
+      { ...f.s, actorId: randomUUID() },
+      old.id,
+      receiptCorrection(old),
+    ),
+    f.pr.start(f.s, old.id, start(1)),
+  ]);
+  assert.equal(results.filter((x) => x.status === "fulfilled").length, 1);
+  assert.equal(
+    results.filter(
+      (x) => x.status === "rejected" && x.reason.code === "CONFLICT",
+    ).length,
+    1,
+  );
+  const current = await f.pr.get(f.s, old.id);
+  assert.equal(current.version, 2);
+  assert.ok((await f.ir.get(f.s, f.i.id)).processingHold);
+  assert.equal((await f.pr.get(f.s, old.id, 1)).source, old.source);
+});

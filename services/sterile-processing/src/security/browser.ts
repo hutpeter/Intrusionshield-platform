@@ -188,6 +188,7 @@ export function createSterileBrowserApp(options: {
           : "viewer",
       canWrite,
       canInspect: has("processing:inspect"),
+      canCorrectReceipt: has("processing:correct"),
       personId: principal.personId,
       canReview: has("release:write"),
       canRecall: has("recall:write"),

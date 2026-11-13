@@ -49,6 +49,15 @@ export interface InspectInput {
   confirmed: boolean;
 }
 export interface ProcessingEpisode {
+  /** Clerical amendments only; original and corrected values remain in frozen versions. */
+  receiptCorrections?: {
+    previousVersion: number;
+    reason: string;
+    reference: string;
+    at: string;
+    actorId: string;
+    personId?: string;
+  }[];
   loanerSource?: { id: string; code: string; visit?: number };
   /** Entered or simulated internal identifiers, not proof of a physical device scan. */
   receivingScans?: { instrumentId: string; identifier: string }[];
@@ -126,6 +135,17 @@ export interface StartCleaningInput {
   procedure: string;
   procedureVersion: string;
   equipment: string;
+  confirmed: boolean;
+}
+export interface CorrectReceiptInput {
+  requestId: string;
+  version: number;
+  source: string;
+  custodian: string;
+  condition: string;
+  discrepancies: string;
+  reason: string;
+  reference: string;
   confirmed: boolean;
 }
 export interface FinishCleaningInput {
