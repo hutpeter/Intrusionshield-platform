@@ -63,13 +63,14 @@ import type {
   TrayDefinitionRevisionInput,
 } from "@intrusionshield/sterile-processing";
 export interface Session {
-  mode: "local-dummy-preview";
+  mode: "local-dummy-preview" | "ruby-browser";
   authenticated: boolean;
   csrf: string;
   expiresAt: number;
   role?: "operator" | "viewer" | "reviewer";
   tenantId?: string;
   actorId?: string;
+  displayName?: string;
   facilityId?: string;
   facilityName?: string;
   timeZone?: string;
@@ -156,18 +157,23 @@ async function checkedSession(
   const value = await call<Session>(path, signal, body, csrf);
   if (
     !value ||
-    value.mode !== "local-dummy-preview" ||
+    value.mode !==
+      (browserAuthentication ? "ruby-browser" : "local-dummy-preview") ||
     typeof value.authenticated !== "boolean" ||
     typeof value.csrf !== "string" ||
     !/^[a-f0-9]{64}$/.test(value.csrf) ||
     !Number.isFinite(value.expiresAt) ||
+    (value.displayName !== undefined &&
+      (typeof value.displayName !== "string" ||
+        value.displayName.length > 200)) ||
     (value.authenticated &&
       (!value.tenantId ||
         !value.facilityId ||
         !value.actorId ||
         !["operator", "viewer", "reviewer"].includes(value.role ?? "") ||
         typeof value.canWrite !== "boolean" ||
-        (value.role === "reviewer" &&
+        (value.mode === "local-dummy-preview" &&
+          value.role === "reviewer" &&
           (value.canReview !== true || value.canWrite !== false))))
   )
     throw new ApiError(503, "SERVICE_UNAVAILABLE");
@@ -402,6 +408,12 @@ function invalidStockBalanceRow(
         ].some((n) => n !== 0))
   );
 }
+export const browserAuthentication =
+  typeof document !== "undefined" &&
+  document
+    .querySelector('meta[name="ruby-sterile-auth"]')
+    ?.getAttribute("content") === "browser";
+const authenticationRoot = browserAuthentication ? "/auth" : "/preview";
 export const api = {
   consumableExpiryReport: async (
     s: Session,
@@ -2536,14 +2548,22 @@ export const api = {
       n,
       signal,
     ),
-  session: (signal: AbortSignal) => checkedSession("/preview/session", signal),
+  session: (signal: AbortSignal) =>
+    checkedSession(authenticationRoot + "/session", signal),
   login: (
     role: "operator" | "viewer" | "reviewer",
     s: Session,
     signal: AbortSignal,
-  ) => checkedSession("/preview/login", signal, { role }, s.csrf),
+    credentials?: { username: string; password: string },
+  ) =>
+    checkedSession(
+      authenticationRoot + "/login",
+      signal,
+      browserAuthentication ? credentials : { role },
+      s.csrf,
+    ),
   logout: (s: Session, signal: AbortSignal) =>
-    checkedSession("/preview/logout", signal, {}, s.csrf),
+    checkedSession(authenticationRoot + "/logout", signal, {}, s.csrf),
   types: (s: Session, n: number, signal: AbortSignal) =>
     scopedPage<InstrumentType>(s, base(s) + "/instrument-types", n, signal),
   instruments: (s: Session, n: number, signal: AbortSignal) =>

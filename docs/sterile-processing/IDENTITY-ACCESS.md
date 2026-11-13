@@ -1,5 +1,11 @@
 # MVP identity and access — backend increment
 
+**Next increment delivered November 13:** see [BROWSER-SIGNIN.md](BROWSER-SIGNIN.md)
+for the separate account-mode browser/session composition and its verified UI.
+The remaining functional list below is the original backend-increment plan;
+configured runtime wiring, account administration and central policy/person
+separation remain outstanding. The preview launcher still uses dummy identities.
+
 November 13, 2026 · `feature/sterile-processing-preview`
 
 Development has resumed toward a workable client MVP. This increment connects

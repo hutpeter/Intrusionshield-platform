@@ -1,5 +1,25 @@
 # Testing register — Ruby Sterile Processing
 
+## Browser account sessions — November 13, 2026 (current)
+
+Delivered [account-mode sign-in/session/logout](BROWSER-SIGNIN.md) as an explicit
+HTTPS composition, separate from the dummy preview. Cookie/CSRF rotation,
+server-only tokens, absolute expiry, current account/access rechecks, invalidation
+on logout, generic failures/throttling and localized credentials UI are included.
+**175 service tests and 89 web tests passed**, including five new service and two
+web tests; service/web builds passed. HTTPS Chromium with isolated fictional
+accounts passed login failure/clearing, sign-in, cookie/storage checks, attributed
+UI write, reload, logout/re-login, disabled-account clearing and localized/mobile
+layout. No real identity service or production store was contacted. Domain
+behavior did not change; the domain build ran as part of service tests, but its
+separate test suite was not repeated.
+
+**Owner check deferred until configured account/runtime wiring is available.**
+The existing preview continues to use demonstration profiles. This is developer
+evidence, not owner acceptance or a live-Ruby authentication-service test.
+Administration, authoritative entitlements/facility policy and independent
+inspection remain outstanding. Historical pending checks remain pending.
+
 ## MVP development resumed — November 13, 2026 (current)
 
 Owner clarified that the previous pause was to assess remaining functionality,

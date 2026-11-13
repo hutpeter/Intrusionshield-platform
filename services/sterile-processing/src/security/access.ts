@@ -79,6 +79,7 @@ export interface SterileIdentityRepository {
     tenantId: string;
     type: string;
     status: string;
+    displayName?: string;
   } | null>;
 }
 export interface RubyTokenConfiguration {

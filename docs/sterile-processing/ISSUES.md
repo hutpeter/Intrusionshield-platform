@@ -1,5 +1,12 @@
 # Ruby Sterile Processing — issues log
 
+**November 13 browser increment:** [BROWSER-SIGNIN.md](BROWSER-SIGNIN.md) records
+the implemented separate HTTPS sign-in/session/logout composition and localized
+account UI. Configured real-account runtime wiring, access administration and
+central policy integration remain pending. Dummy preview profiles remain separate;
+independent inspection is still unimplemented. The backend-only note below is
+historical and does not supersede this browser increment.
+
 **November 13, 2026:** owner clarified the pause was for an assessment of remaining
 MVP work and has now resumed development. The local closeout below did not complete
 the client MVP. [Identity/access backend increment](IDENTITY-ACCESS.md) adds signed

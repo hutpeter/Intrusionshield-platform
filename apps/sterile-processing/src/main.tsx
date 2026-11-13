@@ -42,7 +42,14 @@ import type {
   InstrumentType,
   SterileAuditEvent,
 } from "@intrusionshield/sterile-processing";
-import { api, ApiError, type Session, type Page } from "./api";
+import {
+  api,
+  ApiError,
+  browserAuthentication,
+  type Session,
+  type Page,
+} from "./api";
+import { browserAuthText } from "./browser-auth-text";
 import { labels, type Language } from "./text";
 import "./style.css";
 
@@ -72,6 +79,9 @@ function App() {
     }
   });
   const t = labels(language),
+    authText = browserAuthText[language],
+    [username, setUsername] = useState(""),
+    [password, setPassword] = useState(""),
     [session, setSession] = useState<Session | null>(null),
     [loading, setLoading] = useState(true),
     [error, setError] = useState<unknown>(null),
@@ -110,6 +120,7 @@ function App() {
     }
   }, [language, t.product]);
   const end = useCallback(() => {
+    setPassword("");
     setSession(null);
     setExpired(true);
     void boot();
@@ -124,6 +135,15 @@ function App() {
     const timer = setTimeout(end, remaining);
     return () => clearTimeout(timer);
   }, [session, end]);
+  useEffect(() => {
+    if (!browserAuthentication || !session?.authenticated) return;
+    const check = () => {
+      if (Date.now() >= session.expiresAt) end();
+      else void boot();
+    };
+    window.addEventListener("focus", check);
+    return () => window.removeEventListener("focus", check);
+  }, [session, end, boot]);
   async function authentication(kind: "login" | "logout") {
     if (!session || request.current) return;
     const c = new AbortController();
@@ -133,7 +153,7 @@ function App() {
     try {
       const value =
         kind === "login"
-          ? await api.login(role, session, c.signal)
+          ? await api.login(role, session, c.signal, { username, password })
           : await api.logout(session, c.signal);
       if (!c.signal.aborted) {
         setSession(value);
@@ -141,13 +161,18 @@ function App() {
       }
     } catch (e) {
       if (!c.signal.aborted) {
-        if (e instanceof ApiError && e.status === 401) {
+        if (
+          e instanceof ApiError &&
+          e.status === 401 &&
+          !(browserAuthentication && kind === "login")
+        ) {
           end();
           return;
         }
         setError(e);
       }
     } finally {
+      setPassword("");
       if (!c.signal.aborted) {
         request.current = null;
         setLoading(false);
@@ -182,22 +207,29 @@ function App() {
             <span className="user">
               {t.signedIn}
               <strong>
-                {session.role === "operator"
-                  ? t.operator
-                  : session.role === "reviewer"
-                    ? t.reviewer
-                    : t.viewer}
+                {browserAuthentication
+                  ? (session.displayName ?? authText.account)
+                  : session.role === "operator"
+                    ? t.operator
+                    : session.role === "reviewer"
+                      ? t.reviewer
+                      : t.viewer}
               </strong>
             </span>
           )}
         </div>
       </header>
       <div className="demo-banner">
-        <span aria-hidden="true">●</span> {t.demo}
+        <span aria-hidden="true">●</span>{" "}
+        {browserAuthentication ? authText.banner : t.demo}
       </div>
       {!!error && (
         <p className="alert global-alert" role="alert">
-          {errorText(error, t)}{" "}
+          {browserAuthentication &&
+          error instanceof ApiError &&
+          error.status === 401
+            ? authText.invalid
+            : errorText(error, t)}{" "}
           <button onClick={() => void boot()}>{t.tryAgain}</button>
         </p>
       )}
@@ -216,52 +248,95 @@ function App() {
           <section className="welcome-copy">
             <p className="eyebrow">RUBY · STERILE PROCESSING</p>
             <h1>{t.subtitle}</h1>
-            <p>{t.intro}</p>
+            <p>{browserAuthentication ? authText.intro : t.intro}</p>
             <div className="welcome-line" />
             <p className="muted">{t.notReleased}</p>
           </section>
           <section className="login-card">
-            <h2>{t.loginTitle}</h2>
-            <p>{t.loginText}</p>
+            <h2>{browserAuthentication ? authText.title : t.loginTitle}</h2>
+            <p>{browserAuthentication ? authText.help : t.loginText}</p>
             {expired && (
               <p role="status" className="alert">
                 {t.expired}
               </p>
             )}
-            <div className="roles">
-              {(["operator", "viewer", "reviewer"] as const).map((r) => (
+            {browserAuthentication ? (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void authentication("login");
+                }}
+              >
+                <label>
+                  {authText.username}
+                  <input
+                    autoComplete="username"
+                    value={username}
+                    maxLength={200}
+                    required
+                    disabled={loading}
+                    onChange={(e) => setUsername(e.target.value)}
+                  />
+                </label>
+                <label>
+                  {authText.password}
+                  <input
+                    type="password"
+                    autoComplete="current-password"
+                    value={password}
+                    maxLength={1024}
+                    required
+                    disabled={loading}
+                    onChange={(e) => setPassword(e.target.value)}
+                  />
+                </label>
                 <button
-                  className={"role-card " + (role === r ? "chosen" : "")}
-                  key={r}
-                  aria-pressed={role === r}
-                  disabled={loading}
-                  onClick={() => setRole(r)}
+                  className="primary full"
+                  disabled={
+                    loading || !session || !username.trim() || !password
+                  }
                 >
-                  <strong>
-                    {r === "operator"
-                      ? t.operator
-                      : r === "reviewer"
-                        ? t.reviewer
-                        : t.viewer}
-                  </strong>
-                  <span>
-                    {r === "operator"
-                      ? t.operatorHelp
-                      : r === "reviewer"
-                        ? t.reviewerHelp
-                        : t.viewerHelp}
-                  </span>
+                  {loading ? t.loading : authText.enter}
                 </button>
-              ))}
-            </div>
-            <button
-              className="primary full"
-              disabled={loading || !session}
-              onClick={() => void authentication("login")}
-            >
-              {loading ? t.loading : t.enter}
-              <span aria-hidden="true">→</span>
-            </button>
+              </form>
+            ) : (
+              <>
+                <div className="roles">
+                  {(["operator", "viewer", "reviewer"] as const).map((r) => (
+                    <button
+                      className={"role-card " + (role === r ? "chosen" : "")}
+                      key={r}
+                      aria-pressed={role === r}
+                      disabled={loading}
+                      onClick={() => setRole(r)}
+                    >
+                      <strong>
+                        {r === "operator"
+                          ? t.operator
+                          : r === "reviewer"
+                            ? t.reviewer
+                            : t.viewer}
+                      </strong>
+                      <span>
+                        {r === "operator"
+                          ? t.operatorHelp
+                          : r === "reviewer"
+                            ? t.reviewerHelp
+                            : t.viewerHelp}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                <button
+                  className="primary full"
+                  disabled={loading || !session}
+                  onClick={() => void authentication("login")}
+                >
+                  {loading ? t.loading : t.enter}
+                  <span aria-hidden="true">→</span>
+                </button>
+              </>
+            )}
           </section>
         </main>
       )}
@@ -1668,7 +1743,9 @@ function Workspace({
         )}
         <footer className="content-footer">
           <span>Ruby · Sterile Processing</span>
-          <span>{t.demo}</span>
+          <span>
+            {browserAuthentication ? browserAuthText[language].banner : t.demo}
+          </span>
         </footer>
       </main>
     </div>
