@@ -14,6 +14,7 @@
     "sterile:preview": "node scripts/sterile-preview.mjs",
     "sterile:account": "node scripts/sterile-account.mjs",
     "sterile:account:check": "node scripts/sterile-account-check.mjs",
-    "sterile:account:access": "node scripts/sterile-account-access.mjs"
+    "sterile:account:access": "node scripts/sterile-account-access.mjs",
+    "sterile:account:prepare-test-users": "node scripts/sterile-account-prepare-test-users.mjs"
   }
 }

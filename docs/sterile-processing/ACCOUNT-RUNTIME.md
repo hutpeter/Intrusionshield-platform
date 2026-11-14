@@ -1,5 +1,12 @@
 # Runnable single-machine account setup
 
+**November 14 verification update:** configured Windows sign-in, expected facility,
+read-only notice and logout passed for the existing test account.
+[ACCOUNT-VERIFICATION.md](ACCOUNT-VERIFICATION.md) records that limited acceptance
+and preparation of two distinct test accounts/grants. Earlier deferred account
+checks below are historical for this subset; named pilot mapping and independent
+inspection owner acceptance remain pending.
+
 **Inspection update:** [INDEPENDENT-INSPECTION.md](INDEPENDENT-INSPECTION.md) adds
 required canonical `personId` enrollment and the separate `processing:inspect`
 permission. The access-change example/tool now require that person field. Legacy

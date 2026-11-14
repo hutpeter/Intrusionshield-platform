@@ -1,5 +1,20 @@
 # Testing register — Ruby Sterile Processing
 
+## Configured account verification — November 14, 2026 (current)
+
+**M-AUTH-01 local test-account subset passed:** owner screenshot shows authenticated
+I18N Test User, correct Local account verification facility and read-only notice at
+HTTPS port 9554; owner confirmed sign-out returned to sign-in. Dedicated SQL reader
+and encrypted SQL certificate validation passed. This is real configured sign-in
+for an existing test identity, not named pilot staff, all permission gates or
+independent-inspection acceptance. See [ACCOUNT-VERIFICATION.md](ACCOUNT-VERIFICATION.md).
+
+Preparation helper delivered for two isolated verification identities and minimal
+operator/inspection-reviewer grants. **Six preparation tests passed**; no developer
+SQL calls or owner data access. Generated SQL and Windows ACL validation still need
+owner execution. SQL creation, enrollment, two-account sign-in and independent
+inspection remain pending; preparation does not create accounts or apply grants.
+
 ## Receipt cancellation — November 13, 2026 (current)
 
 Delivered [RECEIPT-CANCELLATION.md](RECEIPT-CANCELLATION.md): separate reviewer
@@ -10,7 +25,13 @@ excluded. Developer: **242 domain, 183 service, 95 web and six runtime tests pas
 plus core/service/web builds and Chromium save/discard/history/reload/mobile checks.
 No live identity database, owner data or equipment was used.
 
-**U-CANCEL-01 pending:** Demo reviewer → Receiving and cleaning → View details for
+**U-CANCEL-01 save path observed:** owner screenshot November 13 shows the fictional
+ordinary receipt in Receipt cancelled — history retained state, version 2, with
+Record saved. This accepts the observed save/state transition, not all hold,
+rollback or discard behavior. The originally requested discard check was not
+established by that save screenshot.
+
+Original instruction: Demo reviewer → Receiving and cleaning → View details for
 an ordinary Received receipt → Cancel receipt. Check reason/reference/confirmation,
 then Cancel and confirm discarding. Only this short owner check is requested.
 The owner's previously shown loaner receipt intentionally cannot be cancelled here.
