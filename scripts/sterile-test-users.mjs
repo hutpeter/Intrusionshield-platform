@@ -28,7 +28,7 @@ const readPermissions = [
   "reports:read",
 ];
 const quote = (value) => "N'" + value.replaceAll("'", "''") + "'";
-export async function prepareTestUsers(config, passwords) {
+export function assertVerificationWorkspace(config) {
   if (
     config.tenantId !== testTenant ||
     config.facilityName !== "Local account verification" ||
@@ -40,6 +40,9 @@ export async function prepareTestUsers(config, passwords) {
     throw Error(
       "This helper is limited to the local verification workspace and test tenant.",
     );
+}
+export async function prepareTestUsers(config, passwords) {
+  assertVerificationWorkspace(config);
   if (
     !passwords ||
     Object.keys(passwords).sort().join(",") !==
@@ -182,4 +185,69 @@ export function writeTestUserFiles(directory, files) {
     for (const path of created) unlinkSync(path);
     throw error;
   }
+}
+
+export async function prepareReviewerPasswordReset(
+  config,
+  grant,
+  identityId,
+  input,
+) {
+  assertVerificationWorkspace(config);
+  if (
+    typeof identityId !== "string" ||
+    !uuid.test(identityId) ||
+    !grant ||
+    typeof grant.actorId !== "string" ||
+    grant.actorId.toLowerCase() !== identityId.toLowerCase() ||
+    grant.tenantId !== testTenant ||
+    !uuid.test(grant.personId) ||
+    grant.status !== "ACTIVE" ||
+    !Array.isArray(grant.facilities) ||
+    grant.facilities.length !== 1 ||
+    grant.facilities[0].facilityId !== config.facilityId ||
+    !Array.isArray(grant.facilities[0].permissions) ||
+    !grant.facilities[0].permissions.includes("processing:inspect") ||
+    grant.facilities[0].permissions.includes("processing:write")
+  )
+    throw Error(
+      "Expected existing local verification reviewer identity and grant required.",
+    );
+  if (
+    !input ||
+    Object.keys(input).join(",") !== "reviewerPassword" ||
+    typeof input.reviewerPassword !== "string" ||
+    input.reviewerPassword.length < 20 ||
+    input.reviewerPassword.length > 128 ||
+    /[\r\n\0]/.test(input.reviewerPassword)
+  )
+    throw Error("One replacement password of 20–128 characters is required.");
+  const hash = await new PasswordHasher().hash(input.reviewerPassword);
+  return `-- PRIVATE: replacement password hash for the existing verification reviewer only.
+-- Execute through an authorized Windows administrator connection to localhost:1433.
+USE [intrusionshield];
+SET NOCOUNT ON;
+SET XACT_ABORT ON;
+BEGIN TRY
+  BEGIN TRANSACTION;
+  IF NOT EXISTS (
+    SELECT 1 FROM [Identity].[Identities] i WITH (UPDLOCK, HOLDLOCK)
+    JOIN [Identity].[Users] u WITH (UPDLOCK, HOLDLOCK)
+      ON u.TenantId = i.TenantId AND u.IdentityId = i.Id
+    WHERE i.TenantId = '${testTenant}' AND i.Id = '${identityId.toLowerCase()}'
+      AND i.IdentityType = N'USER' AND i.Status = N'ACTIVE'
+      AND u.NormalizedUsername = N'STERILE.REVIEWER.TEST'
+  ) THROW 50000, 'Expected active verification reviewer not found; no reset performed.', 1;
+  UPDATE [Authentication].[Credentials]
+    SET PasswordHash = ${quote(hash)}, PasswordChangedAt = SYSUTCDATETIME(), UpdatedAt = SYSUTCDATETIME()
+    WHERE TenantId = '${testTenant}' AND IdentityId = '${identityId.toLowerCase()}';
+  IF @@ROWCOUNT <> 1 THROW 50000, 'Expected exactly one credential; reset rolled back.', 1;
+  COMMIT;
+  PRINT 'Verification reviewer password reset. Identity and permissions unchanged.';
+END TRY
+BEGIN CATCH
+  IF @@TRANCOUNT > 0 ROLLBACK;
+  THROW;
+END CATCH;
+`;
 }

@@ -255,6 +255,50 @@ test("complete preparation CLI uses bounded UTF-8 input, writes only the private
     readFileSync(join(secretDir, "verification-users.sql"), "utf8"),
     original,
   );
+  const grantBefore = readFileSync(
+    join(secretDir, "reviewer-access.json"),
+    "utf8",
+  );
+  const reviewerId = JSON.parse(grantBefore).actorId;
+  const reset = () =>
+    spawnSync(
+      process.execPath,
+      [
+        "scripts/sterile-account-prepare-reviewer-reset.mjs",
+        "--config",
+        file,
+        "--identity",
+        reviewerId,
+      ],
+      {
+        encoding: "utf8",
+        input: JSON.stringify({
+          reviewerPassword: "New replacement reviewer password 12345",
+        }),
+      },
+    );
+  let resetResult = reset();
+  assert.equal(resetResult.status, 0, resetResult.stderr);
+  assert.ok(resetResult.stdout.includes("No SQL connection opened"));
+  const resetSql = readFileSync(
+    join(secretDir, "reviewer-password-reset.sql"),
+    "utf8",
+  );
+  assert.equal(
+    resetSql.includes("New replacement reviewer password 12345"),
+    false,
+  );
+  resetResult = reset();
+  assert.equal(resetResult.status, 1);
+  assert.equal(
+    readFileSync(join(secretDir, "reviewer-password-reset.sql"), "utf8"),
+    resetSql,
+  );
+  assert.equal(
+    readFileSync(join(secretDir, "reviewer-access.json"), "utf8"),
+    grantBefore,
+  );
+  assert.equal(readdirSync(root).includes("access.sqlite"), false);
   result = run("x".repeat(5000));
   assert.equal(result.status, 1);
   assert.equal(result.stderr.includes("x".repeat(100)), false);

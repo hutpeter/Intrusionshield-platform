@@ -1,5 +1,19 @@
 # Testing register — Ruby Sterile Processing
 
+## Two-account verification — November 15, 2026 (current)
+
+Owner SQL output confirms both named test identities created; operator and reviewer
+access enrollment each reported version 1. Operator screenshot confirms real
+Sterile test operator sign-in and Record receipt availability. Reviewer sign-in,
+its restricted actions and independent-inspection handoff remain pending.
+
+Owner authorized replacing the lost reviewer test password. A preparation-only
+helper generates an exact-identity/username-scoped private reset SQL file, changing
+only credential hash/timestamps upon explicit authorized SQL execution. It changes
+no identity, person mapping, grants or operator credentials. **Nine helper tests
+passed**; no developer SQL connection or reset occurred. See
+[ACCOUNT-VERIFICATION.md](ACCOUNT-VERIFICATION.md). Owner execution remains pending.
+
 ## Configured account verification — November 14, 2026 (current)
 
 **M-AUTH-01 local test-account subset passed:** owner screenshot shows authenticated

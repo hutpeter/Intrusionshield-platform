@@ -96,3 +96,34 @@ Windows ACL inspection code and generated SQL still require the owner's actual
 Windows/SQL execution; the developer did not access the owner's database. The
 previous workflow/browser tests are retained, not relabelled as this new setup's
 acceptance. Named-test-account login, grants and independent inspection remain pending.
+
+## Lost verification reviewer password — November 15, 2026
+
+The owner created both verification accounts and enrolled both initial grants at
+version 1. A screenshot confirms Sterile test operator signed in at HTTPS 9554
+with Record receipt available. Reviewer sign-in/permission and independent
+inspection acceptance are still pending. The owner requested a reset of the lost
+reviewer password; the operator account and grants must remain unchanged.
+
+`scripts/sterile-account-prepare-reviewer-reset.mjs` accepts `--config` and
+`--identity` (the existing reviewer's exact identity ID) and one replacement
+`reviewerPassword` through bounded UTF-8 JSON on standard input. Use masked
+PowerShell input as in preparation, without printing JSON. It validates the same
+local verification workspace and private directory, checks the saved reviewer
+access file's identity/person/facility and inspection-without-cleaning permissions,
+and writes only private `reviewer-password-reset.sql` with exclusive creation.
+It opens no SQL connection or store and changes no grant or password itself.
+
+After review, an authorized Windows administrator executes this private SQL file
+with the same encrypted sqlcmd connection used for enrollment. SQL requires that
+exact active USER identity, test tenant and normalized STERILE.REVIEWER.TEST
+username, and updates exactly one Credentials row's PasswordHash,
+PasswordChangedAt and UpdatedAt. A failed identity or row-count check rolls back.
+It does not recreate or enable accounts, change person mappings or access,
+clear lock state, modify the operator, or revoke existing browser sessions.
+This bounded local helper is not a production password-recovery service.
+
+Nine preparation/reset tests passed, including the actual hasher, exact scope and
+target validation, SQL update boundary, no plaintext output, complete CLI preparation,
+private file creation/no overwrite and unchanged grant files. No developer live SQL
+reset was executed. Owner SQL execution and reviewer sign-in remain pending.
