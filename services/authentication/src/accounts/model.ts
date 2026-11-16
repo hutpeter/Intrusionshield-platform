@@ -91,6 +91,15 @@ export function uuid(value: unknown): string {
     fail(400, "INVALID_ID");
   return value.toLowerCase();
 }
+export function optionalPersonId(value: unknown): string | null {
+  if (value === null || (typeof value === "string" && !value.trim()))
+    return null;
+  try {
+    return uuid(typeof value === "string" ? value.trim() : value);
+  } catch {
+    fail(400, "INVALID_PERSON_ID");
+  }
+}
 export function exact(input: unknown, keys: string[]): Record<string, unknown> {
   if (
     !input ||
@@ -119,7 +128,13 @@ export function scopes(value: Record<string, unknown>): Scopes {
     value.productKeys.length > 50
   )
     fail(400, "INVALID_ACCESS");
-  const facilityIds = value.facilityIds.map(uuid),
+  const facilityIds = value.facilityIds.map((id) => {
+      try {
+        return uuid(id);
+      } catch {
+        fail(400, "INVALID_FACILITY_ID");
+      }
+    }),
     productKeys = value.productKeys.map((x) => text(x, 100));
   if (
     productKeys.some((x) => !/^[a-z][a-z0-9_.-]*$/.test(x)) ||

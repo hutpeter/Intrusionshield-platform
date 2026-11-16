@@ -64,11 +64,22 @@ const messages: Record<string, string> = {
   HTTPS_REQUIRED: "Open the secure administration URL to continue.",
   INVALID_FIELDS: "Some form fields are invalid.",
   INVALID_PROFILE: "Check the username, display name and email.",
-  INVALID_ID: "Enter valid facility and person identifiers.",
+  INVALID_ID:
+    "An account or client identifier is invalid. Refresh and try again.",
+  INVALID_PERSON_ID:
+    "Person identifier must be an existing person UUID, or left blank.",
+  INVALID_FACILITY_ID:
+    "Facility identifiers must be existing facility UUIDs, or left blank.",
 };
 export function UsersPanel() {
   const { accessToken, identity, logout } = useAuth();
   const auditRequest = useRef<AbortController | null>(null);
+  const personInput = useRef<HTMLInputElement | null>(null);
+  const facilityInput = useRef<HTMLTextAreaElement | null>(null);
+  const [identifierErrors, setIdentifierErrors] = useState<{
+    personId?: string;
+    facilityIds?: string;
+  }>({});
   useEffect(() => () => auditRequest.current?.abort(), [accessToken]);
   const [context, setContext] = useState<Context | null>(null),
     [clients, setClients] = useState<Client[]>([]),
@@ -178,6 +189,7 @@ export function UsersPanel() {
     return () => c.abort();
   }, [client, offset, nonce, accessToken]);
   function close() {
+    setIdentifierErrors({});
     setAction(null);
     setSelected(null);
     setFields(empty);
@@ -185,6 +197,7 @@ export function UsersPanel() {
   function begin(a: NonNullable<typeof action>, u?: User) {
     setLink(null);
     setError("");
+    setIdentifierErrors({});
     setNotice("");
     setAction(a);
     setSelected(u ?? null);
@@ -207,6 +220,24 @@ export function UsersPanel() {
   async function submit(e: FormEvent) {
     e.preventDefault();
     if (!action || saving || !fields.confirmed) return;
+    if (action === "create" || action === "access") {
+      const uuid =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const errors: typeof identifierErrors = {};
+      if (fields.personId.trim() && !uuid.test(fields.personId.trim()))
+        errors.personId =
+          "Enter an existing person UUID, or leave this optional field blank.";
+      if (split(fields.facilityIds).some((id) => !uuid.test(id)))
+        errors.facilityIds =
+          "Enter existing facility UUIDs, one per line, or leave this optional field blank. Names and job roles do not belong in this field.";
+      setIdentifierErrors(errors);
+      if (errors.personId || errors.facilityIds) {
+        setError("Check the highlighted identifier field.");
+        if (errors.personId) personInput.current?.focus();
+        else facilityInput.current?.focus();
+        return;
+      }
+    }
     setSaving(true);
     setError("");
     setLink(null);
@@ -284,8 +315,11 @@ export function UsersPanel() {
     u.kind !== "SUPERUSER" &&
     u.id !== identity?.identityId &&
     (context?.kind === "SUPERUSER" || u.kind === "USER");
-  const patch = (v: Partial<typeof empty>) =>
+  const patch = (v: Partial<typeof empty>) => {
+    setIdentifierErrors({});
+    setError("");
     setFields((f) => ({ ...f, ...v, confirmed: false }));
+  };
   if (context?.kind === "USER")
     return (
       <section>
@@ -446,14 +480,25 @@ export function UsersPanel() {
                 <label>
                   Person identifier (optional){" "}
                   <input
+                    ref={personInput}
+                    aria-label="Person identifier (optional)"
+                    aria-invalid={!!identifierErrors.personId}
+                    aria-describedby="account-person-help account-person-error"
                     value={fields.personId}
                     readOnly={!!selected?.personId}
                     onChange={(e) => patch({ personId: e.target.value })}
                   />
                 </label>
-                <p>
-                  Use the approved identifier for the person. Existing person
-                  mappings cannot be changed here.
+                <p
+                  id="account-person-error"
+                  role={identifierErrors.personId ? "alert" : undefined}
+                >
+                  {identifierErrors.personId}
+                </p>
+                <p id="account-person-help">
+                  Leave blank unless linking an existing person record. If
+                  provided, enter its UUID. Existing person mappings cannot be
+                  changed here.
                 </p>
                 <fieldset>
                   <legend>Job roles</legend>
@@ -482,12 +527,27 @@ export function UsersPanel() {
                 {context?.kind === "SUPERUSER" ? (
                   <>
                     <label>
-                      Approved facility identifiers (one per line){" "}
+                      Approved facility identifiers (optional, one per line){" "}
                       <textarea
+                        ref={facilityInput}
+                        aria-label="Approved facility identifiers (optional, one per line)"
+                        aria-invalid={!!identifierErrors.facilityIds}
+                        aria-describedby="account-facility-help account-facility-error"
+                        placeholder="Existing facility UUIDs; leave blank if none"
                         value={fields.facilityIds}
                         onChange={(e) => patch({ facilityIds: e.target.value })}
                       />
                     </label>
+                    <p
+                      id="account-facility-error"
+                      role={identifierErrors.facilityIds ? "alert" : undefined}
+                    >
+                      {identifierErrors.facilityIds}
+                    </p>
+                    <p id="account-facility-help">
+                      Optional. Enter existing facility UUIDs, not names or job
+                      roles.
+                    </p>
                     <label>
                       Approved product keys (comma separated){" "}
                       <input
@@ -574,10 +634,16 @@ export function UsersPanel() {
                   setFields((f) => ({ ...f, confirmed: e.target.checked }))
                 }
               />
-              I confirm this account change.
+              {action === "create"
+                ? "I confirm creation of this account."
+                : "I confirm this account change."}
             </label>
             <button disabled={!fields.confirmed}>
-              {saving ? "Saving…" : "Save account change"}
+              {saving
+                ? "Saving…"
+                : action === "create"
+                  ? "Create account"
+                  : "Save account change"}
             </button>
             <button type="button" onClick={close}>
               Cancel

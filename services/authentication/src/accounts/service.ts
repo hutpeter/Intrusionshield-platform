@@ -7,6 +7,7 @@ import {
   type Authority,
   fail,
   uuid,
+  optionalPersonId,
   exact,
   text,
   scopes,
@@ -188,7 +189,7 @@ export class AccountAdministration {
         username,
         email,
         displayName,
-        personId: v.personId === null ? null : uuid(v.personId),
+        personId: optionalPersonId(v.personId),
         status: "PENDING",
         version: 1,
         sessionVersion: 1,
@@ -227,7 +228,7 @@ export class AccountAdministration {
       this.manage(p, authority, tenantId);
       await this.tenant(tx, tenantId);
       const old = await this.target(tx, p, authority, tenantId, id, v.version);
-      const personId = v.personId === null ? null : uuid(v.personId);
+      const personId = optionalPersonId(v.personId);
       if (old.personId && old.personId !== personId)
         fail(409, "PERSON_MAPPING_IMMUTABLE");
       const access = await this.access(tx, actor, authority, tenantId, v),

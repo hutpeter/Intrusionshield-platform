@@ -295,3 +295,25 @@ Five local-runtime helper tests cover grant bounds, private/exclusive output,
 secret isolation and inherited override clearing, invalid configuration and
 symlink rejection. Real SQL permission verification with this narrower runtime
 login and owner browser activation remain pending.
+
+## Account creation validation follow-up
+
+Owner confirmed the dedicated runtime login reports CanControlDatabase=0,
+CanAssignSuperusers=0 and CanCreateUsers=1, then completed the owner superuser's
+password setup and sign-in. Owner client registration is also observed. Creating
+the first regular tester remains pending; no tester setup acceptance is claimed.
+
+The original create form reused the label "Save account change" and mapped every
+INVALID_ID response to a combined person/facility error, misleadingly implicating
+a blank optional person field. Creation now says "Create account" with a creation
+confirmation. Person and facility inputs have separate inline validation and focus;
+blank optional values remain valid, while entered values must be UUIDs. Backend
+errors distinguish INVALID_PERSON_ID and INVALID_FACILITY_ID. Blank/whitespace
+person values normalize to null without relaxing assigned-person immutability.
+
+Verification: 78 authentication tests passed, Athena TypeScript/Vite build passed,
+and Chromium exercised blank optional fields through successful creation with
+null person/empty facilities. Browser checks also confirmed invalid person and
+facility values identify/focus only the affected field and send no create request.
+The broader account setup/hierarchy/status/audit browser flow still passed.
+No migration or credential/bootstrap regeneration is needed for this correction.

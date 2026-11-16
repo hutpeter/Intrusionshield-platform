@@ -618,3 +618,47 @@ test("client registration UI capability fails closed for ordinary users and disa
   assert.equal((await (await call(f.regular)).json()).enabled, false);
   assert.equal(checks, 1);
 });
+
+test("optional person and facility fields accept blank input; invalid supplied IDs identify the actual field", async () => {
+  const f = accountFixture(),
+    p = f.principal(f.root);
+  for (const [i, personId] of [null, "", "   "].entries()) {
+    const result = await f.accounts.create(
+      p,
+      f.tenantA,
+      f.input({
+        username: "optional.user." + i,
+        email: "optional" + i + "@example.invalid",
+        personId,
+        facilityIds: [],
+        roleIds: [],
+        productKeys: [],
+      }),
+    );
+    assert.equal(result.user.personId, null);
+    assert.deepEqual(result.user.facilityIds, []);
+    assert.equal(result.user.status, "PENDING");
+  }
+  const count = f.store.state.users.length;
+  await rejects(
+    () =>
+      f.accounts.create(
+        p,
+        f.tenantA,
+        f.input({ personId: "not-a-person-id", facilityIds: [] }),
+      ),
+    400,
+    "INVALID_PERSON_ID",
+  );
+  await rejects(
+    () =>
+      f.accounts.create(
+        p,
+        f.tenantA,
+        f.input({ personId: null, facilityIds: ["Athena tester"] }),
+      ),
+    400,
+    "INVALID_FACILITY_ID",
+  );
+  assert.equal(f.store.state.users.length, count);
+});
