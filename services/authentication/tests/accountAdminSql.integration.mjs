@@ -67,8 +67,27 @@ try {
     for (const sql of readFileSync(file, "utf8")
       .split(/^\s*GO\s*$/im)
       .filter((s) => s.trim()))
-      await database.execute(sql);
+      await database.execute(
+        file.endsWith("007_client_provisioning_support.sql")
+          ? // Reproduce sqlcmd defaults that previously made filtered-index DDL fail.
+            "SET QUOTED_IDENTIFIER OFF; SET ANSI_NULLS OFF; SET ANSI_PADDING OFF; SET ANSI_WARNINGS OFF; SET ARITHABORT OFF; SET CONCAT_NULL_YIELDS_NULL OFF; SET NUMERIC_ROUNDABORT ON;\n" +
+              sql
+          : sql,
+      );
   }
+  const filtered = await database.query(
+    "SELECT name FROM sys.indexes WHERE object_id=OBJECT_ID(N'Platform.EventOutbox') AND has_filter=1 AND is_disabled=0",
+  );
+  assert.deepEqual(filtered.rows.map((r) => r.name).sort(), [
+    "IX_PlatformEventOutbox_ExpiredLocks",
+    "IX_PlatformEventOutbox_Pending",
+  ]);
+  await database.execute(
+    readFileSync(
+      "services/authentication/sql/007_client_provisioning_support.sql",
+      "utf8",
+    ),
+  );
   // Forward-only administration migration must be safely repeatable.
   await database.execute(
     readFileSync(

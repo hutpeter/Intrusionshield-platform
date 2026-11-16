@@ -221,3 +221,18 @@ deployment and owner browser acceptance remain required before tester use.
 Tiger verification remains paused: owner screenshots show VERIFY-REC-001 at
 version 3, cleaning passed and awaiting independent inspection. Reviewer opened
 the inspection form; a saved inspection decision has not been accepted yet.
+
+## Owner installation follow-up: SQL session defaults
+
+Owner execution completed authorization 002, tenant registry 003 and account
+administration 006. Script 007 failed at a filtered outbox index with SQL error
+1934 because sqlcmd connected with QUOTED_IDENTIFIER off. A separately executed
+PowerShell completion message did not indicate migration success.
+
+Script 007 now explicitly sets all required filtered-index session options. The
+SQL integration runner now starts its 007 batch with adverse session settings
+and checks both enabled filtered indexes, then reruns 007. This regression is
+syntax checked here; real SQL execution of the corrected script remains pending.
+Rerun only corrected 007 against the selected backed-up database, then verify its
+two tables and both filtered indexes before proceeding to bootstrap. No password,
+identity or account grant correction is involved.

@@ -1,6 +1,15 @@
 /* Forward-only support for the existing audited client-creation service.
    Explicitly review/apply to the selected identity/platform database. No roles,
    clients, events or running workers are provisioned by applying this schema. */
+/* Filtered indexes require these settings even when sqlcmd's connection defaults
+   differ from the Node driver. Keep the migration independent of its caller. */
+SET ANSI_NULLS ON;
+SET QUOTED_IDENTIFIER ON;
+SET ANSI_PADDING ON;
+SET ANSI_WARNINGS ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET ARITHABORT ON;
+SET NUMERIC_ROUNDABORT OFF;
 SET XACT_ABORT ON;
 BEGIN TRY
  BEGIN TRANSACTION;
