@@ -183,3 +183,17 @@ environment/connection isolation, invalid targets/configs/private-key rejection,
 exclusive private files, and symlink rejection. Actual SQL login creation and
 health/product acceptance remain owner-side steps; a health result confirms
 startup/connectivity, not a successful authenticated product operation.
+
+## Owner local acceptance completed
+
+The owner subsequently confirmed the dedicated HIS login's 0/0/1/1 permission
+summary, successful HIS health, verification-user private setup/sign-in, Person
+list/read/create/edit, regular-user administration denial, existing-session
+revocation on disable and fresh sign-in after re-enable. Temporary client-admin
+verification also created an own-client regular user, after which the owner
+restored the verifier to Regular user. The external tester remains pending.
+
+See [MVP checkpoint](MVP-CHECKPOINT-2026-11-16.md) for the accepted local scope,
+remaining Azure/email work, indicative effort and the feature-development pause.
+These owner results supersede earlier pending notes for those specific checks;
+public hosting, email delivery and remote tester acceptance remain outstanding.
