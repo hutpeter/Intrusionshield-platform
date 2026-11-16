@@ -163,6 +163,34 @@ after building dependencies/authentication:
 node services/authentication/tests/accountAdminSql.integration.mjs --config <absolute-private-json-path>
 ```
 
+For local Windows verification with SQL authentication, first use the preparation
+helper against the empty disposable database. Its output directory must already
+have the private ACLs described above:
+
+```powershell
+node scripts/account-admin-prepare-sql-check.mjs `
+  --database 'Ruby_AccountAdmin_Test_20261116' `
+  --directory 'D:\RubySterileAccount\secrets'
+```
+
+This prepares `account-admin-sql-check-login.sql`, a random password file and
+`account-admin-sql-check.json`. It never connects to SQL. The SQL file checks the
+named test database is empty and refuses existing login/user names, then creates
+a fresh SQL login with db_owner **only in that disposable database**, without a
+server role. The SQL file contains the password: keep it private and do not paste
+it into support/chat. Execute that file with trusted local Windows SQL credentials
+using `sqlcmd -E -N -b -i <private-file>`, then run the integration runner with the
+private JSON file. Its defaults are localhost:1433 and verified TLS. Set the
+existing public SQL CA through `NODE_EXTRA_CA_CERTS` before running Node if needed.
+After testing, have the SQL administrator remove the generated test user/login
+when the disposable database is no longer needed; the helper does not grant or
+alter runtime access to the existing identity database.
+
+Four preparation-helper tests passed: credential generation and scope, input and
+private directory guards, exclusive writes, and symlink rejection. Windows ACL
+validation uses the previously shared private-directory implementation; execution
+of this generated SQL remains an owner-side verification step.
+
 The runner refuses non-test names and nonempty databases. It applies the foundation
 and new schemas only inside that disposable target, then checks real SQL account
 lifecycle, role preservation, concurrency, audit rollback and audited client
