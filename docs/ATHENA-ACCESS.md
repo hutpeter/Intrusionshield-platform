@@ -127,3 +127,59 @@ against the owner's SQL Server; the earlier disposable check passed before this
 extension. Existing owner runtime grants have not been broadened by development.
 Owner migration 008 execution, client-role preparation, assignment to the real
 regular tester and product API acceptance remain pending.
+
+
+## Owner product-database discovery and local HIS startup helper
+
+Owner metadata-only inventory confirmed 19 HIS tables in `intrusionshield`, and
+19 in each Athena isolation/restore verification copy. CMS and the account test
+database have none. The local product service will use `intrusionshield` explicitly;
+no isolation/restore database is selected or migrated. Account access was saved
+successfully for the regular tester, but product sign-in/requests remain untested.
+A direct localhost:4300 health check failed because HIS was not running.
+
+`scripts/athena-his-runtime.mjs` now prepares a separate SQL login, password file
+and runtime JSON, without connecting to SQL. Use the existing private directory:
+
+```powershell
+node scripts/athena-his-runtime.mjs prepare `
+  --database 'intrusionshield' `
+  --directory 'D:\RubySterileAccount\secrets' `
+  --sql-ca 'D:\RubySterileAccount\tls\sqlserver-cert.pem'
+```
+
+The private `athena-his-login.sql` checks all 19 expected table names before
+creating a random login/user, refuses collisions, and grants object DML only on
+those tables. SELECT/INSERT are available on the 19 tables; UPDATE on parent and
+workflow tables; DELETE only on the five subordinate tables whose existing
+repositories replace identifiers/addresses/contacts/licenses/specialties. This
+SQL ability is not a public DELETE API privilege. No database/server role,
+schema alteration, identity-table write or application record update/seed is
+performed. Keep all generated files private. Existing files are never overwritten.
+
+After trusted Windows SQL execution, the impersonated-user summary should report
+CanControlDatabase=0, CanCreateAccounts=0, CanReadPersons=1, CanCreatePersons=1.
+For the account-write check, absent/hidden account metadata resolves to no usable
+INSERT permission. Actual object grants and subsequent product access acceptance
+must still be checked on the owner's SQL instance.
+
+Build HIS dependencies, then start in a dedicated PowerShell window:
+
+```powershell
+pnpm --filter @intrusionshield/his-service... build
+node scripts/athena-his-runtime.mjs start `
+  --config 'D:\RubySterileAccount\secrets\athena-his-runtime.json'
+```
+
+The starter clears inherited DB, per-role DB, authentication and HIS overrides.
+It uses only its own product password, fixed loopback SQL with verified TLS, the
+public SQL CA, 127.0.0.1:4300 and account verification at 127.0.0.1:4400. It does not
+receive the account token-signing secret. Existing account runtime secrets and
+owner bootstrap files are unchanged. This helper is for local verification, not
+Azure production settings or remote invitation delivery.
+
+Five helper tests passed: explicit grant boundaries and credential separation,
+environment/connection isolation, invalid targets/configs/private-key rejection,
+exclusive private files, and symlink rejection. Actual SQL login creation and
+health/product acceptance remain owner-side steps; a health result confirms
+startup/connectivity, not a successful authenticated product operation.
