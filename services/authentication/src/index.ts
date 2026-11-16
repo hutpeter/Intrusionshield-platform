@@ -190,6 +190,7 @@ async function start(): Promise<void> {
     const server =
         app.listen(
             port,
+            process.env.AUTH_HOST?.trim() || "::",
             () => {
                 console.log(
                     `EIS authentication service listening on port ${port}`

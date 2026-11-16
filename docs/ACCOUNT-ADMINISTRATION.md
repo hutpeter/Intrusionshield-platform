@@ -244,3 +244,54 @@ have now completed. The owner superuser, runtime writer credentials and browser
 activation remain pending. The bootstrap SQL now also sets filtered-index session
 options explicitly because inserting its platform role maintains a filtered
 unique index on Identity.Roles.
+
+## Local account-service runtime preparation
+
+`scripts/athena-account-runtime.mjs` prepares a separate SQL runtime login, password,
+token secret and startup JSON in an existing private directory. Its preparation
+mode never connects to SQL or applies its SQL file. It refuses existing files,
+linked files/directories, system database targets and private-key files supplied
+as a SQL CA. Neither secret appears in the JSON configuration.
+
+```powershell
+node scripts/athena-account-runtime.mjs prepare `
+  --database 'intrusionshield' `
+  --directory 'D:\RubySterileAccount\secrets' `
+  --sql-ca 'D:\RubySterileAccount\tls\sqlserver-cert.pem'
+```
+
+The generated `athena-account-login.sql` contains a private random SQL password.
+Review/execute it with trusted Windows SQL credentials against the explicitly
+selected application database. It checks required tables and refuses an existing
+login/user. It grants object SELECT/INSERT, required column UPDATE and tenant-role
+assignment DELETE only. No database/server role, schema modification privilege or
+PlatformRoleAssignments write is granted. Its final impersonated-user query should
+report CanControlDatabase=0, CanAssignSuperusers=0, CanCreateUsers=1. Neither the
+owner superuser nor any client user is created by this runtime preparation.
+
+Build `@intrusionshield/authentication-service...`, then in a dedicated terminal:
+
+```powershell
+node scripts/athena-account-runtime.mjs start `
+  --config 'D:\RubySterileAccount\secrets\athena-account-runtime.json'
+```
+
+The starter reads private files and launches the existing authentication service.
+It clears inherited DB/auth/PLATFORM database overrides, sets the verified public
+SQL CA before starting Node, enables the administration APIs, and binds the API to
+127.0.0.1:4400. Athena's Vite auth/admin proxies use that same address, avoiding
+localhost IPv4/IPv6 differences. Run the portal on localhost:5173 in another
+terminal. Secrets are passed in the child environment, never command arguments or
+browser configuration. This is an explicit loopback-only HTTP verification setup;
+Azure/tester deployment requires its own HTTPS production configuration.
+
+The starter performs no migrations, bootstrap execution or password setup itself.
+Once service/portal startup is confirmed, execute the previously prepared owner
+bootstrap SQL and immediately open the private setup link. The one-hour setup
+window starts at SQL execution, not file preparation. Do not regenerate the owner
+bootstrap files or tenant ID while configuring the runtime.
+
+Five local-runtime helper tests cover grant bounds, private/exclusive output,
+secret isolation and inherited override clearing, invalid configuration and
+symlink rejection. Real SQL permission verification with this narrower runtime
+login and owner browser activation remain pending.
