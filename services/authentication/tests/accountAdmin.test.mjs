@@ -662,3 +662,112 @@ test("optional person and facility fields accept blank input; invalid supplied I
   );
   assert.equal(f.store.state.users.length, count);
 });
+
+test("Athena role setup is superuser-only, audited, idempotent and assigns no users automatically", async () => {
+  const f = accountFixture(),
+    root = f.principal(f.root),
+    before = f.store.state.users.map((u) => structuredClone(u));
+  await rejects(
+    () =>
+      f.accounts.prepareAthenaRoles(f.principal(f.admin), f.tenantA, {
+        reason: "No escalation",
+      }),
+    403,
+    "SUPERUSER_REQUIRED",
+  );
+  const first = await f.accounts.prepareAthenaRoles(root, f.tenantA, {
+    reason: "Initial Athena role setup",
+  });
+  const second = await f.accounts.prepareAthenaRoles(root, f.tenantA, {
+    reason: "Check role setup",
+  });
+  assert.deepEqual(first.roleIds, second.roleIds);
+  assert.deepEqual(f.store.state.users, before);
+  assert.ok(
+    (await f.accounts.history(root, f.tenantA)).some(
+      (e) => e.action === "ATHENA_ROLES_PREPARED",
+    ),
+  );
+  f.store.failAudit = true;
+  await assert.rejects(() =>
+    f.accounts.prepareAthenaRoles(root, f.tenantB, {
+      reason: "Rollback this role setup",
+    }),
+  );
+  assert.equal(
+    f.store.state.roles.some(
+      (r) => r.tenantId === f.tenantB && r.name === "Athena viewer",
+    ),
+    false,
+  );
+});
+test("Athena current session requires explicit product and tenant job permissions; administration confers no data access", async () => {
+  const f = accountFixture(),
+    root = f.principal(f.root);
+  await f.accounts.prepareAthenaRoles(root, f.tenantA, {
+    reason: "Product policy test",
+  });
+  const viewer = f.store.state.roles.find((r) => r.name === "Athena viewer"),
+    editor = f.store.state.roles.find((r) => r.name === "Athena editor");
+  const currentUser = () =>
+    f.store.state.users.find((u) => u.id === f.regular.id);
+  currentUser().facilityIds = [];
+  currentUser().roleIds = [viewer.id];
+  const p = f.principal(currentUser());
+  assert.equal(
+    (await f.accounts.athenaAccess(p, { action: "READ" })).tenantId,
+    f.tenantA,
+  );
+  await rejects(
+    () => f.accounts.athenaAccess(p, { action: "WRITE" }),
+    403,
+    "ATHENA_ACCESS_REQUIRED",
+  );
+  await rejects(
+    () => f.accounts.athenaAccess(root, { action: "READ" }),
+    403,
+    "ATHENA_ACCESS_REQUIRED",
+  );
+  const admin = f.store.state.users.find((u) => u.id === f.admin.id);
+  admin.roleIds = [];
+  admin.facilityIds = [];
+  await rejects(
+    () => f.accounts.athenaAccess(f.principal(admin), { action: "READ" }),
+    403,
+    "ATHENA_ACCESS_REQUIRED",
+  );
+  currentUser().roleIds = [editor.id];
+  assert.equal(
+    (await f.accounts.athenaAccess(p, { action: "WRITE" })).action,
+    "WRITE",
+  );
+  currentUser().productKeys = [];
+  await rejects(
+    () => f.accounts.athenaAccess(p, { action: "READ" }),
+    403,
+    "ATHENA_ACCESS_REQUIRED",
+  );
+  currentUser().productKeys = ["athena"];
+  currentUser().facilityIds = [f.facility];
+  await rejects(
+    () => f.accounts.athenaAccess(p, { action: "READ" }),
+    403,
+    "ATHENA_FACILITY_SCOPE_UNSUPPORTED",
+  );
+  currentUser().facilityIds = [];
+  currentUser().sessionVersion++;
+  await rejects(
+    () => f.accounts.athenaAccess(p, { action: "READ" }),
+    401,
+    "SIGN_IN_REQUIRED",
+  );
+  await rejects(
+    () =>
+      f.accounts.athenaAccess(f.principal(currentUser()), {
+        action: "READ",
+        tenantId: f.tenantB,
+      }),
+    400,
+    "INVALID_FIELDS",
+  );
+});

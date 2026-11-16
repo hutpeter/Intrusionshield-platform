@@ -98,6 +98,49 @@ export class AccountAdministration {
       }),
     });
   }
+  async athenaAccess(p: Principal, input: unknown) {
+    const v = exact(input, ["action"]);
+    if (v.action !== "READ" && v.action !== "WRITE")
+      fail(400, "INVALID_ACTION");
+    return this.store.transaction(async (tx) => {
+      const { user, authority } = await this.actor(tx, p);
+      // A platform administrator has no implicit product/client data access.
+      await this.tenant(tx, p.tenantId);
+      if (
+        !user.productKeys.includes("athena") ||
+        !authority.permissions.includes("athena:" + v.action)
+      )
+        fail(403, "ATHENA_ACCESS_REQUIRED");
+      // These initial roles are tenant-wide, never a claim of facility isolation.
+      if (user.facilityIds.length)
+        fail(403, "ATHENA_FACILITY_SCOPE_UNSUPPORTED");
+      return { tenantId: p.tenantId, identityId: p.id, action: v.action };
+    });
+  }
+  async prepareAthenaRoles(p: Principal, tenantId: string, input: unknown) {
+    uuid(tenantId);
+    const v = exact(input, ["reason"]),
+      reason = text(v.reason, 500);
+    return this.store.transaction(async (tx) => {
+      const { authority } = await this.actor(tx, p);
+      if (!authority.superuser) fail(403, "SUPERUSER_REQUIRED");
+      await this.tenant(tx, tenantId);
+      const roleIds = await tx.prepareAthenaRoles(tenantId);
+      await tx.audit({
+        id: newId(),
+        tenantId,
+        actorTenantId: p.tenantId,
+        actorId: p.id,
+        targetId: tenantId,
+        action: "ATHENA_ROLES_PREPARED",
+        at: this.clock().toISOString(),
+        reason,
+        version: 1,
+        details: JSON.stringify({ type: "ATHENA_ROLE_CATALOG", roleIds }),
+      });
+      return { prepared: true, roleIds };
+    });
+  }
   async context(p: Principal) {
     return this.store.transaction(async (tx) => {
       const { user, authority } = await this.actor(tx, p);

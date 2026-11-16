@@ -339,3 +339,14 @@ assigning nominal tester roles that the product API does not enforce. Public
 HTTPS hosting and automated invitation/reset email follow product authorization
 and client-admin/regular-user verification. This is a development finding, not a
 claim that those HIS protections or a tester role have already been implemented.
+
+
+## Athena access implementation follow-up
+
+The product access gap described above is addressed in code by the HIS request
+middleware, account-service current-session/product-role authorization and shared
+portal bearer transport. See [Athena access](ATHENA-ACCESS.md) for the enforced
+viewer/editor policy, supported scope, deployment, tests and owner acceptance still
+pending. The owner chose view/create/edit for the regular tester: Athena editor,
+without client-administration authority. No existing user is automatically granted
+that role; global permission definitions and client role setup are explicit steps.

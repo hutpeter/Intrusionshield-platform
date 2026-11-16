@@ -16,7 +16,7 @@ export default defineConfig({
         proxy: {
             "/api/v1/his": {
                 target:
-                    "http://localhost:4300",
+                    "http://127.0.0.1:4300",
                 changeOrigin: true
             },
 

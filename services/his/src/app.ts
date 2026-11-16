@@ -1,4 +1,5 @@
-﻿import express from "express";
+import type {AthenaAuthorizer} from "./middleware/athenaAccess.js";
+import express from "express";
 import type { Express } from "express";
 
 import {
@@ -7,7 +8,8 @@ import {
 } from "./routes/index.js";
 
 export function createApp(
-  services?: HisServices
+  services?: HisServices,
+  authorize?: AthenaAuthorizer
 ): Express {
   const app = express();
 
@@ -32,7 +34,7 @@ export function createApp(
   if (services) {
     app.use(
       "/api/v1/his",
-      createHisRouter(services)
+      createHisRouter(services,authorize)
     );
   }
 

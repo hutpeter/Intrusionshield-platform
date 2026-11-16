@@ -15,9 +15,7 @@ import {
   PractitionerController
 } from "../controllers/index.js";
 
-import {
-  tenantContext
-} from "../middleware/tenantContext.js";
+import {athenaAccess,type AthenaAuthorizer} from "../middleware/athenaAccess.js";
 
 import type {
   AdmissionService,
@@ -60,7 +58,8 @@ export interface HisServices {
 }
 
 export function createHisRouter(
-  services: HisServices
+  services: HisServices,
+  authorize?: AthenaAuthorizer
 ): Router {
   const router = Router();
 
@@ -124,7 +123,7 @@ export function createHisRouter(
       services.bedService
     );
 
-  router.use(tenantContext);
+  router.use(athenaAccess(authorize));
 
   router.get(
     "/persons/summary",

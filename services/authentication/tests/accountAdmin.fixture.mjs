@@ -103,6 +103,34 @@ export function accountFixture() {
             structuredClone(s.tenants.filter((x) => !t || x.id === t)),
           roles: async (t) =>
             structuredClone(s.roles.filter((x) => x.tenantId === t)),
+          prepareAthenaRoles: async (t) => {
+            const ids = [];
+            for (const [name, permissions] of [
+              ["Athena viewer", ["athena:READ"]],
+              ["Athena editor", ["athena:READ", "athena:WRITE"]],
+            ]) {
+              let role = s.roles.find(
+                (r) => r.tenantId === t && r.name === name,
+              );
+              if (
+                role &&
+                JSON.stringify(role.permissions) !== JSON.stringify(permissions)
+              )
+                throw new AccountError(409, "ROLE_DEFINITION_CONFLICT");
+              if (!role) {
+                role = {
+                  tenantId: t,
+                  id: randomUUID(),
+                  name,
+                  permissions,
+                  administrative: false,
+                };
+                s.roles.push(role);
+              }
+              ids.push(role.id);
+            }
+            return ids;
+          },
           users: async (t, offset) =>
             structuredClone(
               s.users

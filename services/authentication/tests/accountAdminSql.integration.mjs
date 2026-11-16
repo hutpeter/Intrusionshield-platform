@@ -63,6 +63,7 @@ try {
     "database-isolation/sql/platform/003_tenant_registry.sql",
     "services/authentication/sql/006_account_administration.sql",
     "services/authentication/sql/007_client_provisioning_support.sql",
+    "services/authentication/sql/008_athena_permissions.sql",
   ]) {
     for (const sql of readFileSync(file, "utf8")
       .split(/^\s*GO\s*$/im)
@@ -198,18 +199,51 @@ try {
     id,
     sessionVersion: (await service.session(tenant, id)).sessionVersion,
   });
-  const root = await principal(bootstrap.id),
-    body = {
-      username: "client.admin.sqlcheck",
-      email: "admin@example.invalid",
-      displayName: "Disposable client admin",
-      kind: "CLIENT_ADMIN",
-      personId: randomUUID(),
-      roleIds: [role],
-      facilityIds: [facility],
-      productKeys: ["athena"],
-      reason: "Disposable integration check",
-    };
+  const root = await principal(bootstrap.id);
+  const athenaRoles = await service.prepareAthenaRoles(root, tenant, {
+    reason: "Verify SQL Athena role catalog",
+  });
+  assert.deepEqual(
+    (
+      await service.prepareAthenaRoles(root, tenant, {
+        reason: "Verify idempotence",
+      })
+    ).roleIds,
+    athenaRoles.roleIds,
+  );
+  const catalog = await service.roles(root, tenant),
+    viewer = catalog.find((r) => r.name === "Athena viewer");
+  const readAccount = await service.create(root, tenant, {
+    username: "athena.viewer.check",
+    email: "athena.viewer@example.invalid",
+    displayName: "Disposable Athena viewer",
+    kind: "USER",
+    personId: null,
+    facilityIds: [],
+    productKeys: ["athena"],
+    roleIds: [viewer.id],
+    reason: "Verify product access",
+  });
+  await service.complete({ token: readAccount.setupToken, password });
+  const viewerPrincipal = await principal(readAccount.user.id);
+  assert.equal(
+    (await service.athenaAccess(viewerPrincipal, { action: "READ" })).tenantId,
+    tenant,
+  );
+  await assert.rejects(() =>
+    service.athenaAccess(viewerPrincipal, { action: "WRITE" }),
+  );
+  const body = {
+    username: "client.admin.sqlcheck",
+    email: "admin@example.invalid",
+    displayName: "Disposable client admin",
+    kind: "CLIENT_ADMIN",
+    personId: randomUUID(),
+    roleIds: [role],
+    facilityIds: [facility],
+    productKeys: ["athena"],
+    reason: "Disposable integration check",
+  };
   const admin = await service.create(root, tenant, body);
   await service.complete({ token: admin.setupToken, password });
   const actor = await principal(admin.user.id);

@@ -95,7 +95,7 @@ export function UsersPanel() {
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
     [action, setAction] = useState<
-      "create" | "access" | "status" | "setup" | null
+      "create" | "access" | "status" | "setup" | "roles" | null
     >(null),
     [selected, setSelected] = useState<User | null>(null),
     [fields, setFields] = useState(empty),
@@ -242,6 +242,17 @@ export function UsersPanel() {
     setError("");
     setLink(null);
     try {
+      if (action === "roles") {
+        await call("/clients/" + client + "/athena-roles", undefined, "POST", {
+          reason: fields.reason,
+        });
+        close();
+        setNotice(
+          "Athena viewer and editor roles are ready. Assign a role to the intended users.",
+        );
+        setNonce((n) => n + 1);
+        return;
+      }
       const base = "/clients/" + client + "/users",
         grant = {
           kind: fields.kind,
@@ -383,6 +394,14 @@ export function UsersPanel() {
         >
           Create account
         </button>
+        {context?.kind === "SUPERUSER" && (
+          <button
+            disabled={!client || saving || !!action}
+            onClick={() => begin("roles")}
+          >
+            Set up Athena roles
+          </button>
+        )}
       </div>
       {link && (
         <section aria-label="Private password setup link">
@@ -417,11 +436,13 @@ export function UsersPanel() {
                 ? "Create account"
                 : action === "access"
                   ? "Edit account access"
-                  : action === "setup"
-                    ? "Issue password setup/reset link"
-                    : selected?.status === "DISABLED"
-                      ? "Re-enable account"
-                      : "Disable account"}
+                  : action === "roles"
+                    ? "Set up Athena roles"
+                    : action === "setup"
+                      ? "Issue password setup/reset link"
+                      : selected?.status === "DISABLED"
+                        ? "Re-enable account"
+                        : "Disable account"}
             </legend>
             {selected && (
               <p>
@@ -512,6 +533,17 @@ export function UsersPanel() {
                             roleIds: e.target.checked
                               ? [...fields.roleIds, r.id]
                               : fields.roleIds.filter((x) => x !== r.id),
+                            ...(e.target.checked &&
+                            r.permissions.some((p) => p.startsWith("athena:"))
+                              ? {
+                                  productKeys: [
+                                    ...new Set([
+                                      ...split(fields.productKeys),
+                                      "athena",
+                                    ]),
+                                  ].join(","),
+                                }
+                              : {}),
                           })
                         }
                       />
@@ -610,6 +642,14 @@ export function UsersPanel() {
                 </p>
               </>
             )}
+            {action === "roles" && (
+              <p>
+                Create this client’s Athena viewer (read) and editor
+                (read/create/edit) roles. This does not assign access to any
+                user. These roles cover the whole client; facility-limited
+                Athena access is not yet available.
+              </p>
+            )}
             {action === "setup" && (
               <p>
                 The account will require password setup before its next sign-in.
@@ -636,14 +676,18 @@ export function UsersPanel() {
               />
               {action === "create"
                 ? "I confirm creation of this account."
-                : "I confirm this account change."}
+                : action === "roles"
+                  ? "I confirm Athena role setup."
+                  : "I confirm this account change."}
             </label>
             <button disabled={!fields.confirmed}>
               {saving
                 ? "Saving…"
                 : action === "create"
                   ? "Create account"
-                  : "Save account change"}
+                  : action === "roles"
+                    ? "Set up Athena roles"
+                    : "Save account change"}
             </button>
             <button type="button" onClick={close}>
               Cancel

@@ -1,3 +1,4 @@
+import {setHisSession} from "./hisFetch.js";
 import {
     createContext,
     useCallback,
@@ -165,10 +166,12 @@ export function AuthProvider({
                             credentials
                         );
 
+                    setHisSession({token:result.accessToken,tenantId:result.identity.tenantId,invalid:()=>{setHisSession(null);setSession(null);}});
                     setSession(result);
 
                     return true;
                 } catch (caught) {
+                    setHisSession(null);
                     setSession(null);
 
                     setError(
@@ -188,6 +191,7 @@ export function AuthProvider({
     const logout =
         useCallback(
             (): void => {
+                setHisSession(null);
                 setSession(null);
                 setError(null);
                 setLoading(false);

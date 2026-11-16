@@ -85,7 +85,7 @@ describe(
           practitionerService as never,
         facilityService:
           facilityService as never
-      });
+      }, async (_token, action) => ({tenantId:TENANT_ID,identityId:OTHER_TENANT_ID,action}));
 
       await new Promise<void>(
         (resolve) => {
@@ -132,7 +132,7 @@ describe(
     });
 
     test(
-      "rejects a request with no tenant header",
+      "rejects an unauthenticated request",
       async () => {
         const response = await fetch(
           `${baseUrl}/api/v1/his/persons`
@@ -141,12 +141,9 @@ describe(
         const body =
           await response.json();
 
-        expect(response.status).toBe(400);
+        expect(response.status).toBe(401);
 
-        expect(body).toEqual({
-          error:
-            "A valid x-tenant-id header is required."
-        });
+        expect(body).toEqual({error:"SIGN_IN_REQUIRED"});
 
         expect(
           personService.list
@@ -161,6 +158,7 @@ describe(
           `${baseUrl}/api/v1/his/persons`,
           {
             headers: {
+              Authorization:"Bearer route-fixture",
               "x-tenant-id":
                 "not-a-valid-uuid"
             }
@@ -170,12 +168,9 @@ describe(
         const body =
           await response.json();
 
-        expect(response.status).toBe(400);
+        expect(response.status).toBe(403);
 
-        expect(body).toEqual({
-          error:
-            "A valid x-tenant-id header is required."
-        });
+        expect(body).toEqual({error:"CLIENT_MISMATCH"});
 
         expect(
           personService.list
@@ -190,6 +185,7 @@ describe(
           `${baseUrl}/api/v1/his/persons`,
           {
             headers: {
+              Authorization:"Bearer route-fixture",
               "x-tenant-id": TENANT_ID
             }
           }
@@ -238,6 +234,7 @@ describe(
           `${baseUrl}/api/v1/his/persons?page=3&pageSize=50`,
           {
             headers: {
+              Authorization:"Bearer route-fixture",
               "x-tenant-id": TENANT_ID
             }
           }
@@ -264,6 +261,7 @@ describe(
           `${baseUrl}/api/v1/his/persons?search=Mitchell`,
           {
             headers: {
+              Authorization:"Bearer route-fixture",
               "x-tenant-id": TENANT_ID
             }
           }
@@ -290,6 +288,7 @@ describe(
           `${baseUrl}/api/v1/his/persons?status=inactive`,
           {
             headers: {
+              Authorization:"Bearer route-fixture",
               "x-tenant-id": TENANT_ID
             }
           }
@@ -316,6 +315,7 @@ describe(
           `${baseUrl}/api/v1/his/persons?page=2&pageSize=10&search=Smith&status=active`,
           {
             headers: {
+              Authorization:"Bearer route-fixture",
               "x-tenant-id": TENANT_ID
             }
           }
@@ -342,6 +342,7 @@ describe(
           `${baseUrl}/api/v1/his/persons?page=0`,
           {
             headers: {
+              Authorization:"Bearer route-fixture",
               "x-tenant-id": TENANT_ID
             }
           }
@@ -370,6 +371,7 @@ describe(
           `${baseUrl}/api/v1/his/persons?pageSize=101`,
           {
             headers: {
+              Authorization:"Bearer route-fixture",
               "x-tenant-id": TENANT_ID
             }
           }
@@ -398,6 +400,7 @@ describe(
           `${baseUrl}/api/v1/his/persons?status=pending`,
           {
             headers: {
+              Authorization:"Bearer route-fixture",
               "x-tenant-id": TENANT_ID
             }
           }
@@ -426,6 +429,7 @@ describe(
           `${baseUrl}/api/v1/his/persons?tenantId=${OTHER_TENANT_ID}`,
           {
             headers: {
+              Authorization:"Bearer route-fixture",
               "x-tenant-id": TENANT_ID
             }
           }

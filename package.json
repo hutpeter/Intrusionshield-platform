@@ -15,6 +15,7 @@
     "sterile:account": "node scripts/sterile-account.mjs",
     "sterile:account:check": "node scripts/sterile-account-check.mjs",
     "sterile:account:access": "node scripts/sterile-account-access.mjs",
-    "sterile:account:prepare-test-users": "node scripts/sterile-account-prepare-test-users.mjs"
+    "sterile:account:prepare-test-users": "node scripts/sterile-account-prepare-test-users.mjs",
+    "test:athena-access": "pnpm --filter @intrusionshield/authentication-service... build && pnpm --filter @intrusionshield/his-service... build && node --test services/authentication/tests/athenaHisAccess.integration.mjs apps/admin-portal/tests/hisFetch.test.mjs"
   }
 }

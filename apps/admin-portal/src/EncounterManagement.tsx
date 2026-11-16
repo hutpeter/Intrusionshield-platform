@@ -1,3 +1,4 @@
+import {hisFetch as fetch} from "./auth/hisFetch.js";
 import {
     useMemo,
     useState

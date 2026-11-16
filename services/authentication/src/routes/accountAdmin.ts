@@ -71,6 +71,24 @@ export function createAccountAdminRouter(api: AccountAdminApi): Router {
   };
   const tenant = (req: Request) => uuid(req.params.tenantId),
     target = (req: Request) => uuid(req.params.id);
+  router.post(
+    "/athena-access",
+    run((req) => {
+      noQuery(req);
+      return api.accounts.athenaAccess(principal(req), req.body);
+    }),
+  );
+  router.post(
+    "/clients/:tenantId/athena-roles",
+    run((req) => {
+      noQuery(req);
+      return api.accounts.prepareAthenaRoles(
+        principal(req),
+        tenant(req),
+        req.body,
+      );
+    }),
+  );
   router.get(
     "/client-creation",
     run(async (req) => {

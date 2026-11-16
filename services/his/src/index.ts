@@ -1,3 +1,4 @@
+import {remoteAthenaAuthorization} from "./middleware/athenaAccess.js";
 import {
   getDatabaseConfiguration
 } from "@intrusionshield/config";
@@ -201,14 +202,14 @@ async function start(): Promise<void> {
     facilityService,
     clinicalLocationService,
     bedService
-  });
+  }, remoteAthenaAuthorization(process.env.HIS_AUTHORIZATION_ORIGIN?.trim() || "http://127.0.0.1:4400"));
 
   const port =
     Number(
       process.env.HIS_PORT ?? 4300
     );
 
-  app.listen(port, () => {
+  app.listen(port, process.env.HIS_HOST?.trim() || "127.0.0.1", () => {
     console.log(
       `Athena HIS service listening on port ${port}`
     );

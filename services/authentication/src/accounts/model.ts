@@ -57,6 +57,7 @@ export interface Tx {
   authority(p: Principal): Promise<Authority>;
   tenants(tenantId?: string): Promise<Tenant[]>;
   roles(tenantId: string): Promise<Role[]>;
+  prepareAthenaRoles(tenantId: string): Promise<string[]>;
   users(tenantId: string, offset: number): Promise<User[]>;
   create(user: User): Promise<void>;
   save(user: User, expected: number, accessChanged?: boolean): Promise<void>;

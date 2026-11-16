@@ -176,6 +176,51 @@ class SqlAccountTx implements Tx {
     if (out.size > 500) fail(503, "ROLE_CATALOG_TOO_LARGE");
     return [...out.values()];
   }
+  async prepareAthenaRoles(tenantId: string) {
+    const permissions = await this.query<{ id: string; action: string }>(
+      "SELECT Id AS id,Action AS action FROM [Identity].[Permissions] WITH(HOLDLOCK) WHERE Resource=N'athena' AND Scope=N'TENANT' AND Action IN(N'READ',N'WRITE')",
+    );
+    if (permissions.length !== 2)
+      fail(503, "ATHENA_PERMISSION_MIGRATION_REQUIRED");
+    const ids: string[] = [];
+    for (const [name, actions] of [
+      ["Athena viewer", ["READ"]],
+      ["Athena editor", ["READ", "WRITE"]],
+    ] as const) {
+      const rows = await this.query<{ id: string }>(
+        "SELECT Id AS id FROM [Identity].[Roles] WITH(UPDLOCK,HOLDLOCK) WHERE TenantId=@tenantId AND Scope=N'TENANT' AND Name=@name",
+        { tenantId, name },
+      );
+      const id = rows[0]?.id ?? randomUUID();
+      if (rows.length) {
+        const catalog = await this.roles(tenantId),
+          role = catalog.find((r) => r.id === id);
+        const expected = actions.map((a) => "athena:" + a).sort();
+        if (
+          !role ||
+          role.administrative ||
+          JSON.stringify([...role.permissions].sort()) !==
+            JSON.stringify(expected)
+        )
+          fail(409, "ROLE_DEFINITION_CONFLICT");
+      } else {
+        await this.execute(
+          "INSERT INTO [Identity].[Roles](Id,TenantId,Name,Scope) VALUES(@id,@tenantId,@name,N'TENANT')",
+          { id, tenantId, name },
+        );
+        for (const action of actions)
+          await this.execute(
+            "INSERT INTO [Identity].[RolePermissions](RoleId,PermissionId,Scope) VALUES(@id,@permissionId,N'TENANT')",
+            {
+              id,
+              permissionId: permissions.find((p) => p.action === action)!.id,
+            },
+          );
+      }
+      ids.push(id);
+    }
+    return ids;
+  }
   async users(tenantId: string, offset: number) {
     const rows = await this.query<{ id: string }>(
       `SELECT i.Id AS id FROM [Identity].[Identities] i JOIN [Identity].[Users] u ON u.TenantId=i.TenantId AND u.IdentityId=i.Id WHERE i.TenantId=@tenantId AND i.IdentityType=N'USER' ORDER BY u.Username,i.Id OFFSET @offset ROWS FETCH NEXT 51 ROWS ONLY`,
