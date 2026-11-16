@@ -236,3 +236,11 @@ syntax checked here; real SQL execution of the corrected script remains pending.
 Rerun only corrected 007 against the selected backed-up database, then verify its
 two tables and both filtered indexes before proceeding to bootstrap. No password,
 identity or account grant correction is involved.
+
+Owner subsequently confirmed corrected 007 installed both EventOutbox and
+TenantProvisioningAudit and both enabled filtered indexes (Pending and
+ExpiredLocks) in the selected identity database. All four installation scripts
+have now completed. The owner superuser, runtime writer credentials and browser
+activation remain pending. The bootstrap SQL now also sets filtered-index session
+options explicitly because inserting its platform role maintains a filtered
+unique index on Identity.Roles.

@@ -53,6 +53,14 @@ export function prepareBootstrap(v) {
     : "";
   const sql = `-- TRUSTED ONE-TIME INITIAL SUPERUSER BOOTSTRAP. Private setup-token hash only.
 -- Review the selected identity/platform database before running. No migrations are applied here.
+-- Role inserts maintain filtered unique indexes: do not rely on caller defaults.
+SET ANSI_NULLS ON;
+SET QUOTED_IDENTIFIER ON;
+SET ANSI_PADDING ON;
+SET ANSI_WARNINGS ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET ARITHABORT ON;
+SET NUMERIC_ROUNDABORT OFF;
 SET XACT_ABORT ON;
 BEGIN TRY
  BEGIN TRANSACTION;
