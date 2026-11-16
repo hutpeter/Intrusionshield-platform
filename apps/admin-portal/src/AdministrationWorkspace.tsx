@@ -1,3 +1,4 @@
+import { UsersPanel } from "./UsersPanel.js";
 import {
     useCallback,
     useEffect,
@@ -164,15 +165,7 @@ function AdministrationTabContent({
             return <ClientsPanel />;
 
         case "users":
-            return (
-                <>
-                    <h2>{t("administrationWorkspace.tabs.users")}</h2>
-
-                    <p>
-                        {t("administrationWorkspace.users.description")}
-                    </p>
-                </>
-            );
+            return <UsersPanel />;
 
         case "products":
             return (

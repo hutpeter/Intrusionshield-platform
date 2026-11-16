@@ -1,3 +1,4 @@
+import { AccountSetupScreen, takeAccountSetupToken } from "./auth/AccountSetupScreen.js";
 import {
     StrictMode
 } from "react";
@@ -22,18 +23,20 @@ import {
     AuthenticatedI18nProvider
 } from "./i18n/index.js";
 
+const setupToken = takeAccountSetupToken();
+
 createRoot(
     document.getElementById(
         "root"
     )!
 ).render(
     <StrictMode>
-        <AuthProvider>
+        {setupToken ? <AccountSetupScreen token={setupToken} /> : <AuthProvider>
             <AuthGate>
                 <AuthenticatedI18nProvider>
                     <App />
                 </AuthenticatedI18nProvider>
             </AuthGate>
-        </AuthProvider>
+        </AuthProvider>}
     </StrictMode>
 );

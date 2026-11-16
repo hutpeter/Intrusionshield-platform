@@ -119,6 +119,7 @@ export class AccessTokenService {
             locale,
             countryCode,
             timeZone,
+            sessionVersion,
             iat,
             exp
         } = decoded;
@@ -152,7 +153,11 @@ export class AccessTokenService {
             );
         }
 
+        if (sessionVersion !== undefined && (!Number.isSafeInteger(sessionVersion) || Number(sessionVersion) < 0))
+            throw new Error("Invalid session version.");
+
         return {
+            ...(sessionVersion !== undefined ? { sessionVersion: sessionVersion as number } : {}),
             iss,
             aud: audience,
             sub,

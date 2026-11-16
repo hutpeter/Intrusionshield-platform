@@ -44,8 +44,17 @@ export function ClientsPanel() {
     const [creating, setCreating] = useState(false);
     const [createError, setCreateError] = useState<string | null>(null);
     const [notice, setNotice] = useState<string | null>(null);
-    // Deliberately false: enabling writes requires a separate reviewed rollout.
-    const createEnabled = false;
+    const [createEnabled, setCreateEnabled] = useState(false);
+    useEffect(() => {
+        const controller = new AbortController();
+        setCreateEnabled(false);
+        if (accessToken) void fetch("/api/v1/admin/accounts/client-creation", {
+            headers: { Authorization: `Bearer ${accessToken}` }, signal: controller.signal
+        }).then(async response => response.ok ? response.json() : { enabled: false })
+          .then(body => { if (!controller.signal.aborted) setCreateEnabled(body.enabled === true); })
+          .catch(() => {});
+        return () => controller.abort();
+    }, [accessToken]);
 
     const load = useCallback(async (signal?: AbortSignal) => {
         if (!accessToken) {
@@ -99,7 +108,7 @@ export function ClientsPanel() {
         setCreateError(null);
         setNotice(null);
         if (!createEnabled) {
-            setCreateError("Tenant creation is unavailable until the security rollout is approved.");
+            setCreateError("Client creation is unavailable for this account or service configuration.");
             return;
         }
         if (!accessToken) {
@@ -152,20 +161,20 @@ export function ClientsPanel() {
     return (
         <section aria-label="Client management">
             <h2>Clients</h2>
-            <p>View registered Ruby clients. New client onboarding will be enabled after security validation.</p>
+            <p>View registered Ruby clients and create a client when your account has permission.</p>
             <div>
                 <button type="button" onClick={() => void load()} disabled={loading}>
                     {loading ? "Loading…" : "Refresh clients"}
                 </button>{" "}
-                <button type="button" onClick={() => setShowCreate(value => !value)} aria-expanded={showCreate}>
-                    {showCreate ? "Hide client form" : "New client (preview)"}
+                <button type="button" onClick={() => setShowCreate(value => !value)} aria-expanded={showCreate} disabled={!createEnabled}>
+                    {showCreate ? "Hide client form" : "New client"}
                 </button>
             </div>
             {notice ? <p role="status">{notice}</p> : null}
             {showCreate ? (
                 <form onSubmit={event => void submitCreate(event)}>
                     <h3>Create client</h3>
-                    <p role="status">Preview only: tenant creation is disabled pending security approval.</p>
+                    <p role="status">Register a client before creating its administrator and user accounts.</p>
                     <div>
                         <label htmlFor="ruby-client-code">Client code</label>
                         <input id="ruby-client-code" value={input.code} maxLength={80}
@@ -186,7 +195,7 @@ export function ClientsPanel() {
                     </div>
                     {createError ? <p role="alert">{createError}</p> : null}
                     <button type="submit" disabled={!createEnabled || creating}>
-                        {creating ? "Creating…" : "Create client (not yet enabled)"}
+                        {creating ? "Creating…" : "Create client"}
                     </button>
                 </form>
             ) : null}

@@ -1496,3 +1496,17 @@ td { height: 72px; color: #253957; font-size: 14px; }
     cursor: wait;
     opacity: 0.6;
 }
+/* Account administration keeps account types separate from job-role assignments. */
+.account-management > div, .account-management > label { margin: 16px 0; }
+.account-management label { display: grid; gap: 6px; margin: 10px 0; min-width: 0; }
+.account-management input:not([type="checkbox"]), .account-management select,
+.account-management textarea { width: 100%; min-width: 0; box-sizing: border-box; padding: 9px; border: 1px solid #cbd5e1; border-radius: 6px; }
+.account-management form > fieldset { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 12px; padding: 18px; border: 1px solid #cbd5e1; border-radius: 8px; }
+.account-management form > fieldset > p, .account-management form > fieldset > fieldset { grid-column: 1 / -1; }
+.account-management fieldset label:has(input[type="checkbox"]) { display: flex; align-items: center; gap: 8px; }
+.account-management button { margin: 4px; padding: 8px 12px; }
+.account-management table { width: 100%; border-collapse: collapse; }
+.account-management th, .account-management td { padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+.account-management [aria-label="Private password setup link"] { padding: 16px; background: #eef6ff; border: 1px solid #93b8e6; border-radius: 8px; }
+.account-management [role="alert"] { color: #991b1b; }
+@media(max-width:700px) { .account-management form > fieldset { grid-template-columns: 1fr; } }

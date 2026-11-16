@@ -1,3 +1,6 @@
+import { PlatformTenantAuthorization } from "./application/PlatformTenantAuthorization.js";
+import { AccountAdministration } from "./accounts/service.js";
+import { createSqlAccountStore } from "./accounts/sql.js";
 import {
     getDatabaseConfiguration
 } from "@intrusionshield/config";
@@ -156,12 +159,16 @@ async function start(): Promise<void> {
                 )
         });
 
+    const accountAdministration = process.env.RUBY_ACCOUNT_ADMIN_API === "enabled"
+        ? new AccountAdministration(createSqlAccountStore(resolved.options)) : undefined;
+
     const authenticationService =
         new AuthenticationService(
             authenticationRepository,
             tenantConfigurationService,
             passwordHasher,
-            accessTokenService
+            accessTokenService,
+            accountAdministration
         );
 
     const app =
@@ -170,7 +177,9 @@ async function start(): Promise<void> {
             accessTokenService
         }, process.env.RUBY_TENANT_ADMIN_API === "enabled"
             ? createTenantAdminDependencies(resolved.options, database, accessTokenService)
-            : undefined);
+            : undefined, accountAdministration ? { accounts: accountAdministration, tokens: accessTokenService, allowInsecureLoopback: process.env.NODE_ENV === "development" && process.env.AUTH_ALLOW_LOCAL_HTTP === "true", canCreateClients: async p => process.env.RUBY_TENANT_ADMIN_API === "enabled" && process.env.RUBY_TENANT_CREATION === "enabled" && await new PlatformTenantAuthorization(database).allowed(p.id,p.tenantId,"CREATE","platform.tenants") } : undefined);
+
+    if (process.env.AUTH_TRUST_LOOPBACK_PROXY === "true") app.set("trust proxy", "loopback");
 
     const port =
         positiveIntegerEnvironment(

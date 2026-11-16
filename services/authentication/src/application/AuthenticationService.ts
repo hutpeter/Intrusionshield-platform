@@ -42,7 +42,8 @@ export class AuthenticationService {
         private readonly passwordHasher:
             PasswordHasher,
         private readonly tokens:
-            AccessTokenService
+            AccessTokenService,
+        private readonly accountSecurity?: { session(tenantId: string, id: string): Promise<{ sessionVersion: number; requiresSetup: boolean } | null> }
     ) {}
 
     public async authenticate(
@@ -71,6 +72,13 @@ export class AuthenticationService {
 
         if (!passwordValid) {
             throw new AuthenticationError();
+        }
+
+        let accountSession: { sessionVersion: number; requiresSetup: boolean } | null = null;
+        if (this.accountSecurity) {
+            try { accountSession = await this.accountSecurity.session(user.tenantId, user.identityId); }
+            catch { throw new Error("Account access is temporarily unavailable."); }
+            if (accountSession?.requiresSetup) throw new AuthenticationError();
         }
 
         const tenant =
@@ -122,6 +130,7 @@ export class AuthenticationService {
 
         const issued =
             this.tokens.issue({
+                ...(accountSession ? { sessionVersion: accountSession.sessionVersion } : {}),
                 sub: user.identityId,
                 tenantId: user.tenantId,
                 identityType:

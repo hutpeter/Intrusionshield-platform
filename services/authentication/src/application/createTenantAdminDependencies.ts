@@ -31,8 +31,8 @@ import { TenantProvisioningReconciliation } from "./TenantProvisioningReconcilia
  * provisioning transaction.
  *
  * SECURITY:
- * Tenant creation remains disabled until explicitly approved
- * following integration and security testing.
+ * Tenant creation defaults to disabled. RUBY_TENANT_CREATION=enabled
+ * explicitly opts in after deployment verification.
  */
 export function createTenantAdminDependencies(
     options: DatabaseOptions,
@@ -87,9 +87,8 @@ export function createTenantAdminDependencies(
 
         create: async (input, context) => {
             // SECURITY GUARD:
-            // Tenant creation remains disabled until explicitly
-            // approved following integration and security testing.
-            if (true) {
+            // Explicit opt-in; the default remains read-only.
+            if (process.env.RUBY_TENANT_CREATION !== "enabled") {
                 throw new Error(
                     "Tenant creation is not enabled."
                 );

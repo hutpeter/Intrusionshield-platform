@@ -54,6 +54,7 @@ export interface AuthenticationResult {
 }
 
 export interface AccessTokenClaims {
+    readonly sessionVersion?: number;
     readonly iss: string;
     readonly aud: string;
     readonly sub: string;
