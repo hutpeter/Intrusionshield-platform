@@ -317,3 +317,25 @@ null person/empty facilities. Browser checks also confirmed invalid person and
 facility values identify/focus only the affected field and send no create request.
 The broader account setup/hierarchy/status/audit browser flow still passed.
 No migration or credential/bootstrap regeneration is needed for this correction.
+
+## Owner regular-user creation acceptance and next access boundary
+
+Owner reported successful creation of the first regular tester under the newly
+registered client. This accepts account creation only: the recipient has not
+activated the account or signed in. Automatic invitation email is not implemented,
+and the generated localhost link is for local verification, not remote delivery.
+
+Code inspection identified the next product-access gap: services/his mounts its
+routes with tenantContext, which validates x-tenant-id but does not authenticate a
+bearer identity or authorize an Athena job role. App.tsx sends tenant headers to
+those APIs. The account-administration checks do not automatically protect those
+separate product routes. The new client's delegatable role catalog is empty.
+
+Next functional work: authenticate HIS requests using the account session; derive
+and enforce the tenant from authenticated identity; authorize explicit Athena job
+roles/actions; pass bearer tokens from the portal; and verify regular-user versus
+client-admin behavior, missing/stale sessions and cross-client denial. Avoid
+assigning nominal tester roles that the product API does not enforce. Public
+HTTPS hosting and automated invitation/reset email follow product authorization
+and client-admin/regular-user verification. This is a development finding, not a
+claim that those HIS protections or a tester role have already been implemented.
