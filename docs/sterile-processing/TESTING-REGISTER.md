@@ -10,8 +10,11 @@ inspection form; no saved independent inspection decision is claimed. Earlier
 pending entries below are historical snapshots.
 
 See [Athena account administration](../ACCOUNT-ADMINISTRATION.md) for delivered
-functionality, developer checks and the still-pending real SQL integration and
-owner deployment. No new owner administrator or tester was created by development.
+functionality and developer checks. Owner reported the real disposable SQL
+integration PASS on Ruby_AccountAdmin_Test_20261116 (migrations/rerun, bootstrap,
+hierarchy, password lifecycle, scopes, isolation, stale edits and audit rollback).
+Deployment to the existing identity database and owner browser acceptance remain
+pending. No real owner administrator or tester was created by the fixture test.
 
 ## Two-account verification — November 15, 2026 (current)
 

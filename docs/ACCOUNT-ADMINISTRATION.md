@@ -149,9 +149,20 @@ Developer verification on November 16, 2026:
   isolated transactional in-memory fixture: client registration, superuser-created
   client admin, private password setup, client-admin-created regular user, regular
   user administration denial, disable/re-enable and audit. No page errors.
-- The SQL integration runner is syntax checked but **not executed**. This
-  environment's network policy blocked SQL Server container layers. No owner SQL
-  database was contacted, migrated, bootstrapped or reset by this development.
+- Developer-side SQL execution was blocked by the environment's container image
+  network policy. The owner subsequently ran the integration runner against
+  `Ruby_AccountAdmin_Test_20261116` on the local SQL Server and reported **PASS**:
+  migrations and rerun, bootstrap guard, account hierarchy, private password
+  setup/reset, preserved scopes, tenant isolation, stale edits and audit rollback.
+  The runner also asserts audited client registration. The disposable database
+  was retained for review; this is not acceptance of a deployment to the existing
+  identity database or an Azure deployment.
+
+Owner read-only inventory of `intrusionshield` found existing credentials, identity
+users and EIS tenant configuration, but no scoped RBAC or Platform.Tenants tables.
+Installing prerequisites and administration schemas there, creating the owner
+superuser, runtime database grants and owner browser acceptance are still pending.
+No real owner/tester account creation is claimed from the disposable fixture test.
 
 To run the actual SQL check, create an **empty disposable** database named
 `Ruby_AccountAdmin_Test_<suffix>` and a private JSON configuration with exactly
@@ -195,8 +206,8 @@ The runner refuses non-test names and nonempty databases. It applies the foundat
 and new schemas only inside that disposable target, then checks real SQL account
 lifecycle, role preservation, concurrency, audit rollback and audited client
 registration. It leaves the database for inspection and never drops an existing
-database. SQL migration/integration success and owner browser acceptance remain
-required before tester use.
+database. The owner has passed this disposable SQL check; target-database
+deployment and owner browser acceptance remain required before tester use.
 
 Tiger verification remains paused: owner screenshots show VERIFY-REC-001 at
 version 3, cleaning passed and awaiting independent inspection. Reviewer opened
