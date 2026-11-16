@@ -164,6 +164,15 @@ Installing prerequisites and administration schemas there, creating the owner
 superuser, runtime database grants and owner browser acceptance are still pending.
 No real owner/tester account creation is claimed from the disposable fixture test.
 
+Before installing those prerequisites, the owner completed a COPY_ONLY, CHECKSUM
+backup of `intrusionshield`. SQL Server reported successful BACKUP DATABASE and
+RESTORE VERIFYONLY (backup set valid). This is backup verification, not a full
+restore rehearsal. Installation of the four missing-schema scripts is the next
+owner-side step: authorization foundation 002, development tenant registry 003,
+account administration 006 and client provisioning support 007. Existing identity
+and credential foundation scripts are not included in that installation step.
+
+
 To run the actual SQL check, create an **empty disposable** database named
 `Ruby_AccountAdmin_Test_<suffix>` and a private JSON configuration with exactly
 `server`, `port`, `database`, `user`, `passwordFile`. The password file must be
