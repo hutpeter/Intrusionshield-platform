@@ -16,6 +16,7 @@ async function fixture(t, patch = {}) {
     clock = Date.now(),
     outage = false,
     valid = true;
+  let permissions = ["instruments:read", "instruments:write"];
   const calls = [];
   const token = jwt.sign({ tenantId, identityType: "USER" }, secret, {
     algorithm: "HS256",
@@ -56,7 +57,7 @@ async function fixture(t, patch = {}) {
             {
               facilityId,
               capabilityEnabled: enabled,
-              permissions: ["instruments:read", "instruments:write"],
+              permissions,
             },
           ],
         };
@@ -129,6 +130,9 @@ async function fixture(t, patch = {}) {
     },
     get cookie() {
       return cookie;
+    },
+    setPermissions(value) {
+      permissions = value;
     },
     advance(ms) {
       clock += ms;
@@ -338,4 +342,19 @@ test("configuration requires HTTPS and explicit facility time zone", async (t) =
     { timeZone: "not-a-zone" },
   ])
     assert.throws(() => createSterileBrowserApp({ ...f.options, ...patch }));
+});
+
+test("equipment management follows its explicit permission independently of release authority", async (t) => {
+  const f = await fixture(t);
+  await f.boot();
+  await f.login();
+  assert.equal(f.session.canManageEquipment, false);
+  f.setPermissions(["equipment:read", "equipment:write"]);
+  let session = await (await f.call("/auth/session")).json();
+  assert.equal(session.canManageEquipment, true);
+  assert.equal(session.canReview, false);
+  f.setPermissions(["equipment:read", "release:write"]);
+  session = await (await f.call("/auth/session")).json();
+  assert.equal(session.canManageEquipment, false);
+  assert.equal(session.canReview, true);
 });

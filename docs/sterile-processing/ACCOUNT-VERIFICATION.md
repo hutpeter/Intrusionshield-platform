@@ -127,3 +127,19 @@ Nine preparation/reset tests passed, including the actual hasher, exact scope an
 target validation, SQL update boundary, no plaintext output, complete CLI preparation,
 private file creation/no overwrite and unchanged grant files. No developer live SQL
 reset was executed. Owner SQL execution and reviewer sign-in remain pending.
+
+## Equipment management visibility — November 17, 2026
+
+Owner verification reached completed tray assembly and packaged-not-sterile records.
+Equipment registration remained hidden despite the operator's equipment grant:
+the web page incorrectly used release-review authority for equipment management.
+Browser sessions now expose `canManageEquipment` from the current facility's
+`equipment:write` permission, and the equipment page uses that flag. The isolated
+dummy preview preserves its reviewer behavior with the explicit flag. Backend
+equipment permission checks remain in force. Release authority is not required
+for equipment registration and is not granted by this change.
+
+Service and web builds passed, along with 19 browser-authentication, equipment,
+and preview tests. The regression test checks equipment-only authority,
+release-only authority and permission removal on the existing session. Owner
+verification of the corrected registration screen remains pending.

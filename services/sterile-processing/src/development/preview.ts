@@ -142,6 +142,7 @@ export function createSterilePreview({
             canCorrectReceipt: session.role === "reviewer",
             canCancelReceipt: session.role === "reviewer",
             canReview: session.role === "reviewer",
+            canManageEquipment: session.role === "reviewer",
             canRecall: session.role === "reviewer",
             canClearRecall: session.role === "reviewer",
             canAdmitRecall: session.role === "operator",

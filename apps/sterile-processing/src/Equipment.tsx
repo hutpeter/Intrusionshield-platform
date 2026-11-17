@@ -74,7 +74,7 @@ export function EquipmentWorkspace({
     } | null>(null);
   const incidentExampleRequest = useRef(crypto.randomUUID());
   const busy = blocked || saving || incidentDirty || incidentBusy,
-    canManage = !!session.canReview,
+    canManage = session.canManageEquipment === true,
     canHold = session.canWrite || canManage;
   useEffect(() => {
     if (detail && exampleWindow?.equipmentId === detail.id)
@@ -355,9 +355,7 @@ export function EquipmentWorkspace({
                       setError(null);
                       try {
                         const sample = await api.prepareEquipmentIncident(
-                          session,
-                          incidentExampleRequest.current,
-                          a.signal,
+                          session, incidentExampleRequest.current, a.signal,
                         );
                         if (!a.signal.aborted) {
                           incidentExampleRequest.current = crypto.randomUUID();
