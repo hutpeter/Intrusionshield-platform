@@ -1,0 +1,19 @@
+{
+  "status": "preparation-only",
+  "subscriptionId": null,
+  "resourceGroup": null,
+  "location": "canadacentral",
+  "publicHostname": null,
+  "useAzureProvidedHostnameInitially": true,
+  "sourceDatabase": "intrusionshield",
+  "targetDatabase": null,
+  "initialScope": ["Athena portal", "Account API", "HIS API"],
+  "email": {
+    "displayName": "Ruby Notifications",
+    "senderLocalPart": "ruby-notifications",
+    "verifiedDomain": null,
+    "senderAddress": null,
+    "provider": null
+  },
+  "deploymentApproved": false
+}
