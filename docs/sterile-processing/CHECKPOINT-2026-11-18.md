@@ -1,5 +1,17 @@
 # Tiger checkpoint — November 18, 2026
 
+## November 21 backup/restore increment
+
+The owner confirmed alphabetical permissions and restoration of the operator's
+Reports — View permission. The access-administration owner round is complete;
+no exact post-restoration version was supplied. Do not remove the permission again.
+
+[BACKUP-RESTORE.md](BACKUP-RESTORE.md) adds stopped-runtime paired SQLite backup,
+manifest verification and isolated-copy restore on `feature/sterile-local-backup`.
+The existing working stores/configuration are never replaced by this command.
+Owner backup/restore evidence is pending. SQL identities, TLS/secrets and off-device
+recovery remain separate; this does not finish clinical production readiness.
+
 ## November 21 owner acceptance — administrator and first permission save
 
 The owner signed in successfully as Sterile access administrator and opened User
