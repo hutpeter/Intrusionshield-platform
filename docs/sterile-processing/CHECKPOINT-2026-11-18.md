@@ -1,5 +1,36 @@
 # Tiger checkpoint — November 18, 2026
 
+## November 21 resumption — current priority
+
+The owner explicitly resumed **Ruby Sterile Management** and made completion of
+its workable MVP the priority. The November 18 business hold below is historical
+and no longer prevents development. TMS is paused after its requested public
+welcome-heading change to **Ruby TMS**; TMS's CAD10 credit was owner-confirmed,
+but its external refund check remains pending. Azure quota support is pending
+on the new subscription; it does not block local Sterile Management development.
+
+Keep the scope on a usable account-mode MVP. Optional reporting remains frozen.
+The full normal processing journey already has the owner evidence below; do not
+restart that round or reset its records. Preserve VERIFY-RECALL-001 and the linked
+return/processing blocks until an explicit supported disposition is selected.
+
+The current implementation includes recall recovery/disposition/clearance and
+expected-member partial-return reconciliation; remaining owner evidence must not
+be described as missing implementation. Genuine delivery gaps include authenticated
+access administration (current grants use the offline trusted tool), backup/restore
+operations and deployment readiness. Central entitlements, multi-process sessions,
+SQL workflow persistence and clinical policies are not silently included in local
+acceptance. A nonclinical local MVP is not clinical production sign-off.
+
+Immediate resumption: establish the current automated baseline, reopen the existing
+account runtime and assess the remaining operational gaps against that scope.
+The historical normal-path acceptance below is retained as evidence.
+
+Resumption developer baseline: domain/service builds passed; all 184 service
+HTTP/SQLite tests and 95 web tests passed (279 checks). These are automated
+local checks, not new owner-machine or clinical acceptance.
+
+
 Status: this owner-guided fictional-data acceptance round is complete. Tiger
 development and further testing are on hold at the owner's request, pending a
 business-priority reassessment. Do not expand the testing round or resume feature
