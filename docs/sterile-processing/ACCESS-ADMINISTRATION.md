@@ -52,6 +52,57 @@ facility permissions/person IDs are not returned by the web API. Facility
 suspension and permission revocation affect subsequent requests from existing
 sessions, not a transaction already executing against a separate workflow store.
 
+## Dedicated local administrator — owner-selected November 21
+
+The owner confirmed President belongs to TMS, not this Ruby tenant, and requested
+creation of a separate Sterile Management administrator. The dedicated username
+is **sterile.admin.test**, display name **Sterile access administrator**. Its only
+facility permission is `access:manage`; it receives no processing, inspection,
+release or global/platform-superuser role. Administrators now initially open the
+User access workspace instead of a workflow dashboard they may not be allowed to
+read. Existing operators/reviewers retain their initial dashboard.
+
+This is an account for the current local verification tenant. Its generated
+canonical test-person identifier is explicitly test enrollment, not verified
+clinical staff identity. Real staff deployment still requires approved person
+mapping and identity/competency policy. The setup does not modify TMS President.
+
+From the updated Sterile repository, an authorized Windows administrator runs:
+
+```powershell
+& .\scripts\sterile-account-create-administrator.ps1 -Config 'D:\RubySterileAccount\account.json'
+```
+
+The script builds account dependencies, prompts for a private 20–128-character
+password with masked input, and prepares exclusive private
+`secrets/administrator-user.sql` and `secrets/administrator-access.json`. The Node
+preparation opens no SQL/store connection. The wrapper then explicitly executes
+the SQL against localhost using the current Windows integrated administrator
+connection with certificate verification, and applies the initial grant through
+the existing access tool only if SQL reports success. The application's normal
+SQL identity reader remains SELECT-only. The initial offline bootstrap audit is
+attributed to the newly created administrator with an explicit owner-authorized
+OS-bootstrap reason; it is not represented as an authenticated web action.
+
+Account inserts are transactional and reject existing usernames/emails/IDs. No
+password reset, existing-user update, schema migration, SQL login or role-membership
+change is generated. Private setup files are never overwritten. Do not rerun a
+failed setup by deleting them: after a SQL or grant failure, retain the files and
+reconcile the completed phase. SQL can have committed before a connection failure;
+no distributed SQL/SQLite transaction or automatic account deletion is claimed.
+If SQL fails, the wrapper applies no grant and saves private diagnostics without
+printing hashes. If grant enrollment fails after successful SQL, resume the same
+prepared grant rather than regenerating an identity. Keep the SQL and diagnostics
+private because SQL errors can include credential-hash fragments.
+
+After successful setup, restart the account runtime and sign in with the chosen
+password and `sterile.admin.test`. User access should open automatically. Use the
+bounded permission-change acceptance below, keeping workflow records untouched.
+Actual Windows SQL creation/enrollment remains owner-side execution; it has not
+been performed by the developer. The preparation tests use the real Ruby hasher,
+private files and CLI without contacting the owner's database. The PowerShell
+wrapper has been reviewed but cannot be executed in the Linux development runtime.
+
 ## First administrator: one explicit trusted bootstrap
 
 No account is automatically promoted. Choose an existing active Ruby user already
@@ -118,3 +169,11 @@ HTTPS fixture with generated test accounts/certificate, not an owner or producti
 identity connection: login, administrator navigation, user selection, permission
 removal, explicit confirmation, persisted version change and self-edit denial
 passed. This is not owner acceptance or proof of the owner's TLS/SQL deployment.
+
+Dedicated-account follow-up verification: five new preparation tests and nine
+existing user/reset helper checks passed, including the actual salted-hash verifier,
+Unicode input, no password output, duplicate/private-file refusal and the complete
+preparation CLI without a SQL connection. All 97 web checks and the final web build
+passed. Isolated Chromium also verified that the administrator initially opens
+User access, then can save another user's permission change while self-edit stays
+disabled. No Windows PowerShell/SQL account creation is claimed by these checks.

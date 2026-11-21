@@ -1,5 +1,15 @@
 # Tiger checkpoint — November 18, 2026
 
+## November 21 administrator selection update
+
+President was identified by the owner as a TMS account, not a Ruby Sterile tenant
+user. The owner explicitly authorized a dedicated new administrator instead.
+`sterile.admin.test` preparation and the Windows setup wrapper are documented in
+[ACCESS-ADMINISTRATION.md](ACCESS-ADMINISTRATION.md). Initial permission is only
+`access:manage`; operator/reviewer accounts and workflow records remain unchanged.
+The owner chooses the password privately. Actual owner-machine SQL creation and
+initial grant enrollment are pending; do not claim the account already exists.
+
 ## November 21 next increment — user access
 
 [ACCESS-ADMINISTRATION.md](ACCESS-ADMINISTRATION.md) implements administrator-only

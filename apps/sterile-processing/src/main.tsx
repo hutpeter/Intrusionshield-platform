@@ -380,7 +380,7 @@ function Workspace({
       | "returns"
       | "access"
       | "recalls"
-    >("dashboard"),
+    >(session.canManageAccess === true ? "access" : "dashboard"),
     [page, setPage] = useState(1),
     [historyPage, setHistoryPage] = useState(1),
     [selected, setSelected] = useState<string | null>(null),
