@@ -123,6 +123,7 @@ export async function startAccountRuntime(
       webRoot,
       repository: workflow,
       directory,
+      administration: directory,
       authentication: config.authentication,
       identities: new SqlIdentityRepository(reads),
       signIn: async (input) => {

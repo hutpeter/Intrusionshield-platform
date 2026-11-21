@@ -48,6 +48,7 @@ export interface SterileDependencies {
     scope: SterileScope,
     capability: "sterile.core",
     permission:
+      | "access:manage"
       | "consumables:reconcile"
       | "consumables:policy"
       | "consumables:withdraw"

@@ -1,5 +1,12 @@
 # Runnable single-machine account setup
 
+**November 21 access administration:** [ACCESS-ADMINISTRATION.md](ACCESS-ADMINISTRATION.md)
+adds explicitly authorized, current-facility permission editing for existing
+person-mapped enrollments, with version checks and audit. A trusted one-time
+administrator bootstrap is still required; no account is automatically promoted.
+Identity creation, person enrollment and central entitlements remain separate.
+Older notes below that web access administration is entirely absent are historical.
+
 **November 14 verification update:** configured Windows sign-in, expected facility,
 read-only notice and logout passed for the existing test account.
 [ACCOUNT-VERIFICATION.md](ACCOUNT-VERIFICATION.md) records that limited acceptance
