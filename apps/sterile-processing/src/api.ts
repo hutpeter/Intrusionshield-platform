@@ -84,6 +84,7 @@ export interface Session {
   canCancelReceipt?: boolean;
   canReview?: boolean;
   canManageEquipment?: boolean;
+  canManageAccess?: boolean;
   canRecall?: boolean;
   canClearRecall?: boolean;
   canAdmitRecall?: boolean;
@@ -170,6 +171,8 @@ async function checkedSession(
     typeof value.csrf !== "string" ||
     !/^[a-f0-9]{64}$/.test(value.csrf) ||
     !Number.isFinite(value.expiresAt) ||
+    (value.canManageAccess !== undefined &&
+      typeof value.canManageAccess !== "boolean") ||
     (value.canManageEquipment !== undefined &&
       typeof value.canManageEquipment !== "boolean") ||
     (value.canInspect !== undefined && typeof value.canInspect !== "boolean") ||

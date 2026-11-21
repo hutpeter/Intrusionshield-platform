@@ -9,6 +9,7 @@ export type SterilePermission = Parameters<
   NonNullable<SterileDependencies["authorize"]>
 >[2];
 export const sterilePermissions = [
+  "access:manage",
   "consumables:reconcile",
   "consumables:policy",
   "consumables:withdraw",

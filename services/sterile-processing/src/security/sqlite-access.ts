@@ -17,7 +17,8 @@ import {
 } from "./access.js";
 
 /** Separate explicit local access store, not the preview registry or production SQL adapter.
- * Provisioning is a trusted server-side operation; no public enrollment/admin route.
+ * Enrollment is a trusted server-side operation. Browser facility edits use the
+ * separately authorized administration adapter; this store grants no authority.
  */
 export class SqliteSterileAccessDirectory implements SterileAccessDirectory {
   private readonly db: DatabaseSync;
@@ -102,6 +103,7 @@ export class SqliteSterileAccessDirectory implements SterileAccessDirectory {
       changedBy: string;
       reason: string;
     },
+    beforeWrite?: () => void,
   ): UserAccess {
     const record: UserAccess = {
       ...structuredClone(input),
@@ -124,13 +126,14 @@ export class SqliteSterileAccessDirectory implements SterileAccessDirectory {
       throw new Error("Invalid access change.");
     this.db.exec("BEGIN IMMEDIATE");
     try {
+      beforeWrite?.();
       const existing = this.db
         .prepare(
           "SELECT version,payload FROM sterile_user_access WHERE tenant_id=? AND actor_id=?",
         )
         .get(record.tenantId, record.actorId);
       if ((existing?.version ?? 0) !== change.expectedVersion)
-        throw new Error("Access version conflict.");
+        throw new AccessAdministrationError("CONFLICT");
       if (existing) {
         const previous = JSON.parse(existing.payload as string) as UserAccess;
         if (previous.personId && previous.personId !== record.personId)
@@ -163,6 +166,128 @@ export class SqliteSterileAccessDirectory implements SterileAccessDirectory {
       this.db.exec("ROLLBACK");
       throw error;
     }
+  }
+  listFacilityUsers(tenantId: string, facilityId: string): UserAccess[] {
+    const rows = this.db
+      .prepare(
+        "SELECT payload FROM sterile_user_access WHERE tenant_id=? AND EXISTS(SELECT 1 FROM json_each(payload,'$.facilities') WHERE json_extract(value,'$.facilityId')=?) ORDER BY actor_id LIMIT 101",
+      )
+      .all(sterileUuid(tenantId), sterileUuid(facilityId)) as {
+      payload: string;
+    }[];
+    if (rows.length > 100)
+      throw new Error("Access administration capacity exceeded.");
+    return rows.map((row) => {
+      const user = JSON.parse(row.payload) as UserAccess;
+      validate(user);
+      return user;
+    });
+  }
+  facilityHistory(tenantId: string, actorId: string, facilityId: string) {
+    const rows = this.db
+      .prepare(
+        "SELECT version,changed_by,reason,recorded_at,payload FROM sterile_access_changes WHERE tenant_id=? AND actor_id=? ORDER BY version LIMIT 1001",
+      )
+      .all(sterileUuid(tenantId), sterileUuid(actorId)) as {
+      version: number;
+      changed_by: string;
+      reason: string;
+      recorded_at: string;
+      payload: string;
+    }[];
+    if (rows.length > 1000)
+      throw new Error("Access history capacity exceeded.");
+    let previous: string | undefined;
+    return rows
+      .flatMap((row) => {
+        const user = JSON.parse(row.payload) as UserAccess;
+        const grant = user.facilities.find((f) => f.facilityId === facilityId);
+        const value = grant ? JSON.stringify(grant) : undefined;
+        const changed = value !== previous;
+        previous = value;
+        return changed
+          ? [
+              {
+                version: row.version,
+                changedBy: row.changed_by,
+                reason: row.reason,
+                recordedAt: row.recorded_at,
+                grant: grant ?? null,
+              },
+            ]
+          : [];
+      })
+      .reverse();
+  }
+  /** Browser administration edits only an existing enrollment's selected facility.
+   * Actor authority and target version are rechecked in the same write transaction. */
+  async replaceFacilityAccess(input: {
+    tenantId: string;
+    facilityId: string;
+    actorId: string;
+    administratorId: string;
+    administratorVersion: number;
+    expectedVersion: number;
+    capabilityEnabled: boolean;
+    permissions: readonly SterilePermission[];
+    reason: string;
+  }): Promise<UserAccess> {
+    const target = await this.findUser(input.tenantId, input.actorId);
+    if (
+      !target ||
+      !target.personId ||
+      !target.facilities.some((f) => f.facilityId === input.facilityId)
+    )
+      throw new AccessAdministrationError("NOT_FOUND");
+    return this.replaceAccess(
+      {
+        ...target,
+        facilities: target.facilities.map((f) =>
+          f.facilityId === input.facilityId
+            ? {
+                facilityId: f.facilityId,
+                capabilityEnabled: input.capabilityEnabled,
+                permissions: input.permissions,
+              }
+            : f,
+        ),
+      },
+      {
+        expectedVersion: input.expectedVersion,
+        changedBy: input.administratorId,
+        reason: input.reason,
+      },
+      () => {
+        const row = this.db
+          .prepare(
+            "SELECT payload FROM sterile_user_access WHERE tenant_id=? AND actor_id=?",
+          )
+          .get(input.tenantId, input.administratorId) as
+          { payload: string } | undefined;
+        const admin = row ? (JSON.parse(row.payload) as UserAccess) : null;
+        const grant = admin?.facilities.find(
+          (f) => f.facilityId === input.facilityId,
+        );
+        if (
+          !admin ||
+          admin.version !== input.administratorVersion ||
+          admin.status !== "ACTIVE" ||
+          !admin.personId ||
+          !grant?.capabilityEnabled ||
+          !grant.permissions.includes("access:manage")
+        )
+          throw new AccessAdministrationError("FORBIDDEN");
+        if (
+          target.actorId === admin.actorId ||
+          target.personId === admin.personId
+        )
+          throw new AccessAdministrationError("SELF_CHANGE_FORBIDDEN");
+        // The read above may precede another writer; preserve all global/other-facility
+        // fields only when the caller's complete target version is still current.
+        if (target.version !== input.expectedVersion)
+          throw new AccessAdministrationError("CONFLICT");
+      },
+    );
   }
   close() {
     this.db.close();
@@ -199,5 +324,14 @@ function validate(record: UserAccess) {
       )
     )
       throw new Error("Invalid facility access.");
+  }
+}
+
+export class AccessAdministrationError extends Error {
+  constructor(
+    readonly code:
+      "NOT_FOUND" | "FORBIDDEN" | "SELF_CHANGE_FORBIDDEN" | "CONFLICT",
+  ) {
+    super(code === "CONFLICT" ? "Access version conflict." : code);
   }
 }
