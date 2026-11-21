@@ -1,5 +1,16 @@
 # Tiger checkpoint — November 18, 2026
 
+## November 21 owner acceptance — administrator and first permission save
+
+The owner signed in successfully as Sterile access administrator and opened User
+access with the current facility's four enrolled users. The operator initially
+showed access version 7. The owner confirmed a successful permission save and
+provided a version-8 screenshot with Reports — View removed. Restoring that
+permission and checking its history remain pending; do not remove it again.
+The requested alphabetical ordering is now applied by translated display name
+in the current-permission list, editor and added/removed summaries. Sorting does
+not modify persisted grants or their versions. TMS remains paused.
+
 ## November 21 administrator selection update
 
 President was identified by the owner as a TMS account, not a Ruby Sterile tenant

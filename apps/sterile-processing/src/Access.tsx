@@ -1,7 +1,7 @@
 import { validAccessView, type AccessView } from "./access-view";
 import { useEffect, useRef, useState } from "react";
 import { call, ApiError, type Session } from "./api";
-import { accessText, permissionLabel } from "./access-text";
+import { accessText, permissionLabel, sortedPermissions } from "./access-text";
 interface Event {
   version: number;
   recordedAt: string;
@@ -149,7 +149,7 @@ export function AccessWorkspace({
                 {t.enabled}: {user.capabilityEnabled ? "✓" : "—"}
               </p>
               <ul>
-                {user.permissions.map((p) => (
+                {sortedPermissions(user.permissions, language).map((p) => (
                   <li key={p}>{permissionLabel(p, language)}</li>
                 ))}
               </ul>
@@ -220,22 +220,24 @@ export function AccessWorkspace({
               </label>
               <fieldset disabled={busy}>
                 <legend>{t.title}</legend>
-                {view?.permissions.map((p) => (
-                  <label key={p}>
-                    <input
-                      type="checkbox"
-                      checked={permissions.includes(p)}
-                      onChange={(e) =>
-                        setPermissions((old) =>
-                          e.target.checked
-                            ? [...old, p]
-                            : old.filter((x) => x !== p),
-                        )
-                      }
-                    />
-                    {permissionLabel(p, language)}
-                  </label>
-                ))}
+                {sortedPermissions(view?.permissions ?? [], language).map(
+                  (p) => (
+                    <label key={p}>
+                      <input
+                        type="checkbox"
+                        checked={permissions.includes(p)}
+                        onChange={(e) =>
+                          setPermissions((old) =>
+                            e.target.checked
+                              ? [...old, p]
+                              : old.filter((x) => x !== p),
+                          )
+                        }
+                      />
+                      {permissionLabel(p, language)}
+                    </label>
+                  ),
+                )}
               </fieldset>
               {permissions.includes("access:manage") && (
                 <p className="alert">{t.grantAdmin}</p>
@@ -243,13 +245,17 @@ export function AccessWorkspace({
               <p>
                 {t.add}:{" "}
                 {added.length
-                  ? added.map((p) => permissionLabel(p, language)).join("; ")
+                  ? sortedPermissions(added, language)
+                      .map((p) => permissionLabel(p, language))
+                      .join("; ")
                   : t.none}
               </p>
               <p>
                 {t.remove}:{" "}
                 {removed.length
-                  ? removed.map((p) => permissionLabel(p, language)).join("; ")
+                  ? sortedPermissions(removed, language)
+                      .map((p) => permissionLabel(p, language))
+                      .join("; ")
                   : t.none}
               </p>
               <label>

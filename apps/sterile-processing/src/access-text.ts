@@ -184,3 +184,18 @@ export function permissionLabel(
   const index = language === "en" ? 0 : language === "es" ? 1 : 2;
   return `${areas[area ?? ""]?.[index] ?? area} — ${actions[action ?? ""]?.[index] ?? action}`;
 }
+
+/** Sort display copies by translated names; never reorder saved grant arrays. */
+export function sortedPermissions(
+  permissions: readonly string[],
+  language: "en" | "es" | "fr",
+) {
+  const collator = new Intl.Collator(language, { sensitivity: "base" });
+  return [...permissions].sort(
+    (a, b) =>
+      collator.compare(
+        permissionLabel(a, language),
+        permissionLabel(b, language),
+      ) || a.localeCompare(b),
+  );
+}
