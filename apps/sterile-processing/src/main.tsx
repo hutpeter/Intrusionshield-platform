@@ -1,3 +1,5 @@
+import { AccessWorkspace } from "./Access";
+import { accessText } from "./access-text";
 import { ReportsHub } from "./ReportsHub";
 import { reportsHubLabels } from "./reports-hub-text";
 import { PerformanceWorkspace } from "./Performance";
@@ -376,6 +378,7 @@ function Workspace({
       | "distribution"
       | "traceability"
       | "returns"
+      | "access"
       | "recalls"
     >("dashboard"),
     [page, setPage] = useState(1),
@@ -433,6 +436,7 @@ function Workspace({
     void (async () => {
       try {
         if (
+          tab === "access" ||
           tab === "reports" ||
           tab === "consumables" ||
           tab === "performance" ||
@@ -550,6 +554,7 @@ function Workspace({
       | "distribution"
       | "traceability"
       | "returns"
+      | "access"
       | "recalls",
   ) {
     guard(() => {
@@ -692,6 +697,16 @@ function Workspace({
       <aside className="sidebar">
         <p className="eyebrow">STERILE PROCESSING</p>
         <nav aria-label={t.product}>
+          {session.mode === "ruby-browser" &&
+            session.canManageAccess === true && (
+              <button
+                aria-current={tab === "access" ? "page" : undefined}
+                disabled={busy}
+                onClick={() => navigate("access")}
+              >
+                {accessText[language].title}
+              </button>
+            )}
           <button
             aria-current={tab === "dashboard" ? "page" : undefined}
             disabled={busy}
@@ -846,6 +861,17 @@ function Workspace({
         </div>
       </aside>
       <main className="content">
+        {tab === "access" &&
+          session.mode === "ruby-browser" &&
+          session.canManageAccess === true && (
+            <AccessWorkspace
+              session={session}
+              language={language}
+              onExpired={onExpired}
+              onDirty={setTrayDirty}
+              onBusy={setTrayBusy}
+            />
+          )}
         {tab === "instruments" && !selected && (
           <InstrumentScan
             session={session}
@@ -872,7 +898,8 @@ function Workspace({
             {recallLabels(language).blocked} · {detail.recall.caseCode}
           </p>
         )}
-        {tab !== "reports" &&
+        {tab !== "access" &&
+          tab !== "reports" &&
           tab !== "consumables" &&
           tab !== "performance" &&
           tab !== "equipment" &&

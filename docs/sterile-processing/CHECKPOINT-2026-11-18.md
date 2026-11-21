@@ -1,5 +1,18 @@
 # Tiger checkpoint — November 18, 2026
 
+## November 21 next increment — user access
+
+[ACCESS-ADMINISTRATION.md](ACCESS-ADMINISTRATION.md) implements administrator-only
+permission changes for existing facility enrollments. The first administrator
+username/identity selection and trusted additive bootstrap are still pending with
+the owner; no local grant has been changed. TMS remains paused and the existing
+recall/return holds remain intact. This does not complete identity enrollment,
+central entitlements, backup/restore or clinical deployment readiness.
+
+Developer validation for this increment: 192 service, 97 web and six account
+runtime checks passed, with final builds and an isolated Chromium permission-edit
+check. No grants were applied on the owner machine.
+
 ## November 21 resumption — current priority
 
 The owner explicitly resumed **Ruby Sterile Management** and made completion of
@@ -29,7 +42,6 @@ The historical normal-path acceptance below is retained as evidence.
 Resumption developer baseline: domain/service builds passed; all 184 service
 HTTP/SQLite tests and 95 web tests passed (279 checks). These are automated
 local checks, not new owner-machine or clinical acceptance.
-
 
 Status: this owner-guided fictional-data acceptance round is complete. Tiger
 development and further testing are on hold at the owner's request, pending a

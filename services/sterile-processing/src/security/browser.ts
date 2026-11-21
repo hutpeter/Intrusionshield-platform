@@ -1,3 +1,7 @@
+import {
+  installAccessAdministration,
+  type SterileAccessAdministration,
+} from "./administration.js";
 import express from "express";
 import { randomBytes, createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
@@ -36,6 +40,7 @@ export function createSterileBrowserApp(options: {
   repository: SterileRepository;
   authentication: RubyTokenConfiguration;
   directory: SterileAccessDirectory;
+  administration?: SterileAccessAdministration;
   identities: SterileIdentityRepository;
   /** Delegate to Ruby AuthenticationService; null means invalid credentials, throw means unavailable. */
   signIn: (request: {
@@ -193,6 +198,7 @@ export function createSterileBrowserApp(options: {
       personId: principal.personId,
       canReview: has("release:write"),
       canManageEquipment: has("equipment:write"),
+      canManageAccess: !!options.administration && has("access:manage"),
       canRecall: has("recall:write"),
       canClearRecall: has("recall:clear"),
       canAdmitRecall: has("recall:admit"),
@@ -336,6 +342,15 @@ export function createSterileBrowserApp(options: {
       next(error);
     }
   });
+  if (options.administration)
+    installAccessAdministration(app, {
+      tenantId,
+      facilityId,
+      directory: options.directory,
+      administration: options.administration,
+      identities: options.identities,
+      access,
+    });
   if (options.webRoot) {
     const html = readFileSync(
       join(options.webRoot, "index.html"),
