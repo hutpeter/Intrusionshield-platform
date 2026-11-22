@@ -17,6 +17,7 @@ describe("portable WGS84 distance expression", () => {
     test("rejects invalid identifiers, points, and offset overflow", () => {
         const dialect = new SqlServerDialect();
         expect(() => createDistanceExpression(dialect, "location);DROP", point)).toThrow("safe SQL");
+        expect(() => createDistanceExpression(dialect, "x".repeat(64), point)).toThrow("safe SQL");
         expect(() => createDistanceExpression(dialect, "location", { latitude: -91, longitude: 0 })).toThrow("latitude");
         expect(() => createDistanceExpression(dialect, "location", point, Number.MAX_SAFE_INTEGER)).toThrow("offset");
     });
