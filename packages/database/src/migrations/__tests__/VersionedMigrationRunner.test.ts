@@ -37,7 +37,7 @@ describe("versioned migration orchestration", () => {
         expect(events).toEqual(["lock", "unlock", "lock", "unlock"]);
     });
     test("detects drift before executing pending work", async () => {
-        const { adapter, executed } = store([{ id: "001", checksum: "changed" }]);
+        const { adapter, executed } = store([{ id: "001", checksum: "0".repeat(64) }]);
         await expect(runVersionedMigrations("sqlserver", [first, second], adapter)).rejects.toThrow("checksum drift");
         expect(executed).toEqual([]);
     });
