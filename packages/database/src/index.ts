@@ -62,3 +62,5 @@ export { spatialRelationPredicate, pointInAreaPredicate } from "./dialects/Spati
 export type { SpatialRelation } from "./dialects/SpatialRelations.js";
 
 export { createDistanceExpression } from "./dialects/SpatialDistance.js";
+
+export { createWgs84PointColumnSql } from "./dialects/SpatialColumn.js";
