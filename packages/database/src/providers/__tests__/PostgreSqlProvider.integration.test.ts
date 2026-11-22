@@ -102,10 +102,10 @@ describe("live PostgreSQL / PostGIS portability", () => {
             const [a, b] = await Promise.all([readTenant("tenant-a"), readTenant("tenant-b")]);
             expect(a).toEqual([{ record_id: "a-only" }]);
             expect(b).toEqual([{ record_id: "b-only" }]);
-            await db.withTransaction(async tx => {
+            await expect(db.withTransaction(async tx => {
                 await tx.query("SELECT set_config('ruby.tenant_id', $1, true)", [{ name: "p0", value: "tenant-a" }]);
-                await expect(tx.execute(`INSERT INTO ${table} (tenant_id, record_id) VALUES ('tenant-b', 'forbidden')`)).rejects.toThrow();
-            }).catch(() => undefined);
+                await tx.execute(`INSERT INTO ${table} (tenant_id, record_id) VALUES ('tenant-b', 'forbidden')`);
+            })).rejects.toThrow();
             const rows = await db.withTransaction(async tx => {
                 await tx.query("SELECT set_config('ruby.tenant_id', $1, true)", [{ name: "p0", value: "tenant-b" }]);
                 return (await tx.query<{ record_id: string }>(`SELECT record_id FROM ${table} ORDER BY record_id`)).rows;
