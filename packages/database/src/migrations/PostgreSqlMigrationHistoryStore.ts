@@ -10,7 +10,7 @@ export class PostgreSqlMigrationHistoryStore implements MigrationHistoryStore {
     constructor(private readonly provider: PostgreSqlProvider) {}
 
     async withExclusiveLock<T>(work: () => Promise<T>): Promise<T> {
-        if (this.lockContext.getStore()) throw new Error("Nested migration deployment is not supported.");
+        if (this.lockContext.getStore()?.active) throw new Error("Nested migration deployment is not supported.");
         return this.provider.withTransaction(async tx => {
             // Fixed application-specific key. xact lock releases automatically on commit/rollback.
             await tx.query("SELECT pg_advisory_xact_lock(824176501, 3021)");
