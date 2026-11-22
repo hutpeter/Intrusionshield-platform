@@ -3,7 +3,6 @@ import { SqlServerProvider } from "../SqlServerProvider.js";
 import { SqlServerMigrationHistoryStore } from "../../migrations/SqlServerMigrationHistoryStore.js";
 import { runVersionedMigrations } from "../../migrations/VersionedMigrationRunner.js";
 import { SqlServerDialect } from "../../dialects/DatabaseDialect.js";
-import { withinDistancePredicate } from "../../dialects/SpatialDialect.js";
 import { TenantDatabaseAccess } from "../TenantDatabaseAccess.js";
 import { describe, expect, test } from "@jest/globals";
 import { createTenantScopedDatabaseProvider } from "../createDatabaseProvider.js";
