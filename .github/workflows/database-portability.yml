@@ -59,11 +59,20 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Build database package
         run: pnpm --filter @intrusionshield/database build
+      - name: Create non-superuser application test role
+        env:
+          PGPASSWORD: ruby_test_password
+        run: |
+          psql -h localhost -U ruby_test -d ruby_portability_test -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE ROLE ruby_app_test LOGIN PASSWORD 'ruby_app_test_password';
+          GRANT CONNECT ON DATABASE ruby_portability_test TO ruby_app_test;
+          GRANT USAGE, CREATE ON SCHEMA public TO ruby_app_test;
+          SQL
       - name: Run live PostgreSQL and PostGIS integration checks
         env:
           RUBY_TEST_POSTGRES_HOST: localhost
           RUBY_TEST_POSTGRES_PORT: '5432'
           RUBY_TEST_POSTGRES_DB: ruby_portability_test
-          RUBY_TEST_POSTGRES_USER: ruby_test
-          RUBY_TEST_POSTGRES_PASSWORD: ruby_test_password
+          RUBY_TEST_POSTGRES_USER: ruby_app_test
+          RUBY_TEST_POSTGRES_PASSWORD: ruby_app_test_password
         run: pnpm --filter @intrusionshield/database test --runInBand --runTestsByPath src/providers/__tests__/PostgreSqlProvider.integration.test.ts
