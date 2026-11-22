@@ -238,6 +238,8 @@ describe("live PostgreSQL / PostGIS portability", () => {
             const predicate = pointInAreaPredicate(new PostgreSqlDialect(), "area", "point");
             const result = await db.query<{ inside: boolean }>(`SELECT ${predicate} AS inside FROM (SELECT ST_GeogFromText('POLYGON((-76 44,-74 44,-74 46,-76 46,-76 44))') AS area, ST_SetSRID(ST_MakePoint(-75,45),4326)::geography AS point) AS spatial_test`);
             expect(result.rows[0]?.inside).toBe(true);
+            const outside = await db.query<{ inside: boolean }>(`SELECT ${predicate} AS inside FROM (SELECT ST_GeogFromText('POLYGON((-76 44,-74 44,-74 46,-76 46,-76 44))') AS area, ST_SetSRID(ST_MakePoint(-75,48),4326)::geography AS point) AS spatial_test`);
+            expect(outside.rows[0]?.inside).toBe(false);
         } finally { await db.disconnect(); }
     });
 
