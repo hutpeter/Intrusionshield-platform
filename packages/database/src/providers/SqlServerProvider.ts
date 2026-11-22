@@ -1,4 +1,5 @@
 import sql from "mssql";
+import { AsyncLocalStorage } from "node:async_hooks";
 
 import type { DatabaseOptions } from "../DatabaseOptions.js";
 import type { SqlParameter } from "../SqlParameter.js";
@@ -18,6 +19,8 @@ export class SqlServerProvider implements IDatabaseProvider {
     private pool: sql.ConnectionPool | null = null;
 
     private transaction: sql.Transaction | null = null;
+    private readonly scopedTransaction = new AsyncLocalStorage<sql.Transaction>();
+    private readonly activeScopedTransactions = new Set<sql.Transaction>();
 
     public constructor(
         private readonly options: DatabaseOptions
@@ -60,6 +63,7 @@ try {
 
     /** Closes the SQL Server connection. */
     public async disconnect(): Promise<void> {
+        if (this.activeScopedTransactions.size > 0) throw new Error("Cannot disconnect while scoped transactions are active.");
         if (this.transaction) {
             try {
                 await this.transaction.rollback();
@@ -126,6 +130,40 @@ try {
         );
     }
 
+    /** Isolated per-request transaction; nested transactions are not supported. */
+    public async withTransaction<T>(work: (provider: SqlServerProvider) => Promise<T>): Promise<T> {
+        if (!this.pool) throw new Error("Database connection has not been established.");
+        if (this.transaction || this.scopedTransaction.getStore()) throw new Error("Nested or mixed transactions are not supported.");
+        const transaction = new sql.Transaction(this.pool);
+        await transaction.begin();
+        this.activeScopedTransactions.add(transaction);
+        try {
+            return await this.scopedTransaction.run(transaction, async () => {
+                try {
+                    const result = await work(this);
+                    await transaction.commit();
+                    return result;
+                } catch (error) {
+                    try { await transaction.rollback(); }
+                    catch (rollbackError) { throw new AggregateError([error, rollbackError], "Transaction and rollback failed."); }
+                    throw error;
+                }
+            });
+        } finally { this.activeScopedTransactions.delete(transaction); }
+    }
+
+    /** SQL Server SESSION_CONTEXT is connection-scoped; clear it before releasing the transaction. */
+    public async withTenantTransaction<T>(tenantId: string, work: (provider: SqlServerProvider) => Promise<T>): Promise<T> {
+        if (!tenantId || !tenantId.trim()) throw new Error("A non-empty tenant identifier is required.");
+        return this.withTransaction(async provider => {
+            await provider.query("EXEC sys.sp_set_session_context @key=N'ruby.tenant_id', @value=@tenantId, @read_only=0", [
+                { name: "tenantId", value: tenantId }
+            ]);
+            try { return await work(provider); }
+            finally { await provider.query("EXEC sys.sp_set_session_context @key=N'ruby.tenant_id', @value=NULL, @read_only=0"); }
+        });
+    }
+
     /** Begins a transaction. */
     public async beginTransaction(): Promise<void> {
         if (!this.pool) {
@@ -134,10 +172,8 @@ try {
             );
         }
 
-        if (this.transaction) {
-            throw new Error(
-                "A database transaction is already active."
-            );
+        if (this.transaction || this.activeScopedTransactions.size > 0) {
+            throw new Error("A database transaction is already active.");
         }
 
         const transaction = new sql.Transaction(this.pool);
@@ -180,6 +216,11 @@ try {
     }
 
     private async createRequest(): Promise<sql.Request> {
+        const scoped = this.scopedTransaction.getStore();
+        if (scoped) {
+            if (!this.activeScopedTransactions.has(scoped)) throw new Error("Scoped database transaction has already completed.");
+            return new sql.Request(scoped);
+        }
         if (this.transaction) {
             return new sql.Request(this.transaction);
         }
