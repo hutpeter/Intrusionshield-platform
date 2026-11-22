@@ -18,6 +18,9 @@ export function planDatabaseMigrations(
     const seen = new Set<string>();
     const history = new Map<string, string>();
     for (const record of applied) {
+        if (!/^[a-zA-Z0-9_-]{1,128}$/.test(record.id) || !/^[a-f0-9]{64}$/.test(record.checksum)) {
+            throw new Error(`Invalid applied migration history record: ${record.id}`);
+        }
         if (history.has(record.id)) throw new Error(`Duplicate applied migration ${record.id}`);
         history.set(record.id, record.checksum);
     }
