@@ -175,13 +175,6 @@ describe("live PostgreSQL / PostGIS portability", () => {
         try {
             await db.execute("DROP TABLE IF EXISTS ruby_schema_migrations");
             expect(await runVersionedMigrations("postgresql", [migration], store)).toEqual([id]);
-            let escapedRead: (() => Promise<unknown>) | undefined;
-            await store.withExclusiveLock(async () => {
-                const captured = new Promise<() => Promise<unknown>>(resolve => {
-                    setImmediate(() => resolve(() => store.readApplied()));
-                });
-                escapedRead = await captured;
-            });
             // Outside the lock scope, direct history access must fail.
             await expect(store.readApplied()).rejects.toThrow("active exclusive deployment lock");
             expect(await runVersionedMigrations("postgresql", [migration], store)).toEqual([]);
