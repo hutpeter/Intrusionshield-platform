@@ -5,8 +5,8 @@ import { spatialRelationPredicate } from "../SpatialRelations.js";
 describe("cross-engine geography relationships", () => {
     test("SQL Server containment and intersection", () => {
         const dialect = new SqlServerDialect();
-        expect(spatialRelationPredicate(dialect, "area", "location", "contains"))
-            .toBe("([area].STContains([location]) = 1)");
+        expect(() => spatialRelationPredicate(dialect, "area", "location", "contains"))
+            .toThrow("point-in-area adapter");
         expect(spatialRelationPredicate(dialect, "area", "location", "intersects"))
             .toBe("([area].STIntersects([location]) = 1)");
     });
