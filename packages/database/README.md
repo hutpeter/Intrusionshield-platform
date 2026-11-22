@@ -77,3 +77,8 @@ GIS SQL-generation helpers accept only single ASCII identifiers matching `[A-Za-
 ### Migration deployment preflight
 
 The versioned migration runner validates the complete requested engine-specific migration batch (engine, unique IDs, and nonempty SQL) **before** acquiring its deployment lock or allowing the history adapter to create its table. After acquiring the lock, it re-reads durable history and performs ordered checksum-drift checks before executing pending DDL. The initial preflight is not a substitute for the locked history check. Migration SQL must still be trusted, reviewed, and executable as a single driver request.
+
+
+### WGS84 point storage declarations
+
+`createWgs84PointColumnSql` generates a reviewed-migration column declaration for point locations. PostGIS uses `geography(Point,4326)` and requires the PostGIS extension to be provisioned by an appropriately privileged deployment role. SQL Server uses `geography`, which **does not enforce Point geometry type or SRID 4326 at the column type level**; applications must validate values and provision appropriate constraints where necessary. The helper does not create tables, enforce tenant isolation, install PostGIS, or automatically apply migrations.
