@@ -26,7 +26,7 @@ export function createWithinDistanceQuery(
     if (!Number.isSafeInteger(parameterOffset) || parameterOffset < 0 || !Number.isSafeInteger(parameterOffset + 3)) {
         throw new RangeError("Parameter offset must be a non-negative safe integer.");
     }
-    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(geographyColumn)) {
+    if ((geographyColumn.length > 63 || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(geographyColumn))) {
         throw new Error("Geography column must be a single safe SQL identifier.");
     }
     if (dialect.engine !== "postgresql" && dialect.engine !== "sqlserver") {
