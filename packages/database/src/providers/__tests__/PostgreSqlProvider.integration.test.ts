@@ -1,3 +1,4 @@
+import { spatialRelationPredicate } from "../../dialects/SpatialRelations.js";
 import { createGeographyIndexSql } from "../../dialects/SpatialIndex.js";
 import { createWithinDistanceQuery } from "../../dialects/SpatialQuery.js";
 import { PostgreSqlMigrationHistoryStore } from "../../migrations/PostgreSqlMigrationHistoryStore.js";
@@ -217,6 +218,17 @@ describe("live PostgreSQL / PostGIS portability", () => {
             await db.execute(`DROP TABLE IF EXISTS ${table}`);
             await db.disconnect();
         }
+    });
+
+    liveTest("PostGIS geography containment and intersection", async () => {
+        const db = new PostgreSqlProvider(options);
+        await db.connect();
+        try {
+            const contains = spatialRelationPredicate(new PostgreSqlDialect(), "area", "location", "contains");
+            const intersects = spatialRelationPredicate(new PostgreSqlDialect(), "area", "location", "intersects");
+            const result = await db.query<{ contains: boolean; intersects: boolean }>(`SELECT ${contains} AS contains, ${intersects} AS intersects FROM (SELECT ST_GeogFromText('POLYGON((-76 44,-74 44,-74 46,-76 46,-76 44))') AS area, ST_SetSRID(ST_MakePoint(-75,45),4326)::geography AS location) AS spatial_test`);
+            expect(result.rows[0]).toEqual({ contains: true, intersects: true });
+        } finally { await db.disconnect(); }
     });
 
 });
