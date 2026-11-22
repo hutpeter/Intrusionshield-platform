@@ -31,8 +31,12 @@ export function spatialRelationPredicate(
         return `(${left}.STIntersects(${right}) = 1)`;
     }
     if (dialect.engine === "postgresql") {
-        const method = relation === "contains" ? "ST_Contains" : "ST_Intersects";
-        return `${method}(${left}, ${right})`;
+        if (relation === "contains") {
+            // PostGIS ST_Contains is a geometry operation; geography inputs
+            // require an explicit cast. This uses planar WGS84 geometry semantics.
+            return `ST_Contains(${left}::geometry, ${right}::geometry)`;
+        }
+        return `ST_Intersects(${left}, ${right})`;
     }
     throw new Error("Unsupported spatial relation database engine.");
 }
