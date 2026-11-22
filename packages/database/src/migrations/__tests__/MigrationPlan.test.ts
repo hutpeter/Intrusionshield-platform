@@ -18,6 +18,12 @@ describe("migration plan and drift checks", () => {
         expect(() => planDatabaseMigrations("sqlserver", [first], [{ id: "000", checksum: "a" }])).toThrow("missing");
         expect(() => planDatabaseMigrations("sqlserver", [first, first], [])).toThrow("duplicate");
     });
+    test("rejects history recorded in the wrong order", () => {
+        expect(() => planDatabaseMigrations("sqlserver", [first, second], [
+            { id: "002", checksum: migrationChecksum("sqlserver", second) },
+            { id: "001", checksum: migrationChecksum("sqlserver", first) }
+        ])).toThrow("order mismatch");
+    });
     test("uses provider-specific SQL to calculate checksums", () => {
         expect(migrationChecksum("sqlserver", first)).not.toBe(migrationChecksum("postgresql", first));
     });
