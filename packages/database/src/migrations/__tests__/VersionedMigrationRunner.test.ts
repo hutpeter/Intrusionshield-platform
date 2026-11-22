@@ -29,6 +29,13 @@ function store(initial: AppliedMigrationRecord[] = []) {
 }
 
 describe("versioned migration orchestration", () => {
+    test("rejects invalid deployment batches before acquiring a lock", async () => {
+        const { adapter, events } = store();
+        await expect(runVersionedMigrations("postgresql", [first, { ...second, postgresql: " " }], adapter)).rejects.toThrow("Missing postgresql SQL");
+        await expect(runVersionedMigrations("sqlite" as never, [first], adapter)).rejects.toThrow("Unsupported database engine");
+        await expect(runVersionedMigrations("sqlserver", [first, first], adapter)).rejects.toThrow("duplicate migration ID");
+        expect(events).toEqual([]);
+    });
     test("applies pending migrations and skips them on second run", async () => {
         const { adapter, executed, events } = store();
         expect(await runVersionedMigrations("postgresql", [first, second], adapter)).toEqual(["001", "002"]);
