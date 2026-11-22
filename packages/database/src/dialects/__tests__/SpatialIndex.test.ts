@@ -17,5 +17,7 @@ describe("portable WGS84 geography spatial index DDL", () => {
         expect(() => createGeographyIndexSql(dialect, "Sites; DROP TABLE Sites", "Location", "idx")).toThrow("safe table");
         expect(() => createGeographyIndexSql(dialect, "Sites", "Location)", "idx")).toThrow("safe SQL");
         expect(() => createGeographyIndexSql(dialect, "Sites", "Location", "idx;--")).toThrow("safe SQL");
+        expect(() => createGeographyIndexSql(dialect, "Sites", "Location", "i".repeat(64))).toThrow("safe SQL");
+        expect(() => createGeographyIndexSql(dialect, "s".repeat(64), "Location", "idx")).toThrow("safe table");
     });
 });
