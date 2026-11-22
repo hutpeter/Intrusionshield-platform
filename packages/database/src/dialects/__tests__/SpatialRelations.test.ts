@@ -1,6 +1,6 @@
 import { describe, expect, test } from "@jest/globals";
 import { PostgreSqlDialect, SqlServerDialect } from "../DatabaseDialect.js";
-import { spatialRelationPredicate } from "../SpatialRelations.js";
+import { pointInAreaPredicate, spatialRelationPredicate } from "../SpatialRelations.js";
 
 describe("cross-engine geography relationships", () => {
     test("SQL Server containment and intersection", () => {
@@ -16,6 +16,12 @@ describe("cross-engine geography relationships", () => {
             .toBe('ST_Contains("area"::geometry, "location"::geometry)');
         expect(spatialRelationPredicate(dialect, "area", "location", "intersects"))
             .toBe('ST_Intersects("area", "location")');
+    });
+    test("point-in-area uses geography intersection on both engines", () => {
+        expect(pointInAreaPredicate(new SqlServerDialect(), "area", "point"))
+            .toBe("([area].STIntersects([point]) = 1)");
+        expect(pointInAreaPredicate(new PostgreSqlDialect(), "area", "point"))
+            .toBe('ST_Intersects("area", "point")');
     });
     test("rejects unsafe columns and unknown relations", () => {
         const dialect = new SqlServerDialect();
