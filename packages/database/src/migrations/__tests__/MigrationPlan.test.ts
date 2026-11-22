@@ -9,13 +9,13 @@ describe("migration plan and drift checks", () => {
         expect(planDatabaseMigrations("postgresql", [first, second], [{ id: first.id, checksum: migrationChecksum("postgresql", first) }])).toEqual([second]);
     });
     test("rejects changed previously applied SQL", () => {
-        expect(() => planDatabaseMigrations("postgresql", [first], [{ id: "001", checksum: "invalid" }])).toThrow("checksum drift");
+        expect(() => planDatabaseMigrations("postgresql", [first], [{ id: "001", checksum: "0".repeat(64) }])).toThrow("checksum drift");
     });
     test("rejects gaps in applied migration history", () => {
         expect(() => planDatabaseMigrations("sqlserver", [first, second], [{ id: "002", checksum: migrationChecksum("sqlserver", second) }])).toThrow("appears after a pending");
     });
     test("rejects deleted history and duplicate IDs", () => {
-        expect(() => planDatabaseMigrations("sqlserver", [first], [{ id: "000", checksum: "a" }])).toThrow("missing");
+        expect(() => planDatabaseMigrations("sqlserver", [first], [{ id: "000", checksum: "0".repeat(64) }])).toThrow("missing");
         expect(() => planDatabaseMigrations("sqlserver", [first, first], [])).toThrow("duplicate");
     });
     test("rejects history recorded in the wrong order", () => {
