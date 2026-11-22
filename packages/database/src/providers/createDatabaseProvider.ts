@@ -1,5 +1,5 @@
 import type { DatabaseOptions } from "../DatabaseOptions.js";
-import type { IDatabaseProvider } from "./IDatabaseProvider.js";
+import type { IDatabaseProvider, ITenantScopedDatabaseProvider } from "./IDatabaseProvider.js";
 import { SqlServerProvider } from "./SqlServerProvider.js";
 import { PostgreSqlProvider, type PostgreSqlOptions } from "./PostgreSqlProvider.js";
 
@@ -16,5 +16,13 @@ export function createDatabaseProvider(config: DatabaseProviderConfiguration): I
             const neverEngine: never = config;
             throw new Error(`Unsupported database configuration: ${String(neverEngine)}`);
         }
+    }
+}
+
+/** Select either engine while preserving tenant-scoped transaction support. */
+export function createTenantScopedDatabaseProvider(config: DatabaseProviderConfiguration): ITenantScopedDatabaseProvider {
+    switch (config.engine) {
+        case "sqlserver": return new SqlServerProvider(config.options);
+        case "postgresql": return new PostgreSqlProvider(config.options);
     }
 }
