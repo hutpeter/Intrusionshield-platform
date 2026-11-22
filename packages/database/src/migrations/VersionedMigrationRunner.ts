@@ -24,6 +24,9 @@ export async function runVersionedMigrations(
     migrations: readonly DatabaseMigration[],
     history: MigrationHistoryStore
 ): Promise<string[]> {
+    // Reject invalid deployment input before opening a transaction, acquiring a
+    // deployment lock, or creating a migration history table.
+    planDatabaseMigrations(engine, migrations, []);
     return history.withExclusiveLock(async () => {
         const applied = await history.readApplied();
         const pending = planDatabaseMigrations(engine, migrations, applied);
