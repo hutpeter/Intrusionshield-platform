@@ -20,6 +20,7 @@ export class PostgreSqlProvider implements IDatabaseProvider {
     private pool: Pool | null = null;
     private client: PoolClient | null = null;
     private readonly transactionContext = new AsyncLocalStorage<PoolClient>();
+    private activeScopedTransactions = 0;
 
     constructor(private readonly options: PostgreSqlOptions) {}
 
@@ -42,6 +43,9 @@ export class PostgreSqlProvider implements IDatabaseProvider {
             this.client = null;
             try { await client.query("ROLLBACK"); } finally { client.release(); }
         }
+        if (this.activeScopedTransactions > 0) {
+            throw new Error("Cannot disconnect while scoped transactions are active.");
+        }
         if (this.pool) {
             const pool = this.pool;
             this.pool = null;
@@ -51,8 +55,9 @@ export class PostgreSqlProvider implements IDatabaseProvider {
 
     async query<T>(sql: string, parameters: SqlParameter[] = []): Promise<SqlResult<T>> {
         const values = parameters.map(p => p.value);
-        const activeClient = this.client;
-        if (activeClient && this.transactionContext.getStore() !== activeClient) {
+        const scopedClient = this.transactionContext.getStore();
+        const activeClient = scopedClient ?? this.client;
+        if (this.client && !scopedClient && this.transactionContext.getStore() !== this.client) {
             throw new Error("Database transaction belongs to another asynchronous context.");
         }
         const result = activeClient
@@ -66,8 +71,33 @@ export class PostgreSqlProvider implements IDatabaseProvider {
         return result.rowCount;
     }
 
+    /** Run one unit of work on its own transaction connection, isolated from other requests. */
+    async withTransaction<T>(work: (provider: PostgreSqlProvider) => Promise<T>): Promise<T> {
+        if (this.client) throw new Error("Cannot start a scoped transaction while a legacy transaction is active.");
+        if (this.transactionContext.getStore()) throw new Error("Nested transactions are not supported.");
+        const client = await this.requirePool().connect();
+        this.activeScopedTransactions++;
+        try {
+            await client.query("BEGIN");
+            return await this.transactionContext.run(client, async () => {
+                try {
+                    const result = await work(this);
+                    await client.query("COMMIT");
+                    return result;
+                } catch (error) {
+                    try { await client.query("ROLLBACK"); }
+                    catch (rollbackError) { throw new AggregateError([error, rollbackError], "Transaction and rollback failed."); }
+                    throw error;
+                }
+            });
+        } finally {
+            this.activeScopedTransactions--;
+            client.release();
+        }
+    }
+
     async beginTransaction(): Promise<void> {
-        if (this.client) throw new Error("A database transaction is already active.");
+        if (this.client || this.activeScopedTransactions > 0) throw new Error("A database transaction is already active.");
         const client = await this.requirePool().connect();
         try {
             await client.query("BEGIN");
