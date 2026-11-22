@@ -1,5 +1,5 @@
 import { describe, expect, test } from "@jest/globals";
-import { SqlServerProvider } from "../SqlServerProvider.js";
+import { createTenantScopedDatabaseProvider } from "../createDatabaseProvider.js";
 
 const enabled = Boolean(process.env.RUBY_TEST_SQLSERVER_HOST);
 const liveTest = enabled ? test : test.skip;
@@ -15,7 +15,7 @@ const options = {
 
 describe("live SQL Server tenant-scoped transactions", () => {
     liveTest("tenant context, concurrent requests, cleanup, and rollback", async () => {
-        const db = new SqlServerProvider(options);
+        const db = createTenantScopedDatabaseProvider({ engine: "sqlserver", options });
         await db.connect();
         try {
             await expect(db.withTenantTransaction("", async () => undefined)).rejects.toThrow("tenant identifier");
