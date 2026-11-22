@@ -67,3 +67,8 @@ GitHub Actions runs package tests and live integration tests against SQL Server 
 ### Portable spatial identifier policy
 
 GIS SQL-generation helpers accept only single ASCII identifiers matching `[A-Za-z_][A-Za-z0-9_]*`, with a maximum of 63 characters. Spatial-index table names may be optionally schema-qualified using two individually validated components. This conservative common subset avoids PostgreSQL's default 63-byte identifier truncation and rejects identifier injection; schema and column identifiers must originate from trusted application metadata. Non-spatial SQL generation is not yet covered by this policy.
+
+
+### Runtime engine selection
+
+`createDatabaseProvider`, `createTenantScopedDatabaseProvider`, and `createDatabaseDialect` accept only the configured `sqlserver` and `postgresql` engines. Unknown engine strings are rejected at runtime even when supplied through untyped environment/configuration data. This does not replace validation of host credentials, TLS settings, tenant entitlements, or the target database schema.
