@@ -18,6 +18,10 @@ describe("migration plan and drift checks", () => {
         expect(() => planDatabaseMigrations("sqlserver", [first], [{ id: "000", checksum: "0".repeat(64) }])).toThrow("missing");
         expect(() => planDatabaseMigrations("sqlserver", [first, first], [])).toThrow("duplicate");
     });
+    test("rejects corrupt migration history records", () => {
+        expect(() => planDatabaseMigrations("postgresql", [first], [{ id: "001", checksum: "bad" }])).toThrow("Invalid applied migration history");
+        expect(() => planDatabaseMigrations("postgresql", [first], [{ id: "../bad", checksum: "0".repeat(64) }])).toThrow("Invalid applied migration history");
+    });
     test("rejects history recorded in the wrong order", () => {
         expect(() => planDatabaseMigrations("sqlserver", [first, second], [
             { id: "002", checksum: migrationChecksum("sqlserver", second) },
