@@ -46,3 +46,5 @@ export { runVersionedMigrations, createMigrationHistoryExecutor } from "./migrat
 export type { MigrationHistoryStore } from "./migrations/VersionedMigrationRunner.js";
 
 export { SqlServerMigrationHistoryStore } from "./migrations/SqlServerMigrationHistoryStore.js";
+
+export { PostgreSqlMigrationHistoryStore } from "./migrations/PostgreSqlMigrationHistoryStore.js";
