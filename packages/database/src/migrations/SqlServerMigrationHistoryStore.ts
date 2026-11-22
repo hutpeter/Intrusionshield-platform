@@ -10,7 +10,7 @@ export class SqlServerMigrationHistoryStore implements MigrationHistoryStore {
     constructor(private readonly provider: SqlServerProvider) {}
 
     async withExclusiveLock<T>(work: () => Promise<T>): Promise<T> {
-        if (this.lockContext.getStore()) throw new Error("Nested migration deployment is not supported.");
+        if (this.lockContext.getStore()?.active) throw new Error("Nested migration deployment is not supported.");
         return this.provider.withTransaction(async tx => {
             const acquisition = await tx.query<{ lock_result: number }>(
                 "DECLARE @result int; EXEC @result = sys.sp_getapplock @Resource=N'ruby.schema_migrations', @LockMode=N'Exclusive', @LockOwner=N'Transaction', @LockTimeout=30000; SELECT @result AS lock_result"
