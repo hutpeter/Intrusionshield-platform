@@ -63,4 +63,4 @@ export type { SpatialRelation } from "./dialects/SpatialRelations.js";
 
 export { createDistanceExpression } from "./dialects/SpatialDistance.js";
 
-export { createWgs84PointColumnSql } from "./dialects/SpatialColumn.js";
+export { createWgs84PointColumnSql, createWgs84PointCheckSql } from "./dialects/SpatialColumn.js";
