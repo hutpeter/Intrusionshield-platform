@@ -22,6 +22,8 @@ export function planDatabaseMigrations(
         history.set(record.id, record.checksum);
     }
     const pending: DatabaseMigration[] = [];
+    // Compare history in exact deployment order, not merely as a set of IDs.
+    let appliedIndex = 0;
     let encounteredPending = false;
     for (const migration of migrations) {
         if (!/^[a-zA-Z0-9_-]{1,128}$/.test(migration.id) || seen.has(migration.id)) {
@@ -33,6 +35,8 @@ export function planDatabaseMigrations(
         const checksum = createHash("sha256").update(sql).digest("hex");
         const previous = history.get(migration.id);
         if (previous !== undefined) {
+            if (applied[appliedIndex]?.id !== migration.id) throw new Error(`Applied migration order mismatch: ${migration.id}`);
+            appliedIndex++;
             if (encounteredPending) throw new Error(`Applied migration ${migration.id} appears after a pending migration`);
             if (previous !== checksum) throw new Error(`Migration checksum drift: ${migration.id}`);
         } else {
