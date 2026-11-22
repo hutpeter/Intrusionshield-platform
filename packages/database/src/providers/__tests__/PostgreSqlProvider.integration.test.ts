@@ -1,3 +1,5 @@
+import { PostgreSqlMigrationHistoryStore } from "../../migrations/PostgreSqlMigrationHistoryStore.js";
+import { runVersionedMigrations } from "../../migrations/VersionedMigrationRunner.js";
 import { PostgreSqlDialect } from "../../dialects/DatabaseDialect.js";
 import { withinDistancePredicate } from "../../dialects/SpatialDialect.js";
 import { TenantDatabaseAccess } from "../TenantDatabaseAccess.js";
@@ -160,6 +162,30 @@ describe("live PostgreSQL / PostGIS portability", () => {
             );
             expect(result.rows[0]?.nearby).toBe(true);
         } finally { await db.disconnect(); }
+    });
+
+    liveTest("durable PostgreSQL migration history, idempotence and rollback", async () => {
+        const db = new PostgreSqlProvider(options);
+        await db.connect();
+        const store = new PostgreSqlMigrationHistoryStore(db);
+        const suffix = Math.random().toString(36).slice(2, 10);
+        const id = `migration_${suffix}`;
+        const table = `ruby_migration_test_${suffix}`;
+        const migration = { id, description: "integration", sqlserver: "SELECT 1", postgresql: `CREATE TABLE ${table} (id integer NOT NULL)` };
+        try {
+            await db.execute("DROP TABLE IF EXISTS ruby_schema_migrations");
+            expect(await runVersionedMigrations("postgresql", [migration], store)).toEqual([id]);
+            expect(await runVersionedMigrations("postgresql", [migration], store)).toEqual([]);
+            await expect(runVersionedMigrations("postgresql", [{ ...migration, postgresql: "SELECT 2" }], store)).rejects.toThrow("checksum drift");
+            const failing = { id: `failed_${suffix}`, description: "invalid", sqlserver: "SELECT 1", postgresql: "SELECT * FROM ruby_table_that_does_not_exist" };
+            await expect(runVersionedMigrations("postgresql", [migration, failing], store)).rejects.toThrow();
+            const history = await db.query<{ migration_id: string }>("SELECT migration_id FROM ruby_schema_migrations ORDER BY sequence_number");
+            expect(history.rows.map(row => row.migration_id)).toEqual([id]);
+        } finally {
+            await db.execute(`DROP TABLE IF EXISTS ${table}`);
+            await db.execute("DROP TABLE IF EXISTS ruby_schema_migrations");
+            await db.disconnect();
+        }
     });
 
 });
