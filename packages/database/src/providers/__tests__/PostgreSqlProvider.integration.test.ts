@@ -244,6 +244,19 @@ describe("live PostgreSQL / PostGIS portability", () => {
         } finally { await db.disconnect(); }
     });
 
+    liveTest("PostGIS migration history permits sequential deployments in reused async context", async () => {
+        const db = new PostgreSqlProvider(options);
+        await db.connect();
+        try {
+            const store = new PostgreSqlMigrationHistoryStore(db);
+            await store.withExclusiveLock(async () => {
+                await store.readApplied();
+                await expect(store.withExclusiveLock(async () => undefined)).rejects.toThrow("Nested migration deployment");
+            });
+            await store.withExclusiveLock(async () => { await store.readApplied(); });
+        } finally { await db.disconnect(); }
+    });
+
     liveTest("PostGIS geography orders nearby sites by distance in metres", async () => {
         const db = new PostgreSqlProvider(options);
         await db.connect();
