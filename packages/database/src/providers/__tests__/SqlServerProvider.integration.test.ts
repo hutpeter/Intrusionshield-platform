@@ -1,3 +1,4 @@
+import { createGeographyIndexSql } from "../../dialects/SpatialIndex.js";
 import { createWithinDistanceQuery } from "../../dialects/SpatialQuery.js";
 import { SqlServerProvider } from "../SqlServerProvider.js";
 import { SqlServerMigrationHistoryStore } from "../../migrations/SqlServerMigrationHistoryStore.js";
@@ -140,6 +141,23 @@ describe("live SQL Server tenant-scoped transactions", () => {
         } finally {
             await db.execute(`IF OBJECT_ID(N'${table}', N'U') IS NOT NULL DROP TABLE ${table}`);
             await db.execute("IF OBJECT_ID(N'dbo.ruby_schema_migrations', N'U') IS NOT NULL DROP TABLE dbo.ruby_schema_migrations");
+            await db.disconnect();
+        }
+    });
+
+    liveTest("creates SQL Server WGS84 spatial index on geography column", async () => {
+        const db = new SqlServerProvider(options);
+        await db.connect();
+        const suffix = Math.random().toString(36).slice(2, 10);
+        const table = `dbo.ruby_geo_index_${suffix}`;
+        const index = `ix_ruby_geo_${suffix}`;
+        try {
+            await db.execute(`CREATE TABLE ${table} (id int NOT NULL PRIMARY KEY, location geography NULL)`);
+            await db.execute(createGeographyIndexSql(new SqlServerDialect(), table, "location", index));
+            const result = await db.query<{ name: string }>(`SELECT name FROM sys.spatial_indexes WHERE object_id = OBJECT_ID(N'${table}')`);
+            expect(result.rows.map(row => row.name)).toContain(index);
+        } finally {
+            await db.execute(`IF OBJECT_ID(N'${table}', N'U') IS NOT NULL DROP TABLE ${table}`);
             await db.disconnect();
         }
     });
