@@ -14,6 +14,9 @@ export function createWgs84PointColumnSql(
     if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(columnName) || columnName.length > 63) {
         throw new Error("Spatial column must be a safe SQL identifier of at most 63 ASCII characters.");
     }
+    if (dialect.engine !== "sqlserver" && dialect.engine !== "postgresql") {
+        throw new Error("Unsupported spatial column database engine.");
+    }
     const name = dialect.quoteIdentifier(columnName);
     const nullSql = nullable ? "NULL" : "NOT NULL";
     if (dialect.engine === "sqlserver") return `${name} geography ${nullSql}`;
