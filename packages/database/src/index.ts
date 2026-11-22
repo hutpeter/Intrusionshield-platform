@@ -41,3 +41,6 @@ export type { DatabaseMigration } from "./migrations/DatabaseMigration.js";
 
 export { planDatabaseMigrations, migrationChecksum } from "./migrations/MigrationPlan.js";
 export type { AppliedMigrationRecord } from "./migrations/MigrationPlan.js";
+
+export { runVersionedMigrations, createMigrationHistoryExecutor } from "./migrations/VersionedMigrationRunner.js";
+export type { MigrationHistoryStore } from "./migrations/VersionedMigrationRunner.js";
