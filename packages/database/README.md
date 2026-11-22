@@ -27,7 +27,7 @@ Schema provisioning, policy deployment, migration ordering, privileged-role sepa
 
 ## Geospatial foundation
 
-The shared `withinDistancePredicate` helper generates a parameterized WGS84 geography proximity predicate for SQL Server and PostGIS. It expects a geography-typed column, latitude/longitude in degrees, and radius in metres. SQL Server uses `geography::Point(latitude, longitude, 4326)`; PostGIS uses `ST_MakePoint(longitude, latitude)` cast to geography. This is a first spatial primitive, **not** complete GIS portability; spatial DDL, indexing, geometry operations, and CRS transformations remain release gates.
+The shared `withinDistancePredicate` helper generates a parameterized WGS84 geography proximity predicate for SQL Server and PostGIS. It expects a geography-typed column, latitude/longitude in degrees, and radius in metres. SQL Server uses `geography::Point(latitude, longitude, 4326)`; PostGIS uses `ST_MakePoint(longitude, latitude)` cast to geography. `createWithinDistanceQuery` additionally validates WGS84 latitude/longitude, non-negative finite radius, and binds all values as provider-specific parameters. This is a first spatial primitive, **not** complete GIS portability; spatial DDL, indexing, geometry operations, and CRS transformations remain release gates.
 
 ## Migration foundation
 
