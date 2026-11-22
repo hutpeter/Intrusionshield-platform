@@ -27,3 +27,6 @@ export type { DatabaseDialect, DatabaseEngine } from "./dialects/index.js";
 
 export { PostgreSqlProvider } from "./providers/PostgreSqlProvider.js";
 export type { PostgreSqlOptions } from "./providers/PostgreSqlProvider.js";
+
+export { createDatabaseProvider } from "./providers/createDatabaseProvider.js";
+export type { DatabaseProviderConfiguration } from "./providers/createDatabaseProvider.js";
