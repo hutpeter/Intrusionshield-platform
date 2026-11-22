@@ -12,7 +12,7 @@ export {
     normalizeUuid
 } from "./Uuid.js";
 
-export type { IDatabaseProvider } from "./providers/IDatabaseProvider.js";
+export type { IDatabaseProvider, ITenantScopedDatabaseProvider } from "./providers/IDatabaseProvider.js";
 export { SqlServerProvider } from "./providers/SqlServerProvider.js";
 
 export type { QueryOperator } from "./query/QueryOperator.js";
@@ -28,5 +28,5 @@ export type { DatabaseDialect, DatabaseEngine } from "./dialects/index.js";
 export { PostgreSqlProvider } from "./providers/PostgreSqlProvider.js";
 export type { PostgreSqlOptions } from "./providers/PostgreSqlProvider.js";
 
-export { createDatabaseProvider } from "./providers/createDatabaseProvider.js";
+export { createDatabaseProvider, createTenantScopedDatabaseProvider } from "./providers/createDatabaseProvider.js";
 export type { DatabaseProviderConfiguration } from "./providers/createDatabaseProvider.js";
