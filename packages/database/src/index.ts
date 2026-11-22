@@ -44,3 +44,5 @@ export type { AppliedMigrationRecord } from "./migrations/MigrationPlan.js";
 
 export { runVersionedMigrations, createMigrationHistoryExecutor } from "./migrations/VersionedMigrationRunner.js";
 export type { MigrationHistoryStore } from "./migrations/VersionedMigrationRunner.js";
+
+export { SqlServerMigrationHistoryStore } from "./migrations/SqlServerMigrationHistoryStore.js";
