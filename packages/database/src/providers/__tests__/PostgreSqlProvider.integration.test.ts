@@ -176,11 +176,18 @@ describe("live PostgreSQL / PostGIS portability", () => {
             await db.execute("DROP TABLE IF EXISTS ruby_schema_migrations");
             expect(await runVersionedMigrations("postgresql", [migration], store)).toEqual([id]);
             expect(await runVersionedMigrations("postgresql", [migration], store)).toEqual([]);
+            // Two deployment attempts must serialize and apply the new migration only once.
+            const concurrent = { id: `concurrent_${suffix}`, description: "concurrency", sqlserver: "SELECT 1", postgresql: "SELECT 1" };
+            const outcomes = await Promise.all([
+                runVersionedMigrations("postgresql", [migration, concurrent], store),
+                runVersionedMigrations("postgresql", [migration, concurrent], store)
+            ]);
+            expect(outcomes.flat()).toEqual([concurrent.id]);
             await expect(runVersionedMigrations("postgresql", [{ ...migration, postgresql: "SELECT 2" }], store)).rejects.toThrow("checksum drift");
             const failing = { id: `failed_${suffix}`, description: "invalid", sqlserver: "SELECT 1", postgresql: "SELECT * FROM ruby_table_that_does_not_exist" };
-            await expect(runVersionedMigrations("postgresql", [migration, failing], store)).rejects.toThrow();
+            await expect(runVersionedMigrations("postgresql", [migration, concurrent, failing], store)).rejects.toThrow();
             const history = await db.query<{ migration_id: string }>("SELECT migration_id FROM ruby_schema_migrations ORDER BY sequence_number");
-            expect(history.rows.map(row => row.migration_id)).toEqual([id]);
+            expect(history.rows.map(row => row.migration_id)).toEqual([id, concurrent.id]);
         } finally {
             await db.execute(`DROP TABLE IF EXISTS ${table}`);
             await db.execute("DROP TABLE IF EXISTS ruby_schema_migrations");
