@@ -6,19 +6,22 @@ import { AsyncLocalStorage } from "node:async_hooks";
 
 /** All migration DDL and history writes share a single SQL Server transaction. */
 export class SqlServerMigrationHistoryStore implements MigrationHistoryStore {
-    private readonly lockContext = new AsyncLocalStorage<boolean>();
+    private readonly lockContext = new AsyncLocalStorage<{ active: boolean }>();
     constructor(private readonly provider: SqlServerProvider) {}
 
     async withExclusiveLock<T>(work: () => Promise<T>): Promise<T> {
         if (this.lockContext.getStore()) throw new Error("Nested migration deployment is not supported.");
         return this.provider.withTransaction(async tx => {
-            const lock = await tx.query<{ lock_result: number }>(
+            const acquisition = await tx.query<{ lock_result: number }>(
                 "DECLARE @result int; EXEC @result = sys.sp_getapplock @Resource=N'ruby.schema_migrations', @LockMode=N'Exclusive', @LockOwner=N'Transaction', @LockTimeout=30000; SELECT @result AS lock_result"
             );
-            if ((lock.rows[0]?.lock_result ?? -999) < 0) throw new Error("Could not acquire SQL Server migration deployment lock.");
-            return this.lockContext.run(true, async () => {
+            if ((acquisition.rows[0]?.lock_result ?? -999) < 0) throw new Error("Could not acquire SQL Server migration deployment lock.");
+            const lock = { active: true };
+            return this.lockContext.run(lock, async () => {
+                try {
                 await tx.execute("IF OBJECT_ID(N'dbo.ruby_schema_migrations', N'U') IS NULL CREATE TABLE dbo.ruby_schema_migrations (sequence_number bigint IDENTITY(1,1) NOT NULL PRIMARY KEY, migration_id nvarchar(128) NOT NULL UNIQUE, checksum char(64) NOT NULL)");
-                return work();
+                return await work();
+                } finally { lock.active = false; }
             });
         });
     }
@@ -41,6 +44,6 @@ export class SqlServerMigrationHistoryStore implements MigrationHistoryStore {
     }
 
     private requireLock(): void {
-        if (!this.lockContext.getStore()) throw new Error("Migration history access requires exclusive deployment lock.");
+        if (!this.lockContext.getStore()?.active) throw new Error("Migration history access requires an active exclusive deployment lock.");
     }
 }
