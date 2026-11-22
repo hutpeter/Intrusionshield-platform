@@ -2,7 +2,7 @@ import type { DatabaseDialect } from "./DatabaseDialect.js";
 
 /**
  * Provider-neutral WGS84 point storage column declaration for reviewed DDL.
- * SQL Server geography enforces SRID per inserted value; PostgreSQL geography
+ * SQL Server geography stores SRID per value without restricting it to 4326; PostgreSQL geography
  * uses a Point/4326 typmod to enforce geometry type and SRID.
  * This helper emits a column declaration, not a complete migration.
  */
