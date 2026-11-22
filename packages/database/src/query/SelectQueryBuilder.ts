@@ -172,7 +172,7 @@ export class SelectQueryBuilder {
         }
 
         if (this.dialect.engine === "postgresql") {
-            sql = sql.replace(/@p(\\d+)\\b/g, (_match, index: string) =>
+            sql = sql.replace(/@p(\d+)\b/g, (_match, index: string) =>
                 this.dialect.parameter(Number(index) + 1)
             );
         }
