@@ -1,3 +1,4 @@
+import { TenantDatabaseAccess } from "../TenantDatabaseAccess.js";
 import { describe, expect, test } from "@jest/globals";
 import { PostgreSqlProvider } from "../PostgreSqlProvider.js";
 import { createTenantScopedDatabaseProvider } from "../createDatabaseProvider.js";
@@ -132,6 +133,17 @@ describe("live PostgreSQL / PostGIS portability", () => {
                 (await tx.query<{ tenant_id: string }>("SELECT current_setting('ruby.tenant_id', true) AS tenant_id")).rows[0]?.tenant_id
             );
             expect(second).toBe("tenant-b");
+        } finally { await db.disconnect(); }
+    });
+
+    liveTest("tenant-only facade uses real postgresql provider", async () => {
+        const db = createTenantScopedDatabaseProvider({ engine: "postgresql", options });
+        await db.connect();
+        try {
+            const access = new TenantDatabaseAccess(db);
+            const result = await access.forTenant("tenant-a", session => session.query<{ ok: number }>("SELECT 1 AS ok"));
+            expect(result.rows[0]?.ok).toBe(1);
+            await expect(access.forTenant("", session => session.query("SELECT 1"))).rejects.toThrow("tenant identifier");
         } finally { await db.disconnect(); }
     });
 
