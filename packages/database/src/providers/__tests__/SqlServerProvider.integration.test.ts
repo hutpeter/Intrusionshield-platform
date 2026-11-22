@@ -1,3 +1,6 @@
+import { SqlServerProvider } from "../SqlServerProvider.js";
+import { SqlServerMigrationHistoryStore } from "../../migrations/SqlServerMigrationHistoryStore.js";
+import { runVersionedMigrations } from "../../migrations/VersionedMigrationRunner.js";
 import { SqlServerDialect } from "../../dialects/DatabaseDialect.js";
 import { withinDistancePredicate } from "../../dialects/SpatialDialect.js";
 import { TenantDatabaseAccess } from "../TenantDatabaseAccess.js";
@@ -100,6 +103,32 @@ describe("live SQL Server tenant-scoped transactions", () => {
             );
             expect(result.rows[0]?.nearby).toBe(1);
         } finally { await db.disconnect(); }
+    });
+
+    liveTest("durable migration history, idempotence, and transactional rollback", async () => {
+        const db = new SqlServerProvider(options);
+        await db.connect();
+        const store = new SqlServerMigrationHistoryStore(db);
+        const suffix = Math.random().toString(36).slice(2, 10);
+        const id = `migration_${suffix}`;
+        const table = `dbo.ruby_migration_test_${suffix}`;
+        const migration = { id, description: "integration", sqlserver: `CREATE TABLE ${table} (id int NOT NULL)`, postgresql: "SELECT 1" };
+        try {
+            // Existing global history may include other migrations, so run the test
+            // against a clean migration history table in ephemeral CI only.
+            await db.execute("IF OBJECT_ID(N'dbo.ruby_schema_migrations', N'U') IS NOT NULL DROP TABLE dbo.ruby_schema_migrations");
+            expect(await runVersionedMigrations("sqlserver", [migration], store)).toEqual([id]);
+            expect(await runVersionedMigrations("sqlserver", [migration], store)).toEqual([]);
+            await expect(runVersionedMigrations("sqlserver", [{ ...migration, sqlserver: "SELECT 2" }], store)).rejects.toThrow("checksum drift");
+            const failing = { id: `failed_${suffix}`, description: "invalid", sqlserver: "SELECT * FROM dbo.table_that_does_not_exist", postgresql: "SELECT 1" };
+            await expect(runVersionedMigrations("sqlserver", [migration, failing], store)).rejects.toThrow();
+            const history = await db.query<{ migration_id: string }>("SELECT migration_id FROM dbo.ruby_schema_migrations ORDER BY sequence_number");
+            expect(history.rows.map(row => row.migration_id)).toEqual([id]);
+        } finally {
+            await db.execute(`IF OBJECT_ID(N'${table}', N'U') IS NOT NULL DROP TABLE ${table}`);
+            await db.execute("IF OBJECT_ID(N'dbo.ruby_schema_migrations', N'U') IS NOT NULL DROP TABLE dbo.ruby_schema_migrations");
+            await db.disconnect();
+        }
     });
 
 });
