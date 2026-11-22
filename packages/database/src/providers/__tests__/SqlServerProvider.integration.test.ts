@@ -1,3 +1,5 @@
+import { SqlServerDialect } from "../../dialects/DatabaseDialect.js";
+import { withinDistancePredicate } from "../../dialects/SpatialDialect.js";
 import { TenantDatabaseAccess } from "../TenantDatabaseAccess.js";
 import { describe, expect, test } from "@jest/globals";
 import { createTenantScopedDatabaseProvider } from "../createDatabaseProvider.js";
@@ -84,6 +86,19 @@ describe("live SQL Server tenant-scoped transactions", () => {
             const result = await access.forTenant("tenant-a", session => session.query<{ ok: number }>("SELECT 1 AS ok"));
             expect(result.rows[0]?.ok).toBe(1);
             await expect(access.forTenant("", session => session.query("SELECT 1"))).rejects.toThrow("tenant identifier");
+        } finally { await db.disconnect(); }
+    });
+
+    liveTest("WGS84 distance predicate executes against SQL Server geography", async () => {
+        const db = createTenantScopedDatabaseProvider({ engine: "sqlserver", options });
+        await db.connect();
+        try {
+            const predicate = withinDistancePredicate(new SqlServerDialect(), "location", "@p0", "@p1", "@p2");
+            const result = await db.query<{ nearby: number }>(
+                `SELECT CASE WHEN ${predicate} THEN 1 ELSE 0 END AS nearby FROM (SELECT geography::Point(45.0, -75.0, 4326) AS location) AS site`,
+                [{ name: "p0", value: 45.0001 }, { name: "p1", value: -75.0 }, { name: "p2", value: 100 }]
+            );
+            expect(result.rows[0]?.nearby).toBe(1);
         } finally { await db.disconnect(); }
     });
 
