@@ -10,6 +10,8 @@ import { migrationChecksum, planDatabaseMigrations, type AppliedMigrationRecord 
 export interface MigrationHistoryStore {
     readApplied(): Promise<AppliedMigrationRecord[]>;
     applyAndRecord(migration: DatabaseMigration, sql: string, checksum: string): Promise<void>;
+    /** Hold a cross-process exclusive lock for the full history read and application. */
+    withExclusiveLock<T>(work: () => Promise<T>): Promise<T>;
 }
 
 /**
@@ -22,15 +24,17 @@ export async function runVersionedMigrations(
     migrations: readonly DatabaseMigration[],
     history: MigrationHistoryStore
 ): Promise<string[]> {
-    const applied = await history.readApplied();
-    const pending = planDatabaseMigrations(engine, migrations, applied);
-    const completed: string[] = [];
-    for (const migration of pending) {
-        const sql = engine === "sqlserver" ? migration.sqlserver : migration.postgresql;
-        await history.applyAndRecord(migration, sql, migrationChecksum(engine, migration));
-        completed.push(migration.id);
-    }
-    return completed;
+    return history.withExclusiveLock(async () => {
+        const applied = await history.readApplied();
+        const pending = planDatabaseMigrations(engine, migrations, applied);
+        const completed: string[] = [];
+        for (const migration of pending) {
+            const sql = engine === "sqlserver" ? migration.sqlserver : migration.postgresql;
+            await history.applyAndRecord(migration, sql, migrationChecksum(engine, migration));
+            completed.push(migration.id);
+        }
+        return completed;
+    });
 }
 
 /**
@@ -39,7 +43,8 @@ export async function runVersionedMigrations(
  */
 export function createMigrationHistoryExecutor(
     readApplied: () => Promise<AppliedMigrationRecord[]>,
-    applyAndRecord: (migration: DatabaseMigration, sql: string, checksum: string) => Promise<void>
+    applyAndRecord: (migration: DatabaseMigration, sql: string, checksum: string) => Promise<void>,
+    withExclusiveLock: <T>(work: () => Promise<T>) => Promise<T>
 ): MigrationHistoryStore {
-    return { readApplied, applyAndRecord };
+    return { readApplied, applyAndRecord, withExclusiveLock };
 }
