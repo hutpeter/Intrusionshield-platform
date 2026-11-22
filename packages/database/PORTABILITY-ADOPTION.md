@@ -23,7 +23,7 @@ The `packages/database` entrypoint exists on both the Athena account-administrat
 | Tiger sterile processing | Compare standalone repository with sterile-processing branches; inspect traceability, sterilizer events, audit and instrument-release transactions | Pass controlled release and equipment integration tests on both engines without Athena dependency |
 | Admin/onboarding and licensing | Inspect tenant provisioning, entitlement enforcement, migration bootstrap and license audits | Provision fresh tenants and enforce entitlement boundaries on both engines |
 | TMS and case/document management | Inventory independently hosted repositories before assuming reuse | Publish migration plan and dual-engine tests for each product before production support claims |
-| Shared GIS | Define CRS conversion, spatial index lifecycle, boundary behavior, geometry support and nearest-neighbor performance | Cross-engine fixture parity and representative indexed query plans |
+| Shared GIS | Define CRS conversion, spatial index lifecycle, polygon ring orientation (SQL Server geography uses left-hand interior rules), boundary behavior, geometry support and nearest-neighbor performance | Cross-engine fixture parity and representative indexed query plans |
 
 ## Non-negotiable acceptance gates
 
