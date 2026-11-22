@@ -29,6 +29,9 @@ export function createWithinDistanceQuery(
     if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(geographyColumn)) {
         throw new Error("Geography column must be a single safe SQL identifier.");
     }
+    if (dialect.engine !== "postgresql" && dialect.engine !== "sqlserver") {
+        throw new Error("Unsupported spatial query database engine.");
+    }
     const first = dialect.engine === "postgresql" ? parameterOffset + 1 : parameterOffset;
     const sql = withinDistancePredicate(
         dialect,
