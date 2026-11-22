@@ -222,7 +222,7 @@ try {
             return new sql.Request(scoped);
         }
         if (this.transaction) {
-            throw new Error("Legacy database transaction is active; use a transaction-scoped request.");
+            return new sql.Request(this.transaction);
         }
 
         if (!this.pool) {
