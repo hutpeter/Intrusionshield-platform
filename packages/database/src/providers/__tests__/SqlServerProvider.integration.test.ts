@@ -51,7 +51,7 @@ describe("live SQL Server tenant-scoped transactions", () => {
             await db.execute(`CREATE TABLE ${table} (tenant_id nvarchar(128) NOT NULL, item nvarchar(128) NOT NULL)`);
             await db.execute(`INSERT INTO ${table} (tenant_id, item) VALUES (N'tenant-a', N'alpha'), (N'tenant-b', N'beta')`);
             await db.execute(`EXEC(N'CREATE FUNCTION ${predicate}(@tenant_id nvarchar(128)) RETURNS TABLE WITH SCHEMABINDING AS RETURN SELECT 1 AS permitted WHERE @tenant_id = CONVERT(nvarchar(128), SESSION_CONTEXT(N''ruby.tenant_id''))')`);
-            await db.execute(`CREATE SECURITY POLICY ${policy} ADD FILTER PREDICATE ${predicate}(tenant_id) ON ${table}, ADD BLOCK PREDICATE ${predicate}(tenant_id) ON ${table} AFTER INSERT WITH (STATE = ON)`);
+            await db.execute(`CREATE SECURITY POLICY ${policy} ADD FILTER PREDICATE ${predicate}(tenant_id) ON ${table}, ADD BLOCK PREDICATE ${predicate}(tenant_id) ON ${table} AFTER INSERT, ADD BLOCK PREDICATE ${predicate}(tenant_id) ON ${table} AFTER UPDATE WITH (STATE = ON)`);
             const items = (tenant: string) => db.withTenantTransaction(tenant, async tx =>
                 (await tx.query<{ item: string }>(`SELECT item FROM ${table} ORDER BY item`)).rows.map(row => row.item)
             );
@@ -62,6 +62,10 @@ describe("live SQL Server tenant-scoped transactions", () => {
             await expect(db.withTenantTransaction("tenant-a", async tx => {
                 await tx.execute(`INSERT INTO ${table} (tenant_id, item) VALUES (N'tenant-b', N'forbidden')`);
             })).rejects.toThrow();
+            await expect(db.withTenantTransaction("tenant-a", async tx => {
+                await tx.execute(`UPDATE ${table} SET tenant_id = N\'tenant-b\' WHERE item = N\'alpha\'`);
+            })).rejects.toThrow();
+            expect(await items("tenant-a")).toEqual(["alpha"]);
             expect(await items("tenant-b")).toEqual(["beta"]);
         } finally {
             await db.execute(`IF EXISTS (SELECT 1 FROM sys.security_policies WHERE name = N'ruby_rls_policy_${suffix}') DROP SECURITY POLICY ${policy}`);
