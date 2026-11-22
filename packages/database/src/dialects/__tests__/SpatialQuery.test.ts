@@ -16,6 +16,10 @@ describe("portable spatial query builder", () => {
         expect(result.sql).toContain(", $5)");
         expect(result.parameters.map(p => p.name)).toEqual(["p2", "p3", "p4"]);
     });
+    test("rejects unsupported engine before emitting SQL", () => {
+        const unsupported = { ...new SqlServerDialect(), engine: "sqlite" } as unknown as SqlServerDialect;
+        expect(() => createWithinDistanceQuery(unsupported, "location", point, 100)).toThrow("Unsupported spatial query");
+    });
     test("rejects invalid coordinates, radii, and offsets", () => {
         const dialect = new SqlServerDialect();
         expect(() => createWithinDistanceQuery(dialect, "location", { latitude: 91, longitude: 0 }, 10)).toThrow("latitude");
