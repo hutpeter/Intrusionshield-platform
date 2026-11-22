@@ -1,3 +1,5 @@
+import { createDatabaseDialect } from "../dialects/DatabaseDialect.js";
+import type { DatabaseDialect } from "../dialects/DatabaseDialect.js";
 import type { SqlCommand } from "./SqlCommand.js";
 import { QueryParameter } from "./QueryParameter.js";
 import type { QueryOperator } from "./QueryOperator.js";
@@ -10,6 +12,8 @@ import type { QueryOperator } from "./QueryOperator.js";
  * implementation.
  */
 export class SelectQueryBuilder {
+    public constructor(private readonly dialect: DatabaseDialect = createDatabaseDialect("sqlserver")) {}
+
     private readonly parameterBuilder = new QueryParameter();
 
     private readonly columns: string[] = [];
@@ -160,10 +164,17 @@ export class SelectQueryBuilder {
         }
 
         if (this.limitValue !== undefined) {
-            sql += ` OFFSET ${this.offsetValue ?? 0} ROWS`;
-            sql += ` FETCH NEXT ${this.limitValue} ROWS ONLY`;
+            sql += ` ${this.dialect.paginate(this.limitValue, this.offsetValue ?? 0)}`;
         } else if (this.offsetValue !== undefined) {
-            sql += ` OFFSET ${this.offsetValue} ROWS`;
+            sql += this.dialect.engine === "postgresql"
+                ? ` OFFSET ${this.offsetValue}`
+                : ` OFFSET ${this.offsetValue} ROWS`;
+        }
+
+        if (this.dialect.engine === "postgresql") {
+            sql = sql.replace(/@p(\\d+)\\b/g, (_match, index: string) =>
+                this.dialect.parameter(Number(index) + 1)
+            );
         }
 
         return {
