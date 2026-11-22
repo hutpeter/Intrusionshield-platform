@@ -1,4 +1,3 @@
-import type { IDatabaseProvider } from "../providers/IDatabaseProvider.js";
 import type { DatabaseEngine } from "../dialects/DatabaseDialect.js";
 import type { DatabaseMigration } from "./DatabaseMigration.js";
 import { migrationChecksum, planDatabaseMigrations, type AppliedMigrationRecord } from "./MigrationPlan.js";
