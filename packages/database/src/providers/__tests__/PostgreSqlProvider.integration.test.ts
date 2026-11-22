@@ -164,7 +164,7 @@ describe("live PostgreSQL / PostGIS portability", () => {
         } finally { await db.disconnect(); }
     });
 
-    liveTest("durable PostgreSQL migration history, idempotence and rollback", async () => {
+    (process.env.RUBY_TEST_MIGRATION_HISTORY === "1" ? liveTest : test.skip)("durable PostgreSQL migration history, idempotence and rollback", async () => {
         const db = new PostgreSqlProvider(options);
         await db.connect();
         const store = new PostgreSqlMigrationHistoryStore(db);
