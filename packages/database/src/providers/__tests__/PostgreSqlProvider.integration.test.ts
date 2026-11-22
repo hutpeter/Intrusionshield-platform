@@ -53,4 +53,33 @@ describe("live PostgreSQL / PostGIS portability", () => {
             await db.disconnect();
         }
     });
+    liveTest("tenant-scoped queries cannot read another tenant's records", async () => {
+        const db = new PostgreSqlProvider(options);
+        await db.connect();
+        const table = "ruby_portability_tenant_isolation";
+        try {
+            await db.execute(`CREATE TABLE IF NOT EXISTS ${table} (tenant_id text NOT NULL, record_id text NOT NULL, PRIMARY KEY (tenant_id, record_id))`);
+            await db.execute(`DELETE FROM ${table}`);
+            await db.execute(`INSERT INTO ${table} (tenant_id, record_id) VALUES ($1, $2), ($3, $4)`, [
+                { name: "p0", value: "tenant-a" }, { name: "p1", value: "a-only" },
+                { name: "p2", value: "tenant-b" }, { name: "p3", value: "b-only" }
+            ]);
+            const readTenant = async (tenantId: string) => db.query<{ record_id: string }>(
+                `SELECT record_id FROM ${table} WHERE tenant_id = $1 ORDER BY record_id`,
+                [{ name: "p0", value: tenantId }]
+            );
+            const [tenantA, tenantB] = await Promise.all([readTenant("tenant-a"), readTenant("tenant-b")]);
+            expect(tenantA.rows).toEqual([{ record_id: "a-only" }]);
+            expect(tenantB.rows).toEqual([{ record_id: "b-only" }]);
+            const crossTenant = await db.query<{ record_id: string }>(
+                `SELECT record_id FROM ${table} WHERE tenant_id = $1 AND record_id = $2`,
+                [{ name: "p0", value: "tenant-a" }, { name: "p1", value: "b-only" }]
+            );
+            expect(crossTenant.rows).toEqual([]);
+        } finally {
+            try { await db.execute(`DROP TABLE IF EXISTS ${table}`); }
+            finally { await db.disconnect(); }
+        }
+    });
+
 });
