@@ -53,3 +53,5 @@ export { validateGeoPoint, validateDistanceMetres } from "./dialects/GeoPoint.js
 export type { GeoPoint } from "./dialects/GeoPoint.js";
 export { createWithinDistanceQuery } from "./dialects/SpatialQuery.js";
 export type { SpatialPredicate } from "./dialects/SpatialQuery.js";
+
+export { createMigrationHistoryStore } from "./migrations/createMigrationHistoryStore.js";
