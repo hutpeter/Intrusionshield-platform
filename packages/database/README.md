@@ -55,3 +55,5 @@ GitHub Actions runs package tests and live integration tests against SQL Server 
 ### Spatial relations
 
 `spatialRelationPredicate` supports geography intersection on SQL Server and PostgreSQL/PostGIS, and PostGIS containment via explicit geography-to-geometry casts (planar WGS84 semantics, not geodesic polygon containment). SQL Server geography containment currently fails closed rather than emitting a potentially unsupported geometry-only method; a dedicated point-in-polygon adapter and cross-engine boundary semantics remain open work. Live engine-specific tests verify supported relationships. Do not assume containment parity until these semantics are implemented and verified.
+
+`pointInAreaPredicate` provides a common WGS84 geography point-in-polygon test via `STIntersects` / `ST_Intersects`, including boundary points. The caller must ensure that the right-hand geography column contains points; it is not a general polygon-contains-polygon operator. Live polygon fixtures exercise the helper on both engines.
