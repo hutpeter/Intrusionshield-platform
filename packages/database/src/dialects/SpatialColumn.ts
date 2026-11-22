@@ -20,8 +20,7 @@ export function createWgs84PointColumnSql(
     const name = dialect.quoteIdentifier(columnName);
     const nullSql = nullable ? "NULL" : "NOT NULL";
     if (dialect.engine === "sqlserver") return `${name} geography ${nullSql}`;
-    if (dialect.engine === "postgresql") return `${name} geography(Point,4326) ${nullSql}`;
-    throw new Error("Unsupported spatial column database engine.");
+    return `${name} geography(Point,4326) ${nullSql}`;
 }
 
 /**
