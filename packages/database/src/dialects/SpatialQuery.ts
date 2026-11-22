@@ -23,11 +23,11 @@ export function createWithinDistanceQuery(
 ): SpatialPredicate {
     const valid = validateGeoPoint(point);
     validateDistanceMetres(metres);
-    if (!Number.isSafeInteger(parameterOffset) || parameterOffset < 0) {
+    if (!Number.isSafeInteger(parameterOffset) || parameterOffset < 0 || !Number.isSafeInteger(parameterOffset + 3)) {
         throw new RangeError("Parameter offset must be a non-negative safe integer.");
     }
-    if (!geographyColumn || geographyColumn.includes(".")) {
-        throw new Error("Geography column must be a single non-empty identifier.");
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(geographyColumn)) {
+        throw new Error("Geography column must be a single safe SQL identifier.");
     }
     const first = dialect.engine === "postgresql" ? parameterOffset + 1 : parameterOffset;
     const sql = withinDistancePredicate(
