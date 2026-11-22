@@ -2,7 +2,6 @@ import { createWithinDistanceQuery } from "../../dialects/SpatialQuery.js";
 import { PostgreSqlMigrationHistoryStore } from "../../migrations/PostgreSqlMigrationHistoryStore.js";
 import { runVersionedMigrations } from "../../migrations/VersionedMigrationRunner.js";
 import { PostgreSqlDialect } from "../../dialects/DatabaseDialect.js";
-import { withinDistancePredicate } from "../../dialects/SpatialDialect.js";
 import { TenantDatabaseAccess } from "../TenantDatabaseAccess.js";
 import { describe, expect, test } from "@jest/globals";
 import { PostgreSqlProvider } from "../PostgreSqlProvider.js";
