@@ -1,5 +1,6 @@
 import { describe, expect, test } from "@jest/globals";
 import { PostgreSqlProvider } from "../PostgreSqlProvider.js";
+import { createTenantScopedDatabaseProvider } from "../createDatabaseProvider.js";
 
 const configured = Boolean(process.env.RUBY_TEST_POSTGRES_HOST);
 const liveTest = configured ? test : test.skip;
@@ -117,7 +118,7 @@ describe("live PostgreSQL / PostGIS portability", () => {
     });
 
     liveTest("tenant context is required and does not leak after transaction completion", async () => {
-        const db = new PostgreSqlProvider(options);
+        const db = createTenantScopedDatabaseProvider({ engine: "postgresql", options });
         await db.connect();
         try {
             await expect(db.withTenantTransaction("", async () => undefined)).rejects.toThrow("tenant identifier");
