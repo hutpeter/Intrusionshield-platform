@@ -67,4 +67,46 @@ describe("PostgreSQL scoped transactions", () => {
         expect(testDb.released).toBe(1);
     });
 
+    test("concurrent transactions use separate clients and commit independently", async () => {
+        const provider = new PostgreSqlProvider({ host: "localhost", port: 5432, database: "test", user: "test", password: "test" });
+        const calls: string[] = [];
+        let nextClient = 0;
+        const releases: number[] = [];
+        (provider as unknown as { pool: { connect: () => Promise<FakeClient> } }).pool = {
+            async connect() {
+                const id = ++nextClient;
+                return {
+                    async query(sql: string) {
+                        calls.push(`${id}:${sql}`);
+                        return { rows: [{ clientId: id }], rowCount: 1 };
+                    },
+                    release() { releases.push(id); }
+                };
+            }
+        };
+        let releaseFirst!: () => void;
+        const firstGate = new Promise<void>(resolve => { releaseFirst = resolve; });
+        let notifyFirst!: () => void;
+        const firstStarted = new Promise<void>(resolve => { notifyFirst = resolve; });
+        const first = provider.withTransaction(async db => {
+            const result = await db.query<{ clientId: number }>("SELECT first");
+            notifyFirst();
+            await firstGate;
+            return result.rows[0]?.clientId;
+        });
+        await firstStarted;
+        const second = await provider.withTransaction(async db => {
+            const result = await db.query<{ clientId: number }>("SELECT second");
+            return result.rows[0]?.clientId;
+        });
+        releaseFirst();
+        expect(await first).toBe(1);
+        expect(second).toBe(2);
+        expect(calls).toContain("1:SELECT first");
+        expect(calls).toContain("2:SELECT second");
+        expect(calls).toContain("1:COMMIT");
+        expect(calls).toContain("2:COMMIT");
+        expect(releases.sort()).toEqual([1, 2]);
+    });
+
 });
