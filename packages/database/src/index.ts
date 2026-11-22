@@ -60,3 +60,5 @@ export { createGeographyIndexSql } from "./dialects/SpatialIndex.js";
 
 export { spatialRelationPredicate, pointInAreaPredicate } from "./dialects/SpatialRelations.js";
 export type { SpatialRelation } from "./dialects/SpatialRelations.js";
+
+export { createDistanceExpression } from "./dialects/SpatialDistance.js";
