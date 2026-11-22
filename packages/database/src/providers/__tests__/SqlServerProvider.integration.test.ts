@@ -1,3 +1,4 @@
+import { createWithinDistanceQuery } from "../../dialects/SpatialQuery.js";
 import { SqlServerProvider } from "../SqlServerProvider.js";
 import { SqlServerMigrationHistoryStore } from "../../migrations/SqlServerMigrationHistoryStore.js";
 import { runVersionedMigrations } from "../../migrations/VersionedMigrationRunner.js";
@@ -96,10 +97,10 @@ describe("live SQL Server tenant-scoped transactions", () => {
         const db = createTenantScopedDatabaseProvider({ engine: "sqlserver", options });
         await db.connect();
         try {
-            const predicate = withinDistancePredicate(new SqlServerDialect(), "location", "@p0", "@p1", "@p2");
+            const predicate = createWithinDistanceQuery(new SqlServerDialect(), "location", { latitude: 45.0001, longitude: -75.0 }, 100);
             const result = await db.query<{ nearby: number }>(
-                `SELECT CASE WHEN ${predicate} THEN 1 ELSE 0 END AS nearby FROM (SELECT geography::Point(45.0, -75.0, 4326) AS location) AS site`,
-                [{ name: "p0", value: 45.0001 }, { name: "p1", value: -75.0 }, { name: "p2", value: 100 }]
+                `SELECT CASE WHEN ${predicate.sql} THEN 1 ELSE 0 END AS nearby FROM (SELECT geography::Point(45.0, -75.0, 4326) AS location) AS site`,
+                [...predicate.parameters]
             );
             expect(result.rows[0]?.nearby).toBe(1);
         } finally { await db.disconnect(); }
