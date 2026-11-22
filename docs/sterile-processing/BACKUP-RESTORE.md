@@ -7,6 +7,20 @@ Those remain separate recovery dependencies under the owner's existing controls.
 A same-disk snapshot is useful for logical recovery, not protection from disk loss;
 retain completed private bundles on an appropriately protected separate medium.
 
+## Owner acceptance — November 22
+
+The Windows owner completed backup, verification and isolated restore, then
+started the restored runtime. Restored operator grants were version 9 with
+Reports — View. VERIFY-RECALL-001 remained open with issue and one instrument
+blocked; TEST-EC-001 remained Received with its return link. These are observed
+local recovery checks, not SQL identity, disk-loss or clinical recovery acceptance.
+
+The source data folder initially inherited broad Windows access. Backup refused
+it until the owner secured it from an elevated terminal with explicit current
+user, SYSTEM and Administrators access. Keep these restrictions in place.
+Set NODE_EXTRA_CA_CERTS to the approved SQL CA file in each new startup terminal;
+restoring configuration does not restore process environment variables.
+
 ## Owner commands
 
 Update to `feature/sterile-local-backup`. Stop the account runtime with Ctrl+C;

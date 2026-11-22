@@ -1,5 +1,28 @@
 # Tiger checkpoint — November 18, 2026
 
+## November 22 owner backup/restore acceptance
+
+The owner created and verified the paired backup, restored it into a separate
+private folder, and started the isolated account runtime. Screenshots confirmed
+operator access version 9, Reports — View and alphabetical permission labels;
+VERIFY-RECALL-001 remained open with issue blocked and one instrument blocked;
+TEST-EC-001 remained Received and linked to VERIFY-RETURN-001. No new processing,
+recall clearance or grant changes were requested during this read-only drill.
+The administrator's denied recall request was the expected permission boundary;
+the operator could view the record. The owner subsequently reported ready after
+instructions to stop the isolated runtime and restart the original configuration.
+
+Windows source-folder checks initially refused inherited broad Users and
+Authenticated Users access on the data directory. The owner applied explicit
+current-user/SYSTEM/Administrators access from an elevated PowerShell window;
+backup then succeeded. Startup needed NODE_EXTRA_CA_CERTS in the active terminal.
+The large Vite chunk warning did not prevent the build or restored startup.
+
+This completes the local paired-store backup, verification and restore startup
+owner round. SQL identity backup, TLS/secrets recovery and protected off-device
+copies are separate and are not owner-confirmed. Do not repeat this acceptance
+round or reset existing records. TMS remains paused; Azure support remains pending.
+
 ## November 21 backup/restore increment
 
 The owner confirmed alphabetical permissions and restoration of the operator's
