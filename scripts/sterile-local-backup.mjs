@@ -378,14 +378,17 @@ export async function verifyAccountBackup(configFile, backupDirectory) {
   await verifyFiles(root, manifest, config);
   return { directory: root, manifest };
 }
-export async function backupAccount(configFile, parent) {
+export async function backupAccount(configFile, parent, progress = () => {}) {
+  progress("configuration");
   const config = loadAccountConfiguration(absolute(configFile));
+  progress("runtime stopped check");
   await requireStopped(config.origin);
   const sources = { workflow: config.workflowFile, access: config.accessFile },
     locks = [];
   let directory;
   try {
     for (const kind of ["workflow", "access"]) {
+      progress(kind + " source privacy and write reservation");
       regular(sources[kind]);
       const lock = new DatabaseSync(sources[kind]);
       locks.push(lock);
@@ -393,11 +396,15 @@ export async function backupAccount(configFile, parent) {
     }
     const capturedAt = new Date().toISOString(),
       tableCounts = {};
-    for (const kind of ["workflow", "access"])
+    for (const kind of ["workflow", "access"]) {
+      progress(kind + " source integrity");
       tableCounts[kind] = inspect(sources[kind], kind, config);
+    }
+    progress("destination directory privacy");
     directory = newDirectory(parent, "sterile-backup");
     const files = {};
     for (const kind of ["workflow", "access"]) {
+      progress(kind + " snapshot creation and verification");
       const target = join(directory, kind + ".sqlite");
       closeSync(openSync(target, "wx", 0o600));
       const source = new DatabaseSync(sources[kind], { readOnly: true });
@@ -426,7 +433,9 @@ export async function backupAccount(configFile, parent) {
       files,
       tableCounts,
     };
+    progress("paired snapshot verification");
     await verifyFiles(directory, manifest, config);
+    progress("manifest publication");
     const manifestFile = join(directory, "manifest.json");
     writeFileSync(manifestFile, JSON.stringify(manifest, null, 2) + "\n", {
       flag: "wx",

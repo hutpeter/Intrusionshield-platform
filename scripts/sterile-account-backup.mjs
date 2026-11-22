@@ -4,6 +4,7 @@ import {
   restoreAccountBackup,
   LocalBackupError,
 } from "./sterile-local-backup.mjs";
+let stage = "arguments";
 try {
   const args = process.argv.slice(2),
     action = args.shift();
@@ -14,7 +15,10 @@ try {
     args[0] === "--config" &&
     args[2] === "--directory"
   )
-    result = await backupAccount(args[1], args[3]);
+    result = await backupAccount(args[1], args[3], (value) => {
+      stage = value;
+      console.log("Checking: " + stage);
+    });
   else if (
     action === "verify" &&
     args.length === 4 &&
@@ -52,6 +56,23 @@ try {
     "Workflow and access records only. SQL identities, account secrets and TLS recovery remain separate.",
   );
 } catch (error) {
+  console.error("Failed stage: " + stage);
+  const safeCodes = new Set([
+    "ENOENT",
+    "EACCES",
+    "EPERM",
+    "ENOSPC",
+    "EBUSY",
+    "EEXIST",
+    "ERR_SQLITE_ERROR",
+  ]);
+  if (safeCodes.has(error?.code)) console.error("System code: " + error.code);
+  if (Number.isInteger(error?.errcode))
+    console.error("SQLite code: " + error.errcode);
+  if (stage.includes("privacy") && !(error instanceof LocalBackupError))
+    console.error(
+      "Check that the source or destination parent has inheritance disabled and allows only your Windows account, SYSTEM and Administrators. Do not loosen its permissions.",
+    );
   console.error(
     error instanceof LocalBackupError
       ? error.code + ": " + error.message
