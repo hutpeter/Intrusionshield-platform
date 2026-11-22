@@ -57,8 +57,7 @@ export function createDatabaseDialect(engine: DatabaseEngine): DatabaseDialect {
         case "sqlserver": return new SqlServerDialect();
         case "postgresql": return new PostgreSqlDialect();
         default: {
-            const unsupported: never = engine;
-            throw new Error(`Unsupported database engine: ${unsupported}`);
+            throw new Error(`Unsupported database engine: ${String(engine)}`);
         }
     }
 }
