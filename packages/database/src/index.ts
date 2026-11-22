@@ -55,3 +55,5 @@ export { createWithinDistanceQuery } from "./dialects/SpatialQuery.js";
 export type { SpatialPredicate } from "./dialects/SpatialQuery.js";
 
 export { createMigrationHistoryStore } from "./migrations/createMigrationHistoryStore.js";
+
+export { createGeographyIndexSql } from "./dialects/SpatialIndex.js";
