@@ -42,10 +42,11 @@ describe("versioned migration orchestration", () => {
         expect(executed).toEqual([]);
     });
     test("preserves history when a migration fails before recording", async () => {
-        const { adapter, history } = store();
+        const { adapter, history, events } = store();
         const failing: MigrationHistoryStore = { ...adapter, applyAndRecord: async () => { throw new Error("DDL failed"); } };
         await expect(runVersionedMigrations("sqlserver", [first], failing)).rejects.toThrow("DDL failed");
         expect(history).toEqual([]);
+        expect(events).toEqual(["lock", "unlock"]);
     });
     test("skips previously applied prefix", async () => {
         const { adapter, executed } = store([{ id: "001", checksum: migrationChecksum("sqlserver", first) }]);
