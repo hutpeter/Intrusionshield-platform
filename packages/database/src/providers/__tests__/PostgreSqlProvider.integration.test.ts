@@ -116,4 +116,22 @@ describe("live PostgreSQL / PostGIS portability", () => {
         }
     });
 
+    liveTest("tenant context is required and does not leak after transaction completion", async () => {
+        const db = new PostgreSqlProvider(options);
+        await db.connect();
+        try {
+            await expect(db.withTenantTransaction("", async () => undefined)).rejects.toThrow("tenant identifier");
+            const inside = await db.withTenantTransaction("tenant-a", async tx =>
+                (await tx.query<{ tenant_id: string }>("SELECT current_setting('ruby.tenant_id', true) AS tenant_id")).rows[0]?.tenant_id
+            );
+            expect(inside).toBe("tenant-a");
+            const outside = await db.query<{ tenant_id: string | null }>("SELECT current_setting('ruby.tenant_id', true) AS tenant_id");
+            expect(outside.rows[0]?.tenant_id ?? "").toBe("");
+            const second = await db.withTenantTransaction("tenant-b", async tx =>
+                (await tx.query<{ tenant_id: string }>("SELECT current_setting('ruby.tenant_id', true) AS tenant_id")).rows[0]?.tenant_id
+            );
+            expect(second).toBe("tenant-b");
+        } finally { await db.disconnect(); }
+    });
+
 });
