@@ -30,3 +30,6 @@ export type { PostgreSqlOptions } from "./providers/PostgreSqlProvider.js";
 
 export { createDatabaseProvider, createTenantScopedDatabaseProvider } from "./providers/createDatabaseProvider.js";
 export type { DatabaseProviderConfiguration } from "./providers/createDatabaseProvider.js";
+
+export { TenantDatabaseAccess } from "./providers/TenantDatabaseAccess.js";
+export type { TenantDatabaseSession } from "./providers/TenantDatabaseAccess.js";
