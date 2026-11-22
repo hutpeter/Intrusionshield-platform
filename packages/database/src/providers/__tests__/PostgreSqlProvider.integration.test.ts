@@ -1,3 +1,4 @@
+import { createWithinDistanceQuery } from "../../dialects/SpatialQuery.js";
 import { PostgreSqlMigrationHistoryStore } from "../../migrations/PostgreSqlMigrationHistoryStore.js";
 import { runVersionedMigrations } from "../../migrations/VersionedMigrationRunner.js";
 import { PostgreSqlDialect } from "../../dialects/DatabaseDialect.js";
@@ -155,10 +156,10 @@ describe("live PostgreSQL / PostGIS portability", () => {
         const db = createTenantScopedDatabaseProvider({ engine: "postgresql", options });
         await db.connect();
         try {
-            const predicate = withinDistancePredicate(new PostgreSqlDialect(), "location", "$1", "$2", "$3");
+            const predicate = createWithinDistanceQuery(new PostgreSqlDialect(), "location", { latitude: 45.0001, longitude: -75.0 }, 100);
             const result = await db.query<{ nearby: boolean }>(
-                `SELECT ${predicate} AS nearby FROM (SELECT ST_SetSRID(ST_MakePoint(-75.0, 45.0), 4326)::geography AS location) AS site`,
-                [{ name: "latitude", value: 45.0001 }, { name: "longitude", value: -75.0 }, { name: "metres", value: 100 }]
+                `SELECT ${predicate.sql} AS nearby FROM (SELECT ST_SetSRID(ST_MakePoint(-75.0, 45.0), 4326)::geography AS location) AS site`,
+                [...predicate.parameters]
             );
             expect(result.rows[0]?.nearby).toBe(true);
         } finally { await db.disconnect(); }
