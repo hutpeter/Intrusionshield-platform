@@ -1,4 +1,5 @@
 import { Pool, type PoolClient } from "pg";
+import { AsyncLocalStorage } from "node:async_hooks";
 import type { SqlParameter } from "../SqlParameter.js";
 import type { SqlResult } from "../SqlResult.js";
 import { normalizeDatabaseValue } from "../Uuid.js";
@@ -18,6 +19,7 @@ export interface PostgreSqlOptions {
 export class PostgreSqlProvider implements IDatabaseProvider {
     private pool: Pool | null = null;
     private client: PoolClient | null = null;
+    private readonly transactionContext = new AsyncLocalStorage<PoolClient>();
 
     constructor(private readonly options: PostgreSqlOptions) {}
 
@@ -49,8 +51,12 @@ export class PostgreSqlProvider implements IDatabaseProvider {
 
     async query<T>(sql: string, parameters: SqlParameter[] = []): Promise<SqlResult<T>> {
         const values = parameters.map(p => p.value);
-        const result = this.client
-            ? await this.client.query(sql, values)
+        const activeClient = this.client;
+        if (activeClient && this.transactionContext.getStore() !== activeClient) {
+            throw new Error("Database transaction belongs to another asynchronous context.");
+        }
+        const result = activeClient
+            ? await activeClient.query(sql, values)
             : await this.requirePool().query(sql, values);
         return { rows: normalizeDatabaseValue(result.rows) as T[], rowCount: result.rowCount ?? 0 };
     }
@@ -66,6 +72,7 @@ export class PostgreSqlProvider implements IDatabaseProvider {
         try {
             await client.query("BEGIN");
             this.client = client;
+            this.transactionContext.enterWith(client);
         } catch (error) {
             client.release();
             throw error;
@@ -75,6 +82,7 @@ export class PostgreSqlProvider implements IDatabaseProvider {
     async commitTransaction(): Promise<void> {
         if (!this.client) throw new Error("No active database transaction.");
         const client = this.client;
+        if (this.transactionContext.getStore() !== client) throw new Error("Database transaction belongs to another asynchronous context.");
         try { await client.query("COMMIT"); }
         finally { this.client = null; client.release(); }
     }
@@ -82,6 +90,7 @@ export class PostgreSqlProvider implements IDatabaseProvider {
     async rollbackTransaction(): Promise<void> {
         if (!this.client) return;
         const client = this.client;
+        if (this.transactionContext.getStore() !== client) throw new Error("Database transaction belongs to another asynchronous context.");
         try { await client.query("ROLLBACK"); }
         finally { this.client = null; client.release(); }
     }
