@@ -15,7 +15,7 @@ export function spatialRelationPredicate(
     relation: SpatialRelation
 ): string {
     const valid = /^[A-Za-z_][A-Za-z0-9_]*$/;
-    if (!valid.test(leftColumn) || !valid.test(rightColumn)) {
+    if (!valid.test(leftColumn) || !valid.test(rightColumn) || leftColumn.length > 63 || rightColumn.length > 63) {
         throw new Error("Spatial relation columns must be safe SQL identifiers.");
     }
     if (relation !== "contains" && relation !== "intersects") {
