@@ -23,8 +23,12 @@ export function spatialRelationPredicate(
     const left = dialect.quoteIdentifier(leftColumn);
     const right = dialect.quoteIdentifier(rightColumn);
     if (dialect.engine === "sqlserver") {
-        const method = relation === "contains" ? "STContains" : "STIntersects";
-        return `(${left}.${method}(${right}) = 1)`;
+        if (relation === "contains") {
+            // SQL Server geography supports STIntersects for a point-in-area test.
+            // A full polygon-contains-polygon operation requires a separate adapter.
+            throw new Error("SQL Server geography containment requires a point-in-area adapter.");
+        }
+        return `(${left}.STIntersects(${right}) = 1)`;
     }
     if (dialect.engine === "postgresql") {
         const method = relation === "contains" ? "ST_Contains" : "ST_Intersects";
