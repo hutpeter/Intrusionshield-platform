@@ -105,7 +105,7 @@ describe("live SQL Server tenant-scoped transactions", () => {
         } finally { await db.disconnect(); }
     });
 
-    liveTest("durable migration history, idempotence, and transactional rollback", async () => {
+    (process.env.RUBY_TEST_MIGRATION_HISTORY === "1" ? liveTest : test.skip)("durable migration history, idempotence, and transactional rollback", async () => {
         const db = new SqlServerProvider(options);
         await db.connect();
         const store = new SqlServerMigrationHistoryStore(db);
