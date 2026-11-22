@@ -26,6 +26,7 @@ describe("cross-engine geography relationships", () => {
     test("rejects unsafe columns and unknown relations", () => {
         const dialect = new SqlServerDialect();
         expect(() => spatialRelationPredicate(dialect, "area);DROP TABLE x", "location", "contains")).toThrow("safe SQL");
+        expect(() => spatialRelationPredicate(dialect, "x".repeat(64), "location", "intersects")).toThrow("safe SQL");
         expect(() => spatialRelationPredicate(dialect, "area", "location", "overlaps" as "contains")).toThrow("Unsupported");
     });
 });
