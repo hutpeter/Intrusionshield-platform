@@ -40,3 +40,16 @@ export function spatialRelationPredicate(
     }
     throw new Error("Unsupported spatial relation database engine.");
 }
+
+/**
+ * WGS84 point-in-area test for geography columns. The second column must
+ * contain Point geography values; boundary points count as inside.
+ * Both engines use geography intersection, avoiding planar cast semantics.
+ */
+export function pointInAreaPredicate(
+    dialect: DatabaseDialect,
+    areaColumn: string,
+    pointColumn: string
+): string {
+    return spatialRelationPredicate(dialect, areaColumn, pointColumn, "intersects");
+}
