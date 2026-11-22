@@ -1,4 +1,4 @@
-import { spatialRelationPredicate } from "../../dialects/SpatialRelations.js";
+import { pointInAreaPredicate, spatialRelationPredicate } from "../../dialects/SpatialRelations.js";
 import { createGeographyIndexSql } from "../../dialects/SpatialIndex.js";
 import { createWithinDistanceQuery } from "../../dialects/SpatialQuery.js";
 import { SqlServerProvider } from "../SqlServerProvider.js";
@@ -170,6 +170,16 @@ describe("live SQL Server tenant-scoped transactions", () => {
             const predicate = spatialRelationPredicate(new SqlServerDialect(), "area", "location", "intersects");
             const result = await db.query<{ hit: number }>(`SELECT CASE WHEN ${predicate} THEN 1 ELSE 0 END AS hit FROM (SELECT geography::Point(45, -75, 4326) AS area, geography::Point(45, -75, 4326) AS location) AS spatial_test`);
             expect(result.rows[0]?.hit).toBe(1);
+        } finally { await db.disconnect(); }
+    });
+
+    liveTest("SQL Server geography point-in-polygon matches interior and excludes exterior", async () => {
+        const db = new SqlServerProvider(options);
+        await db.connect();
+        try {
+            const predicate = pointInAreaPredicate(new SqlServerDialect(), "area", "point");
+            const result = await db.query<{ inside: number }>(`SELECT CASE WHEN ${predicate} THEN 1 ELSE 0 END AS inside FROM (SELECT geography::STGeomFromText('POLYGON((-76 44,-76 46,-74 46,-74 44,-76 44))',4326) AS area, geography::Point(45,-75,4326) AS point) AS spatial_test`);
+            expect(result.rows[0]?.inside).toBe(1);
         } finally { await db.disconnect(); }
     });
 
