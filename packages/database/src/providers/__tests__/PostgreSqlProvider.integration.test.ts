@@ -1,3 +1,4 @@
+import { createWgs84PointColumnSql } from "../../dialects/SpatialColumn.js";
 import { createDistanceExpression } from "../../dialects/SpatialDistance.js";
 import { pointInAreaPredicate, spatialRelationPredicate } from "../../dialects/SpatialRelations.js";
 import { createGeographyIndexSql } from "../../dialects/SpatialIndex.js";
@@ -255,6 +256,24 @@ describe("live PostgreSQL / PostGIS portability", () => {
             });
             await store.withExclusiveLock(async () => { await store.readApplied(); });
         } finally { await db.disconnect(); }
+    });
+
+    liveTest("PostGIS WGS84 point column rejects wrong SRID and non-Point geography", async () => {
+        const db = new PostgreSqlProvider(options);
+        await db.connect();
+        const table = "ruby_spatial_point_check_test";
+        try {
+            await db.execute(`DROP TABLE IF EXISTS ${table}`);
+            await db.execute(`CREATE TABLE ${table} (id integer PRIMARY KEY, ${createWgs84PointColumnSql(new PostgreSqlDialect(), "location")})`);
+            await db.execute(`INSERT INTO ${table} (id, location) VALUES (1, ST_SetSRID(ST_MakePoint(-75,45),4326)::geography)`);
+            await expect(db.execute(`INSERT INTO ${table} (id, location) VALUES (2, ST_SetSRID(ST_MakePoint(-75,45),4269)::geography)`)).rejects.toThrow();
+            await expect(db.execute(`INSERT INTO ${table} (id, location) VALUES (3, ST_GeogFromText('LINESTRING(-75 45,-74 46)'))`)).rejects.toThrow();
+            const result = await db.query<{ total: string }>(`SELECT COUNT(*)::text AS total FROM ${table}`);
+            expect(result.rows[0]?.total).toBe("1");
+        } finally {
+            await db.execute(`DROP TABLE IF EXISTS ${table}`);
+            await db.disconnect();
+        }
     });
 
     liveTest("PostGIS geography orders nearby sites by distance in metres", async () => {
