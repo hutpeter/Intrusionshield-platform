@@ -82,3 +82,6 @@ The versioned migration runner validates the complete requested engine-specific 
 ### WGS84 point storage declarations
 
 `createWgs84PointColumnSql` generates a reviewed-migration column declaration for point locations. PostGIS uses `geography(Point,4326)` and requires the PostGIS extension to be provisioned by an appropriately privileged deployment role. SQL Server uses `geography`, which **does not enforce Point geometry type or SRID 4326 at the column type level**; applications must validate values and provision appropriate constraints where necessary. The helper does not create tables, enforce tenant isolation, install PostGIS, or automatically apply migrations.
+
+
+For SQL Server, `createWgs84PointCheckSql` generates the CHECK predicate for `STSrid = 4326`, `STGeometryType() = 'Point'`, and nonempty geography values. Reviewed migrations must attach this expression to a named CHECK constraint; use the nullable variant when the column permits NULL. PostGIS's `geography(Point,4326)` type already restricts geometry type and SRID, so the helper returns `TRUE` for PostgreSQL; an additional nonempty-geometry constraint is still required if empty points must be prohibited. These constraints are not automatically installed by the column helper.
