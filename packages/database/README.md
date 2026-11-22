@@ -1,0 +1,39 @@
+# Ruby database portability
+
+The shared database package supports **SQL Server** and **PostgreSQL** through provider-specific adapters. SQL text and schema migrations are not yet universally portable; vertical-specific repositories must be audited and migrated separately.
+
+## Tenant-safe application entry point
+
+Use `createTenantScopedDatabaseProvider` and `TenantDatabaseAccess` for tenant-owned data. Resolve the tenant identifier from authenticated server-side authorization context, **never from an unverified request parameter**.
+
+```ts
+import { createTenantScopedDatabaseProvider, TenantDatabaseAccess } from "@intrusionshield/database";
+
+const provider = createTenantScopedDatabaseProvider(config);
+await provider.connect();
+const tenantData = new TenantDatabaseAccess(provider);
+const result = await tenantData.forTenant(authenticatedTenantId, session =>
+    session.query("SELECT item FROM tenant_owned_items")
+);
+```
+
+The callback only receives `query` and `execute`; the session expires when the callback ends. Avoid retaining raw providers in application services that handle tenant-owned data. Privileged administration and migrations must use a separate, explicitly authorized path.
+
+## Database-enforced tenant isolation
+
+**The facade is not a substitute for Row-Level Security.** Every tenant-owned table must have a fail-closed read predicate and write-blocking predicates, with no-tenant-context behavior tested. SQL Server policies can use `SESSION_CONTEXT(N'ruby.tenant_id')`; PostgreSQL policies can use `current_setting('ruby.tenant_id', true)`. The PostgreSQL provider uses a transaction-local setting; the SQL Server provider explicitly clears connection-scoped session context before releasing its transaction.
+
+Schema provisioning, policy deployment, migration ordering, privileged-role separation, cross-tenant administrator access, and production permissions still require implementation and verification for each vertical.
+
+## Validation
+
+GitHub Actions runs package tests and live integration tests against SQL Server 2022 and PostgreSQL/PostGIS. These validate adapter behavior and representative RLS scenarios, **not** complete isolation across all Ruby services. See `.github/workflows/database-portability.yml`.
+
+## Remaining release gates
+
+1. Inventory SQL Server-specific queries, stored procedures, schema definitions, and GIS types across all vertical branches.
+2. Introduce provider-specific, versioned schema migrations, including SQL Server and PostgreSQL RLS policies.
+3. Wire the tenant-only facade into Athena, Tiger, BAS/EMS, and other tenant-owned repositories; reject unscoped access.
+4. Validate role permissions, concurrency, failure cleanup, transaction nesting, and tenant isolation with non-privileged accounts.
+5. Add spatial adapters for SQL Server spatial types and PostGIS, including SRID handling, spatial indexes, and distance/containment queries.
+6. Run end-to-end acceptance suites against both engines before merging or claiming on-premises database portability.
