@@ -1,3 +1,4 @@
+import { createDistanceExpression } from "../../dialects/SpatialDistance.js";
 import { pointInAreaPredicate, spatialRelationPredicate } from "../../dialects/SpatialRelations.js";
 import { createGeographyIndexSql } from "../../dialects/SpatialIndex.js";
 import { createWithinDistanceQuery } from "../../dialects/SpatialQuery.js";
@@ -240,6 +241,18 @@ describe("live PostgreSQL / PostGIS portability", () => {
             expect(result.rows[0]?.inside).toBe(true);
             const outside = await db.query<{ inside: boolean }>(`SELECT ${predicate} AS inside FROM (SELECT ST_GeogFromText('POLYGON((-76 44,-74 44,-74 46,-76 46,-76 44))') AS area, ST_SetSRID(ST_MakePoint(-75,48),4326)::geography AS point) AS spatial_test`);
             expect(outside.rows[0]?.inside).toBe(false);
+        } finally { await db.disconnect(); }
+    });
+
+    liveTest("PostGIS geography orders nearby sites by distance in metres", async () => {
+        const db = new PostgreSqlProvider(options);
+        await db.connect();
+        try {
+            const distance = createDistanceExpression(new PostgreSqlDialect(), "location", { latitude: 45, longitude: -75 });
+            const result = await db.query<{ site: string; metres: number }>(`SELECT site, ${distance.sql} AS metres FROM (SELECT 'near' AS site, ST_SetSRID(ST_MakePoint(-75,45.001),4326)::geography AS location UNION ALL SELECT 'far', ST_SetSRID(ST_MakePoint(-75,46),4326)::geography) AS sites ORDER BY metres ASC`, [...distance.parameters]);
+            expect(result.rows.map(row => row.site)).toEqual(["near", "far"]);
+            expect(result.rows[0]?.metres).toBeGreaterThan(0);
+            expect(result.rows[0]?.metres).toBeLessThan(result.rows[1]!.metres);
         } finally { await db.disconnect(); }
     });
 
