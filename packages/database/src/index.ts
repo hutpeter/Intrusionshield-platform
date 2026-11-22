@@ -38,3 +38,6 @@ export { withinDistancePredicate } from "./dialects/SpatialDialect.js";
 
 export { applyDatabaseMigrations } from "./migrations/DatabaseMigration.js";
 export type { DatabaseMigration } from "./migrations/DatabaseMigration.js";
+
+export { planDatabaseMigrations, migrationChecksum } from "./migrations/MigrationPlan.js";
+export type { AppliedMigrationRecord } from "./migrations/MigrationPlan.js";
