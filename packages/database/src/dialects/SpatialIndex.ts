@@ -11,11 +11,14 @@ export function createGeographyIndexSql(
     indexName: string
 ): string {
     const validIdentifier = /^[A-Za-z_][A-Za-z0-9_]*$/;
+    // Keep identifiers within SQL Server sysname (128) and PostgreSQL default (63 bytes).
+    // ASCII-only names make character count equivalent to byte count.
+    const validName = (name: string): boolean => name.length <= 63 && validIdentifier.test(name);
     const segments = table.split(".");
-    if (segments.length < 1 || segments.length > 2 || segments.some(part => !validIdentifier.test(part))) {
+    if (segments.length < 1 || segments.length > 2 || segments.some(part => !validName(part))) {
         throw new Error("Spatial table must be a safe table or schema.table identifier.");
     }
-    if (!validIdentifier.test(column) || !validIdentifier.test(indexName)) {
+    if (!validName(column) || !validName(indexName)) {
         throw new Error("Spatial column and index names must be safe SQL identifiers.");
     }
     const qualifiedTable = segments.map(part => dialect.quoteIdentifier(part)).join(".");
