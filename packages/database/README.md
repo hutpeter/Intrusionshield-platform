@@ -50,3 +50,8 @@ GitHub Actions runs package tests and live integration tests against SQL Server 
 ### Spatial indexes
 
 `createGeographyIndexSql` generates provider-specific WGS84 geography index DDL: SQL Server `GEOGRAPHY_AUTO_GRID` spatial indexes and PostGIS GiST indexes. The table, column and index names are strictly validated, and schema-qualified table names are supported. The resulting DDL belongs in versioned migrations; do not execute it dynamically from application requests. Live integration checks create and inspect disposable spatial indexes on both engines. Coordinate-reference transformations, spatial intersection/containment, and multi-geometry support remain future work.
+
+
+### Spatial relations
+
+`spatialRelationPredicate` supports geography intersection on SQL Server and PostgreSQL/PostGIS, and PostGIS geography containment. SQL Server geography containment currently fails closed rather than emitting a potentially unsupported geometry-only method; a dedicated point-in-polygon adapter and cross-engine boundary semantics remain open work. Live engine-specific tests verify supported relationships. Do not assume containment parity until these semantics are implemented and verified.
