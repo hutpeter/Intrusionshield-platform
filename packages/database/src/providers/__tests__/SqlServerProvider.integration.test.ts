@@ -1,3 +1,4 @@
+import { createDistanceExpression } from "../../dialects/SpatialDistance.js";
 import { pointInAreaPredicate, spatialRelationPredicate } from "../../dialects/SpatialRelations.js";
 import { createGeographyIndexSql } from "../../dialects/SpatialIndex.js";
 import { createWithinDistanceQuery } from "../../dialects/SpatialQuery.js";
@@ -182,6 +183,18 @@ describe("live SQL Server tenant-scoped transactions", () => {
             expect(result.rows[0]?.inside).toBe(1);
             const outside = await db.query<{ inside: number }>(`SELECT CASE WHEN ${predicate} THEN 1 ELSE 0 END AS inside FROM (SELECT geography::STGeomFromText('POLYGON((-76 44,-76 46,-74 46,-74 44,-76 44))',4326) AS area, geography::Point(48,-75,4326) AS point) AS spatial_test`);
             expect(outside.rows[0]?.inside).toBe(0);
+        } finally { await db.disconnect(); }
+    });
+
+    liveTest("SQL Server geography orders nearby sites by distance in metres", async () => {
+        const db = new SqlServerProvider(options);
+        await db.connect();
+        try {
+            const distance = createDistanceExpression(new SqlServerDialect(), "location", { latitude: 45, longitude: -75 });
+            const result = await db.query<{ site: string; metres: number }>(`SELECT site, ${distance.sql} AS metres FROM (SELECT 'near' AS site, geography::Point(45.001,-75,4326) AS location UNION ALL SELECT 'far', geography::Point(46,-75,4326)) AS sites ORDER BY metres ASC`, [...distance.parameters]);
+            expect(result.rows.map(row => row.site)).toEqual(["near", "far"]);
+            expect(result.rows[0]?.metres).toBeGreaterThan(0);
+            expect(result.rows[0]?.metres).toBeLessThan(result.rows[1]!.metres);
         } finally { await db.disconnect(); }
     });
 
