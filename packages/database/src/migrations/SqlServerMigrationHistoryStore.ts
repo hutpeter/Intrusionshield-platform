@@ -1,31 +1,46 @@
-import type { IDatabaseProvider } from "../providers/IDatabaseProvider.js";
+import type { SqlServerProvider } from "../providers/SqlServerProvider.js";
 import type { DatabaseMigration } from "./DatabaseMigration.js";
 import type { AppliedMigrationRecord } from "./MigrationPlan.js";
 import type { MigrationHistoryStore } from "./VersionedMigrationRunner.js";
+import { AsyncLocalStorage } from "node:async_hooks";
 
-/**
- * SQL Server migration store. Uses a dedicated connection transaction for each
- * DDL + history write, and SQL Server application locks for deployment exclusion.
- * The migration principal must have CREATE TABLE and schema-change privileges.
- */
+/** All migration DDL and history writes share a single SQL Server transaction. */
 export class SqlServerMigrationHistoryStore implements MigrationHistoryStore {
-    constructor(private readonly provider: IDatabaseProvider) {}
+    private readonly lockContext = new AsyncLocalStorage<boolean>();
+    constructor(private readonly provider: SqlServerProvider) {}
 
     async withExclusiveLock<T>(work: () => Promise<T>): Promise<T> {
-        // A session-owned lock must remain on the same connection throughout work.
-        // The generic provider does not expose a pinned connection, so fail closed
-        // until the dedicated connection/locking adapter is available.
-        throw new Error("SQL Server migration history locking requires a pinned dedicated connection.");
+        if (this.lockContext.getStore()) throw new Error("Nested migration deployment is not supported.");
+        return this.provider.withTransaction(async tx => {
+            const lock = await tx.query<{ lock_result: number }>(
+                "DECLARE @result int; EXEC @result = sys.sp_getapplock @Resource=N'ruby.schema_migrations', @LockMode=N'Exclusive', @LockOwner=N'Transaction', @LockTimeout=30000; SELECT @result AS lock_result"
+            );
+            if ((lock.rows[0]?.lock_result ?? -999) < 0) throw new Error("Could not acquire SQL Server migration deployment lock.");
+            return this.lockContext.run(true, async () => {
+                await tx.execute("IF OBJECT_ID(N'dbo.ruby_schema_migrations', N'U') IS NULL CREATE TABLE dbo.ruby_schema_migrations (sequence_number bigint IDENTITY(1,1) NOT NULL PRIMARY KEY, migration_id nvarchar(128) NOT NULL UNIQUE, checksum char(64) NOT NULL)");
+                return work();
+            });
+        });
     }
 
     async readApplied(): Promise<AppliedMigrationRecord[]> {
+        this.requireLock();
         const result = await this.provider.query<{ id: string; checksum: string }>(
             "SELECT migration_id AS id, checksum FROM dbo.ruby_schema_migrations ORDER BY sequence_number"
         );
         return result.rows;
     }
 
-    async applyAndRecord(_migration: DatabaseMigration, _sql: string, _checksum: string): Promise<void> {
-        throw new Error("SQL Server migration execution requires atomic DDL and history recording.");
+    async applyAndRecord(migration: DatabaseMigration, sql: string, checksum: string): Promise<void> {
+        this.requireLock();
+        await this.provider.execute(sql);
+        await this.provider.execute(
+            "INSERT INTO dbo.ruby_schema_migrations (migration_id, checksum) VALUES (@migrationId, @checksum)",
+            [{ name: "migrationId", value: migration.id }, { name: "checksum", value: checksum }]
+        );
+    }
+
+    private requireLock(): void {
+        if (!this.lockContext.getStore()) throw new Error("Migration history access requires exclusive deployment lock.");
     }
 }
