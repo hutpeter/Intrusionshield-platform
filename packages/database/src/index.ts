@@ -58,5 +58,5 @@ export { createMigrationHistoryStore } from "./migrations/createMigrationHistory
 
 export { createGeographyIndexSql } from "./dialects/SpatialIndex.js";
 
-export { spatialRelationPredicate } from "./dialects/SpatialRelations.js";
+export { spatialRelationPredicate, pointInAreaPredicate } from "./dialects/SpatialRelations.js";
 export type { SpatialRelation } from "./dialects/SpatialRelations.js";
