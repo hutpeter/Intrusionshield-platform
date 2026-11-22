@@ -38,3 +38,8 @@ export interface IDatabaseProvider {
     /** Indicates whether the provider currently has an active connection. */
     isConnected(): boolean;
 }
+
+/** Provider-neutral tenant-aware transaction contract. RLS policies must be provisioned separately. */
+export interface ITenantScopedDatabaseProvider extends IDatabaseProvider {
+    withTenantTransaction<T>(tenantId: string, work: (provider: IDatabaseProvider) => Promise<T>): Promise<T>;
+}
