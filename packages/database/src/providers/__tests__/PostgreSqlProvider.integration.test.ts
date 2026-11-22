@@ -1,3 +1,4 @@
+import { createGeographyIndexSql } from "../../dialects/SpatialIndex.js";
 import { createWithinDistanceQuery } from "../../dialects/SpatialQuery.js";
 import { PostgreSqlMigrationHistoryStore } from "../../migrations/PostgreSqlMigrationHistoryStore.js";
 import { runVersionedMigrations } from "../../migrations/VersionedMigrationRunner.js";
@@ -197,6 +198,23 @@ describe("live PostgreSQL / PostGIS portability", () => {
         } finally {
             await db.execute(`DROP TABLE IF EXISTS ${table}`);
             await db.execute("DROP TABLE IF EXISTS ruby_schema_migrations");
+            await db.disconnect();
+        }
+    });
+
+    liveTest("creates PostGIS GiST spatial index on geography column", async () => {
+        const db = new PostgreSqlProvider(options);
+        await db.connect();
+        const suffix = Math.random().toString(36).slice(2, 10);
+        const table = `ruby_geo_index_${suffix}`;
+        const index = `ix_ruby_geo_${suffix}`;
+        try {
+            await db.execute(`CREATE TABLE ${table} (id integer PRIMARY KEY, location geography(Point, 4326))`);
+            await db.execute(createGeographyIndexSql(new PostgreSqlDialect(), table, "location", index));
+            const result = await db.query<{ indexname: string }>(`SELECT indexname FROM pg_indexes WHERE tablename = '${table}'`);
+            expect(result.rows.map(row => row.indexname)).toContain(index);
+        } finally {
+            await db.execute(`DROP TABLE IF EXISTS ${table}`);
             await db.disconnect();
         }
     });
