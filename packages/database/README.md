@@ -25,6 +25,10 @@ The callback only receives `query` and `execute`; the session expires when the c
 
 Schema provisioning, policy deployment, migration ordering, privileged-role separation, cross-tenant administrator access, and production permissions still require implementation and verification for each vertical.
 
+## Geospatial foundation
+
+The shared `withinDistancePredicate` helper generates a parameterized WGS84 geography proximity predicate for SQL Server and PostGIS. It expects a geography-typed column, latitude/longitude in degrees, and radius in metres. SQL Server uses `geography::Point(latitude, longitude, 4326)`; PostGIS uses `ST_MakePoint(longitude, latitude)` cast to geography. This is a first spatial primitive, **not** complete GIS portability; spatial DDL, indexing, geometry operations, and CRS transformations remain release gates.
+
 ## Validation
 
 GitHub Actions runs package tests and live integration tests against SQL Server 2022 and PostgreSQL/PostGIS. These validate adapter behavior and representative RLS scenarios, **not** complete isolation across all Ruby services. See `.github/workflows/database-portability.yml`.
