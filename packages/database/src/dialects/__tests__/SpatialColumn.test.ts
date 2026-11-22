@@ -23,5 +23,6 @@ describe("portable WGS84 point column declaration", () => {
         expect(() => createWgs84PointColumnSql(new SqlServerDialect(), "x);DROP TABLE y")).toThrow("safe SQL");
         expect(() => createWgs84PointColumnSql(new PostgreSqlDialect(), "x".repeat(64))).toThrow("safe SQL");
         expect(() => createWgs84PointColumnSql({ ...new SqlServerDialect(), engine: "sqlite" } as never, "point")).toThrow("Unsupported spatial column");
+        expect(() => createWgs84PointCheckSql({ ...new SqlServerDialect(), engine: "sqlite" } as never, "point")).toThrow("Unsupported spatial column");
     });
 });
