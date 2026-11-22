@@ -1,3 +1,4 @@
+import { createWgs84PointColumnSql, createWgs84PointCheckSql } from "../../dialects/SpatialColumn.js";
 import { createDistanceExpression } from "../../dialects/SpatialDistance.js";
 import { pointInAreaPredicate, spatialRelationPredicate } from "../../dialects/SpatialRelations.js";
 import { createGeographyIndexSql } from "../../dialects/SpatialIndex.js";
@@ -197,6 +198,25 @@ describe("live SQL Server tenant-scoped transactions", () => {
             });
             await store.withExclusiveLock(async () => { await store.readApplied(); });
         } finally { await db.disconnect(); }
+    });
+
+    liveTest("SQL Server WGS84 point CHECK rejects wrong SRID and non-Point geography", async () => {
+        const db = new SqlServerProvider(options);
+        await db.connect();
+        const table = "ruby_spatial_point_check_test";
+        const dialect = new SqlServerDialect();
+        try {
+            await db.execute(`IF OBJECT_ID(N'dbo.${table}', N'U') IS NOT NULL DROP TABLE dbo.${table}`);
+            await db.execute(`CREATE TABLE dbo.${table} (id int NOT NULL PRIMARY KEY, ${createWgs84PointColumnSql(dialect, "location")}, CONSTRAINT CK_ruby_spatial_point_check_test CHECK ${createWgs84PointCheckSql(dialect, "location")})`);
+            await db.execute(`INSERT INTO dbo.${table} (id, location) VALUES (1, geography::Point(45,-75,4326))`);
+            await expect(db.execute(`INSERT INTO dbo.${table} (id, location) VALUES (2, geography::Point(45,-75,4269))`)).rejects.toThrow();
+            await expect(db.execute(`INSERT INTO dbo.${table} (id, location) VALUES (3, geography::STGeomFromText('LINESTRING(-75 45,-74 46)',4326))`)).rejects.toThrow();
+            const result = await db.query<{ total: number }>(`SELECT COUNT(*) AS total FROM dbo.${table}`);
+            expect(result.rows[0]?.total).toBe(1);
+        } finally {
+            await db.execute(`IF OBJECT_ID(N'dbo.${table}', N'U') IS NOT NULL DROP TABLE dbo.${table}`);
+            await db.disconnect();
+        }
     });
 
     liveTest("SQL Server geography orders nearby sites by distance in metres", async () => {
