@@ -129,10 +129,14 @@ describe("live SQL Server tenant-scoped transactions", () => {
             ]);
             expect(outcomes.flat()).toEqual([concurrent.id]);
             await expect(runVersionedMigrations("sqlserver", [{ ...migration, sqlserver: "SELECT 2" }], store)).rejects.toThrow("checksum drift");
+            const rollbackTable = `dbo.ruby_migration_rollback_${suffix}`;
+            const rollbackFirst = { id: `rollback_${suffix}`, description: "rollback probe", sqlserver: `CREATE TABLE ${rollbackTable} (id int)`, postgresql: `CREATE TABLE ${rollbackTable} (id integer)` };
             const failing = { id: `failed_${suffix}`, description: "invalid", sqlserver: "SELECT * FROM dbo.table_that_does_not_exist", postgresql: "SELECT 1" };
-            await expect(runVersionedMigrations("sqlserver", [migration, concurrent, failing], store)).rejects.toThrow();
+            await expect(runVersionedMigrations("sqlserver", [migration, concurrent, rollbackFirst, failing], store)).rejects.toThrow();
             const history = await db.query<{ migration_id: string }>("SELECT migration_id FROM dbo.ruby_schema_migrations ORDER BY sequence_number");
             expect(history.rows.map(row => row.migration_id)).toEqual([id, concurrent.id]);
+            const rolledBack = await db.query<{ object_id: number | null }>(`SELECT OBJECT_ID(N'${rollbackTable}', N'U') AS object_id`);
+            expect(rolledBack.rows[0]?.object_id).toBeNull();
         } finally {
             await db.execute(`IF OBJECT_ID(N'${table}', N'U') IS NOT NULL DROP TABLE ${table}`);
             await db.execute("IF OBJECT_ID(N'dbo.ruby_schema_migrations', N'U') IS NOT NULL DROP TABLE dbo.ruby_schema_migrations");
