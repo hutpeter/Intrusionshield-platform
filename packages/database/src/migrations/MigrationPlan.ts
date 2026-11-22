@@ -51,5 +51,6 @@ export function planDatabaseMigrations(
 }
 
 export function migrationChecksum(engine: DatabaseEngine, migration: DatabaseMigration): string {
+    if (engine !== "sqlserver" && engine !== "postgresql") throw new Error("Unsupported database engine.");
     return createHash("sha256").update(engine === "sqlserver" ? migration.sqlserver : migration.postgresql).digest("hex");
 }
