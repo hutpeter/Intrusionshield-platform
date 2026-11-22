@@ -65,6 +65,6 @@ describe("PostgreSQL scoped transactions", () => {
         await expect(lateQuery).rejects.toThrow("Scoped database transaction has already completed.");
         expect(testDb.statements).toEqual(["BEGIN", "COMMIT"]);
         expect(testDb.released).toBe(1);
-    });;
+    });
 
 });
