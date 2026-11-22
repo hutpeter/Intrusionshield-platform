@@ -28,4 +28,4 @@ jobs:
       - name: Build database package
         run: pnpm --filter @intrusionshield/database build
       - name: Test database package
-        run: pnpm --filter @intrusionshield/database test -- --runInBand
+        run: pnpm --filter @intrusionshield/database test --runInBand
