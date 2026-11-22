@@ -5,6 +5,7 @@ export type SpatialRelation = "contains" | "intersects";
 /**
  * Geography relationship predicate between two trusted geography columns.
  * Both columns must use the same SRID (WGS84/4326 for Ruby's baseline).
+ * Null geography values yield unknown (not true).
  * No dynamic geometry values are interpolated into SQL.
  */
 export function spatialRelationPredicate(
@@ -45,6 +46,8 @@ export function spatialRelationPredicate(
  * WGS84 point-in-area test for geography columns. The second column must
  * contain Point geography values; boundary points count as inside.
  * Both engines use geography intersection, avoiding planar cast semantics.
+ * SQL Server and PostGIS can differ in tolerance at polygon boundaries;
+ * callers requiring exact boundary classification must test their use case.
  */
 export function pointInAreaPredicate(
     dialect: DatabaseDialect,
