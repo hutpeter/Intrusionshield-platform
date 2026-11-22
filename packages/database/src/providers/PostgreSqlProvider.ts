@@ -102,6 +102,20 @@ export class PostgreSqlProvider implements IDatabaseProvider {
         }
     }
 
+    /**
+     * Run tenant-scoped work in one transaction. The tenant identifier is set with
+     * transaction-local scope so pooled connections cannot leak it to later requests.
+     * Tenant-owned tables must have an appropriate RLS policy; this method alone
+     * does not authorize access or enforce isolation on tables without RLS.
+     */
+    async withTenantTransaction<T>(tenantId: string, work: (provider: PostgreSqlProvider) => Promise<T>): Promise<T> {
+        if (!tenantId || !tenantId.trim()) throw new Error("A non-empty tenant identifier is required.");
+        return this.withTransaction(async provider => {
+            await provider.query("SELECT set_config('ruby.tenant_id', $1, true)", [{ name: "tenantId", value: tenantId }]);
+            return work(provider);
+        });
+    }
+
     async beginTransaction(): Promise<void> {
         if (this.client || this.activeScopedTransactions > 0) throw new Error("A database transaction is already active.");
         const client = await this.requirePool().connect();
