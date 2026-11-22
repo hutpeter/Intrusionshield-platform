@@ -45,3 +45,8 @@ GitHub Actions runs package tests and live integration tests against SQL Server 
 4. Validate role permissions, concurrency, failure cleanup, transaction nesting, and tenant isolation with non-privileged accounts.
 5. Add spatial adapters for SQL Server spatial types and PostGIS, including SRID handling, spatial indexes, and distance/containment queries.
 6. Run end-to-end acceptance suites against both engines before merging or claiming on-premises database portability.
+
+
+### Spatial indexes
+
+`createGeographyIndexSql` generates provider-specific WGS84 geography index DDL: SQL Server `GEOGRAPHY_AUTO_GRID` spatial indexes and PostGIS GiST indexes. The table, column and index names are strictly validated, and schema-qualified table names are supported. The resulting DDL belongs in versioned migrations; do not execute it dynamically from application requests. Live integration checks create and inspect disposable spatial indexes on both engines. Coordinate-reference transformations, spatial intersection/containment, and multi-geometry support remain future work.
