@@ -82,4 +82,41 @@ describe("live PostgreSQL / PostGIS portability", () => {
         }
     });
 
+    liveTest("PostgreSQL row-level security enforces tenant isolation within scoped transactions", async () => {
+        const db = new PostgreSqlProvider(options);
+        await db.connect();
+        const table = "ruby_portability_rls_test";
+        try {
+            await db.execute(`CREATE TABLE IF NOT EXISTS ${table} (tenant_id text NOT NULL, record_id text NOT NULL)`);
+            await db.execute(`ALTER TABLE ${table} DISABLE ROW LEVEL SECURITY`);
+            await db.execute(`DELETE FROM ${table}`);
+            await db.execute(`INSERT INTO ${table} (tenant_id, record_id) VALUES ('tenant-a', 'a-only'), ('tenant-b', 'b-only')`);
+            await db.execute(`DROP POLICY IF EXISTS ruby_tenant_policy ON ${table}`);
+            await db.execute(`CREATE POLICY ruby_tenant_policy ON ${table} USING (tenant_id = current_setting('ruby.tenant_id', true)) WITH CHECK (tenant_id = current_setting('ruby.tenant_id', true))`);
+            await db.execute(`ALTER TABLE ${table} ENABLE ROW LEVEL SECURITY`);
+            await db.execute(`ALTER TABLE ${table} FORCE ROW LEVEL SECURITY`);
+            const readTenant = (tenant: string) => db.withTransaction(async tx => {
+                await tx.query("SELECT set_config('ruby.tenant_id', $1, true)", [{ name: "p0", value: tenant }]);
+                return (await tx.query<{ record_id: string }>(`SELECT record_id FROM ${table} ORDER BY record_id`)).rows;
+            });
+            const [a, b] = await Promise.all([readTenant("tenant-a"), readTenant("tenant-b")]);
+            expect(a).toEqual([{ record_id: "a-only" }]);
+            expect(b).toEqual([{ record_id: "b-only" }]);
+            await db.withTransaction(async tx => {
+                await tx.query("SELECT set_config('ruby.tenant_id', $1, true)", [{ name: "p0", value: "tenant-a" }]);
+                await expect(tx.execute(`INSERT INTO ${table} (tenant_id, record_id) VALUES ('tenant-b', 'forbidden')`)).rejects.toThrow();
+            }).catch(() => undefined);
+            const rows = await db.withTransaction(async tx => {
+                await tx.query("SELECT set_config('ruby.tenant_id', $1, true)", [{ name: "p0", value: "tenant-b" }]);
+                return (await tx.query<{ record_id: string }>(`SELECT record_id FROM ${table} ORDER BY record_id`)).rows;
+            });
+            expect(rows).toEqual([{ record_id: "b-only" }]);
+        } finally {
+            try {
+                await db.execute(`ALTER TABLE ${table} DISABLE ROW LEVEL SECURITY`);
+                await db.execute(`DROP TABLE IF EXISTS ${table}`);
+            } finally { await db.disconnect(); }
+        }
+    });
+
 });
