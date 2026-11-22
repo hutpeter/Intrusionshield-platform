@@ -1,3 +1,4 @@
+import { spatialRelationPredicate } from "../../dialects/SpatialRelations.js";
 import { createGeographyIndexSql } from "../../dialects/SpatialIndex.js";
 import { createWithinDistanceQuery } from "../../dialects/SpatialQuery.js";
 import { SqlServerProvider } from "../SqlServerProvider.js";
@@ -160,6 +161,16 @@ describe("live SQL Server tenant-scoped transactions", () => {
             await db.execute(`IF OBJECT_ID(N'${table}', N'U') IS NOT NULL DROP TABLE ${table}`);
             await db.disconnect();
         }
+    });
+
+    liveTest("SQL Server geography intersection distinguishes near and distant points", async () => {
+        const db = new SqlServerProvider(options);
+        await db.connect();
+        try {
+            const predicate = spatialRelationPredicate(new SqlServerDialect(), "area", "location", "intersects");
+            const result = await db.query<{ hit: number }>(`SELECT CASE WHEN ${predicate} THEN 1 ELSE 0 END AS hit FROM (SELECT geography::Point(45, -75, 4326) AS area, geography::Point(45, -75, 4326) AS location) AS spatial_test`);
+            expect(result.rows[0]?.hit).toBe(1);
+        } finally { await db.disconnect(); }
     });
 
 });
