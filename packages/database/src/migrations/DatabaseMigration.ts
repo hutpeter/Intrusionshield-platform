@@ -21,6 +21,7 @@ export async function applyDatabaseMigrations(
     engine: DatabaseEngine,
     migrations: readonly DatabaseMigration[]
 ): Promise<string[]> {
+    if (engine !== "sqlserver" && engine !== "postgresql") throw new Error("Unsupported database engine.");
     const applied: string[] = [];
     const seen = new Set<string>();
     // Validate the entire batch before executing any schema-changing statement.
