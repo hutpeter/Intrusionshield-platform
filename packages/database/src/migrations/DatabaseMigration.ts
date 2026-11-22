@@ -23,17 +23,19 @@ export async function applyDatabaseMigrations(
 ): Promise<string[]> {
     const applied: string[] = [];
     const seen = new Set<string>();
+    // Validate the entire batch before executing any schema-changing statement.
     for (const migration of migrations) {
         if (!/^[a-zA-Z0-9_-]{1,128}$/.test(migration.id) || seen.has(migration.id)) {
             throw new Error("Migration IDs must be unique and contain only letters, numbers, underscore or hyphen.");
         }
         seen.add(migration.id);
+        const sql = engine === "sqlserver" ? migration.sqlserver : migration.postgresql;
+        if (!sql.trim()) throw new Error(`Missing ${engine} SQL for migration ${migration.id}`);
     }
     // Migration history and concurrent-deployment locking will be added before
     // this runner is used for production schema provisioning.
     for (const migration of migrations) {
         const sql = engine === "sqlserver" ? migration.sqlserver : migration.postgresql;
-        if (!sql.trim()) throw new Error(`Missing ${engine} SQL for migration ${migration.id}`);
         await provider.execute(sql);
         applied.push(migration.id);
     }
