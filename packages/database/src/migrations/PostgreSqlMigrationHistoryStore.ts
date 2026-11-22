@@ -6,7 +6,7 @@ import type { MigrationHistoryStore } from "./VersionedMigrationRunner.js";
 
 /** PostgreSQL migration history and transaction-scoped advisory deployment lock. */
 export class PostgreSqlMigrationHistoryStore implements MigrationHistoryStore {
-    private readonly lockContext = new AsyncLocalStorage<boolean>();
+    private readonly lockContext = new AsyncLocalStorage<{ active: boolean }>();
     constructor(private readonly provider: PostgreSqlProvider) {}
 
     async withExclusiveLock<T>(work: () => Promise<T>): Promise<T> {
@@ -14,9 +14,12 @@ export class PostgreSqlMigrationHistoryStore implements MigrationHistoryStore {
         return this.provider.withTransaction(async tx => {
             // Fixed application-specific key. xact lock releases automatically on commit/rollback.
             await tx.query("SELECT pg_advisory_xact_lock(824176501, 3021)");
-            return this.lockContext.run(true, async () => {
+            const lock = { active: true };
+            return this.lockContext.run(lock, async () => {
+                try {
                 await tx.execute("CREATE TABLE IF NOT EXISTS ruby_schema_migrations (sequence_number bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY, migration_id varchar(128) NOT NULL UNIQUE, checksum char(64) NOT NULL)");
-                return work();
+                return await work();
+                } finally { lock.active = false; }
             });
         });
     }
@@ -39,6 +42,6 @@ export class PostgreSqlMigrationHistoryStore implements MigrationHistoryStore {
     }
 
     private requireLock(): void {
-        if (!this.lockContext.getStore()) throw new Error("Migration history access requires exclusive deployment lock.");
+        if (!this.lockContext.getStore()?.active) throw new Error("Migration history access requires an active exclusive deployment lock.");
     }
 }
