@@ -95,19 +95,16 @@ describe("live PostgreSQL / PostGIS portability", () => {
             await db.execute(`CREATE POLICY ruby_tenant_policy ON ${table} USING (tenant_id = current_setting('ruby.tenant_id', true)) WITH CHECK (tenant_id = current_setting('ruby.tenant_id', true))`);
             await db.execute(`ALTER TABLE ${table} ENABLE ROW LEVEL SECURITY`);
             await db.execute(`ALTER TABLE ${table} FORCE ROW LEVEL SECURITY`);
-            const readTenant = (tenant: string) => db.withTransaction(async tx => {
-                await tx.query("SELECT set_config('ruby.tenant_id', $1, true)", [{ name: "p0", value: tenant }]);
+            const readTenant = (tenant: string) => db.withTenantTransaction(tenant, async tx => {
                 return (await tx.query<{ record_id: string }>(`SELECT record_id FROM ${table} ORDER BY record_id`)).rows;
             });
             const [a, b] = await Promise.all([readTenant("tenant-a"), readTenant("tenant-b")]);
             expect(a).toEqual([{ record_id: "a-only" }]);
             expect(b).toEqual([{ record_id: "b-only" }]);
-            await expect(db.withTransaction(async tx => {
-                await tx.query("SELECT set_config('ruby.tenant_id', $1, true)", [{ name: "p0", value: "tenant-a" }]);
+            await expect(db.withTenantTransaction("tenant-a", async tx => {
                 await tx.execute(`INSERT INTO ${table} (tenant_id, record_id) VALUES ('tenant-b', 'forbidden')`);
             })).rejects.toThrow();
-            const rows = await db.withTransaction(async tx => {
-                await tx.query("SELECT set_config('ruby.tenant_id', $1, true)", [{ name: "p0", value: "tenant-b" }]);
+            const rows = await db.withTenantTransaction("tenant-b", async tx => {
                 return (await tx.query<{ record_id: string }>(`SELECT record_id FROM ${table} ORDER BY record_id`)).rows;
             });
             expect(rows).toEqual([{ record_id: "b-only" }]);
