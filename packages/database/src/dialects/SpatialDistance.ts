@@ -10,7 +10,7 @@ export function createDistanceExpression(
     parameterOffset = 0
 ): { readonly sql: string; readonly parameters: readonly SqlParameter[] } {
     const valid = validateGeoPoint(point);
-    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(geographyColumn)) {
+    if ((geographyColumn.length > 63 || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(geographyColumn))) {
         throw new Error("Geography column must be a safe SQL identifier.");
     }
     if (!Number.isSafeInteger(parameterOffset) || parameterOffset < 0 || !Number.isSafeInteger(parameterOffset + 2)) {
