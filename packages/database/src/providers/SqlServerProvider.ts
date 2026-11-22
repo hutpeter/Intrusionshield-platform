@@ -5,7 +5,7 @@ import type { DatabaseOptions } from "../DatabaseOptions.js";
 import type { SqlParameter } from "../SqlParameter.js";
 import type { SqlResult } from "../SqlResult.js";
 import { normalizeDatabaseValue } from "../Uuid.js";
-import type { IDatabaseProvider } from "./IDatabaseProvider.js";
+import type { IDatabaseProvider, ITenantScopedDatabaseProvider } from "./IDatabaseProvider.js";
 
 /**
  * SQL Server implementation of the database provider contract.
@@ -15,7 +15,7 @@ import type { IDatabaseProvider } from "./IDatabaseProvider.js";
  * boundary, so all query results are normalized here before they enter
  * repositories or application code.
  */
-export class SqlServerProvider implements IDatabaseProvider {
+export class SqlServerProvider implements ITenantScopedDatabaseProvider {
     private pool: sql.ConnectionPool | null = null;
 
     private transaction: sql.Transaction | null = null;
@@ -153,7 +153,7 @@ try {
     }
 
     /** SQL Server SESSION_CONTEXT is connection-scoped; clear it before releasing the transaction. */
-    public async withTenantTransaction<T>(tenantId: string, work: (provider: SqlServerProvider) => Promise<T>): Promise<T> {
+    public async withTenantTransaction<T>(tenantId: string, work: (provider: IDatabaseProvider) => Promise<T>): Promise<T> {
         if (!tenantId || !tenantId.trim()) throw new Error("A non-empty tenant identifier is required.");
         return this.withTransaction(async provider => {
             await provider.query("EXEC sys.sp_set_session_context @key=N'ruby.tenant_id', @value=@tenantId, @read_only=0", [
