@@ -186,6 +186,19 @@ describe("live SQL Server tenant-scoped transactions", () => {
         } finally { await db.disconnect(); }
     });
 
+    liveTest("SQL Server migration history permits sequential deployments in reused async context", async () => {
+        const db = new SqlServerProvider(options);
+        await db.connect();
+        try {
+            const store = new SqlServerMigrationHistoryStore(db);
+            await store.withExclusiveLock(async () => {
+                await store.readApplied();
+                await expect(store.withExclusiveLock(async () => undefined)).rejects.toThrow("Nested migration deployment");
+            });
+            await store.withExclusiveLock(async () => { await store.readApplied(); });
+        } finally { await db.disconnect(); }
+    });
+
     liveTest("SQL Server geography orders nearby sites by distance in metres", async () => {
         const db = new SqlServerProvider(options);
         await db.connect();
