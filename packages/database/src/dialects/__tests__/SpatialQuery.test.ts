@@ -28,6 +28,7 @@ describe("portable spatial query builder", () => {
         expect(() => createWithinDistanceQuery(dialect, "location", point, NaN)).toThrow("Distance");
         expect(() => createWithinDistanceQuery(dialect, "location", point, 1, -1)).toThrow("offset");
         expect(() => createWithinDistanceQuery(dialect, "dbo.location", point, 1)).toThrow("safe SQL identifier");
+        expect(() => createWithinDistanceQuery(dialect, "x".repeat(64), point, 1)).toThrow("safe SQL identifier");
         expect(() => createWithinDistanceQuery(dialect, "location]; DROP TABLE patients;--", point, 1)).toThrow("safe SQL identifier");
         expect(() => createWithinDistanceQuery(dialect, "location", point, 1, Number.MAX_SAFE_INTEGER)).toThrow("offset");
     });
