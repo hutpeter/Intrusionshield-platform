@@ -24,3 +24,6 @@ export type { RubyDatabaseRole, DatabaseRoleResolution } from "./DatabaseRoleCon
 
 export { SqlServerDialect, PostgreSqlDialect, createDatabaseDialect } from "./dialects/index.js";
 export type { DatabaseDialect, DatabaseEngine } from "./dialects/index.js";
+
+export { PostgreSqlProvider } from "./providers/PostgreSqlProvider.js";
+export type { PostgreSqlOptions } from "./providers/PostgreSqlProvider.js";
