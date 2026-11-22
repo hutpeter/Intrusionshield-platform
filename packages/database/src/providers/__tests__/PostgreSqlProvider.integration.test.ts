@@ -1,3 +1,5 @@
+import { PostgreSqlDialect } from "../../dialects/DatabaseDialect.js";
+import { withinDistancePredicate } from "../../dialects/SpatialDialect.js";
 import { TenantDatabaseAccess } from "../TenantDatabaseAccess.js";
 import { describe, expect, test } from "@jest/globals";
 import { PostgreSqlProvider } from "../PostgreSqlProvider.js";
@@ -144,6 +146,19 @@ describe("live PostgreSQL / PostGIS portability", () => {
             const result = await access.forTenant("tenant-a", session => session.query<{ ok: number }>("SELECT 1 AS ok"));
             expect(result.rows[0]?.ok).toBe(1);
             await expect(access.forTenant("", session => session.query("SELECT 1"))).rejects.toThrow("tenant identifier");
+        } finally { await db.disconnect(); }
+    });
+
+    liveTest("WGS84 distance predicate executes against PostGIS geography", async () => {
+        const db = createTenantScopedDatabaseProvider({ engine: "postgresql", options });
+        await db.connect();
+        try {
+            const predicate = withinDistancePredicate(new PostgreSqlDialect(), "location", "$1", "$2", "$3");
+            const result = await db.query<{ nearby: boolean }>(
+                `SELECT ${predicate} AS nearby FROM (SELECT ST_SetSRID(ST_MakePoint(-75.0, 45.0), 4326)::geography AS location) AS site`,
+                [{ name: "latitude", value: 45.0001 }, { name: "longitude", value: -75.0 }, { name: "metres", value: 100 }]
+            );
+            expect(result.rows[0]?.nearby).toBe(true);
         } finally { await db.disconnect(); }
     });
 
