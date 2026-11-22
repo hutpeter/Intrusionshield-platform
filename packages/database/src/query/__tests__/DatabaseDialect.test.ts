@@ -18,6 +18,12 @@ describe("database dialect portability", () => {
         ]);
     });
 
+    test("does not rewrite parameter-like text inside SQL identifiers", () => {
+        const command = new SelectQueryBuilder(createDatabaseDialect("postgresql"))
+            .select("audit_@p0").from("Users").where("Id", "=", 7).build();
+        expect(command.sql).toBe("SELECT audit_@p0 FROM Users WHERE Id = $1");
+    });
+
     test("PostgreSQL offset without limit", () => {
         const command = new SelectQueryBuilder(createDatabaseDialect("postgresql")).from("Users").offset(3).build();
         expect(command.sql).toBe("SELECT * FROM Users OFFSET 3");
