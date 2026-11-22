@@ -1,4 +1,5 @@
 import type { SqlParameter } from "../SqlParameter.js";
+import type { DatabaseDialect } from "../dialects/DatabaseDialect.js";
 
 /**
  * Generates SQL parameter names for query builders.
@@ -14,7 +15,8 @@ export class QueryParameter {
      */
     public add(
         value: unknown,
-        type?: unknown
+        type?: unknown,
+        dialect?: DatabaseDialect
     ): string {
         const name = `p${this.parameters.length}`;
 
@@ -24,7 +26,7 @@ export class QueryParameter {
             type
         });
 
-        return `@${name}`;
+        return dialect ? dialect.parameter(this.parameters.length - 1 + (dialect.engine === "postgresql" ? 1 : 0)) : `@${name}`;
     }
 
     /**
