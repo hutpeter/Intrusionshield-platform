@@ -180,6 +180,8 @@ describe("live SQL Server tenant-scoped transactions", () => {
             const predicate = pointInAreaPredicate(new SqlServerDialect(), "area", "point");
             const result = await db.query<{ inside: number }>(`SELECT CASE WHEN ${predicate} THEN 1 ELSE 0 END AS inside FROM (SELECT geography::STGeomFromText('POLYGON((-76 44,-76 46,-74 46,-74 44,-76 44))',4326) AS area, geography::Point(45,-75,4326) AS point) AS spatial_test`);
             expect(result.rows[0]?.inside).toBe(1);
+            const outside = await db.query<{ inside: number }>(`SELECT CASE WHEN ${predicate} THEN 1 ELSE 0 END AS inside FROM (SELECT geography::STGeomFromText('POLYGON((-76 44,-76 46,-74 46,-74 44,-76 44))',4326) AS area, geography::Point(48,-75,4326) AS point) AS spatial_test`);
+            expect(outside.rows[0]?.inside).toBe(0);
         } finally { await db.disconnect(); }
     });
 
