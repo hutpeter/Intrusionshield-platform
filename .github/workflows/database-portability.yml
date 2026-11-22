@@ -70,6 +70,7 @@ jobs:
           SQL
       - name: Run live PostgreSQL and PostGIS integration checks
         env:
+          RUBY_TEST_MIGRATION_HISTORY: "1"
           RUBY_TEST_POSTGRES_HOST: localhost
           RUBY_TEST_POSTGRES_PORT: '5432'
           RUBY_TEST_POSTGRES_DB: ruby_portability_test
@@ -103,6 +104,7 @@ jobs:
         run: pnpm --filter @intrusionshield/database build
       - name: Run live SQL Server integration checks
         env:
+          RUBY_TEST_MIGRATION_HISTORY: "1"
           RUBY_TEST_SQLSERVER_HOST: localhost
           RUBY_TEST_SQLSERVER_PORT: '1433'
           RUBY_TEST_SQLSERVER_DB: master
