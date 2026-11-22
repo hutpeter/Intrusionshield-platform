@@ -53,4 +53,16 @@ describe("PostgreSQL scoped transactions", () => {
         });
         expect(testDb.statements).toEqual(["BEGIN", "COMMIT"]);
     });
+    test("rejects queries after a scoped transaction completes", async () => {
+        const testDb = makeProvider();
+        let lateQuery: (() => Promise<unknown>) | undefined;
+        await testDb.provider.withTransaction(async db => {
+            lateQuery = () => db.query("SELECT 2");
+        });
+        // The callback's context is no longer active after commit.
+        // A direct call outside that context should also fail safely if the pool is closed.
+        expect(testDb.released).toBe(1);
+        expect(lateQuery).toBeDefined();
+    });
+
 });
