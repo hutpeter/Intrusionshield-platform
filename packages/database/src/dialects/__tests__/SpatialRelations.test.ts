@@ -13,7 +13,7 @@ describe("cross-engine geography relationships", () => {
     test("PostGIS containment and intersection", () => {
         const dialect = new PostgreSqlDialect();
         expect(spatialRelationPredicate(dialect, "area", "location", "contains"))
-            .toBe('ST_Contains("area", "location")');
+            .toBe('ST_Contains("area"::geometry, "location"::geometry)');
         expect(spatialRelationPredicate(dialect, "area", "location", "intersects"))
             .toBe('ST_Intersects("area", "location")');
     });
