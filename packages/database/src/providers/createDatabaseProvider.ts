@@ -13,8 +13,7 @@ export function createDatabaseProvider(config: DatabaseProviderConfiguration): I
         case "sqlserver": return new SqlServerProvider(config.options);
         case "postgresql": return new PostgreSqlProvider(config.options);
         default: {
-            const neverEngine: never = config;
-            throw new Error(`Unsupported database configuration: ${String(neverEngine)}`);
+            throw new Error(`Unsupported database engine: ${String((config as { engine: unknown }).engine)}`);
         }
     }
 }
@@ -24,5 +23,6 @@ export function createTenantScopedDatabaseProvider(config: DatabaseProviderConfi
     switch (config.engine) {
         case "sqlserver": return new SqlServerProvider(config.options);
         case "postgresql": return new PostgreSqlProvider(config.options);
+        default: throw new Error(`Unsupported database engine: ${String((config as { engine: unknown }).engine)}`);
     }
 }
