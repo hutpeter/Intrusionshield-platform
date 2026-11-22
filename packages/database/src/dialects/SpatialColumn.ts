@@ -37,11 +37,11 @@ export function createWgs84PointCheckSql(dialect: DatabaseDialect, columnName: s
     if (dialect.engine !== "sqlserver" && dialect.engine !== "postgresql") {
         throw new Error("Unsupported spatial column database engine.");
     }
-    const name = dialect.quoteIdentifier(columnName);
     if (dialect.engine === "postgresql") {
         // PostgreSQL type modifier is the authoritative constraint.
         return "TRUE";
     }
+    const name = dialect.quoteIdentifier(columnName);
     const check = `(${name}.STSrid = 4326 AND ${name}.STGeometryType() = 'Point' AND ${name}.STIsEmpty() = 0)`;
     return nullable ? `(${name} IS NULL OR ${check})` : check;
 }
