@@ -48,3 +48,8 @@ export type { MigrationHistoryStore } from "./migrations/VersionedMigrationRunne
 export { SqlServerMigrationHistoryStore } from "./migrations/SqlServerMigrationHistoryStore.js";
 
 export { PostgreSqlMigrationHistoryStore } from "./migrations/PostgreSqlMigrationHistoryStore.js";
+
+export { validateGeoPoint, validateDistanceMetres } from "./dialects/GeoPoint.js";
+export type { GeoPoint } from "./dialects/GeoPoint.js";
+export { createWithinDistanceQuery } from "./dialects/SpatialQuery.js";
+export type { SpatialPredicate } from "./dialects/SpatialQuery.js";
