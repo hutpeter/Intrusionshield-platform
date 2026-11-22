@@ -35,3 +35,6 @@ export { TenantDatabaseAccess } from "./providers/TenantDatabaseAccess.js";
 export type { TenantDatabaseSession } from "./providers/TenantDatabaseAccess.js";
 
 export { withinDistancePredicate } from "./dialects/SpatialDialect.js";
+
+export { applyDatabaseMigrations } from "./migrations/DatabaseMigration.js";
+export type { DatabaseMigration } from "./migrations/DatabaseMigration.js";
