@@ -118,13 +118,6 @@ describe("live SQL Server tenant-scoped transactions", () => {
             // against a clean migration history table in ephemeral CI only.
             await db.execute("IF OBJECT_ID(N'dbo.ruby_schema_migrations', N'U') IS NOT NULL DROP TABLE dbo.ruby_schema_migrations");
             expect(await runVersionedMigrations("sqlserver", [migration], store)).toEqual([id]);
-            let escapedRead: (() => Promise<unknown>) | undefined;
-            await store.withExclusiveLock(async () => {
-                const captured = new Promise<() => Promise<unknown>>(resolve => {
-                    setImmediate(() => resolve(() => store.readApplied()));
-                });
-                escapedRead = await captured;
-            });
             // Outside the lock scope, direct history access must fail.
             await expect(store.readApplied()).rejects.toThrow("active exclusive deployment lock");
             expect(await runVersionedMigrations("sqlserver", [migration], store)).toEqual([]);
