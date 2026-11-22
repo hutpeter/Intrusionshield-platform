@@ -33,3 +33,5 @@ export type { DatabaseProviderConfiguration } from "./providers/createDatabasePr
 
 export { TenantDatabaseAccess } from "./providers/TenantDatabaseAccess.js";
 export type { TenantDatabaseSession } from "./providers/TenantDatabaseAccess.js";
+
+export { withinDistancePredicate } from "./dialects/SpatialDialect.js";
