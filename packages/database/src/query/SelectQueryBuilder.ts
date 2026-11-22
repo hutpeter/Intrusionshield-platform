@@ -73,7 +73,7 @@ export class SelectQueryBuilder {
             }
 
             const placeholders = value.map(
-                item => this.parameterBuilder.add(item)
+                item => this.parameterBuilder.add(item, undefined, this.dialect)
             );
 
             this.conditions.push(
@@ -84,7 +84,7 @@ export class SelectQueryBuilder {
         }
 
         const placeholder =
-            this.parameterBuilder.add(value);
+            this.parameterBuilder.add(value, undefined, this.dialect);
 
         this.conditions.push(
             `${column} ${operator} ${placeholder}`
@@ -171,11 +171,6 @@ export class SelectQueryBuilder {
                 : ` OFFSET ${this.offsetValue} ROWS`;
         }
 
-        if (this.dialect.engine === "postgresql") {
-            sql = sql.replace(/@p(\d+)\b/g, (_match, index: string) =>
-                this.dialect.parameter(Number(index) + 1)
-            );
-        }
 
         return {
             sql,
