@@ -11,6 +11,9 @@ on:
       - 'pnpm-lock.yaml'
       - '.github/workflows/database-portability.yml'
 
+permissions:
+  contents: write
+
 jobs:
   database-package:
     runs-on: ubuntu-latest
@@ -26,6 +29,16 @@ jobs:
       # Temporary until the pnpm lockfile is regenerated and committed.
       - name: Install dependencies
         run: pnpm install --no-frozen-lockfile
+      - name: Commit regenerated lockfile to portability branch
+        if: github.event_name == 'push' && github.ref == 'refs/heads/feature/database-engine-independence'
+        run: |
+          if ! git diff --quiet -- pnpm-lock.yaml; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add pnpm-lock.yaml
+            git commit -m 'chore(database): lock PostgreSQL dependencies'
+            git push origin HEAD:feature/database-engine-independence
+          fi
       - name: Upload regenerated lockfile for review
         uses: actions/upload-artifact@v4
         with:
