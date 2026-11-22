@@ -21,6 +21,7 @@ export class PostgreSqlProvider implements IDatabaseProvider {
     private client: PoolClient | null = null;
     private readonly transactionContext = new AsyncLocalStorage<PoolClient>();
     private activeScopedTransactions = 0;
+    private readonly scopedClients = new Set<PoolClient>();
 
     constructor(private readonly options: PostgreSqlOptions) {}
 
@@ -56,6 +57,9 @@ export class PostgreSqlProvider implements IDatabaseProvider {
     async query<T>(sql: string, parameters: SqlParameter[] = []): Promise<SqlResult<T>> {
         const values = parameters.map(p => p.value);
         const scopedClient = this.transactionContext.getStore();
+        if (scopedClient && !this.scopedClients.has(scopedClient)) {
+            throw new Error("Scoped database transaction has already completed.");
+        }
         const activeClient = scopedClient ?? this.client;
         if (this.client && !scopedClient && this.transactionContext.getStore() !== this.client) {
             throw new Error("Database transaction belongs to another asynchronous context.");
@@ -77,6 +81,7 @@ export class PostgreSqlProvider implements IDatabaseProvider {
         if (this.transactionContext.getStore()) throw new Error("Nested transactions are not supported.");
         const client = await this.requirePool().connect();
         this.activeScopedTransactions++;
+        this.scopedClients.add(client);
         try {
             await client.query("BEGIN");
             return await this.transactionContext.run(client, async () => {
@@ -91,6 +96,7 @@ export class PostgreSqlProvider implements IDatabaseProvider {
                 }
             });
         } finally {
+            this.scopedClients.delete(client);
             this.activeScopedTransactions--;
             client.release();
         }
