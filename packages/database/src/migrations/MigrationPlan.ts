@@ -14,6 +14,7 @@ export function planDatabaseMigrations(
     migrations: readonly DatabaseMigration[],
     applied: readonly AppliedMigrationRecord[]
 ): DatabaseMigration[] {
+    if (engine !== "sqlserver" && engine !== "postgresql") throw new Error("Unsupported database engine.");
     const seen = new Set<string>();
     const history = new Map<string, string>();
     for (const record of applied) {
