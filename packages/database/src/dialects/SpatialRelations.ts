@@ -27,8 +27,7 @@ export function spatialRelationPredicate(
         return `(${left}.${method}(${right}) = 1)`;
     }
     if (dialect.engine === "postgresql") {
-        const method = relation === "contains" ? "ST_Covers" : "ST_Intersects";
-        // ST_Covers includes boundary points, unlike strict ST_Contains.
+        const method = relation === "contains" ? "ST_Contains" : "ST_Intersects";
         return `${method}(${left}, ${right})`;
     }
     throw new Error("Unsupported spatial relation database engine.");
