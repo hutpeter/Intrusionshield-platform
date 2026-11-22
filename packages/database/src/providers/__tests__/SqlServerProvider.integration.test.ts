@@ -1,3 +1,4 @@
+import { TenantDatabaseAccess } from "../TenantDatabaseAccess.js";
 import { describe, expect, test } from "@jest/globals";
 import { createTenantScopedDatabaseProvider } from "../createDatabaseProvider.js";
 
@@ -73,6 +74,17 @@ describe("live SQL Server tenant-scoped transactions", () => {
             await db.execute(`IF OBJECT_ID(N'${table}', N'U') IS NOT NULL DROP TABLE ${table}`);
             await db.disconnect();
         }
+    });
+
+    liveTest("tenant-only facade uses real sqlserver provider", async () => {
+        const db = createTenantScopedDatabaseProvider({ engine: "sqlserver", options });
+        await db.connect();
+        try {
+            const access = new TenantDatabaseAccess(db);
+            const result = await access.forTenant("tenant-a", session => session.query<{ ok: number }>("SELECT 1 AS ok"));
+            expect(result.rows[0]?.ok).toBe(1);
+            await expect(access.forTenant("", session => session.query("SELECT 1"))).rejects.toThrow("tenant identifier");
+        } finally { await db.disconnect(); }
     });
 
 });
