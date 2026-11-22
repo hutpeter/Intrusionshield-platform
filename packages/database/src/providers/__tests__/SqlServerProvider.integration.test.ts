@@ -50,7 +50,7 @@ describe("live SQL Server tenant-scoped transactions", () => {
         try {
             await db.execute(`CREATE TABLE ${table} (tenant_id nvarchar(128) NOT NULL, item nvarchar(128) NOT NULL)`);
             await db.execute(`INSERT INTO ${table} (tenant_id, item) VALUES (N'tenant-a', N'alpha'), (N'tenant-b', N'beta')`);
-            await db.execute(`EXEC(N'CREATE FUNCTION ${predicate}(@tenant_id nvarchar(128)) RETURNS TABLE WITH SCHEMABINDING AS RETURN SELECT 1 AS permitted WHERE @tenant_id = CONVERT(nvarchar(128), SESSION_CONTEXT(N''''ruby.tenant_id''''))')`);
+            await db.execute(`EXEC(N'CREATE FUNCTION ${predicate}(@tenant_id nvarchar(128)) RETURNS TABLE WITH SCHEMABINDING AS RETURN SELECT 1 AS permitted WHERE @tenant_id = CONVERT(nvarchar(128), SESSION_CONTEXT(N''ruby.tenant_id''))')`);
             await db.execute(`CREATE SECURITY POLICY ${policy} ADD FILTER PREDICATE ${predicate}(tenant_id) ON ${table}, ADD BLOCK PREDICATE ${predicate}(tenant_id) ON ${table} AFTER INSERT WITH (STATE = ON)`);
             const items = (tenant: string) => db.withTenantTransaction(tenant, async tx =>
                 (await tx.query<{ item: string }>(`SELECT item FROM ${table} ORDER BY item`)).rows.map(row => row.item)
