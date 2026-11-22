@@ -76,3 +76,36 @@ jobs:
           RUBY_TEST_POSTGRES_USER: ruby_app_test
           RUBY_TEST_POSTGRES_PASSWORD: ruby_app_test_password
         run: pnpm --filter @intrusionshield/database test --runInBand --runTestsByPath src/providers/__tests__/PostgreSqlProvider.integration.test.ts
+
+  sqlserver-integration:
+    runs-on: ubuntu-latest
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          MSSQL_SA_PASSWORD: 'RubyTest_StrongPassword2026!'
+          MSSQL_PID: Developer
+        ports:
+          - 1433:1433
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.20.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build database package
+        run: pnpm --filter @intrusionshield/database build
+      - name: Run live SQL Server integration checks
+        env:
+          RUBY_TEST_SQLSERVER_HOST: localhost
+          RUBY_TEST_SQLSERVER_PORT: '1433'
+          RUBY_TEST_SQLSERVER_DB: master
+          RUBY_TEST_SQLSERVER_USER: sa
+          RUBY_TEST_SQLSERVER_PASSWORD: 'RubyTest_StrongPassword2026!'
+        run: pnpm --filter @intrusionshield/database test --runInBand --runTestsByPath src/providers/__tests__/SqlServerProvider.integration.test.ts
