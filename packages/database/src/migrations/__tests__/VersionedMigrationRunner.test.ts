@@ -32,8 +32,8 @@ describe("versioned migration orchestration", () => {
     });
     test("preserves history when a migration fails before recording", async () => {
         const { adapter, history } = store();
-        adapter.applyAndRecord = async () => { throw new Error("DDL failed"); };
-        await expect(runVersionedMigrations("sqlserver", [first], adapter)).rejects.toThrow("DDL failed");
+        const failing: MigrationHistoryStore = { ...adapter, applyAndRecord: async () => { throw new Error("DDL failed"); } };
+        await expect(runVersionedMigrations("sqlserver", [first], failing)).rejects.toThrow("DDL failed");
         expect(history).toEqual([]);
     });
     test("skips previously applied prefix", async () => {
