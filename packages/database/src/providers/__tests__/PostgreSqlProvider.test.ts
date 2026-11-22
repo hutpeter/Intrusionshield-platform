@@ -53,16 +53,18 @@ describe("PostgreSQL scoped transactions", () => {
         });
         expect(testDb.statements).toEqual(["BEGIN", "COMMIT"]);
     });
-    test("rejects queries after a scoped transaction completes", async () => {
+    test("rejects queries from a stale asynchronous transaction context", async () => {
         const testDb = makeProvider();
-        let lateQuery: (() => Promise<unknown>) | undefined;
+        let releaseLateQuery!: () => void;
+        const gate = new Promise<void>(resolve => { releaseLateQuery = resolve; });
+        let lateQuery!: Promise<unknown>;
         await testDb.provider.withTransaction(async db => {
-            lateQuery = () => db.query("SELECT 2");
+            lateQuery = gate.then(() => db.query("SELECT 2"));
         });
-        // The callback's context is no longer active after commit.
-        // A direct call outside that context should also fail safely if the pool is closed.
+        releaseLateQuery();
+        await expect(lateQuery).rejects.toThrow("Scoped database transaction has already completed.");
+        expect(testDb.statements).toEqual(["BEGIN", "COMMIT"]);
         expect(testDb.released).toBe(1);
-        expect(lateQuery).toBeDefined();
-    });
+    });;
 
 });
