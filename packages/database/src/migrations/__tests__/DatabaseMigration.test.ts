@@ -26,6 +26,11 @@ describe("database migration SQL selection", () => {
         await expect(applyDatabaseMigrations(provider, "sqlserver", [{ ...migration, id: "../bad" }])).rejects.toThrow("unique");
         expect(statements).toEqual([]);
     });
+    test("does not partially apply migrations when a later migration is invalid", async () => {
+        const { provider, statements } = fake();
+        await expect(applyDatabaseMigrations(provider, "postgresql", [migration, { ...migration, id: "002_missing", postgresql: "" }])).rejects.toThrow("Missing postgresql SQL");
+        expect(statements).toEqual([]);
+    });
     test("rejects missing SQL for selected engine", async () => {
         const { provider } = fake();
         await expect(applyDatabaseMigrations(provider, "postgresql", [{ ...migration, postgresql: " " }])).rejects.toThrow("Missing postgresql SQL");
