@@ -200,6 +200,16 @@ try {
         /Nested transactions are not supported/,
         "Nested tenant transactions must not silently replace tenant context"
     );
+    await assert.rejects(
+        () => provider.withTenantTransaction("", async () => {}),
+        /non-empty tenant identifier/,
+        "Empty tenant context must be rejected before opening a transaction"
+    );
+    await assert.rejects(
+        () => provider.withTenantTransaction("   ", async () => {}),
+        /non-empty tenant identifier/,
+        "Whitespace-only tenant context must be rejected"
+    );
     console.log("PostgreSQL identity persistence integration passed");
 } finally {
     await provider.disconnect();
