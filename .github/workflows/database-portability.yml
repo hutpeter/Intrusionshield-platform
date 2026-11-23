@@ -145,6 +145,13 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Build database package
         run: pnpm --filter @intrusionshield/database build
+      - name: Apply real SQL Server identity schema through versioned migrations
+        env:
+          RUBY_TEST_SQLSERVER_HOST: localhost
+          RUBY_TEST_SQLSERVER_PORT: '1433'
+          RUBY_TEST_SQLSERVER_USER: sa
+          RUBY_TEST_SQLSERVER_PASSWORD: 'RubyTest_StrongPassword2026!'
+        run: node packages/identity-persistence/tests/sqlserver-schema-migrations.integration.mjs
       - name: Run live SQL Server integration checks
         env:
           RUBY_TEST_MIGRATION_HISTORY: "1"
