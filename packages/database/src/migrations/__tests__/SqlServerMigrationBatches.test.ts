@@ -25,5 +25,6 @@ describe("SQL Server versioned migration batch parsing", () => {
     test("rejects repeat counts and empty scripts", () => {
         expect(() => splitSqlServerMigrationBatches("SELECT 1;\nGO 2\n")).toThrow("repeat counts");
         expect(() => splitSqlServerMigrationBatches("GO\nGO\n")).toThrow("no executable batches");
+        expect(() => splitSqlServerMigrationBatches("SELECT 1;\nGO 3 -- unsafe\n")).toThrow("repeat counts");
     });
 });
