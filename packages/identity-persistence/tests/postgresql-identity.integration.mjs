@@ -94,6 +94,27 @@ try {
         /row-level security|policy/i,
         "Tenant B must not assign roles to Tenant A"
     );
+    await assert.rejects(
+        () => provider.withTenantTransaction(tenantB, async db => {
+            await db.execute(
+                'INSERT INTO "Identity"."IdentityRoles" ("TenantId","IdentityId","RoleId") VALUES ($1,$2,$3)',
+                [
+                    {name:"tenant",value:tenantB},
+                    {name:"identity",value:"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"},
+                    {name:"role",value:tenantRoleId}
+                ]
+            );
+        }),
+        /foreign key|violates|permission denied|row-level security|policy/i,
+        "Tenant B must not acquire Tenant A's role even with its own identity"
+    );
+    await provider.withTenantTransaction(tenantB, async () => {
+        assert.deepEqual(
+            await authorization.getPermissions("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",tenantB),
+            [],
+            "Denied role assignment must not grant Tenant B any permissions"
+        );
+    });
     console.log("PostgreSQL identity persistence integration passed");
 } finally {
     await provider.disconnect();
