@@ -6,9 +6,6 @@ const tenantA = "11111111-1111-4111-8111-111111111111";
 const tenantB = "22222222-2222-4222-8222-222222222222";
 const identityId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const tenantRoleId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
-const platformRoleId = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
-const tenantPermissionId = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
-const platformPermissionId = "ffffffff-ffff-4fff-8fff-ffffffffffff";
 const provider = new PostgreSqlProvider({
     host: process.env.RUBY_TEST_POSTGRES_HOST ?? "localhost",
     port: Number(process.env.RUBY_TEST_POSTGRES_PORT ?? 5432),
@@ -41,6 +38,27 @@ try {
         assert.deepEqual(await authorization.getPermissions(identityId, tenantA), []);
     });
     assert.equal(await identity.findById(identityId, tenantA), null, "Missing tenant context must fail closed");
+    assert.deepEqual(await authorization.getPermissions(identityId, tenantA), [], "Missing tenant context must deny permissions");
+    await assert.rejects(
+        () => provider.withTenantTransaction(tenantB, async db => {
+            await db.execute(
+                'INSERT INTO "Identity"."PlatformRoleAssignments" ("TenantId","IdentityId","RoleId") VALUES ($1,$2,$3)',
+                [{name:"tenant",value:tenantB},{name:"identity",value:identityId},{name:"role",value:"dddddddd-dddd-4ddd-8ddd-dddddddddddd"}]
+            );
+        }),
+        /permission denied|row-level security|policy/i,
+        "Tenant application role must never create platform assignments"
+    );
+    await assert.rejects(
+        () => provider.withTenantTransaction(tenantB, async db => {
+            await db.execute(
+                'INSERT INTO "Identity"."IdentityRoles" ("TenantId","IdentityId","RoleId") VALUES ($1,$2,$3)',
+                [{name:"tenant",value:tenantA},{name:"identity",value:identityId},{name:"role",value:tenantRoleId}]
+            );
+        }),
+        /row-level security|policy/i,
+        "Tenant B must not assign roles to Tenant A"
+    );
     console.log("PostgreSQL identity persistence integration passed");
 } finally {
     await provider.disconnect();
