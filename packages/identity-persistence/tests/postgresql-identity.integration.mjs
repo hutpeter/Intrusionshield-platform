@@ -37,6 +37,20 @@ try {
         await assert.rejects(() => identity.updateStatus(identityId, tenantA, "ACTIVE"), /Identity was not found/);
         assert.deepEqual(await authorization.getPermissions(identityId, tenantA), []);
     });
+    await provider.withTenantTransaction(tenantB, async db => {
+        const tenantBIdentity = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+        await db.execute(
+            'INSERT INTO "Identity"."Identities" ("TenantId","Id","IdentityType","Status","DisplayName") VALUES ($1,$2,$3,$4,$5)',
+            [
+                {name:"tenant",value:tenantB},{name:"id",value:tenantBIdentity},
+                {name:"type",value:"USER"},{name:"status",value:"ACTIVE"},
+                {name:"name",value:"Tenant B fixture"}
+            ]
+        );
+        assert.equal((await identity.findById(tenantBIdentity,tenantB))?.status,"ACTIVE");
+        assert.deepEqual(await authorization.getPermissions(tenantBIdentity,tenantB),[]);
+        assert.equal(await identity.findById(identityId,tenantA),null);
+    });
     assert.equal(await identity.findById(identityId, tenantA), null, "Missing tenant context must fail closed");
     assert.deepEqual(await authorization.getPermissions(identityId, tenantA), [], "Missing tenant context must deny permissions");
     await assert.rejects(
