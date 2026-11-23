@@ -115,6 +115,39 @@ try {
             "Denied role assignment must not grant Tenant B any permissions"
         );
     });
+    await assert.rejects(
+        () => provider.execute(
+            'INSERT INTO "Identity"."Identities" ("TenantId","Id","IdentityType","Status","DisplayName") VALUES ($1,$2,$3,$4,$5)',
+            [
+                {name:"tenant",value:tenantB},
+                {name:"id",value:"88888888-8888-4888-8888-888888888888"},
+                {name:"type",value:"USER"},
+                {name:"status",value:"ACTIVE"},
+                {name:"name",value:"Unscoped attempt"}
+            ]
+        ),
+        /row-level security|policy/i,
+        "Direct application writes without a tenant transaction must fail closed"
+    );
+    await assert.rejects(
+        () => provider.withTenantTransaction(tenantB, async db => {
+            await db.execute(
+                'UPDATE "Identity"."Identities" SET "Status" = $1 WHERE "TenantId" = $2 AND "Id" = $3',
+                [
+                    {name:"status",value:"ACTIVE"},
+                    {name:"tenant",value:tenantA},
+                    {name:"id",value:identityId}
+                ]
+            );
+            const leaked = await db.query(
+                'SELECT "Id" FROM "Identity"."Identities" WHERE "TenantId" = $1 AND "Id" = $2',
+                [{name:"tenant",value:tenantA},{name:"id",value:identityId}]
+            );
+            assert.equal(leaked.rows.length,0,"Tenant B must not read Tenant A identity via direct SQL");
+            throw new Error("Cross-tenant direct SQL access denied");
+        }),
+        /Cross-tenant direct SQL access denied/
+    );
     console.log("PostgreSQL identity persistence integration passed");
 } finally {
     await provider.disconnect();
