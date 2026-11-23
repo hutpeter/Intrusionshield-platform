@@ -116,13 +116,13 @@ describe("live SQL Server tenant-scoped transactions", () => {
         const suffix = Math.random().toString(36).slice(2, 10);
         const id = `migration_${suffix}`;
         const table = `dbo.ruby_migration_test_${suffix}`;
-        const migration = { id, description: "integration", sqlserver: `CREATE TABLE ${table} (id int NOT NULL)`, postgresql: "SELECT 1" };
+        const migration = { id, description: "integration", sqlserver: `CREATE TABLE ${table} (id int NOT NULL);\nGO\nINSERT INTO ${table} (id) VALUES (42);\nGO`, postgresql: "SELECT 1" };
         try {
             // Existing global history may include other migrations, so run the test
             // against a clean migration history table in ephemeral CI only.
             await db.execute("IF OBJECT_ID(N'dbo.ruby_schema_migrations', N'U') IS NOT NULL DROP TABLE dbo.ruby_schema_migrations");
             expect(await runVersionedMigrations("sqlserver", [migration], store)).toEqual([id]);
-            // Outside the lock scope, direct history access must fail.
+            expect((await db.query<{ id: number }>(`SELECT id FROM ${table}`)).rows).toEqual([{ id: 42 }]);\n            // Outside the lock scope, direct history access must fail.
             await expect(store.readApplied()).rejects.toThrow("active exclusive deployment lock");
             expect(await runVersionedMigrations("sqlserver", [migration], store)).toEqual([]);
             // Two deployment attempts must serialize and apply the new migration only once.
