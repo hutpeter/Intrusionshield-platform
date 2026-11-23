@@ -54,6 +54,27 @@ try {
     assert.equal(await identity.findById(identityId, tenantA), null, "Missing tenant context must fail closed");
     assert.deepEqual(await authorization.getPermissions(identityId, tenantA), [], "Missing tenant context must deny permissions");
     await assert.rejects(
+        () => identity.updateStatus(identityId, tenantA, "ACTIVE"),
+        /Identity was not found/,
+        "Missing tenant context must deny status updates"
+    );
+    await assert.rejects(
+        () => provider.withTenantTransaction(tenantA, async db => {
+            await db.execute(
+                'INSERT INTO "Identity"."Permissions" ("Id","Name","Resource","Action","Scope") VALUES ($1,$2,$3,$4,$5)',
+                [
+                    {name:"id",value:"99999999-9999-4999-8999-999999999999"},
+                    {name:"name",value:"Escalation attempt"},
+                    {name:"resource",value:"identity"},
+                    {name:"action",value:"ADMIN"},
+                    {name:"scope",value:"PLATFORM"}
+                ]
+            );
+        }),
+        /permission denied|row-level security|policy/i,
+        "Application principal must not alter permission catalog"
+    );
+    await assert.rejects(
         () => provider.withTenantTransaction(tenantB, async db => {
             await db.execute(
                 'INSERT INTO "Identity"."PlatformRoleAssignments" ("TenantId","IdentityId","RoleId") VALUES ($1,$2,$3)',
