@@ -240,6 +240,40 @@ try {
     assert.equal((await provider.withTenantTransaction(tenantA, tx =>
         tx.query("SELECT RoleId FROM [Identity].[PlatformRoleAssignments]")
     )).rows.length, 1);
+    // Verify actual application-principal permissions, not just RLS evaluated
+    // under the migration administrator (sa). The disposable CI database
+    // receives a restricted SQL login with no schema or policy ALTER rights.
+    const appLogin = "ruby_identity_app_ci";
+    const appPassword = "RubyIdentityApp_CiPassword2026!";
+    const master = new SqlServerProvider({ ...options, database: "master" });
+    await master.connect();
+    try {
+        await master.execute(`IF SUSER_ID(N'${appLogin}') IS NULL CREATE LOGIN [${appLogin}] WITH PASSWORD = N'${appPassword}', CHECK_POLICY = OFF`);
+    } finally {
+        await master.disconnect();
+    }
+    await provider.execute(`IF DATABASE_PRINCIPAL_ID(N'${appLogin}') IS NULL CREATE USER [${appLogin}] FOR LOGIN [${appLogin}]`);
+    await provider.execute(`GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA::[Identity] TO [${appLogin}]`);
+    const app = new SqlServerProvider({ ...options, database, user: appLogin, password: appPassword });
+    await app.connect();
+    try {
+        await assert.rejects(app.execute(
+            "ALTER SECURITY POLICY [Identity].[IdentityTenantPolicy] WITH (STATE = OFF)"
+        ), "Application login must not disable tenant RLS");
+        await assert.rejects(app.execute(
+            "ALTER TABLE [Identity].[Identities] ADD UnsafeColumn int NULL"
+        ), "Application login must not modify protected identity schema");
+        assert.equal((await app.query("SELECT Id FROM [Identity].[Identities]")).rows.length, 0);
+        assert.deepEqual((await app.withTenantTransaction(tenantA, tx =>
+            tx.query("SELECT DisplayName FROM [Identity].[Identities]")
+        )).rows.map(row => row.DisplayName), ["Alpha"]);
+        await assert.rejects(app.withTenantTransaction(tenantA, tx => tx.execute(
+            "INSERT INTO [Identity].[PlatformRoleAssignments] (TenantId,IdentityId,RoleId) VALUES (@tenant,@identity,@role)",
+            [{ name: "tenant", value: tenantA }, { name: "identity", value: identityA }, { name: "role", value: platformRole }]
+        )), "Application login must not grant platform roles");
+    } finally {
+        await app.disconnect();
+    }
     console.log("Versioned SQL Server identity schema and tenant RLS checks passed");
 } finally {
     await provider.disconnect();
