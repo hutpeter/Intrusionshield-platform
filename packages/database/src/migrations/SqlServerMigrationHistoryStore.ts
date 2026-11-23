@@ -36,7 +36,12 @@ export class SqlServerMigrationHistoryStore implements MigrationHistoryStore {
 
     async applyAndRecord(migration: DatabaseMigration, sql: string, checksum: string): Promise<void> {
         this.requireLock();
-        await this.provider.execute(sql);
+        // GO is a client-side batch separator, not executable T-SQL.
+        // Existing SQL Server foundation migrations contain GO between DDL batches.
+        const batches = sql.split(/^\s*GO\s*(?:--[^\r\n]*)?$/gim).map(batch => batch.trim()).filter(Boolean);
+        for (const batch of batches) {
+            await this.provider.execute(batch);
+        }
         await this.provider.execute(
             "INSERT INTO dbo.ruby_schema_migrations (migration_id, checksum) VALUES (@migrationId, @checksum)",
             [{ name: "migrationId", value: migration.id }, { name: "checksum", value: checksum }]
