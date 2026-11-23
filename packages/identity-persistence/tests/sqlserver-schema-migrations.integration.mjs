@@ -23,7 +23,8 @@ try {
 const files = [
     ["identity_001", "001_identity_foundation.sql"],
     ["identity_002", "002_authorization_foundation.sql"],
-    ["identity_003", "003_identity_tenant_security.sql"]
+    ["identity_003", "003_identity_tenant_security.sql"],
+    ["identity_004", "004_authorization_tenant_security.sql"]
 ];
 const directory = new URL("../sql/", import.meta.url);
 const migrations = await Promise.all(files.map(async ([id, file]) => ({
@@ -49,7 +50,7 @@ try {
     const policies = await provider.query(
         "SELECT COUNT(*) AS count FROM sys.security_predicates WHERE object_id = OBJECT_ID(N'Identity.IdentityTenantPolicy')"
     );
-    assert.equal(policies.rows[0].count, 15, "Five identity tables must each have filter and write-block predicates");
+    assert.equal(policies.rows[0].count, 18, "Six identity and authorization tables must each have filter and write-block predicates");
     const tenantA = "11111111-1111-4111-8111-111111111111";
     const tenantB = "22222222-2222-4222-8222-222222222222";
     const identityA = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -100,6 +101,34 @@ try {
         "INSERT INTO [Identity].[Identities] (TenantId,Id,IdentityType,Status,DisplayName) VALUES (@tenant,@id,N'USER',N'ACTIVE',N'Unscoped')",
         [{ name: "tenant", value: tenantA }, { name: "id", value: "dddddddd-dddd-4ddd-8ddd-dddddddddddd" }]
     ));
+    const roleA = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+    const roleB = "ffffffff-ffff-4fff-8fff-ffffffffffff";
+    await provider.withTenantTransaction(tenantA, tx => tx.execute(
+        "INSERT INTO [Identity].[Roles] (Id,TenantId,Name,Scope) VALUES (@id,@tenant,N'AlphaRole',N'TENANT')",
+        [{ name: "id", value: roleA }, { name: "tenant", value: tenantA }]
+    ));
+    await provider.withTenantTransaction(tenantB, tx => tx.execute(
+        "INSERT INTO [Identity].[Roles] (Id,TenantId,Name,Scope) VALUES (@id,@tenant,N'BetaRole',N'TENANT')",
+        [{ name: "id", value: roleB }, { name: "tenant", value: tenantB }]
+    ));
+    assert.deepEqual((await provider.withTenantTransaction(tenantA, tx =>
+        tx.query("SELECT Name FROM [Identity].[Roles] ORDER BY Name")
+    )).rows.map(row => row.Name), ["AlphaRole"]);
+    assert.deepEqual((await provider.withTenantTransaction(tenantB, tx =>
+        tx.query("SELECT Name FROM [Identity].[Roles] ORDER BY Name")
+    )).rows.map(row => row.Name), ["BetaRole"]);
+    assert.equal((await provider.query("SELECT Name FROM [Identity].[Roles]")).rows.length, 0);
+    await assert.rejects(provider.withTenantTransaction(tenantA, tx => tx.execute(
+        "INSERT INTO [Identity].[Roles] (Id,TenantId,Name,Scope) VALUES (NEWID(),@tenant,N'ForbiddenRole',N'TENANT')",
+        [{ name: "tenant", value: tenantB }]
+    )));
+    await assert.rejects(provider.withTenantTransaction(tenantA, tx => tx.execute(
+        "UPDATE [Identity].[Roles] SET TenantId=@other WHERE Id=@id",
+        [{ name: "other", value: tenantB }, { name: "id", value: roleA }]
+    )));
+    await assert.rejects(provider.withTenantTransaction(tenantA, tx => tx.execute(
+        "INSERT INTO [Identity].[Roles] (Id,TenantId,Name,Scope) VALUES (NEWID(),NULL,N'ForbiddenPlatformRole',N'PLATFORM')"
+    )));
     console.log("Versioned SQL Server identity schema and tenant RLS checks passed");
 } finally {
     await provider.disconnect();
