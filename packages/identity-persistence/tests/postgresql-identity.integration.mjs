@@ -21,25 +21,15 @@ try {
     const identity = new SqlIdentityRepository(provider, new PostgreSqlDialect());
     const authorization = new SqlAuthorizationRepository(provider, new PostgreSqlDialect());
     await provider.withTenantTransaction(tenantA, async db => {
-        await db.execute(
-            'INSERT INTO "Identity"."Identities" ("TenantId","Id","IdentityType","Status","DisplayName") VALUES ($1,$2,$3,$4,$5)',
-            [
-                {name:"tenant",value:tenantA}, {name:"id",value:identityId},
-                {name:"type",value:"USER"}, {name:"status",value:"ACTIVE"},
-                {name:"name",value:"Portability fixture"}
-            ]
-        );
         const found = await identity.findById(identityId, tenantA);
         assert.equal(found?.displayName, "Portability fixture");
         assert.equal(found?.status, "ACTIVE");
-        assert.deepEqual(await authorization.getPermissions(identityId, tenantA), []);
+        assert.deepEqual((await authorization.getPermissions(identityId, tenantA)).map(p => p.action), ["SUPPORT"]);
         await db.execute(
             'INSERT INTO "Identity"."IdentityRoles" ("TenantId","IdentityId","RoleId") VALUES ($1,$2,$3)',
             [{name:"tenant",value:tenantA},{name:"identity",value:identityId},{name:"role",value:tenantRoleId}]
         );
         let permissions = await authorization.getPermissions(identityId, tenantA);
-        assert.deepEqual(permissions.map(p => p.action), ["READ"], "Tenant permission must resolve");
-        permissions = await authorization.getPermissions(identityId, tenantA);
         assert.deepEqual(permissions.map(p => p.action).sort(), ["READ","SUPPORT"], "Tenant and platform permissions must combine");
         await identity.updateStatus(identityId, tenantA, "SUSPENDED");
         assert.equal((await identity.findById(identityId, tenantA))?.status, "SUSPENDED");
