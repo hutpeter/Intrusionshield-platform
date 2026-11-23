@@ -267,6 +267,9 @@ try {
         assert.deepEqual((await app.withTenantTransaction(tenantA, tx =>
             tx.query("SELECT DisplayName FROM [Identity].[Identities]")
         )).rows.map(row => row.DisplayName), ["Alpha"]);
+        assert.equal((await app.withTenantTransaction(tenantB, tx =>
+            tx.query("SELECT Id FROM [Identity].[Identities] WHERE Id=@id", [{ name: "id", value: identityA }])
+        )).rows.length, 0, "Restricted login must not read another tenant's identity");
         await assert.rejects(app.withTenantTransaction(tenantA, tx => tx.execute(
             "INSERT INTO [Identity].[PlatformRoleAssignments] (TenantId,IdentityId,RoleId) VALUES (@tenant,@identity,@role)",
             [{ name: "tenant", value: tenantA }, { name: "identity", value: identityA }, { name: "role", value: platformRole }]
