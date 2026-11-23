@@ -24,7 +24,8 @@ const files = [
     ["identity_001", "001_identity_foundation.sql"],
     ["identity_002", "002_authorization_foundation.sql"],
     ["identity_003", "003_identity_tenant_security.sql"],
-    ["identity_004", "004_authorization_tenant_security.sql"]
+    ["identity_004", "004_authorization_tenant_security.sql"],
+    ["identity_005", "005_authorization_audit_tenant_security.sql"]
 ];
 const directory = new URL("../sql/", import.meta.url);
 const migrations = await Promise.all(files.map(async ([id, file]) => ({
@@ -50,7 +51,7 @@ try {
     const policies = await provider.query(
         "SELECT COUNT(*) AS count FROM sys.security_predicates WHERE object_id = OBJECT_ID(N'Identity.IdentityTenantPolicy')"
     );
-    assert.equal(policies.rows[0].count, 18, "Six identity and authorization tables must each have filter and write-block predicates");
+    assert.equal(policies.rows[0].count, 21, "Seven identity and authorization tables must each have filter and write-block predicates");
     const tenantA = "11111111-1111-4111-8111-111111111111";
     const tenantB = "22222222-2222-4222-8222-222222222222";
     const identityA = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -128,6 +129,33 @@ try {
     )));
     await assert.rejects(provider.withTenantTransaction(tenantA, tx => tx.execute(
         "INSERT INTO [Identity].[Roles] (Id,TenantId,Name,Scope) VALUES (NEWID(),NULL,N'ForbiddenPlatformRole',N'PLATFORM')"
+    )));
+    await provider.withTenantTransaction(tenantA, tx => tx.execute(
+        "INSERT INTO [Identity].[AuthorizationAudit] (TenantId,IdentityId,Resource,Action,Allowed) VALUES (@tenant,@id,N'identity',N'read',1)",
+        [{ name: "tenant", value: tenantA }, { name: "id", value: identityA }]
+    ));
+    await provider.withTenantTransaction(tenantB, tx => tx.execute(
+        "INSERT INTO [Identity].[AuthorizationAudit] (TenantId,IdentityId,Resource,Action,Allowed) VALUES (@tenant,@id,N'identity',N'read',0)",
+        [{ name: "tenant", value: tenantB }, { name: "id", value: identityB }]
+    ));
+    assert.equal((await provider.query("SELECT Id FROM [Identity].[AuthorizationAudit]")).rows.length, 0);
+    for (const tenant of [tenantA, tenantB]) {
+        const result = await provider.withTenantTransaction(tenant, tx =>
+            tx.query("SELECT TenantId FROM [Identity].[AuthorizationAudit]")
+        );
+        assert.equal(result.rows.length, 1, "Audit records must be isolated by tenant");
+        assert.equal(String(result.rows[0].TenantId).toLowerCase(), tenant);
+    }
+    await assert.rejects(provider.withTenantTransaction(tenantA, tx => tx.execute(
+        "INSERT INTO [Identity].[AuthorizationAudit] (TenantId,Resource,Action,Allowed) VALUES (@other,N'identity',N'write',0)",
+        [{ name: "other", value: tenantB }]
+    )));
+    await assert.rejects(provider.withTenantTransaction(tenantA, tx => tx.execute(
+        "INSERT INTO [Identity].[AuthorizationAudit] (TenantId,Resource,Action,Allowed) VALUES (NULL,N'platform',N'admin',0)"
+    )));
+    await assert.rejects(provider.withTenantTransaction(tenantA, tx => tx.execute(
+        "UPDATE [Identity].[AuthorizationAudit] SET TenantId=@other WHERE TenantId=@tenant",
+        [{ name: "other", value: tenantB }, { name: "tenant", value: tenantA }]
     )));
     console.log("Versioned SQL Server identity schema and tenant RLS checks passed");
 } finally {
