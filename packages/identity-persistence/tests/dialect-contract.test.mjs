@@ -20,7 +20,7 @@ for (const [engine, dialect, expected] of [
     const identity = new SqlIdentityRepository(provider,dialect);
     const authorization = new SqlAuthorizationRepository(provider,dialect);
     assert.equal(await identity.findById("id","tenant"),null);
-    assert.match(calls.at(-1).sql, new RegExp(expected.table.replace(/[.*+?^$()|[\]{}]/g,"\\$&")));
+    assert.ok(calls.at(-1).sql.includes(expected.table));
     assert.ok(calls.at(-1).sql.includes(expected.id));
     assert.ok(calls.at(-1).sql.includes(expected.tenant));
     await identity.updateStatus("id","tenant","SUSPENDED");
