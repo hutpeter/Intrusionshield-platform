@@ -129,9 +129,8 @@ try {
         /row-level security|policy/i,
         "Direct application writes without a tenant transaction must fail closed"
     );
-    await assert.rejects(
-        () => provider.withTenantTransaction(tenantB, async db => {
-            await db.execute(
+    await provider.withTenantTransaction(tenantB, async db => {
+            const changed = await db.execute(
                 'UPDATE "Identity"."Identities" SET "Status" = $1 WHERE "TenantId" = $2 AND "Id" = $3',
                 [
                     {name:"status",value:"ACTIVE"},
@@ -139,15 +138,13 @@ try {
                     {name:"id",value:identityId}
                 ]
             );
+            assert.equal(changed,0,"Tenant B must not update Tenant A via direct SQL");
             const leaked = await db.query(
                 'SELECT "Id" FROM "Identity"."Identities" WHERE "TenantId" = $1 AND "Id" = $2',
                 [{name:"tenant",value:tenantA},{name:"id",value:identityId}]
             );
             assert.equal(leaked.rows.length,0,"Tenant B must not read Tenant A identity via direct SQL");
-            throw new Error("Cross-tenant direct SQL access denied");
-        }),
-        /Cross-tenant direct SQL access denied/
-    );
+        });
     console.log("PostgreSQL identity persistence integration passed");
 } finally {
     await provider.disconnect();
