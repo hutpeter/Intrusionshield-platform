@@ -5,6 +5,10 @@ import { SqlIdentityRepository, SqlAuthorizationRepository } from "../dist/index
 const tenantA = "11111111-1111-4111-8111-111111111111";
 const tenantB = "22222222-2222-4222-8222-222222222222";
 const identityId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+const tenantRoleId = "cccccccc-cccc-4ccc-8ccc-cccccccccccc";
+const platformRoleId = "dddddddd-dddd-4ddd-8ddd-dddddddddddd";
+const tenantPermissionId = "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee";
+const platformPermissionId = "ffffffff-ffff-4fff-8fff-ffffffffffff";
 const provider = new PostgreSqlProvider({
     host: process.env.RUBY_TEST_POSTGRES_HOST ?? "localhost",
     port: Number(process.env.RUBY_TEST_POSTGRES_PORT ?? 5432),
@@ -29,6 +33,18 @@ try {
         assert.equal(found?.displayName, "Portability fixture");
         assert.equal(found?.status, "ACTIVE");
         assert.deepEqual(await authorization.getPermissions(identityId, tenantA), []);
+        await db.execute(
+            'INSERT INTO "Identity"."IdentityRoles" ("TenantId","IdentityId","RoleId") VALUES ($1,$2,$3)',
+            [{name:"tenant",value:tenantA},{name:"identity",value:identityId},{name:"role",value:tenantRoleId}]
+        );
+        let permissions = await authorization.getPermissions(identityId, tenantA);
+        assert.deepEqual(permissions.map(p => p.action), ["READ"], "Tenant permission must resolve");
+        await db.execute(
+            'INSERT INTO "Identity"."PlatformRoleAssignments" ("TenantId","IdentityId","RoleId") VALUES ($1,$2,$3)',
+            [{name:"tenant",value:tenantA},{name:"identity",value:identityId},{name:"role",value:platformRoleId}]
+        );
+        permissions = await authorization.getPermissions(identityId, tenantA);
+        assert.deepEqual(permissions.map(p => p.action).sort(), ["READ","SUPPORT"], "Tenant and platform permissions must combine");
         await identity.updateStatus(identityId, tenantA, "SUSPENDED");
         assert.equal((await identity.findById(identityId, tenantA))?.status, "SUSPENDED");
         assert.deepEqual(await authorization.getPermissions(identityId, tenantA), []);
