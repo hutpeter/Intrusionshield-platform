@@ -43,3 +43,18 @@ The `packages/database` entrypoint exists on both the Athena account-administrat
 4. Repeat for telemetry ingestion and sterile-processing transactions, then complete GIS parity and load tests.
 
 **Status:** foundation in progress; vertical adoption and complete cross-branch source audit are **not yet verified**.
+
+
+## Branch-specific source-tree inventory (2026-11-23)
+
+A recursive Git tree inspection of `feature/database-engine-independence` returned 1,729 entries without truncation. The source roots are **`packages/his/src`**, **`packages/sterile-processing/src`**, **`packages/identity-persistence/src`**, **`packages/repositories/src`**, **`packages/event-persistence/src`**, **`apps/admin-portal/src`**, and **`apps/solar-dashboard`**. Do not assume there is a `services/his-service` or `services/telemetry-energy-service` directory on this branch: those guessed paths were not verified. Other active branch heads and separately hosted products require separate tree scans.
+
+Verified source-level portability blockers on this branch:
+
+- `packages/identity-persistence/src/SqlIdentityRepository.ts` embeds SQL Server bracketed `[Identity].[Identities]`, named `@id`/`@tenantId`/`@status` parameters, and `SYSUTCDATETIME()`. It uses the shared `IDatabaseProvider` but its SQL is **not** PostgreSQL compatible.
+- `packages/identity-persistence/src/SqlAuthorizationRepository.ts` embeds SQL Server schema/table quoting, named parameters, and `N'...'` literals in both tenant and platform permission queries. Its `UNION` behavior and tenant/platform scope must be preserved during conversion.
+- `packages/event-persistence/src/SqlEventOutboxRepository.ts` explicitly documents a SQL Server transactional outbox; its DDL and query syntax need provider-specific inspection and conversion.
+- `packages/repositories/src/base/BaseSqlRepository.ts` uses `DatabaseManager` and passes raw SQL through without generating engine-neutral statements. Adopting a provider alone does **not** make its concrete repositories portable.
+- `packages/identity-persistence/sql/001_identity_foundation.sql` and `002_authorization_foundation.sql` are existing schema assets requiring PostgreSQL migration equivalents and RLS verification.
+
+**Recommended first vertical integration slice:** identity persistence. Add dialect selection while retaining SQL Server as the default, provide reviewed PostgreSQL identity schema migrations, test identity reads/updates and authorization permissions with both engines, and verify tenant and platform-role isolation using restricted principals. Then apply the same process to Athena repositories and telemetry. This is a source inventory, **not** a claim that any vertical has already passed dual-engine acceptance.
