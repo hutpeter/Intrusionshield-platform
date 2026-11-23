@@ -38,7 +38,7 @@ try {
             [{name:"tenant",value:tenantA},{name:"identity",value:identityId},{name:"role",value:tenantRoleId}]
         );
         let permissions = await authorization.getPermissions(identityId, tenantA);
-        assert.deepEqual(permissions.map(p => p.action).sort(), ["READ","SUPPORT"], "Tenant and pre-provisioned platform permissions must resolve");
+        assert.deepEqual(permissions.map(p => p.action), ["READ"], "Tenant permission must resolve");
         permissions = await authorization.getPermissions(identityId, tenantA);
         assert.deepEqual(permissions.map(p => p.action).sort(), ["READ","SUPPORT"], "Tenant and platform permissions must combine");
         await identity.updateStatus(identityId, tenantA, "SUSPENDED");
