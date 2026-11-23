@@ -36,21 +36,22 @@ implements IdentityRepository {
         tenantId: string
     ): Promise<Identity | null> {
         const table = `${this.dialect.quoteIdentifier("Identity")}.${this.dialect.quoteIdentifier("Identities")}`;
+        const col = (name: string) => this.dialect.quoteIdentifier(name);
         const idParam = this.dialect.engine === "postgresql" ? "$1" : "@id";
         const tenantParam = this.dialect.engine === "postgresql" ? "$2" : "@tenantId";
         const result =
             await this.database.query<IdentityRow>(
                 `SELECT
-                    Id AS id,
-                    TenantId AS tenantId,
-                    IdentityType AS type,
-                    Status AS status,
-                    DisplayName AS displayName,
-                    CreatedAt AS createdAt,
-                    UpdatedAt AS updatedAt
+                    ${col("Id")} AS id,
+                    ${col("TenantId")} AS "tenantId",
+                    ${col("IdentityType")} AS type,
+                    ${col("Status")} AS status,
+                    ${col("DisplayName")} AS "displayName",
+                    ${col("CreatedAt")} AS "createdAt",
+                    ${col("UpdatedAt")} AS "updatedAt"
                  FROM ${table}
-                 WHERE Id = ${idParam}
-                   AND TenantId = ${tenantParam}`,
+                 WHERE ${col("Id")} = ${idParam}
+                   AND ${col("TenantId")} = ${tenantParam}`,
                 [
                     { name: "id", value: id },
                     { name: "tenantId", value: tenantId }
@@ -80,6 +81,7 @@ implements IdentityRepository {
         status: IdentityStatus
     ): Promise<void> {
         const table = `${this.dialect.quoteIdentifier("Identity")}.${this.dialect.quoteIdentifier("Identities")}`;
+        const col = (name: string) => this.dialect.quoteIdentifier(name);
         const statusParam = this.dialect.engine === "postgresql" ? "$3" : "@status";
         const idParam = this.dialect.engine === "postgresql" ? "$1" : "@id";
         const tenantParam = this.dialect.engine === "postgresql" ? "$2" : "@tenantId";
@@ -88,10 +90,10 @@ implements IdentityRepository {
             await this.database.execute(
                 `UPDATE ${table}
                  SET
-                    Status = ${statusParam},
-                    UpdatedAt = ${utcNow}
-                 WHERE Id = ${idParam}
-                   AND TenantId = ${tenantParam}`,
+                    ${col("Status")} = ${statusParam},
+                    ${col("UpdatedAt")} = ${utcNow}
+                 WHERE ${col("Id")} = ${idParam}
+                   AND ${col("TenantId")} = ${tenantParam}`,
                 [
                     { name: "id", value: id },
                     { name: "tenantId", value: tenantId },
