@@ -14,6 +14,14 @@ describe("SQL Server versioned migration batch parsing", () => {
         expect(splitSqlServerMigrationBatches("SELECT 'GO' AS marker;\nSELECT 1 AS GO;"))
             .toEqual(["SELECT 'GO' AS marker;\nSELECT 1 AS GO;"]);
     });
+    test("does not interpret GO inside identifiers or ordinary comments", () => {
+        expect(splitSqlServerMigrationBatches(
+            "SELECT [GO] AS marker;\n-- GO is a comment\nSELECT 2;\nGO\nSELECT 3;"
+        )).toEqual([
+            "SELECT [GO] AS marker;\n-- GO is a comment\nSELECT 2;",
+            "SELECT 3;"
+        ]);
+    });
     test("rejects repeat counts and empty scripts", () => {
         expect(() => splitSqlServerMigrationBatches("SELECT 1;\nGO 2\n")).toThrow("repeat counts");
         expect(() => splitSqlServerMigrationBatches("GO\nGO\n")).toThrow("no executable batches");
