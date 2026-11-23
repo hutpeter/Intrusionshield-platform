@@ -31,4 +31,24 @@ for (const [engine, dialect, expected] of [
     assert.ok(calls.at(-1).sql.includes(engine==="postgresql"?"$2":"@tenantId"));
     assert.ok(calls.at(-1).sql.includes("UNION"));
 }
+const unsupported = {
+    engine: "unsupported",
+    quoteIdentifier: name => name
+};
+const noSql = {
+    query: async () => { throw new Error("Unsupported engine must not query"); },
+    execute: async () => { throw new Error("Unsupported engine must not mutate"); }
+};
+await assert.rejects(
+    () => new SqlIdentityRepository(noSql,unsupported).findById("id","tenant"),
+    /Unsupported identity persistence database engine/
+);
+await assert.rejects(
+    () => new SqlIdentityRepository(noSql,unsupported).updateStatus("id","tenant","SUSPENDED"),
+    /Unsupported identity persistence database engine/
+);
+await assert.rejects(
+    () => new SqlAuthorizationRepository(noSql,unsupported).getPermissions("id","tenant"),
+    /Unsupported identity persistence database engine/
+);
 console.log("Identity SQL dialect contract checks passed");
