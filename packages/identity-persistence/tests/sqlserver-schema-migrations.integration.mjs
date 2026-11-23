@@ -22,7 +22,8 @@ try {
 }
 const files = [
     ["identity_001", "001_identity_foundation.sql"],
-    ["identity_002", "002_authorization_foundation.sql"]
+    ["identity_002", "002_authorization_foundation.sql"],
+    ["identity_003", "003_identity_tenant_security.sql"]
 ];
 const directory = new URL("../sql/", import.meta.url);
 const migrations = await Promise.all(files.map(async ([id, file]) => ({
@@ -45,6 +46,10 @@ try {
         "SELECT migration_id AS id FROM dbo.ruby_schema_migrations ORDER BY sequence_number"
     );
     assert.deepEqual(history.rows.map(row => row.id), files.map(([id]) => id));
+    const policies = await provider.query(
+        "SELECT COUNT(*) AS count FROM sys.security_predicates WHERE object_id = OBJECT_ID(N'Identity.IdentityTenantPolicy')"
+    );
+    assert.equal(policies.rows[0].count, 15, "Five identity tables must each have filter and write-block predicates");
     console.log("Versioned SQL Server identity schema migrations passed");
 } finally {
     await provider.disconnect();
