@@ -210,6 +210,20 @@ try {
         /non-empty tenant identifier/,
         "Whitespace-only tenant context must be rejected"
     );
+    await provider.withTenantTransaction(tenantA, async db => {
+        const original = await db.query("SELECT current_setting('ruby.tenant_id', true) AS tenant");
+        assert.equal(original.rows[0]?.tenant,tenantA);
+        await assert.rejects(
+            () => provider.withTenantTransaction(tenantB, async () => {}),
+            /Nested transactions are not supported/
+        );
+        const afterRejectedNested = await db.query("SELECT current_setting('ruby.tenant_id', true) AS tenant");
+        assert.equal(
+            afterRejectedNested.rows[0]?.tenant,tenantA,
+            "Rejected nested tenant transaction must not alter outer tenant context"
+        );
+        assert.equal(await identity.findById("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",tenantB),null);
+    });
     console.log("PostgreSQL identity persistence integration passed");
 } finally {
     await provider.disconnect();
