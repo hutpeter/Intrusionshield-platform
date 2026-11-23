@@ -1,6 +1,9 @@
 import type {
-    IDatabaseProvider
+    IDatabaseProvider,
+    DatabaseDialect
 } from "@intrusionshield/database";
+
+import { SqlServerDialect } from "@intrusionshield/database";
 
 import type {
     Identity,
@@ -24,13 +27,17 @@ interface IdentityRow {
 export class SqlIdentityRepository
 implements IdentityRepository {
     public constructor(
-        private readonly database: IDatabaseProvider
+        private readonly database: IDatabaseProvider,
+        private readonly dialect: DatabaseDialect = new SqlServerDialect()
     ) {}
 
     public async findById(
         id: string,
         tenantId: string
     ): Promise<Identity | null> {
+        const table = `${this.dialect.quoteIdentifier("Identity")}.${this.dialect.quoteIdentifier("Identities")}`;
+        const idParam = this.dialect.engine === "postgresql" ? "$1" : "@id";
+        const tenantParam = this.dialect.engine === "postgresql" ? "$2" : "@tenantId";
         const result =
             await this.database.query<IdentityRow>(
                 `SELECT
@@ -41,9 +48,9 @@ implements IdentityRepository {
                     DisplayName AS displayName,
                     CreatedAt AS createdAt,
                     UpdatedAt AS updatedAt
-                 FROM [Identity].[Identities]
-                 WHERE Id = @id
-                   AND TenantId = @tenantId`,
+                 FROM ${table}
+                 WHERE Id = ${idParam}
+                   AND TenantId = ${tenantParam}`,
                 [
                     { name: "id", value: id },
                     { name: "tenantId", value: tenantId }
@@ -72,14 +79,19 @@ implements IdentityRepository {
         tenantId: string,
         status: IdentityStatus
     ): Promise<void> {
+        const table = `${this.dialect.quoteIdentifier("Identity")}.${this.dialect.quoteIdentifier("Identities")}`;
+        const statusParam = this.dialect.engine === "postgresql" ? "$3" : "@status";
+        const idParam = this.dialect.engine === "postgresql" ? "$1" : "@id";
+        const tenantParam = this.dialect.engine === "postgresql" ? "$2" : "@tenantId";
+        const utcNow = this.dialect.engine === "postgresql" ? "CURRENT_TIMESTAMP" : "SYSUTCDATETIME()";
         const affected =
             await this.database.execute(
-                `UPDATE [Identity].[Identities]
+                `UPDATE ${table}
                  SET
-                    Status = @status,
-                    UpdatedAt = SYSUTCDATETIME()
-                 WHERE Id = @id
-                   AND TenantId = @tenantId`,
+                    Status = ${statusParam},
+                    UpdatedAt = ${utcNow}
+                 WHERE Id = ${idParam}
+                   AND TenantId = ${tenantParam}`,
                 [
                     { name: "id", value: id },
                     { name: "tenantId", value: tenantId },
