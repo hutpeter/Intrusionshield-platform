@@ -145,6 +145,45 @@ try {
             );
             assert.equal(leaked.rows.length,0,"Tenant B must not read Tenant A identity via direct SQL");
         });
+    const [concurrentA, concurrentB] = await Promise.all([
+        provider.withTenantTransaction(tenantA, async db => {
+            const setting = await db.query("SELECT current_setting('ruby.tenant_id', true) AS tenant");
+            const own = await identity.findById(identityId,tenantA);
+            const other = await identity.findById("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",tenantB);
+            return {setting:setting.rows[0]?.tenant,own:own?.id,other};
+        }),
+        provider.withTenantTransaction(tenantB, async db => {
+            const setting = await db.query("SELECT current_setting('ruby.tenant_id', true) AS tenant");
+            const own = await identity.findById("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",tenantB);
+            const other = await identity.findById(identityId,tenantA);
+            return {setting:setting.rows[0]?.tenant,own:own?.id,other};
+        })
+    ]);
+    assert.deepEqual(concurrentA,{setting:tenantA,own:identityId,other:null});
+    assert.deepEqual(concurrentB,{
+        setting:tenantB,own:"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",other:null
+    });
+    await assert.rejects(
+        () => provider.withTenantTransaction(tenantB, async db => {
+            await db.execute(
+                'UPDATE "Identity"."Identities" SET "Status" = $1 WHERE "TenantId" = $2 AND "Id" = $3',
+                [
+                    {name:"status",value:"DISABLED"},
+                    {name:"tenant",value:tenantB},
+                    {name:"id",value:"bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"}
+                ]
+            );
+            throw new Error("Intentional rollback verification");
+        }),
+        /Intentional rollback verification/
+    );
+    await provider.withTenantTransaction(tenantB, async () => {
+        assert.equal(
+            (await identity.findById("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",tenantB))?.status,
+            "ACTIVE",
+            "Failed tenant transaction must roll back identity changes"
+        );
+    });
     console.log("PostgreSQL identity persistence integration passed");
 } finally {
     await provider.disconnect();
