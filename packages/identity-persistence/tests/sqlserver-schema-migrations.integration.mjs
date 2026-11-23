@@ -50,7 +50,30 @@ try {
         "SELECT COUNT(*) AS count FROM sys.security_predicates WHERE object_id = OBJECT_ID(N'Identity.IdentityTenantPolicy')"
     );
     assert.equal(policies.rows[0].count, 15, "Five identity tables must each have filter and write-block predicates");
-    console.log("Versioned SQL Server identity schema migrations passed");
+    const tenantA = "11111111-1111-4111-8111-111111111111";
+    const tenantB = "22222222-2222-4222-8222-222222222222";
+    const identityA = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    const identityB = "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb";
+    await provider.withTenantTransaction(tenantA, tx => tx.execute(
+        "INSERT INTO [Identity].[Identities] (TenantId,Id,IdentityType,Status,DisplayName) VALUES (@tenant,@id,N'USER',N'ACTIVE',N'Alpha')",
+        [{ name: "tenant", value: tenantA }, { name: "id", value: identityA }]
+    ));
+    await provider.withTenantTransaction(tenantB, tx => tx.execute(
+        "INSERT INTO [Identity].[Identities] (TenantId,Id,IdentityType,Status,DisplayName) VALUES (@tenant,@id,N'USER',N'ACTIVE',N'Beta')",
+        [{ name: "tenant", value: tenantB }, { name: "id", value: identityB }]
+    ));
+    for (const [tenant, expected] of [[tenantA, "Alpha"], [tenantB, "Beta"]]) {
+        const rows = await provider.withTenantTransaction(tenant, tx =>
+            tx.query("SELECT DisplayName FROM [Identity].[Identities]")
+        );
+        assert.deepEqual(rows.rows.map(row => row.DisplayName), [expected]);
+    }
+    assert.equal((await provider.query("SELECT Id FROM [Identity].[Identities]")).rows.length, 0);
+    await assert.rejects(provider.withTenantTransaction(tenantA, tx => tx.execute(
+        "INSERT INTO [Identity].[Identities] (TenantId,Id,IdentityType,Status,DisplayName) VALUES (@tenant,@id,N'USER',N'ACTIVE',N'Forbidden')",
+        [{ name: "tenant", value: tenantB }, { name: "id", value: "cccccccc-cccc-4ccc-8ccc-cccccccccccc" }]
+    )));
+    console.log("Versioned SQL Server identity schema and tenant RLS checks passed");
 } finally {
     await provider.disconnect();
 }
