@@ -135,7 +135,7 @@ describe("live SQL Server tenant-scoped transactions", () => {
             expect(outcomes.flat()).toEqual([concurrent.id]);
             await expect(runVersionedMigrations("sqlserver", [{ ...migration, sqlserver: "SELECT 2" }], store)).rejects.toThrow("checksum drift");
             const rollbackTable = `dbo.ruby_migration_rollback_${suffix}`;
-            const rollbackFirst = { id: `rollback_${suffix}`, description: "rollback probe", sqlserver: `CREATE TABLE ${rollbackTable} (id int)`, postgresql: `CREATE TABLE ${rollbackTable} (id integer)` };
+            const rollbackFirst = { id: `rollback_${suffix}`, description: "rollback probe", sqlserver: `CREATE TABLE ${rollbackTable} (id int);\nGO\nINSERT INTO ${rollbackTable} (id) VALUES (7);\nGO`, postgresql: `CREATE TABLE ${rollbackTable} (id integer)` };
             const failing = { id: `failed_${suffix}`, description: "invalid", sqlserver: "SELECT * FROM dbo.table_that_does_not_exist", postgresql: "SELECT 1" };
             await expect(runVersionedMigrations("sqlserver", [migration, concurrent, rollbackFirst, failing], store)).rejects.toThrow();
             const history = await db.query<{ migration_id: string }>("SELECT migration_id FROM dbo.ruby_schema_migrations ORDER BY sequence_number");
