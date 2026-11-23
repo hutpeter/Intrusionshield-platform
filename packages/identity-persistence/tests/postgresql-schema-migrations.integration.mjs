@@ -38,5 +38,11 @@ try {
     assert.ok(policies.rows[0].count >= 6, "Tenant RLS policies must exist");
     console.log("Versioned PostgreSQL identity schema migrations passed");
 } finally {
-    await provider.disconnect();
+    // The subsequent restricted-principal integration suite owns its own migration
+    // history fixture. Do not leave a privileged-owned table that it cannot reset.
+    try {
+        await provider.execute("DROP TABLE IF EXISTS public.ruby_schema_migrations");
+    } finally {
+        await provider.disconnect();
+    }
 }
