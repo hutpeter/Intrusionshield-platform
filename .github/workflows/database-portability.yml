@@ -66,6 +66,14 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Build database package
         run: pnpm --filter @intrusionshield/database build
+      - name: Apply real identity schema through versioned PostgreSQL migrations
+        env:
+          RUBY_TEST_POSTGRES_HOST: localhost
+          RUBY_TEST_POSTGRES_PORT: '5432'
+          RUBY_TEST_POSTGRES_DB: ruby_portability_test
+          RUBY_TEST_POSTGRES_USER: ruby_test
+          RUBY_TEST_POSTGRES_PASSWORD: ruby_test_password
+        run: node packages/identity-persistence/tests/postgresql-schema-migrations.integration.mjs
       - name: Provision PostgreSQL identity schema and RLS
         env:
           PGPASSWORD: ruby_test_password
