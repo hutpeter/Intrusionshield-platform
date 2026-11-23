@@ -224,6 +224,29 @@ try {
         );
         assert.equal(await identity.findById("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",tenantB),null);
     });
+    await assert.rejects(
+        () => provider.withTenantTransaction(tenantA, async db => {
+            await db.execute(
+                'INSERT INTO "Identity"."Identities" ("TenantId","Id","IdentityType","Status","DisplayName") VALUES ($1,$2,$3,$4,$5)',
+                [
+                    {name:"tenant",value:tenantB},
+                    {name:"id",value:"77777777-7777-4777-8777-777777777777"},
+                    {name:"type",value:"USER"},
+                    {name:"status",value:"ACTIVE"},
+                    {name:"name",value:"Cross-tenant insert attempt"}
+                ]
+            );
+        }),
+        /row-level security|policy/i,
+        "Tenant A must not insert Tenant B identities"
+    );
+    await provider.withTenantTransaction(tenantB, async () => {
+        assert.equal(
+            await identity.findById("77777777-7777-4777-8777-777777777777",tenantB),
+            null,
+            "Denied cross-tenant insert must leave no record"
+        );
+    });
     console.log("PostgreSQL identity persistence integration passed");
 } finally {
     await provider.disconnect();
