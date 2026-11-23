@@ -157,6 +157,37 @@ try {
         "UPDATE [Identity].[AuthorizationAudit] SET TenantId=@other WHERE TenantId=@tenant",
         [{ name: "other", value: tenantB }, { name: "tenant", value: tenantA }]
     )));
+    await provider.withTenantTransaction(tenantA, tx => tx.execute(
+        "INSERT INTO [Identity].[ServiceIdentities] (TenantId,IdentityId,ServiceName) VALUES (@tenant,@id,N'alpha-service')",
+        [{ name: "tenant", value: tenantA }, { name: "id", value: identityA }]
+    ));
+    assert.equal((await provider.query("SELECT ServiceName FROM [Identity].[ServiceIdentities]")).rows.length, 0);
+    assert.equal((await provider.withTenantTransaction(tenantB, tx =>
+        tx.query("SELECT ServiceName FROM [Identity].[ServiceIdentities]")
+    )).rows.length, 0);
+    await assert.rejects(provider.withTenantTransaction(tenantB, tx => tx.execute(
+        "INSERT INTO [Identity].[ServiceIdentities] (TenantId,IdentityId,ServiceName) VALUES (@tenant,@id,N'forbidden-service')",
+        [{ name: "tenant", value: tenantA }, { name: "id", value: identityA }]
+    )));
+    await provider.withTenantTransaction(tenantA, tx => tx.execute(
+        "INSERT INTO [Identity].[IdentityRoles] (TenantId,IdentityId,RoleId) VALUES (@tenant,@identity,@role)",
+        [{ name: "tenant", value: tenantA }, { name: "identity", value: identityA }, { name: "role", value: roleA }]
+    ));
+    assert.equal((await provider.query("SELECT RoleId FROM [Identity].[IdentityRoles]")).rows.length, 0);
+    assert.equal((await provider.withTenantTransaction(tenantB, tx =>
+        tx.query("SELECT RoleId FROM [Identity].[IdentityRoles]")
+    )).rows.length, 0);
+    await assert.rejects(provider.withTenantTransaction(tenantB, tx => tx.execute(
+        "INSERT INTO [Identity].[IdentityRoles] (TenantId,IdentityId,RoleId) VALUES (@tenant,@identity,@role)",
+        [{ name: "tenant", value: tenantA }, { name: "identity", value: identityA }, { name: "role", value: roleA }]
+    )));
+    await assert.rejects(provider.withTenantTransaction(tenantB, tx => tx.execute(
+        "INSERT INTO [Identity].[IdentityRoles] (TenantId,IdentityId,RoleId) VALUES (@tenant,@identity,@role)",
+        [{ name: "tenant", value: tenantB }, { name: "identity", value: identityB }, { name: "role", value: roleA }]
+    )), "Composite tenant/role FK must reject cross-tenant role assignment");
+    assert.equal((await provider.withTenantTransaction(tenantA, tx =>
+        tx.query("SELECT RoleId FROM [Identity].[IdentityRoles]")
+    )).rows.length, 1);
     console.log("Versioned SQL Server identity schema and tenant RLS checks passed");
 } finally {
     await provider.disconnect();
