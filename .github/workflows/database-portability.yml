@@ -31,7 +31,7 @@ jobs:
       - name: Test database package
         run: pnpm --filter @intrusionshield/database test --runInBand
       - name: Build identity persistence package
-        run: pnpm --filter @intrusionshield/identity-persistence^... build && pnpm --filter @intrusionshield/identity-persistence build
+        run: pnpm --filter @intrusionshield/identity-persistence... build
 
   postgresql-integration:
     runs-on: ubuntu-latest
