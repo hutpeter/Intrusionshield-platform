@@ -264,6 +264,16 @@ try {
             "ALTER TABLE [Identity].[Identities] ADD UnsafeColumn int NULL"
         ), "Application login must not modify protected identity schema");
         assert.equal((await app.query("SELECT Id FROM [Identity].[Identities]")).rows.length, 0);
+        // Catalog writes are reserved for the provisioning principal. A tenant
+        // application role must not be allowed to mint permission definitions.
+        await provider.execute("DENY INSERT, UPDATE, DELETE ON [Identity].[Permissions] TO [ruby_identity_app_ci]");
+        await provider.execute("DENY INSERT, UPDATE, DELETE ON [Identity].[RolePermissions] TO [ruby_identity_app_ci]");
+        await assert.rejects(app.execute(
+            "INSERT INTO [Identity].[Permissions] (Id,Name,Resource,Action,Scope) VALUES (NEWID(),N'Unauthorized',N'identity',N'admin',N'PLATFORM')"
+        ), "Application principal must not modify permission catalog");
+        await assert.rejects(app.execute(
+            "DELETE FROM [Identity].[RolePermissions]"
+        ), "Application principal must not modify role-permission mappings");
         assert.deepEqual((await app.withTenantTransaction(tenantA, tx =>
             tx.query("SELECT DisplayName FROM [Identity].[Identities]")
         )).rows.map(row => row.DisplayName), ["Alpha"]);
