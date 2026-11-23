@@ -81,6 +81,25 @@ try {
         tx.query("SELECT TenantId FROM [Identity].[Identities] WHERE Id=@id", [{ name: "id", value: identityA }])
     );
     assert.equal(untouched.rows.length, 1, "Rejected tenant reassignment must roll back");
+    await provider.withTenantTransaction(tenantA, tx => tx.execute(
+        "INSERT INTO [Identity].[Users] (TenantId,IdentityId,Username,NormalizedUsername,Email,NormalizedEmail) VALUES (@tenant,@id,N'alpha',N'ALPHA',N'alpha@example.test',N'ALPHA@EXAMPLE.TEST')",
+        [{ name: "tenant", value: tenantA }, { name: "id", value: identityA }]
+    ));
+    assert.equal((await provider.query("SELECT Username FROM [Identity].[Users]")).rows.length, 0);
+    assert.equal((await provider.withTenantTransaction(tenantB, tx =>
+        tx.query("SELECT Username FROM [Identity].[Users]")
+    )).rows.length, 0);
+    await assert.rejects(provider.withTenantTransaction(tenantB, tx => tx.execute(
+        "INSERT INTO [Identity].[Users] (TenantId,IdentityId,Username,NormalizedUsername,Email,NormalizedEmail) VALUES (@tenant,@id,N'forbidden',N'FORBIDDEN',N'forbidden@example.test',N'FORBIDDEN@EXAMPLE.TEST')",
+        [{ name: "tenant", value: tenantA }, { name: "id", value: identityA }]
+    )));
+    assert.equal((await provider.withTenantTransaction(tenantA, tx =>
+        tx.query("SELECT Username FROM [Identity].[Users]")
+    )).rows.length, 1);
+    await assert.rejects(provider.execute(
+        "INSERT INTO [Identity].[Identities] (TenantId,Id,IdentityType,Status,DisplayName) VALUES (@tenant,@id,N'USER',N'ACTIVE',N'Unscoped')",
+        [{ name: "tenant", value: tenantA }, { name: "id", value: "dddddddd-dddd-4ddd-8ddd-dddddddddddd" }]
+    ));
     console.log("Versioned SQL Server identity schema and tenant RLS checks passed");
 } finally {
     await provider.disconnect();
