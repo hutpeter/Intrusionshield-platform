@@ -8,6 +8,7 @@ on:
   pull_request:
     paths:
       - 'packages/database/**'
+      - 'packages/identity-persistence/**'
       - 'pnpm-lock.yaml'
       - '.github/workflows/database-portability.yml'
 
@@ -29,6 +30,8 @@ jobs:
         run: pnpm --filter @intrusionshield/database build
       - name: Test database package
         run: pnpm --filter @intrusionshield/database test --runInBand
+      - name: Build identity persistence package
+        run: pnpm --filter @intrusionshield/identity-persistence^... build && pnpm --filter @intrusionshield/identity-persistence build
 
   postgresql-integration:
     runs-on: ubuntu-latest
