@@ -188,6 +188,30 @@ try {
     assert.equal((await provider.withTenantTransaction(tenantA, tx =>
         tx.query("SELECT RoleId FROM [Identity].[IdentityRoles]")
     )).rows.length, 1);
+    // Platform roles are global and intentionally readable, but tenant sessions
+    // cannot create them. Provisioning here is performed by the migration admin
+    // with the RLS policy disabled only for the duration of this disposable fixture.
+    const platformRole = "99999999-9999-4999-8999-999999999999";
+    await provider.execute("ALTER SECURITY POLICY [Identity].[IdentityTenantPolicy] WITH (STATE = OFF)");
+    try {
+        await provider.execute(
+            "INSERT INTO [Identity].[Roles] (Id,TenantId,Name,Scope) VALUES (@id,NULL,N'PlatformOperator',N'PLATFORM')",
+            [{ name: "id", value: platformRole }]
+        );
+    } finally {
+        await provider.execute("ALTER SECURITY POLICY [Identity].[IdentityTenantPolicy] WITH (STATE = ON)");
+    }
+    for (const tenant of [tenantA, tenantB]) {
+        const global = await provider.withTenantTransaction(tenant, tx =>
+            tx.query("SELECT Name FROM [Identity].[Roles] WHERE Id=@id", [{ name: "id", value: platformRole }])
+        );
+        assert.deepEqual(global.rows.map(row => row.Name), ["PlatformOperator"]);
+    }
+    await assert.rejects(provider.withTenantTransaction(tenantA, tx => tx.execute(
+        "INSERT INTO [Identity].[PlatformRoleAssignments] (TenantId,IdentityId,RoleId) VALUES (@other,@identity,@role)",
+        [{ name: "other", value: tenantB }, { name: "identity", value: identityB }, { name: "role", value: platformRole }]
+    )));
+    assert.equal((await provider.query("SELECT RoleId FROM [Identity].[PlatformRoleAssignments]")).rows.length, 0);
     console.log("Versioned SQL Server identity schema and tenant RLS checks passed");
 } finally {
     await provider.disconnect();
