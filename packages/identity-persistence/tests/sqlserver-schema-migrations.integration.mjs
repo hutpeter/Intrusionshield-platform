@@ -253,7 +253,11 @@ try {
         await master.disconnect();
     }
     await provider.execute(`IF DATABASE_PRINCIPAL_ID(N'${appLogin}') IS NULL CREATE USER [${appLogin}] FOR LOGIN [${appLogin}]`);
-    await provider.execute(`GRANT SELECT, INSERT, UPDATE, DELETE ON SCHEMA::[Identity] TO [${appLogin}]`);
+    await provider.execute(`GRANT SELECT ON SCHEMA::[Identity] TO [${appLogin}]`);
+    for (const table of ["Identities", "Users", "ServiceIdentities", "IdentityRoles", "Roles", "AuthorizationAudit"]) {
+        await provider.execute(`GRANT INSERT, UPDATE, DELETE ON [Identity].[${table}] TO [${appLogin}]`);
+    }
+    // Permission catalogs and platform assignments are read-only to application principals.
     const app = new SqlServerProvider({ ...options, database, user: appLogin, password: appPassword });
     await app.connect();
     try {
@@ -266,8 +270,6 @@ try {
         assert.equal((await app.query("SELECT Id FROM [Identity].[Identities]")).rows.length, 0);
         // Catalog writes are reserved for the provisioning principal. A tenant
         // application role must not be allowed to mint permission definitions.
-        await provider.execute("DENY INSERT, UPDATE, DELETE ON [Identity].[Permissions] TO [ruby_identity_app_ci]");
-        await provider.execute("DENY INSERT, UPDATE, DELETE ON [Identity].[RolePermissions] TO [ruby_identity_app_ci]");
         await assert.rejects(app.execute(
             "INSERT INTO [Identity].[Permissions] (Id,Name,Resource,Action,Scope) VALUES (NEWID(),N'Unauthorized',N'identity',N'admin',N'PLATFORM')"
         ), "Application principal must not modify permission catalog");
