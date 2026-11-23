@@ -1,6 +1,9 @@
 ﻿import type {
-    IDatabaseProvider
+    IDatabaseProvider,
+    DatabaseDialect
 } from "@intrusionshield/database";
+
+import { SqlServerDialect } from "@intrusionshield/database";
 
 import type {
     AuthorizationRepository,
@@ -17,69 +20,68 @@ interface PermissionRow {
 export class SqlAuthorizationRepository
 implements AuthorizationRepository {
     public constructor(
-        private readonly database: IDatabaseProvider
+        private readonly database: IDatabaseProvider,
+        private readonly dialect: DatabaseDialect = new SqlServerDialect()
     ) {}
 
     public async getPermissions(
         identityId: string,
         tenantId: string
     ): Promise<readonly Permission[]> {
-        const result =
-            await this.database.query<PermissionRow>(
-                `SELECT DISTINCT
-                    p.Id AS id,
-                    p.Name AS name,
-                    p.Resource AS resource,
-                    p.Action AS action
-                 FROM [Identity].[Identities] i
-                 INNER JOIN [Identity].[IdentityRoles] ir
-                     ON ir.IdentityId = i.Id
-                    AND ir.TenantId = i.TenantId
-                    AND ir.Scope = N'TENANT'
-                 INNER JOIN [Identity].[Roles] r
-                     ON r.Id = ir.RoleId
-                    AND r.TenantId = i.TenantId
-                    AND r.Scope = N'TENANT'
-                 INNER JOIN [Identity].[RolePermissions] rp
-                     ON rp.RoleId = r.Id
-                    AND rp.Scope = N'TENANT'
-                 INNER JOIN [Identity].[Permissions] p
-                     ON p.Id = rp.PermissionId
-                    AND p.Scope = N'TENANT'
-                 WHERE i.Id = @identityId
-                   AND i.TenantId = @tenantId
-                   AND i.Status = N'ACTIVE'
-
-                 UNION
-
-                 SELECT DISTINCT
-                    p.Id AS id,
-                    p.Name AS name,
-                    p.Resource AS resource,
-                    p.Action AS action
-                 FROM [Identity].[Identities] i
-                 INNER JOIN [Identity].[PlatformRoleAssignments] pra
-                     ON pra.IdentityId = i.Id
-                    AND pra.TenantId = i.TenantId
-                    AND pra.Scope = N'PLATFORM'
-                 INNER JOIN [Identity].[Roles] r
-                     ON r.Id = pra.RoleId
-                    AND r.Scope = N'PLATFORM'
-                    AND r.TenantId IS NULL
-                 INNER JOIN [Identity].[RolePermissions] rp
-                     ON rp.RoleId = r.Id
-                    AND rp.Scope = N'PLATFORM'
-                 INNER JOIN [Identity].[Permissions] p
-                     ON p.Id = rp.PermissionId
-                    AND p.Scope = N'PLATFORM'
-                 WHERE i.Id = @identityId
-                   AND i.TenantId = @tenantId
-                   AND i.Status = N'ACTIVE'`,
-                [
-                    { name: "identityId", value: identityId },
-                    { name: "tenantId", value: tenantId }
-                ]
-            );
+        if (this.dialect.engine !== "sqlserver" && this.dialect.engine !== "postgresql") {
+            throw new Error("Unsupported identity persistence database engine.");
+        }
+        const q = (name: string) => this.dialect.quoteIdentifier(name);
+        const table = (name: string) => `${q("Identity")}.${q(name)}`;
+        const identityParam = this.dialect.engine === "postgresql" ? "$1" : "@identityId";
+        const tenantParam = this.dialect.engine === "postgresql" ? "$2" : "@tenantId";
+        const literal = (value: string) => this.dialect.engine === "sqlserver" ? `N'${value}'` : `'${value}'`;
+        const tenantPermissions = `SELECT DISTINCT
+            p.${q("Id")} AS id, p.${q("Name")} AS name,
+            p.${q("Resource")} AS resource, p.${q("Action")} AS action
+            FROM ${table("Identities")} i
+            INNER JOIN ${table("IdentityRoles")} ir
+                ON ir.${q("IdentityId")} = i.${q("Id")}
+                AND ir.${q("TenantId")} = i.${q("TenantId")}
+                AND ir.${q("Scope")} = ${literal("TENANT")}
+            INNER JOIN ${table("Roles")} r
+                ON r.${q("Id")} = ir.${q("RoleId")}
+                AND r.${q("TenantId")} = i.${q("TenantId")}
+                AND r.${q("Scope")} = ${literal("TENANT")}
+            INNER JOIN ${table("RolePermissions")} rp
+                ON rp.${q("RoleId")} = r.${q("Id")}
+                AND rp.${q("Scope")} = ${literal("TENANT")}
+            INNER JOIN ${table("Permissions")} p
+                ON p.${q("Id")} = rp.${q("PermissionId")}
+                AND p.${q("Scope")} = ${literal("TENANT")}
+            WHERE i.${q("Id")} = ${identityParam}
+                AND i.${q("TenantId")} = ${tenantParam}
+                AND i.${q("Status")} = ${literal("ACTIVE")}`;
+        const platformPermissions = `SELECT DISTINCT
+            p.${q("Id")} AS id, p.${q("Name")} AS name,
+            p.${q("Resource")} AS resource, p.${q("Action")} AS action
+            FROM ${table("Identities")} i
+            INNER JOIN ${table("PlatformRoleAssignments")} pra
+                ON pra.${q("IdentityId")} = i.${q("Id")}
+                AND pra.${q("TenantId")} = i.${q("TenantId")}
+                AND pra.${q("Scope")} = ${literal("PLATFORM")}
+            INNER JOIN ${table("Roles")} r
+                ON r.${q("Id")} = pra.${q("RoleId")}
+                AND r.${q("Scope")} = ${literal("PLATFORM")}
+                AND r.${q("TenantId")} IS NULL
+            INNER JOIN ${table("RolePermissions")} rp
+                ON rp.${q("RoleId")} = r.${q("Id")}
+                AND rp.${q("Scope")} = ${literal("PLATFORM")}
+            INNER JOIN ${table("Permissions")} p
+                ON p.${q("Id")} = rp.${q("PermissionId")}
+                AND p.${q("Scope")} = ${literal("PLATFORM")}
+            WHERE i.${q("Id")} = ${identityParam}
+                AND i.${q("TenantId")} = ${tenantParam}
+                AND i.${q("Status")} = ${literal("ACTIVE")}`;
+        const result = await this.database.query<PermissionRow>(
+            `${tenantPermissions} UNION ${platformPermissions}`,
+            [{ name: "identityId", value: identityId }, { name: "tenantId", value: tenantId }]
+        );
 
         return result.rows.map((row) => ({
             id: row.id,
