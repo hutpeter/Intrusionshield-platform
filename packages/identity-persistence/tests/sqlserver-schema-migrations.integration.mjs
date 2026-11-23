@@ -274,6 +274,18 @@ try {
             "INSERT INTO [Identity].[PlatformRoleAssignments] (TenantId,IdentityId,RoleId) VALUES (@tenant,@identity,@role)",
             [{ name: "tenant", value: tenantA }, { name: "identity", value: identityA }, { name: "role", value: platformRole }]
         )), "Application login must not grant platform roles");
+        await assert.rejects(app.withTenantTransaction(tenantA, tx => tx.execute(
+            "INSERT INTO [Identity].[Identities] (TenantId,Id,IdentityType,Status,DisplayName) VALUES (@tenant,@id,N'USER',N'ACTIVE',N'OtherTenant')",
+            [{ name: "tenant", value: tenantB }, { name: "id", value: "12121212-1212-4121-8121-121212121212" }]
+        )), "Restricted login must not create an identity in another tenant");
+        await assert.rejects(app.withTenantTransaction(tenantA, tx => tx.execute(
+            "UPDATE [Identity].[Identities] SET TenantId=@other WHERE TenantId=@tenant AND Id=@id",
+            [{ name: "other", value: tenantB }, { name: "tenant", value: tenantA }, { name: "id", value: identityA }]
+        )), "Restricted login must not reassign tenant ownership");
+        await assert.rejects(app.withTenantTransaction(tenantA, tx => tx.execute(
+            "DELETE FROM [Identity].[PlatformRoleAssignments] WHERE TenantId=@tenant AND IdentityId=@identity",
+            [{ name: "tenant", value: tenantA }, { name: "identity", value: identityA }]
+        )), "Restricted login must not revoke platform assignments");
     } finally {
         await app.disconnect();
     }
