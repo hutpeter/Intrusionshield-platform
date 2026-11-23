@@ -184,6 +184,22 @@ try {
             "Failed tenant transaction must roll back identity changes"
         );
     });
+    await provider.withTenantTransaction(tenantA, async db => {
+        const observed = await db.query("SELECT current_setting('ruby.tenant_id', true) AS tenant");
+        assert.equal(observed.rows[0]?.tenant,tenantA);
+    });
+    const unscoped = await provider.query("SELECT current_setting('ruby.tenant_id', true) AS tenant");
+    assert.ok(
+        !unscoped.rows[0]?.tenant,
+        "Tenant context must not leak onto a pooled connection after commit"
+    );
+    await assert.rejects(
+        () => provider.withTenantTransaction(tenantA, async () => {
+            await provider.withTenantTransaction(tenantB, async () => {});
+        }),
+        /Nested transactions are not supported/,
+        "Nested tenant transactions must not silently replace tenant context"
+    );
     console.log("PostgreSQL identity persistence integration passed");
 } finally {
     await provider.disconnect();
