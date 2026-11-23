@@ -73,6 +73,14 @@ try {
         "INSERT INTO [Identity].[Identities] (TenantId,Id,IdentityType,Status,DisplayName) VALUES (@tenant,@id,N'USER',N'ACTIVE',N'Forbidden')",
         [{ name: "tenant", value: tenantB }, { name: "id", value: "cccccccc-cccc-4ccc-8ccc-cccccccccccc" }]
     )));
+    await assert.rejects(provider.withTenantTransaction(tenantA, tx => tx.execute(
+        "UPDATE [Identity].[Identities] SET TenantId=@other WHERE TenantId=@tenant AND Id=@id",
+        [{ name: "other", value: tenantB }, { name: "tenant", value: tenantA }, { name: "id", value: identityA }]
+    )));
+    const untouched = await provider.withTenantTransaction(tenantA, tx =>
+        tx.query("SELECT TenantId FROM [Identity].[Identities] WHERE Id=@id", [{ name: "id", value: identityA }])
+    );
+    assert.equal(untouched.rows.length, 1, "Rejected tenant reassignment must roll back");
     console.log("Versioned SQL Server identity schema and tenant RLS checks passed");
 } finally {
     await provider.disconnect();
