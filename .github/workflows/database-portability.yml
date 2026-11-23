@@ -28,6 +28,10 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Build database package
         run: pnpm --filter @intrusionshield/database build
+      - name: Verify identity SQL dialect contracts
+        run: |
+          pnpm --filter @intrusionshield/identity-persistence... build
+          node packages/identity-persistence/tests/dialect-contract.test.mjs
       - name: Test database package
         run: pnpm --filter @intrusionshield/database test --runInBand
       - name: Build identity persistence package
