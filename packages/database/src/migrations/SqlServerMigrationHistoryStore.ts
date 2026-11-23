@@ -7,10 +7,10 @@ import { AsyncLocalStorage } from "node:async_hooks";
 /** Split sqlcmd GO batch delimiters without interpreting GO inside a SQL statement. */
 export function splitSqlServerMigrationBatches(sql: string): string[] {
     // Reject sqlcmd repeat counts: replaying DDL is unsafe for versioned migrations.
-    if (/^\s*GO\s+\d+\s*(?:--[^\r\n]*)?$/gim.test(sql)) {
+    if (/^[ \t]*GO[ \t]+\d+[ \t]*(?:--[^\r\n]*)?$/gim.test(sql)) {
         throw new Error("SQL Server migration GO repeat counts are not supported.");
     }
-    const batches = sql.split(/^\s*GO\s*(?:--[^\r\n]*)?$/gim)
+    const batches = sql.split(/^[ \t]*GO[ \t]*(?:--[^\r\n]*)?$/gim)
         .map(batch => batch.trim()).filter(Boolean);
     if (batches.length === 0) throw new Error("SQL Server migration contains no executable batches.");
     return batches;
