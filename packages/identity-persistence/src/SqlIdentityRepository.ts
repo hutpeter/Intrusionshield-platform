@@ -83,6 +83,9 @@ implements IdentityRepository {
         tenantId: string,
         status: IdentityStatus
     ): Promise<void> {
+        if (this.dialect.engine !== "sqlserver" && this.dialect.engine !== "postgresql") {
+            throw new Error("Unsupported identity persistence database engine.");
+        }
         const table = `${this.dialect.quoteIdentifier("Identity")}.${this.dialect.quoteIdentifier("Identities")}`;
         const col = (name: string) => this.dialect.quoteIdentifier(name);
         const statusParam = this.dialect.engine === "postgresql" ? "$3" : "@status";
