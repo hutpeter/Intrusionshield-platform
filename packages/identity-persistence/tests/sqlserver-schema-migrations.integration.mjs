@@ -26,7 +26,8 @@ const files = [
     ["identity_003", "003_identity_tenant_security.sql"],
     ["identity_004", "004_authorization_tenant_security.sql"],
     ["identity_005", "005_authorization_audit_tenant_security.sql"],
-    ["identity_006", "006_platform_assignment_privileged_writes.sql"]
+    ["identity_006", "006_platform_assignment_privileged_writes.sql"],
+    ["identity_007", "007_platform_assignment_delete_protection.sql"]
 ];
 const directory = new URL("../sql/", import.meta.url);
 const migrations = await Promise.all(files.map(async ([id, file]) => ({
@@ -52,7 +53,7 @@ try {
     const policies = await provider.query(
         "SELECT COUNT(*) AS count FROM sys.security_predicates WHERE object_id = OBJECT_ID(N'Identity.IdentityTenantPolicy')"
     );
-    assert.equal(policies.rows[0].count, 21, "Seven identity and authorization tables must each have filter and write-block predicates");
+    assert.equal(policies.rows[0].count, 22, "Seven protected tables plus platform-assignment delete guard must be deployed");
     const tenantA = "11111111-1111-4111-8111-111111111111";
     const tenantB = "22222222-2222-4222-8222-222222222222";
     const identityA = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
@@ -217,6 +218,28 @@ try {
         [{ name: "tenant", value: tenantA }, { name: "identity", value: identityA }, { name: "role", value: platformRole }]
     )), "Tenant principals must not grant platform privileges even within their own tenant");
     assert.equal((await provider.query("SELECT RoleId FROM [Identity].[PlatformRoleAssignments]")).rows.length, 0);
+    // A privileged provisioning fixture proves that tenant principals cannot
+    // revoke an existing platform assignment. Policy changes are never exposed
+    // through the tenant-scoped application API.
+    await provider.execute("ALTER SECURITY POLICY [Identity].[IdentityTenantPolicy] WITH (STATE = OFF)");
+    try {
+        await provider.execute(
+            "INSERT INTO [Identity].[PlatformRoleAssignments] (TenantId,IdentityId,RoleId) VALUES (@tenant,@identity,@role)",
+            [{ name: "tenant", value: tenantA }, { name: "identity", value: identityA }, { name: "role", value: platformRole }]
+        );
+    } finally {
+        await provider.execute("ALTER SECURITY POLICY [Identity].[IdentityTenantPolicy] WITH (STATE = ON)");
+    }
+    assert.equal((await provider.withTenantTransaction(tenantA, tx =>
+        tx.query("SELECT RoleId FROM [Identity].[PlatformRoleAssignments]")
+    )).rows.length, 1);
+    await assert.rejects(provider.withTenantTransaction(tenantA, tx => tx.execute(
+        "DELETE FROM [Identity].[PlatformRoleAssignments] WHERE TenantId=@tenant AND IdentityId=@identity",
+        [{ name: "tenant", value: tenantA }, { name: "identity", value: identityA }]
+    )), "Tenant principal must not revoke an existing platform assignment");
+    assert.equal((await provider.withTenantTransaction(tenantA, tx =>
+        tx.query("SELECT RoleId FROM [Identity].[PlatformRoleAssignments]")
+    )).rows.length, 1);
     console.log("Versioned SQL Server identity schema and tenant RLS checks passed");
 } finally {
     await provider.disconnect();
