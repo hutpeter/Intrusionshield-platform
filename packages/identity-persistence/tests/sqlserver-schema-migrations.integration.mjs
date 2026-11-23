@@ -25,7 +25,8 @@ const files = [
     ["identity_002", "002_authorization_foundation.sql"],
     ["identity_003", "003_identity_tenant_security.sql"],
     ["identity_004", "004_authorization_tenant_security.sql"],
-    ["identity_005", "005_authorization_audit_tenant_security.sql"]
+    ["identity_005", "005_authorization_audit_tenant_security.sql"],
+    ["identity_006", "006_platform_assignment_privileged_writes.sql"]
 ];
 const directory = new URL("../sql/", import.meta.url);
 const migrations = await Promise.all(files.map(async ([id, file]) => ({
@@ -211,6 +212,10 @@ try {
         "INSERT INTO [Identity].[PlatformRoleAssignments] (TenantId,IdentityId,RoleId) VALUES (@other,@identity,@role)",
         [{ name: "other", value: tenantB }, { name: "identity", value: identityB }, { name: "role", value: platformRole }]
     )));
+    await assert.rejects(provider.withTenantTransaction(tenantA, tx => tx.execute(
+        "INSERT INTO [Identity].[PlatformRoleAssignments] (TenantId,IdentityId,RoleId) VALUES (@tenant,@identity,@role)",
+        [{ name: "tenant", value: tenantA }, { name: "identity", value: identityA }, { name: "role", value: platformRole }]
+    )), "Tenant principals must not grant platform privileges even within their own tenant");
     assert.equal((await provider.query("SELECT RoleId FROM [Identity].[PlatformRoleAssignments]")).rows.length, 0);
     console.log("Versioned SQL Server identity schema and tenant RLS checks passed");
 } finally {
