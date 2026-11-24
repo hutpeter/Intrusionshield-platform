@@ -1,3 +1,4 @@
+import { provisionDatabaseSchema } from "../../migrations/provisionDatabaseSchema.js";
 import { createWgs84PointColumnSql } from "../../dialects/SpatialColumn.js";
 import { createDistanceExpression } from "../../dialects/SpatialDistance.js";
 import { pointInAreaPredicate, spatialRelationPredicate } from "../../dialects/SpatialRelations.js";
@@ -288,4 +289,10 @@ describe("live PostgreSQL / PostGIS portability", () => {
         } finally { await db.disconnect(); }
     });
 
+});
+
+// Invalid manifests must fail before opening a database connection.
+test("schema provisioning rejects duplicate migration IDs", async () => {
+    const migration = { id: "duplicate", description: "fixture", sqlserver: "SELECT 1", postgresql: "SELECT 1" };
+    await expect(provisionDatabaseSchema({ engine: "postgresql", options }, [migration, migration])).rejects.toThrow();
 });
