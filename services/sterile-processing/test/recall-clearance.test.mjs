@@ -108,14 +108,16 @@ async function sqlFixture(t) {
       actorId: randomUUID(),
     },
     reviewer = { ...s, actorId: randomUUID() };
+  const extraRepositories = [];
   t.after(() => {
+    for (const extra of extraRepositories) extra.close();
     repo.close();
     rmSync(dir, { recursive: true, force: true });
   });
   const { prepareReviewExample } =
       await import("../dist/development/review-example.js"),
     l = await prepareReviewExample(repo, s, randomUUID());
-  return { repo, file, s, reviewer, l, prepareReviewExample };
+  return { repo, file, s, reviewer, l, prepareReviewExample, extraRepositories };
 }
 const issue = (version, extra = {}) => ({
   requestId: randomUUID(),
@@ -495,7 +497,7 @@ test("SQLite clearance/readmission survives reopen with immutable old versions a
       admitBody(c, await rc.admissionPlan(f.s, r.id)),
     ),
     reopened = new PreviewSqliteRepository(f.file);
-  t.after(() => reopened.close());
+  f.extraRepositories.push(reopened);
   const read = new RecallRegistry(reopened),
     current = await read.get(f.s, r.id),
     e = await new ProcessingRegistry(reopened).get(
@@ -601,7 +603,7 @@ test("two SQLite connections accept only one clearance and one receiving admissi
       randomUUID(),
     ),
     other = new PreviewSqliteRepository(f.file);
-  t.after(() => other.close());
+  f.extraRepositories.push(other);
   const one = new RecallRegistry(f.repo),
     two = new RecallRegistry(other),
     out = await Promise.allSettled([
