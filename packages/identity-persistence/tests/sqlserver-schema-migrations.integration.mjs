@@ -260,6 +260,10 @@ try {
         [{ name: "name", value: appLogin }]
     );
     assert.equal(applicationRole.rows[0].count, 1, "Restricted login must inherit deployed application role");
+    const grantedRoleWrites = await provider.query(
+        "SELECT COUNT(*) AS count FROM sys.database_permissions WHERE grantee_principal_id = DATABASE_PRINCIPAL_ID(N'ruby_identity_application') AND permission_name IN (N'INSERT',N'UPDATE',N'DELETE') AND state_desc = N'GRANT'"
+    );
+    assert.equal(grantedRoleWrites.rows[0].count, 18, "Application role must have exactly six tables with three write grants each");
     // Grants come from the versioned deployment migration, not test-only setup.
     const app = new SqlServerProvider({ ...options, database, user: appLogin, password: appPassword });
     await app.connect();
