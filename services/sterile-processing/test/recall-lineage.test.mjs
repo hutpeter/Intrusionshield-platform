@@ -108,14 +108,16 @@ async function sqlFixture(t) {
       actorId: randomUUID(),
     },
     reviewer = { ...s, actorId: randomUUID() };
+  const extraRepositories = [];
   t.after(() => {
+    for (const extra of extraRepositories) extra.close();
     repo.close();
     rmSync(dir, { recursive: true, force: true });
   });
   const { prepareReviewExample } =
       await import("../dist/development/review-example.js"),
     l = await prepareReviewExample(repo, s, randomUUID());
-  return { repo, file, s, reviewer, l, prepareReviewExample };
+  return { repo, file, s, reviewer, l, prepareReviewExample, extraRepositories };
 }
 const issue = (version, extra = {}) => ({
   requestId: randomUUID(),
@@ -410,7 +412,7 @@ test("SQLite extension preserves legacy snapshots and persists descendant and in
     });
   assert.equal(r.items.length, 2);
   const reopened = new PreviewSqliteRepository(f.file);
-  t.after(() => reopened.close());
+  f.extraRepositories.push(reopened);
   assert.equal(
     (await new RecallRegistry(reopened).get(f.s, old.id, 1)).items.length,
     1,
@@ -494,7 +496,7 @@ test("SQLite issue-versus-recall race either invalidates preview or denies issue
       randomUUID(),
     ),
     other = new PreviewSqliteRepository(f.file);
-  t.after(() => other.close());
+  f.extraRepositories.push(other);
   const rc = new RecallRegistry(f.repo),
     plan = await rc.impact(f.reviewer, "package", x.sourcePackage.id, 1),
     d = await f.repo.transaction(f.s, (tx) =>
