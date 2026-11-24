@@ -179,10 +179,10 @@ describe("live PostgreSQL / PostGIS portability", () => {
         const migration = { id, description: "integration", sqlserver: "SELECT 1", postgresql: `CREATE TABLE ${table} (id integer NOT NULL)` };
         try {
             await db.execute("DROP TABLE IF EXISTS ruby_schema_migrations");
-            expect(await runVersionedMigrations("postgresql", [migration], store)).toEqual([id]);
+            expect(await provisionDatabaseSchema({ engine: "postgresql", options }, [migration])).toEqual([id]);
             // Outside the lock scope, direct history access must fail.
             await expect(store.readApplied()).rejects.toThrow("active exclusive deployment lock");
-            expect(await runVersionedMigrations("postgresql", [migration], store)).toEqual([]);
+            expect(await provisionDatabaseSchema({ engine: "postgresql", options }, [migration])).toEqual([]);
             // Two deployment attempts must serialize and apply the new migration only once.
             const concurrent = { id: `concurrent_${suffix}`, description: "concurrency", sqlserver: "SELECT 1", postgresql: "SELECT 1" };
             const outcomes = await Promise.all([
