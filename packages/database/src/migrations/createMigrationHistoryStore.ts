@@ -8,6 +8,7 @@ import type { MigrationHistoryStore } from "./VersionedMigrationRunner.js";
 /** Create a durable, transaction-locked history store for the selected engine. */
 export function createMigrationHistoryStore(engine: "sqlserver", provider: SqlServerProvider): SqlServerMigrationHistoryStore;
 export function createMigrationHistoryStore(engine: "postgresql", provider: PostgreSqlProvider): PostgreSqlMigrationHistoryStore;
+export function createMigrationHistoryStore(engine: DatabaseEngine, provider: SqlServerProvider | PostgreSqlProvider): MigrationHistoryStore;
 export function createMigrationHistoryStore(
     engine: DatabaseEngine,
     provider: SqlServerProvider | PostgreSqlProvider
