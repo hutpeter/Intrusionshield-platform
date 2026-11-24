@@ -255,6 +255,11 @@ try {
     }
     await provider.execute(`IF DATABASE_PRINCIPAL_ID(N'${appLogin}') IS NULL CREATE USER [${appLogin}] FOR LOGIN [${appLogin}]`);
     await provider.execute(`ALTER ROLE [ruby_identity_application] ADD MEMBER [${appLogin}]`);
+    const applicationRole = await provider.query(
+        "SELECT COUNT(*) AS count FROM sys.database_role_members AS membership JOIN sys.database_principals AS role ON role.principal_id = membership.role_principal_id JOIN sys.database_principals AS member ON member.principal_id = membership.member_principal_id WHERE role.name = N'ruby_identity_application' AND member.name = @name",
+        [{ name: "name", value: appLogin }]
+    );
+    assert.equal(applicationRole.rows[0].count, 1, "Restricted login must inherit deployed application role");
     // Grants come from the versioned deployment migration, not test-only setup.
     const app = new SqlServerProvider({ ...options, database, user: appLogin, password: appPassword });
     await app.connect();
