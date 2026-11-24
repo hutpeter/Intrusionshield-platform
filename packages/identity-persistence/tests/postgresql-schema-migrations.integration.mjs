@@ -13,7 +13,8 @@ const provider = new PostgreSqlProvider({
 const directory = new URL("../sql/postgresql/", import.meta.url);
 const files = [
     ["identity_001", "001_identity_foundation.sql"],
-    ["identity_002", "002_authorization_foundation.sql"]
+    ["identity_002", "002_authorization_foundation.sql"],
+    ["identity_003", "003_application_database_role.sql"]
 ];
 const migrations = await Promise.all(files.map(async ([id, file]) => ({
     id,
