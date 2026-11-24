@@ -27,7 +27,8 @@ const files = [
     ["identity_004", "004_authorization_tenant_security.sql"],
     ["identity_005", "005_authorization_audit_tenant_security.sql"],
     ["identity_006", "006_platform_assignment_privileged_writes.sql"],
-    ["identity_007", "007_platform_assignment_delete_protection.sql"]
+    ["identity_007", "007_platform_assignment_delete_protection.sql"],
+    ["identity_008", "008_application_database_role.sql"]
 ];
 const directory = new URL("../sql/", import.meta.url);
 const migrations = await Promise.all(files.map(async ([id, file]) => ({
@@ -253,11 +254,8 @@ try {
         await master.disconnect();
     }
     await provider.execute(`IF DATABASE_PRINCIPAL_ID(N'${appLogin}') IS NULL CREATE USER [${appLogin}] FOR LOGIN [${appLogin}]`);
-    await provider.execute(`GRANT SELECT ON SCHEMA::[Identity] TO [${appLogin}]`);
-    for (const table of ["Identities", "Users", "ServiceIdentities", "IdentityRoles", "Roles", "AuthorizationAudit"]) {
-        await provider.execute(`GRANT INSERT, UPDATE, DELETE ON [Identity].[${table}] TO [${appLogin}]`);
-    }
-    // Permission catalogs and platform assignments are read-only to application principals.
+    await provider.execute(`ALTER ROLE [ruby_identity_application] ADD MEMBER [${appLogin}]`);
+    // Grants come from the versioned deployment migration, not test-only setup.
     const app = new SqlServerProvider({ ...options, database, user: appLogin, password: appPassword });
     await app.connect();
     try {
