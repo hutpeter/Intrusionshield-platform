@@ -1,6 +1,9 @@
 import type {
-    IDatabaseProvider
+    IDatabaseProvider,
+    DatabaseDialect
 } from "@intrusionshield/database";
+
+import { SqlServerDialect } from "@intrusionshield/database";
 
 import type {
     Identity,
@@ -24,26 +27,34 @@ interface IdentityRow {
 export class SqlIdentityRepository
 implements IdentityRepository {
     public constructor(
-        private readonly database: IDatabaseProvider
+        private readonly database: IDatabaseProvider,
+        private readonly dialect: DatabaseDialect = new SqlServerDialect()
     ) {}
 
     public async findById(
         id: string,
         tenantId: string
     ): Promise<Identity | null> {
+        if (this.dialect.engine !== "sqlserver" && this.dialect.engine !== "postgresql") {
+            throw new Error("Unsupported identity persistence database engine.");
+        }
+        const table = `${this.dialect.quoteIdentifier("Identity")}.${this.dialect.quoteIdentifier("Identities")}`;
+        const col = (name: string) => this.dialect.quoteIdentifier(name);
+        const idParam = this.dialect.engine === "postgresql" ? "$1" : "@id";
+        const tenantParam = this.dialect.engine === "postgresql" ? "$2" : "@tenantId";
         const result =
             await this.database.query<IdentityRow>(
                 `SELECT
-                    Id AS id,
-                    TenantId AS tenantId,
-                    IdentityType AS type,
-                    Status AS status,
-                    DisplayName AS displayName,
-                    CreatedAt AS createdAt,
-                    UpdatedAt AS updatedAt
-                 FROM [Identity].[Identities]
-                 WHERE Id = @id
-                   AND TenantId = @tenantId`,
+                    ${col("Id")} AS id,
+                    ${col("TenantId")} AS "tenantId",
+                    ${col("IdentityType")} AS type,
+                    ${col("Status")} AS status,
+                    ${col("DisplayName")} AS "displayName",
+                    ${col("CreatedAt")} AS "createdAt",
+                    ${col("UpdatedAt")} AS "updatedAt"
+                 FROM ${table}
+                 WHERE ${col("Id")} = ${idParam}
+                   AND ${col("TenantId")} = ${tenantParam}`,
                 [
                     { name: "id", value: id },
                     { name: "tenantId", value: tenantId }
@@ -72,14 +83,23 @@ implements IdentityRepository {
         tenantId: string,
         status: IdentityStatus
     ): Promise<void> {
+        if (this.dialect.engine !== "sqlserver" && this.dialect.engine !== "postgresql") {
+            throw new Error("Unsupported identity persistence database engine.");
+        }
+        const table = `${this.dialect.quoteIdentifier("Identity")}.${this.dialect.quoteIdentifier("Identities")}`;
+        const col = (name: string) => this.dialect.quoteIdentifier(name);
+        const statusParam = this.dialect.engine === "postgresql" ? "$3" : "@status";
+        const idParam = this.dialect.engine === "postgresql" ? "$1" : "@id";
+        const tenantParam = this.dialect.engine === "postgresql" ? "$2" : "@tenantId";
+        const utcNow = this.dialect.engine === "postgresql" ? "CURRENT_TIMESTAMP" : "SYSUTCDATETIME()";
         const affected =
             await this.database.execute(
-                `UPDATE [Identity].[Identities]
+                `UPDATE ${table}
                  SET
-                    Status = @status,
-                    UpdatedAt = SYSUTCDATETIME()
-                 WHERE Id = @id
-                   AND TenantId = @tenantId`,
+                    ${col("Status")} = ${statusParam},
+                    ${col("UpdatedAt")} = ${utcNow}
+                 WHERE ${col("Id")} = ${idParam}
+                   AND ${col("TenantId")} = ${tenantParam}`,
                 [
                     { name: "id", value: id },
                     { name: "tenantId", value: tenantId },

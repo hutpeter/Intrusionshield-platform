@@ -1,0 +1,163 @@
+name: Database portability validation
+
+on:
+  push:
+    branches:
+      - feature/database-engine-independence
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'packages/database/**'
+      - 'packages/identity-persistence/**'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/database-portability.yml'
+
+jobs:
+  database-package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.20.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build database package
+        run: pnpm --filter @intrusionshield/database build
+      - name: Verify identity SQL dialect contracts
+        run: |
+          pnpm --filter @intrusionshield/identity-persistence... build
+          node packages/identity-persistence/tests/dialect-contract.test.mjs
+      - name: Test database package
+        run: pnpm --filter @intrusionshield/database test --runInBand
+      - name: Build identity persistence package
+        run: pnpm --filter @intrusionshield/identity-persistence... build
+
+  postgresql-integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: ruby_test
+          POSTGRES_PASSWORD: ruby_test_password
+          POSTGRES_DB: ruby_portability_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ruby_test -d ruby_portability_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.20.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build database package
+        run: pnpm --filter @intrusionshield/database build
+      - name: Apply real identity schema through versioned PostgreSQL migrations
+        env:
+          RUBY_TEST_POSTGRES_HOST: localhost
+          RUBY_TEST_POSTGRES_PORT: '5432'
+          RUBY_TEST_POSTGRES_DB: ruby_portability_test
+          RUBY_TEST_POSTGRES_USER: ruby_test
+          RUBY_TEST_POSTGRES_PASSWORD: ruby_test_password
+        run: node packages/identity-persistence/tests/postgresql-schema-migrations.integration.mjs
+      - name: Provision PostgreSQL identity schema and RLS
+        env:
+          PGPASSWORD: ruby_test_password
+        run: |
+          psql -h localhost -U ruby_test -d ruby_portability_test -v ON_ERROR_STOP=1 -f packages/identity-persistence/sql/postgresql/001_identity_foundation.sql
+          psql -h localhost -U ruby_test -d ruby_portability_test -v ON_ERROR_STOP=1 -f packages/identity-persistence/sql/postgresql/002_authorization_foundation.sql
+          psql -h localhost -U ruby_test -d ruby_portability_test -v ON_ERROR_STOP=1 -f packages/identity-persistence/sql/postgresql/001_identity_foundation.sql
+          psql -h localhost -U ruby_test -d ruby_portability_test -v ON_ERROR_STOP=1 -f packages/identity-persistence/sql/postgresql/002_authorization_foundation.sql
+      - name: Create non-superuser application test role
+        env:
+          PGPASSWORD: ruby_test_password
+        run: |
+          psql -h localhost -U ruby_test -d ruby_portability_test -v ON_ERROR_STOP=1 <<'SQL'
+          CREATE ROLE ruby_app_test LOGIN PASSWORD 'ruby_app_test_password';
+          GRANT CONNECT ON DATABASE ruby_portability_test TO ruby_app_test;
+          GRANT USAGE, CREATE ON SCHEMA public TO ruby_app_test;
+          SQL
+      - name: Verify identity RLS with restricted PostgreSQL principal
+        env:
+          PGPASSWORD: ruby_test_password
+        run: |
+          psql -h localhost -U ruby_test -d ruby_portability_test -v ON_ERROR_STOP=1 -c 'GRANT USAGE ON SCHEMA "Identity" TO ruby_app_test; GRANT SELECT, INSERT, UPDATE ON "Identity"."Identities" TO ruby_app_test; GRANT SELECT ON ALL TABLES IN SCHEMA "Identity" TO ruby_app_test; GRANT INSERT ON "Identity"."IdentityRoles" TO ruby_app_test;'
+          PGPASSWORD=ruby_app_test_password psql -h localhost -U ruby_app_test -d ruby_portability_test -v ON_ERROR_STOP=1 -f packages/identity-persistence/sql/postgresql/verify_tenant_rls.sql
+      - name: Seed privileged authorization fixtures
+        env:
+          PGPASSWORD: ruby_test_password
+        run: psql -h localhost -U ruby_test -d ruby_portability_test -v ON_ERROR_STOP=1 -f packages/identity-persistence/sql/postgresql/seed_authorization_test.sql
+      - name: Run PostgreSQL identity repository integration
+        env:
+          RUBY_TEST_POSTGRES_HOST: localhost
+          RUBY_TEST_POSTGRES_PORT: '5432'
+          RUBY_TEST_POSTGRES_DB: ruby_portability_test
+          RUBY_TEST_POSTGRES_USER: ruby_app_test
+          RUBY_TEST_POSTGRES_PASSWORD: ruby_app_test_password
+        run: |
+          pnpm --filter @intrusionshield/identity-persistence... build
+          node packages/identity-persistence/tests/postgresql-identity.integration.mjs
+      - name: Run live PostgreSQL and PostGIS integration checks
+        env:
+          RUBY_TEST_MIGRATION_HISTORY: "1"
+          RUBY_TEST_POSTGRES_HOST: localhost
+          RUBY_TEST_POSTGRES_PORT: '5432'
+          RUBY_TEST_POSTGRES_DB: ruby_portability_test
+          RUBY_TEST_POSTGRES_USER: ruby_app_test
+          RUBY_TEST_POSTGRES_PASSWORD: ruby_app_test_password
+        run: pnpm --filter @intrusionshield/database test --runInBand --runTestsByPath src/providers/__tests__/PostgreSqlProvider.integration.test.ts
+
+  sqlserver-integration:
+    runs-on: ubuntu-latest
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          MSSQL_SA_PASSWORD: 'RubyTest_StrongPassword2026!'
+          MSSQL_PID: Developer
+        ports:
+          - 1433:1433
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.20.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build database package
+        run: pnpm --filter @intrusionshield/database build
+      - name: Apply real SQL Server identity schema through versioned migrations
+        env:
+          RUBY_TEST_SQLSERVER_HOST: localhost
+          RUBY_TEST_SQLSERVER_PORT: '1433'
+          RUBY_TEST_SQLSERVER_USER: sa
+          RUBY_TEST_SQLSERVER_PASSWORD: 'RubyTest_StrongPassword2026!'
+        run: node packages/identity-persistence/tests/sqlserver-schema-migrations.integration.mjs
+      - name: Run live SQL Server integration checks
+        env:
+          RUBY_TEST_MIGRATION_HISTORY: "1"
+          RUBY_TEST_SQLSERVER_HOST: localhost
+          RUBY_TEST_SQLSERVER_PORT: '1433'
+          RUBY_TEST_SQLSERVER_DB: master
+          RUBY_TEST_SQLSERVER_USER: sa
+          RUBY_TEST_SQLSERVER_PASSWORD: 'RubyTest_StrongPassword2026!'
+        run: pnpm --filter @intrusionshield/database test --runInBand --runTestsByPath src/providers/__tests__/SqlServerProvider.integration.test.ts
