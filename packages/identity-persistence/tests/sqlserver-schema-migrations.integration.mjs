@@ -284,6 +284,8 @@ try {
         await assert.rejects(app.execute(
             "DELETE FROM [Identity].[RolePermissions]"
         ), "Application principal must not modify role-permission mappings");
+        await assert.rejects(app.execute("DELETE FROM [Identity].[Roles]"), "Application principal must not delete role definitions");
+        await assert.rejects(app.execute("DELETE FROM [Identity].[AuthorizationAudit]"), "Application principal must not delete authorization audit records");
         assert.deepEqual((await app.withTenantTransaction(tenantA, tx =>
             tx.query("SELECT DisplayName FROM [Identity].[Identities]")
         )).rows.map(row => row.DisplayName), ["Alpha"]);
