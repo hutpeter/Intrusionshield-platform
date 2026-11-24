@@ -37,6 +37,14 @@ try {
         [{ name: "schema", value: "Identity" }]
     );
     assert.ok(policies.rows[0].count >= 6, "Tenant RLS policies must exist");
+    const role = await provider.query("SELECT rolcanlogin, rolsuper, rolcreatedb, rolcreaterole, rolbypassrls FROM pg_roles WHERE rolname = 'ruby_identity_application'");
+    assert.deepEqual(role.rows, [{ rolcanlogin: false, rolsuper: false, rolcreatedb: false, rolcreaterole: false, rolbypassrls: false }]);
+    const grants = await provider.query("SELECT table_name, privilege_type FROM information_schema.role_table_grants WHERE grantee = 'ruby_identity_application' AND table_schema = 'Identity' AND privilege_type IN ('INSERT','UPDATE','DELETE') ORDER BY table_name, privilege_type");
+    const expected = ["Identities", "IdentityRoles", "ServiceIdentities", "Users"].flatMap(table_name =>
+        ["DELETE", "INSERT", "UPDATE"].map(privilege_type => ({ table_name, privilege_type }))
+    );
+    expected.unshift({ table_name: "AuthorizationAudit", privilege_type: "INSERT" });
+    assert.deepEqual(grants.rows, expected, "Runtime write privileges must match the explicit allowlist");
     console.log("Versioned PostgreSQL identity schema migrations passed");
 } finally {
     // The subsequent restricted-principal integration suite owns its own migration
