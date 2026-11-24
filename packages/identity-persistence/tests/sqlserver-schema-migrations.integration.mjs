@@ -28,7 +28,8 @@ const files = [
     ["identity_005", "005_authorization_audit_tenant_security.sql"],
     ["identity_006", "006_platform_assignment_privileged_writes.sql"],
     ["identity_007", "007_platform_assignment_delete_protection.sql"],
-    ["identity_008", "008_application_database_role.sql"]
+    ["identity_008", "008_application_database_role.sql"],
+    ["identity_009", "009_application_role_write_parity.sql"]
 ];
 const directory = new URL("../sql/", import.meta.url);
 const migrations = await Promise.all(files.map(async ([id, file]) => ({
@@ -263,7 +264,7 @@ try {
     const grantedRoleWrites = await provider.query(
         "SELECT COUNT(*) AS count FROM sys.database_permissions WHERE grantee_principal_id = DATABASE_PRINCIPAL_ID(N'ruby_identity_application') AND permission_name IN (N'INSERT',N'UPDATE',N'DELETE') AND state_desc = N'GRANT'"
     );
-    assert.equal(grantedRoleWrites.rows[0].count, 18, "Application role must have exactly six tables with three write grants each");
+    assert.equal(grantedRoleWrites.rows[0].count, 13, "Application role must have four writable tables and insert-only audit");
     // Grants come from the versioned deployment migration, not test-only setup.
     const app = new SqlServerProvider({ ...options, database, user: appLogin, password: appPassword });
     await app.connect();
