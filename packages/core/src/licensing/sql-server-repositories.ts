@@ -38,6 +38,10 @@ export class SqlServerLicenseRepository implements LicenseRepository {
     const {metadata,...fields}=value;
     await this.db.execute("INSERT INTO core.Licenses (id,tenant_id,license_number,type,status,effective_from,effective_until,metadata_json) VALUES (@id,@tenantId,@licenseNumber,@type,@status,@effectiveFrom,@effectiveUntil,@metadataJson)",params({...fields,metadataJson:metadata === undefined ? null : JSON.stringify(metadata)}));
   }
+  // Tenant-scoped mutation for administration; authorization belongs to the caller.
+  async setStatusForTenant(tenantId: string,id: string,status: LicenseStatus): Promise<void> {
+    if(await this.db.execute("UPDATE core.Licenses SET status=@status,updated_at=SYSUTCDATETIME() WHERE tenant_id=@tenantId AND id=@id AND status<>'REVOKED'",params({tenantId,id,status})) !== 1) throw new Error("License not found or revoked");
+  }
   async setStatus(id: string,status: LicenseStatus): Promise<void> {
     if(await this.db.execute("UPDATE core.Licenses SET status=@status,updated_at=SYSUTCDATETIME() WHERE id=@id",params({id,status})) !== 1) throw new Error("License not found");
   }
@@ -55,6 +59,10 @@ export class SqlServerEntitlementRepository implements EntitlementRepository {
   async save(value: Entitlement): Promise<void> {
     const {metadata,limits,...fields}=value;
     await this.db.execute("INSERT INTO core.Entitlements (id,tenant_id,capability_id,license_id,status,effective_from,effective_until,metadata_json,limits_json) VALUES (@id,@tenantId,@capabilityId,@licenseId,@status,@effectiveFrom,@effectiveUntil,@metadataJson,@limitsJson)",params({...fields,metadataJson:metadata === undefined ? null : JSON.stringify(metadata),limitsJson:limits === undefined ? null : JSON.stringify(limits)}));
+  }
+  // Scope the write itself, rather than relying on a preceding ownership lookup.
+  async revokeForTenant(tenantId: string,entitlementId: string,reason?: string): Promise<void> {
+    if(await this.db.execute("UPDATE core.Entitlements SET status='REVOKED',revoked_at=SYSUTCDATETIME(),revoked_reason=@reason,updated_at=SYSUTCDATETIME() WHERE tenant_id=@tenantId AND id=@entitlementId AND status<>'REVOKED'",params({tenantId,entitlementId,reason:reason ?? null})) !== 1) throw new Error("Entitlement not found or already revoked");
   }
   async revoke(entitlementId: string,reason?: string): Promise<void> {
     if(await this.db.execute("UPDATE core.Entitlements SET status='REVOKED',revoked_at=SYSUTCDATETIME(),revoked_reason=@reason,updated_at=SYSUTCDATETIME() WHERE id=@entitlementId AND status<>'REVOKED'",params({entitlementId,reason:reason ?? null})) !== 1) throw new Error("Entitlement not found or already revoked");
