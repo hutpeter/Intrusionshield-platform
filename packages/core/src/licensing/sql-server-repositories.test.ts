@@ -69,3 +69,26 @@ describe("SQL Server licensing repositories", () => {
     expect(calls[0]?.sql).toContain("status='REVOKED'");
   });
 });
+
+describe("Tenant-scoped licensing mutations", () => {
+  test("scopes status updates and excludes revoked licenses", async () => {
+    const {db,calls}=fixture();
+    await new SqlServerLicenseRepository(db).setStatusForTenant("t1","l1","SUSPENDED");
+    expect(calls[0]?.sql).toContain("WHERE tenant_id=@tenantId AND id=@id AND status<>'REVOKED'");
+    expect(calls[0]?.parameters).toEqual([{name:"tenantId",value:"t1"},{name:"id",value:"l1"},{name:"status",value:"SUSPENDED"}]);
+  });
+  test("rejects status updates when no eligible tenant license matches", async () => {
+    const {db}=fixture([],0);
+    await expect(new SqlServerLicenseRepository(db).setStatusForTenant("t2","l1","ACTIVE")).rejects.toThrow("License not found or revoked");
+  });
+  test("scopes entitlement revocation and handles absent reason", async () => {
+    const {db,calls}=fixture();
+    await new SqlServerEntitlementRepository(db).revokeForTenant("t1","e1");
+    expect(calls[0]?.sql).toContain("WHERE tenant_id=@tenantId AND id=@entitlementId AND status<>'REVOKED'");
+    expect(calls[0]?.parameters).toEqual([{name:"tenantId",value:"t1"},{name:"entitlementId",value:"e1"},{name:"reason",value:null}]);
+  });
+  test("rejects revocation when no eligible tenant grant matches", async () => {
+    const {db}=fixture([],0);
+    await expect(new SqlServerEntitlementRepository(db).revokeForTenant("t2","e1")).rejects.toThrow("Entitlement not found or already revoked");
+  });
+});
