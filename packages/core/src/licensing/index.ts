@@ -7,3 +7,7 @@ export * from "./administration.js";
 export * from "./rbac-authorizer.js";
 export * from "./platform-authorizer.js";
 export * from "./sql-server-platform-policy.js";
+
+export * from "./audit.js";
+export * from "./audited-administration.js";
+export * from "./sql-server-transaction.js";
