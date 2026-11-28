@@ -54,6 +54,34 @@ const createEntitlementResolver = (
 });
 
 describe("LicensingAccessService", () => {
+  for (const status of ["DISABLED", "DEPRECATED"] as const) {
+    test(`denies a ${status} capability even with active license and entitlements`, async () => {
+      const registry = new InMemoryCapabilityRegistry();
+      registry.register(authentication);
+      registry.register({ ...ai, status });
+      const licenses = createLicenseService(true);
+      const entitlements = createEntitlementResolver([capabilityId, authentication.id]);
+      const service = new LicensingAccessService(licenses, registry, entitlements);
+      await expect(service.canUse(tenantId, capabilityId, at)).resolves.toEqual({
+        allowed: false, reason: "CAPABILITY_INACTIVE", capabilityId
+      });
+      expect(licenses.isActive).not.toHaveBeenCalled();
+    });
+
+    test(`denies a ${status} dependency even when entitled`, async () => {
+      const registry = new InMemoryCapabilityRegistry();
+      registry.register({ ...authentication, status });
+      registry.register(ai);
+      const service = new LicensingAccessService(
+        createLicenseService(true), registry,
+        createEntitlementResolver([capabilityId, authentication.id])
+      );
+      await expect(service.canUse(tenantId, capabilityId, at)).resolves.toEqual({
+        allowed: false, reason: "DEPENDENCY_INACTIVE", capabilityId
+      });
+    });
+  }
+
   test("denies an unknown capability", async () => {
     const licenses = createLicenseService(true);
     const entitlements = createEntitlementResolver([]);

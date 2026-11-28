@@ -109,14 +109,16 @@ async function sqlFixture(t) {
       actorId: randomUUID(),
     },
     reviewer = { ...s, actorId: randomUUID() };
+  const extraRepositories = [];
   t.after(() => {
+    for (const extra of extraRepositories) extra.close();
     repo.close();
     rmSync(dir, { recursive: true, force: true });
   });
   const { prepareReviewExample } =
       await import("../dist/development/review-example.js"),
     l = await prepareReviewExample(repo, s, randomUUID());
-  return { repo, file, s, reviewer, l, prepareReviewExample };
+  return { repo, file, s, reviewer, l, prepareReviewExample, extraRepositories };
 }
 const issue = (version, extra = {}) => ({
   requestId: randomUUID(),
@@ -326,7 +328,7 @@ test("SQLite trace retains historical membership and excludes co-loaded sibling 
     confirmed: true,
   });
   const reopened = new PreviewSqliteRepository(f.file);
-  t.after(() => reopened.close());
+  f.extraRepositories.push(reopened);
   const trace = new TraceabilityRegistry(reopened),
     i = p.assemblySnapshot.instruments[0],
     report = await trace.report(f.s, "instrument", i.id);

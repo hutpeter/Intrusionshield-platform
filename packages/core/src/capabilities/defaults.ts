@@ -85,10 +85,24 @@ export const CORE_CAPABILITIES: readonly CapabilityDefinition[] = [
     }
 ];
 
+export const STERILE_PROCESSING_CORE_CAPABILITY_ID = "sterile-processing.core";
+
+export const PRODUCT_CAPABILITIES: readonly CapabilityDefinition[] = [
+    {
+        id: STERILE_PROCESSING_CORE_CAPABILITY_ID,
+        name: "Ruby Sterile Management",
+        description: "Complete sterile processing lifecycle, including release, recall and traceability.",
+        version: "1.0.0",
+        category: "application",
+        dependencies: ["core.authorization", "core.i18n"],
+        status: "ACTIVE"
+    }
+];
+
 export function createDefaultCapabilityRegistry(): CapabilityRegistry {
     const registry = new InMemoryCapabilityRegistry();
 
-    for (const capability of CORE_CAPABILITIES) {
+    for (const capability of [...CORE_CAPABILITIES, ...PRODUCT_CAPABILITIES]) {
         registry.register(capability);
     }
 

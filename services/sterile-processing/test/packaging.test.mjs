@@ -24,17 +24,16 @@ async function httpFixture(t) {
     repo = new PreviewSqliteRepository(join(dir, "registry.sqlite")),
     preview = createSterilePreview({ origin, repository: repo });
   server.on("request", preview.app);
-  t.after(
-    () =>
-      new Promise((resolve) =>
-        server.close(() => {
-          preview.dispose();
-          repo.close();
-          rmSync(dir, { recursive: true, force: true });
-          resolve();
-        }),
-      ),
-  );
+  const extraRepositories = [];
+  t.after(async () => {
+    await new Promise((resolve, reject) =>
+      server.close((error) => error ? reject(error) : resolve()),
+    );
+    preview.dispose();
+    for (const extra of extraRepositories) extra.close();
+    repo.close();
+    rmSync(dir, { recursive: true, force: true });
+  });
   let cookie = "",
     session;
   async function call(path, body, headers = {}) {
@@ -84,6 +83,7 @@ async function httpFixture(t) {
   return {
     repo,
     file: join(dir, "registry.sqlite"),
+    extraRepositories,
     call,
     login,
     base,
@@ -1631,7 +1631,7 @@ test("review queue paging is stable, scoped and read-only across SQLite reopen",
     0,
   );
   const reopened = new PreviewSqliteRepository(f.file);
-  t.after(() => reopened.close());
+  f.extraRepositories.push(reopened);
   assert.deepEqual(
     (
       await new DashboardRegistry(reopened).queue(
@@ -1672,7 +1672,7 @@ test("replenishment policy persists with scoped live suggestions and legacy sett
     ).queue.items.find((x) => x.id === lot.id).consumableAlert;
   assert.equal((await read()).suggestedQuantity, 15);
   const reopened = new PreviewSqliteRepository(f.file);
-  t.after(() => reopened.close());
+  f.extraRepositories.push(reopened);
   const { ConsumableRegistry } =
     await import("@intrusionshield/sterile-processing");
   assert.equal(
@@ -1813,7 +1813,7 @@ test("stock movement report is scoped, date-strict, read-only and available to e
   const { StockMovementReportRegistry } =
       await import("@intrusionshield/sterile-processing"),
     reopened = new PreviewSqliteRepository(f.file);
-  t.after(() => reopened.close());
+  f.extraRepositories.push(reopened);
   const r = await new StockMovementReportRegistry(reopened).report(
     f.session,
     from,
@@ -1941,7 +1941,7 @@ test("balance report HTTP is scoped and strict, persists ledger values, and rege
   const { StockBalanceReportRegistry } =
       await import("@intrusionshield/sterile-processing"),
     reopened = new PreviewSqliteRepository(f.file);
-  t.after(() => reopened.close());
+  f.extraRepositories.push(reopened);
   assert.equal(
     (await new StockBalanceReportRegistry(reopened).get(f.session)).items.find(
       (x) => x.lotId === lot.id,
@@ -2086,7 +2086,7 @@ test("expiry HTTP report is scoped, strict and includes quarantine-only stock at
   const { ConsumableExpiryReportRegistry } =
       await import("@intrusionshield/sterile-processing"),
     reopened = new PreviewSqliteRepository(f.file);
-  t.after(() => reopened.close());
+  f.extraRepositories.push(reopened);
   assert.equal(
     (await new ConsumableExpiryReportRegistry(reopened).get(f.session)).items[0]
       .balance.quarantined,

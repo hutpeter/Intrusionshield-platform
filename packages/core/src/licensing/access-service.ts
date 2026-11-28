@@ -4,7 +4,7 @@ import type { LicenseService } from "./types.js";
 
 export interface LicensingAccessDecision {
   readonly allowed: boolean;
-  readonly reason?: "UNKNOWN_CAPABILITY" | "LICENSE_INACTIVE" | "CAPABILITY_NOT_ENTITLED" | "DEPENDENCY_NOT_ENTITLED";
+  readonly reason?: "UNKNOWN_CAPABILITY" | "CAPABILITY_INACTIVE" | "DEPENDENCY_INACTIVE" | "LICENSE_INACTIVE" | "CAPABILITY_NOT_ENTITLED" | "DEPENDENCY_NOT_ENTITLED";
   readonly capabilityId: string;
 }
 
@@ -20,12 +20,17 @@ export class LicensingAccessService {
     capabilityId: string,
     at = new Date()
   ): Promise<LicensingAccessDecision> {
-    if (!this.registry.has(capabilityId)) {
+    const capability = this.registry.get(capabilityId);
+    if (!capability) {
       return {
         allowed: false,
         reason: "UNKNOWN_CAPABILITY",
         capabilityId
       };
+    }
+
+    if (capability.status !== "ACTIVE") {
+      return { allowed: false, reason: "CAPABILITY_INACTIVE", capabilityId };
     }
 
     if (!(await this.licenses.isActive(tenantId, at))) {
@@ -45,6 +50,9 @@ export class LicensingAccessService {
     }
 
     for (const dependency of this.registry.resolveDependencies(capabilityId)) {
+      if (dependency.status !== "ACTIVE") {
+        return { allowed: false, reason: "DEPENDENCY_INACTIVE", capabilityId };
+      }
       if (!(await this.entitlements.isEntitled(tenantId, dependency.id, at))) {
         return {
           allowed: false,

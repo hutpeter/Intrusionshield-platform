@@ -108,14 +108,16 @@ async function sqlFixture(t) {
       actorId: randomUUID(),
     },
     reviewer = { ...s, actorId: randomUUID() };
+  const extraRepositories = [];
   t.after(() => {
+    for (const extra of extraRepositories) extra.close();
     repo.close();
     rmSync(dir, { recursive: true, force: true });
   });
   const { prepareReviewExample } =
       await import("../dist/development/review-example.js"),
     l = await prepareReviewExample(repo, s, randomUUID());
-  return { repo, file, s, reviewer, l, prepareReviewExample };
+  return { repo, file, s, reviewer, l, prepareReviewExample, extraRepositories };
 }
 const issue = (version, extra = {}) => ({
   requestId: randomUUID(),
@@ -350,7 +352,7 @@ test("SQLite reopen retains linked episode, original versions and permanent old-
     ret = await rt.create(f.s, returnBody(d)),
     done = await rt.dispose(f.reviewer, ret.id, disposition());
   const reopened = new PreviewSqliteRepository(f.file);
-  t.after(() => reopened.close());
+  f.extraRepositories.push(reopened);
   const read = new ReturnRegistry(reopened);
   assert.equal((await read.get(f.s, ret.id)).episodeId, done.episodeId);
   assert.equal((await read.get(f.s, ret.id, 1)).state, "returned");
@@ -416,7 +418,7 @@ test("two SQLite connections accept one duplicate return and one processing tran
     stored = await dr.store(f.s, store(f, r)),
     d = await dr.issue(f.s, stored.id, issue(1)),
     other = new PreviewSqliteRepository(f.file);
-  t.after(() => other.close());
+  f.extraRepositories.push(other);
   const first = new ReturnRegistry(f.repo),
     second = new ReturnRegistry(other),
     out = await Promise.allSettled([

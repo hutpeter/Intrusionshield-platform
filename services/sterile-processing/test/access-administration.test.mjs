@@ -361,7 +361,7 @@ test("rolls back grants and history together and preserves audit on reopening", 
   const f = await fixture(t),
     admin = await f.login(f.admin),
     db = new DatabaseSync(f.file);
-  t.after(() => db.close());
+  try {
   db.exec(
     "CREATE TRIGGER deny_access_audit BEFORE INSERT ON sterile_access_changes WHEN NEW.version>1 BEGIN SELECT RAISE(ABORT,'private audit failure'); END;",
   );
@@ -386,6 +386,9 @@ test("rolls back grants and history together and preserves audit on reopening", 
     assert.equal(history[0].changedBy, f.admin);
   } finally {
     reopened.close();
+  }
+  } finally {
+    db.close();
   }
 });
 test("does not expose other-facility audit reasons in this facility history", async (t) => {
@@ -419,7 +422,15 @@ test("bootstrap preparation is private, additive, versioned and does not apply t
     { dirname } = await import("node:path"),
     { prepareAccessAdministrator } =
       await import("../../../scripts/sterile-access-admin-preparation.mjs");
-  mkdirSync(join(dirname(f.file), "secrets"), { mode: 0o700 });
+  const secrets = join(dirname(f.file), "secrets");
+  mkdirSync(secrets, { mode: 0o700 });
+  if (process.platform === "win32") {
+    const { execFileSync } = await import("node:child_process");
+    // Secure only this newly created disposable test directory.
+    execFileSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command",
+      "$ErrorActionPreference='Stop'; $p=$env:RUBY_FIXTURE_SECRETS; $acl=Get-Acl -LiteralPath $p; $acl.SetAccessRuleProtection($true,$false); $sid=[System.Security.Principal.WindowsIdentity]::GetCurrent().User; $rule=[System.Security.AccessControl.FileSystemAccessRule]::new($sid,'FullControl','ContainerInherit,ObjectInherit','None','Allow'); $acl.SetAccessRule($rule); Set-Acl -LiteralPath $p -AclObject $acl"
+    ], { env: { ...process.env, RUBY_FIXTURE_SECRETS: secrets }, stdio: "pipe" });
+  }
   const before = await f.directory.findUser(f.tenantId, f.operator),
     config = {
       tenantId: f.tenantId,
