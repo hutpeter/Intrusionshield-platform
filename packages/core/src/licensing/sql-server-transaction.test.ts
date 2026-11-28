@@ -20,7 +20,7 @@ function fixture(failAudit=false,failRollback=false) {
     return db;
   },{} as CapabilityRegistry,{async allows(){return true;}});
   const work=()=>transaction.run(async(admin,audit)=>{
-    await admin.changeStatus("tenant","license","ACTIVE");
+    await admin.changeStatus("actor","tenant","license","ACTIVE");
     await audit.append({id:"event",actorId:"actor",actorTenantId:"home",targetTenantId:"tenant",operation:"change-status",subjectId:"license",correlationId:"request",details:{status:"ACTIVE"}});
   });
   return {transaction,connections,work};
@@ -36,7 +36,7 @@ describe("SqlServerLicensingTransaction",()=>{
   });
   test("preserves rollback failure",async()=>{
     const f=fixture(true,true);await expect(f.work()).rejects.toThrow("Licensing transaction and rollback failed");
-    expect(f.connections[0]).toContain("disconnect");
+    expect(f.connections).toEqual([["connect","begin","mutation","audit","rollback","disconnect"]]);
   });
   test("isolates concurrent requests using separate connections",async()=>{
     const f=fixture();await Promise.all([f.work(),f.work()]);
